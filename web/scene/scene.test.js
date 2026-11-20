@@ -159,7 +159,10 @@
 // reading, the pause doubling to its cap — until pane B is set to it in one
 // step, the line said once and the landing once, no reissue outliving the
 // scene; its trail entry keeping the state asked, read again by a return
-// (FP-23, FP-34, FP-36).
+// (FP-23, FP-34, FP-36); and a row arriving above the state shown taking the
+// words saying it is how the draft stands now from pane B's corner and its
+// description in the one step that takes the row in, an older row touching
+// neither nor any element of the corner (FP-20, FP-33).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -3073,6 +3076,8 @@ function pastRows(/** @type {object[]} */ rows = PAST_ROWS) {
   const since = Math.max(0, (REC.feedAt() ?? 0) - PUMP.OWN_WINDOW);
   script[FAKE.keyOf('changes', { session: 's-1', since, under: PASTD })] = { result: { entries: rows, next: 60, head: 60 } };
 }
+/** a feed row naming the draft, as one arrives at the scene once its history stands: one change of the bare hand at a position, at a time */
+const pastRow = (/** @type {number} */ position, /** @type {number} */ time) => /** @type {any} */ ({ position, at: position, op: 'insert', docs: [PASTD], class: 'drafts', key: 'bare', time });
 /** the draft held whole, its kept state "kept", and its history opened from its corner's act (N-GO's `history`) */
 async function pastOpened(/** @type {ReturnType<typeof page>} */ p) {
   await PUMP.loadWhole(PASTD);
@@ -3201,8 +3206,7 @@ test('a day folds and opens on the reader\'s act at its head alone; rows arrivin
     assert.ok(String(p.afterB[0].innerHTML).includes(`aria-expanded="false" data-shown="1"`), `the folded head marked, the shown row's bar on it: ${p.afterB[0].innerHTML}`);
     SCENE.foldDay(key);
     assert.deepEqual(SCENE.past()?.days.map((d) => d.folded), [false], 'opened again');
-    const older = Date.UTC(2026, 10, 14, 9);
-    SCENE.dropped({ row: /** @type {any} */ ({ position: 20, at: 20, op: 'insert', docs: [PASTD], class: 'drafts', key: 'bare', time: older }), addrs: [PASTD], at: 0 });
+    SCENE.dropped({ row: pastRow(20, Date.UTC(2026, 10, 14, 9)), addrs: [PASTD], at: 0 });
     assert.deepEqual(SCENE.past()?.days.map((d) => [d.folded, d.rows.map((r) => r.last)]), [[false, [48, PAST_AT, 30]], [true, [20]]], 'the row arrived under a day of its own, folded; the open day as it stood');
   } finally { WRITE.setKept(PASTD, null); }
 }));
@@ -3485,6 +3489,35 @@ test('a past state\'s pane carries no kind at any fit — at its document\'s hea
     assert.equal(await opening, true, 'a draft of one change: its history shows');
     const now = /** @type {import('../text/article.js').PastWhy} */ (SCENE.past()?.why);
     assert.deepEqual([now.id, now.substituted, p.paneB.attrs['aria-description'], p.paneB.attrs['aria-labelledby']], ['B3.history.now', false, heard(now.text), 'sceneB-title sceneB-name'], 'the state shown how the draft stands now: described so, named by its title');
+  } finally { WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('a row arriving above the state pane B shows takes the words saying that state is how the draft stands now from its corner and from its description together, in the step that takes the row in — an older row changing neither, nor any element of the corner, the focus on its act standing; the state shown and the days as the reader left them (FP-33, FP-20; B3-S7; skep-frontend #697)', () => onPage(async (p) => {
+  await onTrail(p);
+  await PUMP.loadWhole(PASTD);
+  WRITE.setKept(PASTD, { word: 'kept', reason: null });
+  pastRows([PAST_ROWS[2]]);
+  try {
+    const opening = GO.history(PASTD); await flown();
+    assert.equal(await opening, true, 'a draft of one change: its history shows');
+    /** the line pane B's state carries, its description, and whether its corner says the state is how the draft stands now */
+    const told = () => [SCENE.past()?.why?.id ?? null, p.paneB.attrs['aria-description'], p.cornerB.innerHTML.includes('data-string="B3.history.now"')];
+    const days = () => [SCENE.past()?.at, SCENE.past()?.days.map((d) => [d.folded, d.rows.map((r) => r.last)])];
+    assert.deepEqual(told(), ['B3.history.now', heard(t('B3.history.now')), true], 'the state shown how the draft stands now: the line, the description and the corner say so');
+    // a frame of the app's loop once the history stands, which marks each pane's corner as its items read
+    SCENE.markKept();
+    const chip = p.acts.b.find((b) => b.dataset.chip);
+    assert.ok(chip, `pane B's corner at its document's head holds its chip's act: ${p.cornerB.innerHTML}`);
+    chip.focus();
+    SCENE.dropped({ row: pastRow(20, Date.UTC(2026, 10, 14, 9)), addrs: [PASTD], at: 0 });
+    assert.deepEqual(told(), ['B3.history.now', heard(t('B3.history.now')), true], 'an older row: still how the draft stands now, said so by all three');
+    assert.equal(p.doc.activeElement, chip, 'the corner\'s items as they stood, none of its elements written again: the focus on the act it stood on');
+    SCENE.dropped({ row: pastRow(56, PAST_T0 + 9 * 60000), addrs: [PASTD], at: 0 });
+    assert.deepEqual(told(), [null, undefined, false], 'a newer row: the line gone from the corner and the description together, as the row is taken in — no frame between them');
+    assert.ok(p.doc.activeElement !== chip && /** @type {any} */ (p.doc.activeElement).dataset?.chip === '1', 'the corner written again, the focus kept on its chip\'s act standing in its place');
+    assert.deepEqual(days(), [48, [[false, [56, 48]], [true, [20]]]], 'the state shown as it stood; the newer row in the open day above it, the older under a day of its own, folded');
+    await flown();
+    assert.deepEqual([...told(), ...days()], [null, undefined, false, 48, [[false, [56, 48]], [true, [20]]]], 'and so once pane A, the draft read again, is set from the rows\' reads');
   } finally { WRITE.setKept(PASTD, null); }
 }, { acts: true }));
 

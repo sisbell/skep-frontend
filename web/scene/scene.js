@@ -444,8 +444,12 @@
 // floor mark (`listHTML`); above them, where the draft
 // held words the board had not kept, "now — not yet kept". Rows arriving
 // after it stands — those below the history read's reach, read as it stands
-// (`readOlder`), and a feed row naming the draft — move no row in view and
-// open no day (`arriveRows`). Pane A, the draft's current text, stays its
+// (`readOlder`), and a feed row naming the draft — open no day, the first row
+// or day standing in view held where it stands; pane B's corner and its
+// description follow the line the rows now decide (`pastWhyOf`) together, in
+// one step (FP-33), so a row above the state shown takes from both the words
+// saying it is how the draft stands now; nothing is said in the status region
+// (`arriveRows`). Pane A, the draft's current text, stays its
 // editor: its corner keeps the draft's kept word and its
 // second act, which there moves the focus into the history pane (`focusPast`;
 // N-GO's), and opens the draft's history from any other scene's pane
@@ -2113,28 +2117,40 @@ function paneHeld(P) {
 function paneKept(P) { return LAYER.keptWords(P.d, P.d, paneHeld(P)); }
 
 /**
- * Each pane's corner marked in place (see the head): its items written again
+ * A pane's corner marked in place (see the head): its items written again
  * where they would read other than as last written (`cornerForm`) — its kind
  * told, its kept clause changed (`paneKept`), a draft's kept word or its
- * statement moved — or the board's lag began or ended since (`lags`), the
- * element kept so a focus on it stays, the bar's words its name leads with
- * written again with them (`nameBar`), its kind said once where its slot
- * fills under the focus (`sayKind`), the heads' band set again where their
- * rows changed (`setBand`), and its origins' statements placed again where
- * what the edition claims held say changed since they were placed, or its
- * article was set since (T-LAYER's `keptRunsKey`; `placeStatements`). The
- * app's loop runs it on each dirty frame while the scene stands; the one line
- * speaks for the panes (`keptPanes`).
+ * statement moved, a past state's line moved (`pastLine`) — or the board's
+ * lag began or ended since (`lags`), the element kept so a focus on it stays
+ * (`writeCorner`), the bar's words its name leads with written again with
+ * them (`nameBar`); nothing where its items read as last written, so a focus
+ * on one of its acts stays on the element it stands on.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {Pane} P
+ */
+function markCorner(E, S, P) {
+  const items = cornerForm(P, S.fit), c = cornerEl(E, P.side);
+  if (c && (items.html + (items.foot ?? '') !== P.corner || c.dataset.lags !== String(lags()))) { writeCorner(E, P, items); nameBar(E, P); }
+}
+
+/**
+ * Each pane's corner marked in place (see the head; `markCorner`), its kind
+ * said once where its slot fills under the focus (`sayKind`), the heads' band
+ * set again where their rows changed (`setBand`), and its origins' statements
+ * placed again where what the edition claims held say changed since they were
+ * placed, or its article was set since (T-LAYER's `keptRunsKey`;
+ * `placeStatements`). The app's loop runs it on each dirty frame while the
+ * scene stands; the one line speaks for the panes (`keptPanes`).
  */
 export function markKept() {
   const S = scene, E = els;
   if (!S || !E) return;
-  const signs = LAYER.keptRunsKey(), lagging = String(lags());
+  const signs = LAYER.keptRunsKey();
   const at = typeof document !== 'undefined' ? document.activeElement : null, own = LAYER.caret(), live = own && own.live ? LAYER.caretPane() : null;
   for (const side of SIDES) {
-    const P = S[side], items = cornerForm(P, S.fit);
-    const c = /** @type {HTMLElement | null} */ (paneEl(E, side).querySelector(':scope > .corner'));
-    if (c && (items.html + (items.foot ?? '') !== P.corner || c.dataset.lags !== lagging)) { writeCorner(E, P, items); nameBar(E, P); }
+    const P = S[side];
+    markCorner(E, S, P);
     sayKind(E, P);
     // the span focus marked as the plane marks the walk's span, while the pane's text holds the platform's focus and no live caret stands in it, the caret then the mark (D5 §4 rule 2)
     if (P.el) LAYER.markPaneFocus(P.el, P.focus != null && textHolds(E, side, at) && !(live && live.article === P.el) ? P.focus : null);
@@ -5718,9 +5734,15 @@ export function foldDay(key) {
  * below the read's reach (`readOlder`), a feed row naming the draft
  * (`dropped`) — taken in (M-PAST's `arrive`): each position once, the rows and
  * days made again, the days open as the reader left them — a day the rows name
- * anew standing folded — and the rows in view held where they stand
- * (`writeList`). Arriving rows move no row in view and open no day
- * (FP-36).
+ * anew standing folded. Then, where the scene stands, pane B follows the line
+ * the rows decide now (`pastWhyOf`) in one step — its corner marked where its
+ * items moved (`markCorner`), the heads' band set again where its rows
+ * changed (`rebanded`), its region described anew (`namePane`) — so its
+ * corner and its description never say different lines (FP-33): a row above the
+ * state shown takes from both the words saying it is how the draft stands
+ * now. The list is then written again, the first row or day standing in view
+ * held where it stands (`writeList`). Arriving rows open no day (FP-36), and
+ * nothing is said in the status region.
  * @param {Scene} S
  * @param {readonly FeedUpdate[]} came
  */
@@ -5729,7 +5751,11 @@ function arriveRows(S, came) {
   if (!L || !came.length) return;
   const got = PAST.arrive(L.entries, came, L.open);
   L.entries = got.entries; L.rows = got.rows; L.days = got.days; L.open = got.open;
-  if (E && scene === S) writeList(E, S, true);
+  if (!E || scene !== S) return;
+  markCorner(E, S, S.b);
+  rebanded(E, S);
+  namePane(E, S, S.b);
+  writeList(E, S, true);
 }
 
 /**

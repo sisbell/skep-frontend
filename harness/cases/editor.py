@@ -68,7 +68,10 @@ and rows in the strings table's words, the past pane's corner, the bands, side b
 corner split at the narrow width (`read`), then stacked between those widths with the past pane's corner beside its column,
 led by its title, the pane's name the AX tree computes the same at all three (issue #687); `changes` armed with the
 draft's newest row alone, the act opening on that row's state, pane B's corner saying it is how the draft stands now on one
-line inside its slot, that line the pane's description (`now`); and a held line,
+line inside its slot, that line the pane's description (`now`); `changes` armed with a row of the draft's in another minute
+than its newest change alone, the act opening on that row's state as how the draft stands now, then the newest change handed
+in as the feed hands a row, the line gone from pane B's corner and its description in the call that hands it in, before any
+frame (`now-moved`; skep-frontend #697); and a held line,
 the act opening on the newest kept state under "now — not yet kept" (`unkept`) — every word of both panes' corners inside
 the box it stands in at each (issue #678).
 The editor pane follows them (`pane_rows`; skep-frontend #556, B3-S1's scene rule, B3-S13): a reading scene's pane holding
@@ -349,6 +352,9 @@ STATES = [
     dict(screen='B3-S7', state='now', walk='W-08', step=8, drawn=True,
          how="`changes` armed, once the page is quiet, with the draft's newest row alone, then the act clicked (skep-frontend #661, #678)",
          claim='the history opens on its one row\'s state, the current text, pane B\'s corner saying so beneath its title — "this is how the draft stands now" (B3.history.now) — on one line inside its slot; every word of both panes\' corners inside the box it stands in'),
+    dict(screen='B3-S7', state='now-moved', walk='W-08', step=8, drawn=True,
+         how="`changes` armed, once the page is quiet, with the draft's newest row in another minute than its newest change alone, the act clicked; then the newest change handed in as the feed hands a row (the gate's `model.feed`) (skep-frontend #697)",
+         claim='the history opens on that row\'s state, pane B\'s corner and its description saying it is how the draft stands now (B3.history.now); the newer row arriving above it takes those words from the corner and from the description together, in the step that takes the row in — the list holding the row above the state shown, that state still shown and marked, pane B\'s text and its first span in view as they stood, no day opened; every word of both panes\' corners inside the box it stands in'),
     dict(screen='B3-S7', state='unkept', walk='W-08', step=8, drawn=True,
          how="a line of the case's own draft held (`op` armed to answer `held`), then the act clicked (skep-frontend #661)",
          claim='the history opens on the newest kept state, the held words standing in the current pane alone, the list\'s top line "now — not yet kept" (L.history.unkept)'),
@@ -1444,7 +1450,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
         for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'unkept',
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'now-moved', 'unkept',
                       'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal', 'pane-refused', 'pane-held-bars'):
             red(state, 'the machine\'s page did not open')
         return
@@ -1559,7 +1565,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
         for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'unkept',
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'now-moved', 'unkept',
                       'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal', 'pane-refused', 'pane-held-bars'):
             red(st, 'the case\'s own draft did not mount')
         return
@@ -2852,6 +2858,18 @@ WHY_LINE = '''(() => { const e = document.querySelector("#sceneB > .corner .why"
   const tops = rs.map((k) => k.top).sort((a, b) => a - b), lines = tops.filter((y, i) => i === 0 || y - tops[i - 1] > rs[0].height / 2).length;
   return {words: e.textContent, id: e.dataset.string || null, slot: !!s, oneRow: !!s && !s.classList.contains("wraps"), lines,
           past: s && rs.length ? +(Math.max(...rs.map((k) => k.right)) - s.getBoundingClientRect().right).toFixed(2) : null}; })()'''
+# the first span of pane B's text standing in view — the first not scrolled above the pane's visible top — by its first
+# position: where the person reads the past state; null where pane B holds no article or no span stands in view
+PANE_FIRST = '''(() => { const pane = document.getElementById("sceneB"), art = pane && pane.querySelector(":scope > article.dtext"); if (!art) return null;
+  const top = pane.getBoundingClientRect().top + pane.clientTop, e = [...art.querySelectorAll(".run > .sp")].find((x) => x.getBoundingClientRect().bottom > top);
+  return e ? Number(e.dataset.pos) : null; })()'''
+# a feed row handed in as the feed hands one (the gate's `model.feed`; formatted with the row, as JSON), and pane B as a person
+# meets it read in the same call, before any frame runs (skep-frontend #697): its description, whether its corner holds the line
+# saying why it shows its state, that line as the scene derives it, and the rows the list holds, by their last positions, newest
+# first
+MOVED_IN = '''((row) => { window.__skep.model.feed(row); const pane = document.getElementById("sceneB"), p = window.__skep.scene.past();
+  return {description: pane ? pane.getAttribute("aria-description") : "no pane B", why: !!document.querySelector("#sceneB > .corner .why"),
+          past: p ? p.why : "no history", rows: p ? p.days.flatMap((d) => d.rows.map((r) => r.last)) : null}; })(%s)'''
 
 
 def past_rows(ctx, r, shoot, red, ops_allowed, m):
@@ -2888,10 +2906,18 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     `now`: `changes` armed, once the page is quiet, with the draft's newest row alone, then the act — the history on that
     row's state, the current text, pane B's corner saying it is how the draft stands now, on one line inside its slot, the
     pane named by its title and described by that line as the AX tree computes them (issue #687).
+    `now-moved`, at each width afresh: `changes` armed, once the page is quiet, with the draft's newest row in another minute
+    than its newest change alone, then the act — the history on that row's state, pane B's corner and its description saying
+    it is how the draft stands now; then the newest change handed in as the feed hands a row (`MOVED_IN`), a real row at a
+    position the page's place on the feed has passed, under the page's session, and pane B read in that same call, before any
+    frame: its description and its corner's line gone together, the list holding the row (FP-33; skep-frontend #697); once
+    the page settles, no line and no description as the AX tree computes it, the state shown and its row's mark as they stood,
+    pane B's text and its first span in view (`PANE_FIRST`) unmoved, the days folded and open as they stood, a day the row
+    names anew folded.
     `unkept`: a line held, then the act — the newest kept state, the list's top line saying so. At `read`, `reclaimed`,
-    `now` and `unkept`, at both widths, every word of both panes' corners stands inside the box it is set in, 1 px either way, the
-    worst excess a figure (`fit_part`; issue #678). No `history.past` is called; the rows' writes are the two typed lines
-    and the held line's drop."""
+    `now`, `now-moved` and `unkept`, at both widths, every word of both panes' corners stands inside the box it is set in, 1 px
+    either way, the worst excess a figure (`fit_part`; issue #678). No `history.past` is called; the rows' writes are the two
+    typed lines and the held line's drop."""
     mine, corner, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'corner', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
     sid, figures = m['sid'], m['figures']
     # both panes' corners: at their documents' heads, an editor pane's foot among them
@@ -3262,6 +3288,53 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
                 'its name and description': (named_ok, dict(got_as, lead=lead, want_description=now_words)),
                 "the corners' words in their boxes": fit_part(ctx, figures, 'now', w, *pane_corners)}
     shoot('now', now_check)
+    close_scene()
+
+    # ---- `now-moved`: a row arriving above the state shown while the history stands (skep-frontend #697) ----------------------
+    # `changes` armed with one row of the draft's own alone — the newest standing in another minute than its newest change — so
+    # the history opens on that row's state as how the draft stands now; then the newest change handed in as the feed hands a
+    # row: a real row, at a position the page's place on the feed has passed, so that place stands where the board's does,
+    # carrying the page's session as the feed's drafts rows do. Each width opens the history afresh, the row handed in again
+    newest_minute = newest['time'] // 60000 if newest and isinstance(newest.get('time'), int) else None
+    moved_from = next((u for u in sorted(real, key=lambda u: u['position'], reverse=True)
+                       if newest_minute is not None and isinstance(u.get('time'), int) and u['time'] // 60000 != newest_minute), None)
+    handed = dict(newest, session=sid) if newest else None
+
+    def now_moved_check(w):
+        close_scene(); quiet()
+        seq_m = ctx.editor_seq()
+        armed_m = ctx.arm('changes', answer={'entries': [moved_from] if moved_from else [], 'next': head, 'head': head})
+        opened_m = open_by_act()
+        taken_m = ctx.consumed('changes', seq_m)
+        P0, why0, as0 = ctx.js('window.__skep.scene.past()') or {}, ctx.js(WHY_LINE) or {}, named_as(ctx, '#sceneB') or {}
+        rows0 = [row['last'] for dd in P0.get('days') or [] for row in dd['rows']]
+        L0, b_text0, first0 = ctx.js(PAST_LIST) or {}, pane_text('b'), ctx.js(PANE_FIRST)
+        folded0 = {d['key']: d['folded'] for d in L0.get('days') or []}
+        # the history on the armed row's state, how the draft stands now: its line, its corner's words and its description say so
+        now_ok = (bool(moved_from) and bool(handed) and (armed_m.get('result') or {}).get('armed') == 'changes' and opened_m and taken_m
+                  and rows0[:1] == [moved_from['position']] and P0.get('at') == moved_from['position'] and (P0.get('why') or {}).get('id') == 'B3.history.now'
+                  and why0.get('words') == now_words and why0.get('id') == 'B3.history.now' and as0.get('description') == heard(ctx, now_words) and first0 is not None)
+        # the row handed in and pane B read in the one call: the line gone from the corner and the description together
+        got = (ctx.js(MOVED_IN % json.dumps(handed)) or {}) if now_ok else {}
+        at_once = (bool(got) and got.get('description') is None and got.get('why') is False and got.get('past') is None
+                   and (got.get('rows') or [])[:1] == [handed['position']] and moved_from['position'] in (got.get('rows') or []))
+        ctx.settle(15); ctx.frames(3)
+        P1, as1, L1 = ctx.js('window.__skep.scene.past()') or {}, named_as(ctx, '#sceneB'), ctx.js(PAST_LIST) or {}
+        rows1 = [row['last'] for dd in P1.get('days') or [] for row in dd['rows']]
+        shown1 = [x['last'] for d in L1.get('days') or [] for x in d['lines'] if x['shown'] and not x['who']]
+        folded1 = {d['key']: d['folded'] for d in L1.get('days') or []}
+        b_text1, first1 = pane_text('b'), ctx.js(PANE_FIRST)
+        after_ok = (now_ok and bool(ctx.js('window.__skep.scene.isOpen()')) and P1.get('why') is None and ctx.js(WHY_LINE) is None and bool(as1) and as1.get('description') is None
+                    and P1.get('at') == P0.get('at') and rows1[:1] == [handed['position']] and P0.get('at') in rows1 and shown1 == [P0.get('at')]
+                    and b_text1 == b_text0 and first1 == first0
+                    and all(folded1.get(k) == v for k, v in folded0.items()) and all(v for k, v in folded1.items() if k not in folded0))
+        return {'the state shown, how the draft stands now': (now_ok, {'moved_from': moved_from and {k: moved_from.get(k) for k in ('position', 'op', 'time')}, 'newest': handed and {k: handed.get(k) for k in ('position', 'op', 'time')},
+                                                                       'armed': armed_m, 'opened': opened_m, 'consumed': taken_m, 'rows': rows0[:4], 'at': P0.get('at'), 'why': P0.get('why'), 'line': why0, 'named': as0, 'first': first0}),
+                'the row taken in: the line gone from the corner and the description at once': (at_once, dict(got, want_row=handed and handed['position'])),
+                'once the page settles': (after_ok, {'at': P1.get('at'), 'why': P1.get('why'), 'line': ctx.js(WHY_LINE), 'named': as1, 'rows': rows1[:4], 'shown': shown1,
+                                                     'text_kept': b_text1 == b_text0, 'first': [first0, first1], 'folded': [folded0, folded1]}),
+                "the corners' words in their boxes": fit_part(ctx, figures, 'now-moved', w, *pane_corners)}
+    shoot('now-moved', now_moved_check)
     close_scene()
 
     # ---- `unkept`: a line held, the act opening on the newest kept state, "now — not yet kept" at the top ---------------------------
