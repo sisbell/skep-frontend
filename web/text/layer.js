@@ -219,23 +219,31 @@
 // corner stands (`cornerPlace`). Where the view's fit leaves the measure
 // beside it short of forty characters (P-LAY's `Fit.head`; FP-31), the
 // corner stands at its document's head instead: its fold reserves a band of
-// its rows above the first row of columns (`headBand`, P-LAY's `Fold.band`),
+// its rows above every row of columns (`headBand`, P-LAY's `Fold.band`),
 // read at the reading size and the view's width alone, never the camera; it
-// stands across the column nearest the view's centre — its text and its edge
-// — on the document's own ground, its rows at the reading line's pitch: the
+// stands in the band above the column nearest the view's centre, across that
+// column's text and edge, on the document's own ground, its rows at the
+// reading line's pitch, each as tall as the slots beginning on it take: the
 // document's name on its first row, unless the one line names it, the kept
 // clause after its address, then the corner's items in their one order and
 // compact forms, each in its slot with its act, those that never yield wrapped
 // whole onto the rows after, those that yield folded into "⟨n⟩ more", whose
-// act opens them whole beneath (`headLayout`, `headOf`); its first row held
-// below the one line as the document scrolls, the rest passing under it
-// (`placeHead`), and no held label set over that document's text, its first
-// row naming it. A change of its rows' count changes the band, the fold with
-// it, and the article set again in its place re-anchors the camera on the
-// passage being read (FP-8). No act leaves the caret under the one line or
-// what a head covers (`headClear`, `placeCaretMark`), nor the end of the
-// page's selection a press, K-8 or the platform's own keys moved under what a
-// head covers (`keepClear`; FP-37). Beneath a draft's kept word its corner
+// act opens them whole beneath (`headLayout`, `headOf`); its held rows — the
+// first, through the last the kept clause or an item that holds stands on
+// (`HeadLayout.held`), and every row where its rows at the camera's scale are
+// deeper than the band, so none stands unheld on its column's text — held
+// below the one line together as the document scrolls, every other row
+// passing under them, clipped at their foot and never hidden, so each of its
+// acts keeps its Tab stop (`placeHead`); a focus on an
+// act of a row past them brought in by that row's own place, below them
+// (`headRowOf`, which APP-INPUT pans by); and no held label set over that
+// document's text, its first row naming it. A change of its rows changes the
+// band, the fold with it, and the article set again in its place re-anchors
+// the camera on the passage being read (FP-8). No act leaves the caret under
+// the one line or what a head covers — its held rows, or a form opened beneath
+// them (`headClear`, `placeCaretMark`) — nor the end of the page's selection a
+// press, K-8 or the platform's own keys moved under what a head covers
+// (`keepClear`; FP-37). Beneath a draft's kept word its corner
 // carries the face standing there — a moved document's (the reader `face`;
 // B3-S2; T-ARTICLE draws it) — never yielding: whole beside its column where
 // the corner stands whole, compact where it stands compact or at its
@@ -592,7 +600,7 @@ import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, landingPx, panBy, panInto, flying } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
-import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, inFirstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W } from '../plane/layout.js';
+import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W, GRID } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX, ELLIPSIS } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, titleHTML, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
@@ -802,8 +810,9 @@ import { t, plural, facedHTML, lastRead, runsText, joinRuns, sentence, CLIENT_CL
  * @property {boolean} stale its items or its cap changed since it was measured
  * @property {boolean} mine it is the focused document's: the Tab stop
  * @property {number} blockedAt the column beside which the signs in the edge before it left it no room down to its row's foot, where it stands by its row's first column while the view's centre stays over that column; -1 where none
- * @property {boolean} head it stands at its document's head (`placeHead`): its first row held, its rows across the column being read
- * @property {number} bottom the bottom of what it covers on screen as last placed (px): its first row's, or a form opened beneath it — what no act leaves a target under (`headClear`)
+ * @property {boolean} head it stands at its document's head (`placeHead`): its held rows held, its rows across the column being read
+ * @property {HeadRows | null} rows at its document's head, its rows as last placed (`placeHead`); null beside its column, or not yet placed
+ * @property {number} bottom the bottom of what it covers on screen as last placed (px): beside its column its items', at its document's head its held rows', or a form opened beneath its rows — what no act leaves a target under (`headClear`)
  * @property {string | null} word the kept word its kept slot showed as last placed: a word that changes is spoken (FP-36); null where none stood
  * @property {string | null} face the words of the face standing at it as last placed (`faceWords`): a face that comes or changes is spoken (FP-36); null where none stood
  */
@@ -823,7 +832,15 @@ import { t, plural, facedHTML, lastRead, runsText, joinRuns, sentence, CLIENT_CL
  * @property {HeadSlot[]} slots its items and the kept clause, each where it stands
  * @property {number} name the room its first row leaves the document's name, px from the head's left: the name stands in [0, name)
  * @property {number} folded the items folded into the count, "⟨n⟩ more"
- * @property {number} held its rows held at a reading scene's pane's top as the text scrolls (SC's): through the last row a title, the kept clause or an item that holds stands on, the first at the least; the rest scroll with the text
+ * @property {number} held its rows held as the text scrolls — below the one line on the plane (`placeHead`), at a reading scene's pane's top (SC's): through the last row a title, the kept clause or an item that holds stands on, the first at the least; the rest pass under them
+ */
+
+/**
+ * @typedef {Object} HeadRows — a corner's rows at its document's head as last placed (`placeHead`): where a focus on one is brought in to (`headRowOf`)
+ * @property {number} at its band's top on screen, pushed down with the corner by a surface standing at its place (px): where its rows stand unheld, each its row's pitch below the one before it
+ * @property {number} pitch its rows' pitch on screen (px)
+ * @property {number} held its rows held below the one line, the first among them (`HeadLayout.held`)
+ * @property {number[]} tall the rows each row takes, by row: more than one where a slot beginning on it wraps onto the rows after
  */
 
 /**
@@ -1802,10 +1819,10 @@ const nameWidth = (/** @type {Doc} */ d) => measureRun(d.addr, ADDRESS.px, ADDRE
 const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => ({ w: i.em * CORNER.px, yields: i.yields, words: i.words, holds: i.holds }));
 
 /**
- * The depth a document's head takes above its first row, in the body's em
- * (`Fold.band`; see the head): its rows at the reading size and the view's
- * fit (`headLayout`) — the head across its column's text and edge, its rows
- * at the reading line's pitch — the name's room and the kept clause counted
+ * The depth a document's head takes above each row of its columns, in the
+ * body's em (`Fold.band`; see the head): its rows at the reading size and the
+ * view's fit (`headLayout`) — the head across its column's text and edge, its
+ * rows at the reading line's pitch — the name's room and the kept clause counted
  * whether or not the one line names it, so the depth never moves with the
  * camera; none where its corner stands beside its column. Every corner
  * carries an item — its kind's slot, else a refused document's own words —
@@ -2156,10 +2173,9 @@ function docAt(p) {
  * em or above, the view over a column whose foot it shows (PageDown) or whose
  * top it shows (PageUp) — the view that brings the next column's top, or the
  * previous one's, half a gutter below the one line, centred across it, at
- * the scale it stands at — where the corner stands at the document's head, a
- * first-row column's band with it, and a later column's text just below the
- * head's first row held under the line (`placeHead`), so no line opens under
- * it; null where the paging pages as it does elsewhere.
+ * the scale it stands at — where the corner stands at the document's head,
+ * its row's band with it, the head standing there (`placeHead`), so no line
+ * opens under it; null where the paging pages as it does elsewhere.
  * @param {1 | -1} dir 1 PageDown, -1 PageUp
  * @returns {{x: number, y: number, scale: number} | null}
  */
@@ -2172,8 +2188,7 @@ export function pageTarget(dir) {
   if (!readsAt(f.fs)) return null;
   const to = pageIn(f, { x0: wx(seen.x) - box.x, y0: wy(seen.y) - box.y, x1: wx(seen.x + seen.w) - box.x, y1: wy(seen.y + seen.h) - box.y }, dir);
   if (!to) return null;
-  const top = f.band > 0 && !to.first ? f.columns[to.column].y - HOLD.gap / cam.scale - LINE_H * f.fs : to.top;
-  return { x: box.x + to.x, y: box.y + top + (VH / 2 - seen.y) / cam.scale, scale: cam.scale };
+  return { x: box.x + to.x, y: box.y + to.top + (VH / 2 - seen.y) / cam.scale, scale: cam.scale };
 }
 
 // ---- setting an article -----------------------------------------------------------------------------------------
@@ -4044,7 +4059,7 @@ function placeCorners(focused) {
       heads.push({ c, rec, head: headOf(c, rec, columnAt(rec.fold, p.x, p.y), open) });
       continue;
     }
-    if (c.head) { c.head = false; c.compact = false; c.html = ''; c.stale = true; c.el.classList.remove('head'); Object.assign(c.el.style, { width: '', height: '' }); }
+    if (c.head) { c.head = false; c.rows = null; c.compact = false; c.html = ''; c.stale = true; c.el.classList.remove('head'); Object.assign(c.el.style, { width: '', height: '' }); }
     // a column the signs before it left no room beside is tried again once the view's centre has left it
     if (c.blockedAt !== columnAt(rec.fold, p.x, p.y)) c.blockedAt = -1;
     const at = besideOf(rec.fold, clearLeftOf(addr), p, cam.scale, c.blockedAt);
@@ -4491,9 +4506,10 @@ export function marksStanding() {
 /**
  * @typedef {Object} Head — a corner at its document's head as this frame sets it (`headOf`), placed after the reads (`placeHead`)
  * @property {number} column the column it stands across, an index into the fold's columns
- * @property {boolean} first that column stands in the fold's first row, the head's band above it
  * @property {number} pitch its rows' pitch on screen, px: the reading line's at the scale
  * @property {number} rows its rows
+ * @property {number} held its rows held below the one line, the first among them: `HeadLayout.held`'s, every row where they are deeper than the band above its column
+ * @property {number[]} tall the rows each row takes, by row (`HeadRows.tall`)
  */
 
 /**
@@ -4512,10 +4528,17 @@ export function marksStanding() {
  * the forms its acts opened — every item whole on the count's or a glyph's
  * act (`openCorner`), its words alone where its rows hold its act
  * (`openedHTML`), a kept word's statement on its act or Mod+S's
- * (`openStatement`). Each row stands on the document's own ground, the name
- * drawn and never announced. Its markup is written again only where it
- * changed, its stops stood again (`setStops`), a focus on its act put back on
- * the act standing in its place, else on its first stop (FP-20).
+ * (`openStatement`). Each row stands on the document's own ground, as tall as
+ * the slots beginning on it take — a wrapped slot's later rows standing in its
+ * own row — the rows held below the one line marked so (`HeadLayout.held`),
+ * every row held where the rows are deeper than the band above the column, as
+ * a camera's em below the reading size narrows the head onto more rows than
+ * the band was laid out at (`headBand`), so no row stands unheld on the
+ * column's text (FP-26); the name drawn and never announced; its element the
+ * held rows' box. Its
+ * markup is written again only where it changed, its stops stood again
+ * (`setStops`), a focus on its act put back on the act standing in its place,
+ * else on its first stop (FP-20).
  * @param {Corner} c
  * @param {Mounted} rec
  * @param {number} column the column nearest the view's centre
@@ -4536,65 +4559,101 @@ function headOf(c, rec, column, open) {
     const line = heldContents({ lead: label.lead, address, kept: null }, label.parts, L.name, measureRun);
     if (line) rows[0] += `<span class="name" aria-hidden="true">${line.map((m) => `<span style="left:${m.x}px;line-height:${pitch}px;color:${m.part.ink}">${m.runs.map((r) => runHTML(r, m.px, m.weight)).join('')}</span>`).join('')}</span>`;
   }
+  /** @type {number[]} the rows each row takes, by row: the most a slot beginning on it takes, one for a row holding the name alone */
+  const tall = rows.map(() => 1);
   for (const s of L.slots) {
     const html = s.k === -1 ? (named ? '' : `<span class="kept" data-string="${esc(/** @type {KeptClause} */ (k).id)}" style="font-size:${ADDRESS.px}px">${esc(/** @type {KeptClause} */ (k).text)}</span>`)
       : s.k === -2 ? moreHTML(L.folded, open)
         : items[s.k].html;
     rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
+    tall[s.row] = Math.max(tall[s.row], s.rows);
   }
+  // rows deeper than the band above the column — the head narrower at the scale than the band was laid out at, its items
+  // wrapping onto more rows — are every one held with the first, so none stands unheld on the column's text
+  const held = L.rows * LINE_H * f.fs > f.band * (1 + 1e-9) ? L.rows : L.held;
   const kept = WRITE.keptOf(addr), formHTML = open ? openedHTML(rec.corner.words, items, L) : kept && openStatements.has(addr) ? statementHTML(kept, keptSaid(addr)) : '';
-  const html = rows.map((r, i) => (r ? hrowHTML(i, `height:${pitch}px;background:${ground}`, r) : '')).join('')
+  const html = rows.map((r, i) => (r ? hrowHTML(i, `height:${tall[i] * pitch}px;background:${ground}`, r, i < held) : '')).join('')
     + (formHTML ? openedFormHTML(`width:${width}px;background:${ground}`, formHTML) : '');
   if (c.html !== html) { FOCUS.keep(c.el, cornerAct, () => { c.el.innerHTML = html; setStops(c.el, c.mine, true); }); c.html = html; }
-  c.el.style.width = width + 'px'; c.el.style.height = pitch + 'px';
-  c.column = column; c.w = width; c.h = pitch;
-  return { column, first: inFirstRow(f, col), pitch, rows: L.rows };
+  c.el.style.width = width + 'px'; c.el.style.height = held * pitch + 'px';
+  c.column = column; c.w = width; c.h = held * pitch;
+  return { column, pitch, rows: L.rows, held, tall };
 }
 
 /**
  * A corner at its document's head placed for the frame (see the head;
- * FP-26, FP-37): across its column, its first row at its band's top above a
- * first-row column — in the gutter above a later one — held below the one
- * line once that top rises past the hold, never past its column's foot (the
- * one hold, P-LABEL's `holdTop`), its later rows where its band sets them and
- * hidden as they pass under it, or above a later row's column, where no band
- * holds them; the forms opened beneath it below its rows, or below its held
- * row as its band rises. Pushed down by a surface standing at its place, as
- * a corner beside its column is (`Readers.atop`). What it covers on screen,
- * its first row and a form opened beneath it, is what no act leaves a target
- * under (`headClear`).
+ * FP-26, FP-37): across its column, its first row at its row's band's top,
+ * its held rows held together below the one line once that top rises past
+ * the hold, never past its column's foot (the one hold, P-LABEL's `holdTop`);
+ * every other row where its band sets it, passing under the held rows as the
+ * band rises, its part above their foot clipped away and never hidden, so its
+ * acts keep their stops and their place in the accessibility tree; the forms
+ * opened beneath its rows below them, or below its held rows as its band
+ * rises. Pushed down by a surface standing at its place, as a corner beside
+ * its column is (`Readers.atop`). What it covers on screen, its held rows and
+ * a form opened beneath its rows, is what no act leaves a target under
+ * (`headClear`); where its rows stand is kept for a focus on one
+ * (`Corner.rows`, `headRowOf`).
  * @param {Corner} c
  * @param {Mounted} rec
  * @param {Head} head
  * @param {number} formH the height of the forms opened beneath it, px; 0 where none stands
  */
 function placeHead(c, rec, head, formH) {
-  const f = rec.fold, box = docBox(rec.d.addr), col = f.columns[head.column], P = head.pitch;
-  const at = head.first ? sy(box.y + col.y - f.band) : sy(box.y + col.y) - P;
-  const top = holdTop(at, read.top() + HOLD.gap, sy(box.y + col.y + col.h), P);
+  const f = rec.fold, box = docBox(rec.d.addr), col = f.columns[head.column], P = head.pitch, held = head.held * P;
+  const at = sy(box.y + col.y - f.band);
+  const top = holdTop(at, read.top() + HOLD.gap, sy(box.y + col.y + col.h), held);
+  // how far the hold carries the held rows below where the band sets them: every other row stands that far above them
+  const shift = top - at;
   c.x = Math.round(sx(box.x + col.x)); c.top = Math.round(top); c.y = c.top + Math.round(read.atop(boxOf(rec.d.addr)));
   c.el.style.transform = `translate(${c.x}px, ${c.y}px)`;
   for (const r of /** @type {HTMLElement[]} */ ([...c.el.querySelectorAll(':scope > .hrow')])) {
-    const k = Number(r.dataset.row), y = k === 0 ? 0 : head.first ? Math.round(at - c.top + k * P) : -1;
-    r.style.top = Math.max(0, y) + 'px';
-    r.style.visibility = y < 0 ? 'hidden' : '';
+    // a clip less than the layout unit the engines place boxes on clips nothing
+    const k = Number(r.dataset.row), y = k < head.held ? k * P : k * P - shift, cut = k < head.held ? 0 : held - y;
+    r.style.top = y + 'px';
+    r.style.clipPath = cut * GRID >= 1 ? `inset(${cut}px 0 0 0)` : '';
   }
-  const below = Math.max(P, head.first ? Math.round(at - c.top + head.rows * P) : P);
+  const below = Math.max(held, head.rows * P - shift);
   const o = /** @type {HTMLElement | null} */ (c.el.querySelector(':scope > .opened'));
   if (o) o.style.top = below + 'px';
-  c.bottom = c.y + (o ? below + formH : P);
+  c.bottom = c.y + (o ? below + formH : held);
+  c.rows = { at: c.y - shift, pitch: P, held: head.held, tall: head.tall };
 }
 
 /**
  * Where a corner standing at its document's head leaves the view clear of it
- * (see the head; FP-37): the bottom of its first row, or of a form opened
- * beneath it, on screen — what an act that places a target brings it below
- * (`placeCaretMark`); null where the document's corner stands beside its
+ * (see the head; FP-37): the bottom of its held rows, or of a form opened
+ * beneath its rows, on screen — what an act that places a target brings it
+ * below (`placeCaretMark`); null where the document's corner stands beside its
  * column, or none stands.
  * @param {string} addr
  * @returns {number | null}
  */
 export function headClear(addr) { const c = corners.get(addr); return c && c.head ? c.bottom : null; }
+
+/**
+ * Where a focus on an act of a corner standing at its document's head is
+ * brought into view (see the head; FP-20, FP-26): for an act on a row past
+ * its held rows, that row's own place on screen as last placed — unclamped,
+ * across the head, as tall as the row — for an act in a form opened beneath
+ * its rows, the act's own box; each with the foot of the held rows, never
+ * above the one line, which APP-INPUT brings it below. Null for an act on a
+ * held row, the corner's element itself, anything outside a corner at its
+ * head, or a corner not yet placed there.
+ * @param {Element} el what the focus came to stand on
+ * @returns {{rect: Rect, clear: number} | null}
+ */
+export function headRowOf(el) {
+  if (!el || typeof el.closest !== 'function') return null;
+  const holder = /** @type {HTMLElement | null} */ (el.closest('[data-corner]')), c = holder ? corners.get(holder.dataset.corner || '') : undefined;
+  if (!c || c.el !== holder || !c.head || !c.rows) return null;
+  const R = c.rows, clear = Math.max(read.top(), c.y + R.held * R.pitch);
+  const form = el.closest('.opened');
+  if (form && c.el.contains(form)) { const q = el.getBoundingClientRect(); return { rect: { x: q.left, y: q.top, w: q.width, h: q.height }, clear }; }
+  const row = /** @type {HTMLElement | null} */ (el.closest('.hrow')), k = row ? Number(row.dataset.row) : NaN;
+  if (!row || !c.el.contains(row) || !(k >= R.held)) return null;
+  return { rect: { x: c.x, y: R.at + k * R.pitch, w: c.w, h: (R.tall[k] || 1) * R.pitch }, clear };
+}
 
 /**
  * A standing corner's kept word and the face beneath it said once in the
@@ -4807,7 +4866,7 @@ function makeCorner(into, addr) {
   el.setAttribute('aria-hidden', 'true');
   into.appendChild(el);
   /** @type {Corner} */
-  const c = { el, html: '', compact: false, column: 0, cap: Infinity, w: 0, h: 0, x: 0, y: 0, top: 0, stale: true, mine: false, blockedAt: -1, head: false, bottom: 0, word: null, face: null };
+  const c = { el, html: '', compact: false, column: 0, cap: Infinity, w: 0, h: 0, x: 0, y: 0, top: 0, stale: true, mine: false, blockedAt: -1, head: false, rows: null, bottom: 0, word: null, face: null };
   corners.set(addr, c);
   return c;
 }
@@ -4927,7 +4986,7 @@ export const cornerStop = (el) => allIn(el, 'button').find((b) => b.getAttribute
 /** a head's count of the items its rows fold, "⟨n⟩ more" (`headLayout`): the act that opens them whole beneath its rows, saying whether they stand opened (D5 K-57; FP-26) */
 const moreHTML = (/** @type {number} */ n, /** @type {boolean} */ open) => `<button type="button" class="more" data-more="${n}" aria-expanded="${open}" tabindex="-1">${esc(t('L.corner.more', { n: numeral(n) }))}</button>`;
 
-/** a head's row as markup: a row holding an act a line of acts of its own (`setStops`), marked where it is held at a reading scene's pane's top (`HeadLayout.held`) */
+/** a head's row as markup: a row holding an act a line of acts of its own (`setStops`), marked where it is held — below the one line on the plane, at a reading scene's pane's top (`HeadLayout.held`) */
 const hrowHTML = (/** @type {number} */ i, /** @type {string} */ style, /** @type {string} */ inner, held = false) => `<div class="hrow" data-row="${i}"${held ? ' data-held="1"' : ''}${inner.includes('<button') ? ' role="toolbar"' : ''} style="${style}">${inner}</div>`;
 
 /**

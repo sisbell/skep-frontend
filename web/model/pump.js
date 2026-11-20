@@ -348,7 +348,7 @@ const MAX_SCANS = 2;
 const SPAN_BLOCK = 2048;
 /** the most positions a whole read fetches at once (the staging draft holds six million; the rest comes by the viewport's windows) */
 export const WHOLE_CAP = 262144;
-/** the rows of a document's head the columns a view meets are read for, where its corner stands at its head (`spanWindow`) */
+/** the rows of a document's head its estimate is folded beneath above every row of columns, and the columns a view meets are read for, where its corner stands at its head (`spanWindow`) */
 const HEAD_ROWS = 4;
 /** the em (px), by P-LAY's estimate, at which a document's text is fetched — below S1's mount em, and the estimate's size never smaller than the one T-LAYER folds the article at and mounts it at (its columns never more than the text's), so the text is there when the layer mounts */
 const FETCH_EM = 5;
@@ -2360,22 +2360,24 @@ export function visibleDocs(pad = 80) {
  * `estimate`, every line full: never more columns than its text sets, so its
  * positions reach at least as far as the columns in view hold) — through its
  * end where the view stands over its room past the estimate's columns —
- * within WHOLE_CAP; past it, the estimated columns in view alone, which
- * T-LAYER lays out from their estimated column — where the corner stands at
- * its document's head, whose band stands every column lower than the estimate
- * sets it, those meeting the view raised by HEAD_ROWS of its rows (P-CAM's
- * `fit`, P-LAY's `Fold.band`); rounded to SPAN_BLOCK; every column at the
- * measure in force (P-CAM's `measure`), which T-LAYER sets it at.
+ * within WHOLE_CAP; past it, the estimated columns in view alone and one
+ * either side of them, which T-LAYER lays out from their estimated column.
+ * Where the corner stands at its document's head (P-CAM's `fit`), whose band
+ * stands above every row of columns (P-LAY's `Fold.band`), the estimate is
+ * folded beneath a band of HEAD_ROWS of its rows above every row, and the
+ * view's top raised by one such band where the columns meeting it are found;
+ * rounded to SPAN_BLOCK; every column at the measure in force (P-CAM's
+ * `measure`), which T-LAYER sets it at.
  * @param {Doc} d
  * @returns {[number, number] | null} [first position, one past the last]
  */
 export function spanWindow(d) {
   const extent = d.extent || 0; if (!extent) return null;
-  const cpl = measure(), box = docBox(d.addr), f = estimate(extent, box, cpl);
+  const head = fit().head, cpl = measure(), box = docBox(d.addr), f = estimate(extent, box, cpl, head ? HEAD_ROWS * LINE_H : 0);
   const v = viewportWorld(0);
   if (!intersects(box, v)) return null;
   let lo = Infinity, hi = -1;
-  const band = fit().head ? HEAD_ROWS * LINE_H * f.fs : 0;
+  const band = head ? HEAD_ROWS * LINE_H * f.fs : 0;
   f.columns.forEach((c, i) => {
     const x = box.x + c.x, y = box.y + c.y;
     if (x + c.w >= v.x0 && x <= v.x1 && y + c.h >= v.y0 - band && y <= v.y1) { lo = Math.min(lo, i); hi = Math.max(hi, i); }
@@ -2383,7 +2385,7 @@ export function spanWindow(d) {
   const end = hi < 0 ? extent + 1 : Math.min(extent + 1, estimatedSpan(hi + 1, cpl)[1]);
   const up = (/** @type {number} */ n) => Math.min(extent + 1, Math.ceil((n - 1) / SPAN_BLOCK) * SPAN_BLOCK + 1);
   if (end <= WHOLE_CAP + 1 || hi < 0) return [1, Math.max(up(Math.min(end, WHOLE_CAP + 1)), Math.min(extent + 1, 1 + SPAN_BLOCK))];
-  const from = Math.max(1, Math.floor((estimatedSpan(lo, cpl)[0] - 1) / SPAN_BLOCK) * SPAN_BLOCK + 1);
+  const from = Math.max(1, Math.floor((estimatedSpan(Math.max(0, lo - 1), cpl)[0] - 1) / SPAN_BLOCK) * SPAN_BLOCK + 1);
   return [from, up(end)];
 }
 

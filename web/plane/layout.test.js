@@ -25,7 +25,7 @@
 // a column's last line read where an empty line after it pushes the next out,
 // columns left to right then row by row, the standard size then steps each at
 // least doubling the capacity, the outline one edge, the estimate never more
-// columns than the text, the head's band reserved above the first row inside
+// columns than the text, the head's band reserved above every row inside
 // the room; positions placed and read back, unheld positions
 // estimated, the view's window over a fold, the paging key's next column, a
 // document's first line where its label sets it, and a passage held across
@@ -36,7 +36,7 @@ import assert from 'node:assert/strict';
 import * as LAY from './layout.js';
 import {
   layoutOf, heightOf, wrap, breakBetween, cssMeasures, lineBox, columnsOf, fold, estimate, estimatedSpan, slot, outline, outlineRects, boundsOf, firstRow, padded,
-  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, leadOf, standardFs, stepAt, stepFor, gapOf, edgeOf, fitFor, columnW, advanceOf, setAdvance, inFirstRow, endsColumn,
+  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, leadOf, standardFs, stepAt, stepFor, gapOf, edgeOf, fitFor, columnW, advanceOf, setAdvance, endsColumn,
   MEASURE, BORDER, LINE_H, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, EDGE, EDGE_GAP, STANDARD_GRID, STANDARD_FS, ADVANCE_WEIGHTS, HEAD_CPL,
 } from './layout.js';
 import { DOC_W, DOC_H } from './projection.js';
@@ -552,34 +552,39 @@ test('the paging key continues at the next column\'s top where the view shows it
   const f = fold(layoutOf(article(Array.from({ length: 30 }, (_, i) => words(30, i))).rows).lines, ROOM);
   const c0 = f.columns[0], c1 = f.columns[1], half = (GUTTER / 2) * f.fs;
   const whole = { x0: c0.x - half, y0: c0.y - half, x1: c0.x + c0.w + half, y1: c0.y + c0.h + 10 * half };
-  assert.deepEqual(pageTarget(f, whole, 1), { column: 1, x: c1.x + c1.w / 2, top: c1.y - half, first: true }, 'the foot in view: the next column\'s top, half a gutter above its text');
+  assert.deepEqual(pageTarget(f, whole, 1), { column: 1, x: c1.x + c1.w / 2, top: c1.y - half }, 'the foot in view: the next column\'s top, half a gutter above its text');
   const part = { ...whole, y1: c0.y + c0.h / 2 };
   assert.equal(pageTarget(f, part, 1), null, 'the foot below the view: page within the column');
   const second = { x0: c1.x - half, y0: c1.y - half, x1: c1.x + c1.w + half, y1: c1.y + c1.h };
-  assert.deepEqual(pageTarget(f, second, -1), { column: 0, x: c0.x + c0.w / 2, top: c0.y - half, first: true }, 'PageUp from a column\'s top: the previous column\'s top');
+  assert.deepEqual(pageTarget(f, second, -1), { column: 0, x: c0.x + c0.w / 2, top: c0.y - half }, 'PageUp from a column\'s top: the previous column\'s top');
   const last = f.columns[f.columns.length - 1];
   assert.equal(pageTarget(f, { x0: last.x - half, y0: last.y - half, x1: last.x + last.w + half, y1: last.y + last.h + 4 * half }, 1), null, 'past the last column: nothing to continue at');
-  // the head's band above the first row: a first-row column's top with it, a later row's without
+  // the head's band above every row: each column's top with its row's band
   const b = fold(layoutOf(article(Array.from({ length: 60 }, (_, i) => words(30, i))).rows).lines, ROOM, { band: 2 * LINE_H }), g = (GUTTER / 2) * b.fs;
   const k = b.across - 1, end = b.columns[k], next = b.columns[k + 1], before = b.columns[k - 1];
-  assert.ok(next && !inFirstRow(b, next), 'a column past the first row');
-  assert.deepEqual(pageTarget(b, { x0: end.x - g, y0: end.y - g, x1: end.x + end.w + g, y1: end.y + end.h + 4 * g }, 1), { column: k + 1, x: next.x + next.w / 2, top: next.y - g, first: false }, 'into the second row: half a gutter above its text, no band');
-  assert.deepEqual(pageTarget(b, { x0: end.x - g, y0: end.y - 2 * g, x1: end.x + end.w + g, y1: end.y + end.h }, -1), { column: k - 1, x: before.x + before.w / 2, top: before.y - g - b.band, first: true }, 'within the first row: half a gutter above its band');
+  assert.ok(next && next.y > end.y, 'a column past the first row');
+  assert.deepEqual(pageTarget(b, { x0: end.x - g, y0: end.y - g, x1: end.x + end.w + g, y1: end.y + end.h + 4 * g }, 1), { column: k + 1, x: next.x + next.w / 2, top: next.y - g - b.band }, 'into the second row: half a gutter above its row\'s band');
+  assert.deepEqual(pageTarget(b, { x0: end.x - g, y0: end.y - 2 * g, x1: end.x + end.w + g, y1: end.y + end.h }, -1), { column: k - 1, x: before.x + before.w / 2, top: before.y - g - b.band }, 'within the first row: half a gutter above its band');
 });
 
-test('a band reserved above the first row for the head stands every column that much lower, inside its room: the first row\'s padded slots run up through it, so the outline holds it and the head stands on the document\'s ground; positions placed and read back; and the step\'s capacity counts it (issue #436; FP-26)', () => {
+test('a band reserved above every row of columns for the head stands each row\'s columns below a band of their own, inside its room: every padded slot runs up through its row\'s band, so the outline holds each band and the head stands on the document\'s ground above whichever column it stands across; positions placed and read back; and the step\'s capacity counts every band (issue #689; FP-26)', () => {
   const lines = layoutOf(article(Array.from({ length: 60 }, (_, i) => words(30, i))).rows).lines, band = 2 * LINE_H;
   const f = fold(lines, ROOM, { band }), plain = fold(lines, ROOM), g = (GUTTER / 2) * f.fs;
   assert.ok(close(f.band, band * f.fs) && plain.band === 0, 'the band in world units, none where none is asked');
-  f.columns.forEach((c, i) => assert.ok(close(c.y, (Math.floor(i / f.across) * (COLUMN_H + GUTTER) + GUTTER / 2 + band) * f.fs), `column ${i} the band lower than its row sets it`));
+  assert.ok(f.columns.length > 2 * f.across, `three rows of columns or more: ${f.columns.length} columns, ${f.across} across`);
+  f.columns.forEach((c, i) => assert.ok(close(c.y, (Math.floor(i / f.across) * (COLUMN_H + GUTTER + band) + GUTTER / 2 + band) * f.fs), `column ${i} below its row's band, each row before it a band deeper`));
   for (const c of f.columns) {
-    const q = padded(f, c), first = inFirstRow(f, c);
-    assert.ok(close(q.y, c.y - g - (first ? f.band : 0)) && close(q.h, c.h + 2 * g + (first ? f.band : 0)), `${first ? 'a first-row' : 'a later'} column's slot ${first ? 'through' : 'without'} the band`);
+    const q = padded(f, c);
+    assert.ok(close(q.y, c.y - g - f.band) && close(q.h, c.h + 2 * g + f.band), 'every column\'s slot through its row\'s band');
     assert.ok(q.y >= -1e-6 && q.x >= -1e-6 && q.y + q.h <= ROOM.h + 1e-6 && q.x + q.w <= ROOM.w + 1e-6, 'every slot inside the room');
+  }
+  for (let i = f.across; i < f.columns.length; i++) {
+    const up = padded(f, f.columns[i - f.across]);
+    assert.ok(close(padded(f, f.columns[i]).y, up.y + up.h), `column ${i}'s slot meets the one above it: its band stands on the document's ground`);
   }
   assert.ok(close(boundsOf(f).y, 0) && close(firstRow(f).h, (COLUMN_H + GUTTER) * f.fs + f.band), 'the outline from the room\'s top, its first row the band\'s depth taller');
   const area = outlineRects(f).reduce((a, r) => a + r.w * r.h, 0), slots = f.columns.reduce((a, c) => { const q = padded(f, c); return a + q.w * q.h; }, 0);
-  assert.ok(Math.abs(area - slots) < 1e-6 * slots, 'the outline\'s rects the padded slots, the band among them');
+  assert.ok(Math.abs(area - slots) < 1e-6 * slots, 'the outline\'s rects the padded slots, every band among them');
   let checked = 0;
   for (let i = 0; i < f.lines.length; i += 7) {
     const l = f.lines[i];
@@ -589,7 +594,11 @@ test('a band reserved above the first row for the head stands every column that 
     checked++;
   }
   assert.ok(checked > 10, `${checked} positions`);
-  assert.ok(stepAt(ROOM, 0, MEASURE_CPL, band).fs < stepAt(ROOM, 0).fs && STANDARD_GRID[1] * (COLUMN_H + GUTTER) + band <= ROOM.h / stepAt(ROOM, 0, MEASURE_CPL, band).fs + 1e-9, 'the standard size holds its rows beneath the band');
+  assert.ok(stepAt(ROOM, 0, MEASURE_CPL, band).fs < stepAt(ROOM, 0).fs && STANDARD_GRID[1] * (COLUMN_H + GUTTER + band) <= ROOM.h / stepAt(ROOM, 0, MEASURE_CPL, band).fs + 1e-9, 'the standard size holds its rows, each beneath its band');
+  for (const k of [1, 2, 3]) {
+    const s = stepAt(ROOM, k, MEASURE_CPL, band), down = Math.ceil(s.capacity / s.across);
+    assert.ok(s.capacity >= STANDARD_GRID[0] * STANDARD_GRID[1] * 2 ** k && down * (COLUMN_H + GUTTER + band) <= ROOM.h / s.fs + 1e-9, `step ${k}: its capacity's rows, each beneath its band, inside the room`);
+  }
   const e = estimate(600, ROOM, MEASURE_CPL, band), e0 = estimate(600, ROOM);
   assert.ok(close(e.columns[0].y - e0.columns[0].y * (e.fs / e0.fs), e.band) && close(placeOf(e, 1).y - e.columns[0].y, placeOf(e0, 1).y * (e.fs / e0.fs) - e0.columns[0].y * (e.fs / e0.fs)), 'an estimate beneath the band, its positions where its columns are');
   assert.ok(close(slot(ROOM, MEASURE_CPL, band).columns[0].y, (GUTTER / 2 + band) * slot(ROOM, MEASURE_CPL, band).fs), 'a slot beneath the band');

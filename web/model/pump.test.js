@@ -90,7 +90,7 @@ import * as CAM from '../plane/camera.js';
 import * as TRAIL from '../nav/trail.js';
 import { accountCell, docBox, DOC_W } from '../plane/projection.js';
 import { lodOf, LOD_FAR_LO } from '../plane/lod.js';
-import { estimate, estimatedSpan, MEASURE_CPL } from '../plane/layout.js';
+import { estimate, estimatedSpan, MEASURE_CPL, LINE_H } from '../plane/layout.js';
 import { documentOf, memberOf, unitSpan, versionAddress } from './address.js';
 import { clauseOf } from '../text/layer.js';
 import { t } from '../strings.js';
@@ -1395,6 +1395,26 @@ test('the span window reads the estimate at the measure in force: at a 480 px vi
     const [a, b] = estimatedSpan(300, cpl), [a66, b66] = estimatedSpan(300);
     assert.ok(w && w[0] <= a && w[1] >= b, `the window holds column 300's positions at ${cpl} characters, ${a}–${b}: ${JSON.stringify(w)}`);
     assert.ok(w[1] < a66 || w[0] > b66, `and none of what column 300 would hold at the full measure, ${a66}–${b66}`);
+  } finally { CAM._reset(); }
+});
+
+test('where the corner stands at its document\'s head, its band above every row of columns, the span window holds the positions of the column the view stands over, under a band of one, two or three rows and from the column\'s left to its right (issue #689; FP-12)', () => {
+  const H = '1.0.1.0.12', extent = 20000;
+  REC.takeSpanSet(H, [{ subspace: 1, ordinal: 1, positions: extent }]);
+  const box = docBox(H);
+  try {
+    for (const rows of [1, 2, 3]) {
+      for (const k of [11, 12, 13]) {
+        for (const across of [0, 0.25, 0.5, 0.75, 1]) {
+          CAM._reset(); CAM.setViewport(390, 900);
+          const cpl = CAM.measure(), e = estimate(extent, box, cpl, rows * LINE_H), c = e.columns[k];
+          assert.ok(CAM.fit().head && e.band > 0 && c && e.columns.length > k + 1, `390 px: the corner at its head, a column ${k} past the fold's first row under a band of ${rows}`);
+          CAM.reach(e.fs); CAM.set(CAM.viewAt({ x: box.x + c.x + c.w * across, y: box.y + c.y + c.h / 2 }, e.fs));
+          const w = /** @type {[number, number]} */ (PUMP.spanWindow(REC.doc(H))), [a, b] = estimatedSpan(k, cpl);
+          assert.ok(w && w[0] <= a && w[1] >= b, `a band of ${rows} rows, the view over column ${k} ${across} of the way across: the window holds its positions ${a}–${b} — ${JSON.stringify(w)}`);
+        }
+      }
+    }
   } finally { CAM._reset(); }
 });
 

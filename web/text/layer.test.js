@@ -10,9 +10,14 @@
 // by the trail across a refit landing framed; a passage read below one bottom
 // of the one line, set again or returned to below another, kept at its
 // height from the visible view's centre; the corner at its document's
-// head below forty characters — its rows, across the column on the band its
-// fold reserves, its first row held below the line, a form opened beneath it,
-// the band's change re-anchoring the camera — and a kept word said where it
+// head below forty characters — its rows, each as tall as its slots, across
+// the column on the band its fold reserves above that column's row, over a
+// later row's column too and the paging key continuing into that band, its
+// held rows held below the line and the rows past them passing under them
+// clipped and never hidden, every row held below the reading size where they
+// are deeper than the band, a focus on a passed row's act brought in by that
+// row's own place, a form opened beneath it, the band's change re-anchoring
+// the camera — and a kept word said where it
 // changes; a reading scene's pane's view at its measure and its corner,
 // compact beside its column or at its document's head, measured in the
 // corner's own type whatever its view measures the article at, no row naming
@@ -115,7 +120,7 @@ import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnO
 import { CORNER, ADDRESS, COL, HOLD, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, lineHeight, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
-import { MOUNTS_PER_FRAME } from '../plane/lod.js';
+import { MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { CLAUSE_READING, articleHTML, faceRuns, cornerTitle, titleHTML, titleRuns } from './article.js';
 import * as FACES from '../overlays/faces.js';
 import { farSays } from '../beams/held.js';
@@ -2312,7 +2317,7 @@ test('a resize that narrows the measure frames the view across the column being 
   assert.ok(Math.abs(line() - y) < 1e-6 && Math.abs(CAM.cam.scale * LAYER.foldOf(REC.doc(D)).fs - em) < 1e-9, 'the line at its height, at its size');
 }));
 
-test('below forty characters beside its column the corner stands at its document\'s head: across the column, inside the view below the one line, on the band its fold reserves above its first row, its first row holding the kept word in its slot; its first row held below the line as the document scrolls, the rest passing under it; a form its act opens beneath its rows; and no held label set over that document\'s text (issue #436; FP-26, FP-31, FP-37)', () => onHead(() => {
+test('below forty characters beside its column the corner stands at its document\'s head: across the column, inside the view below the one line, on the band its fold reserves above the column\'s row, its first row holding the kept word in its slot; its held rows held below the line as the document scrolls, what it covers their foot; a form its act opens beneath its rows; and no held label set over that document\'s text (issue #436, #689; FP-26, FP-31, FP-37)', () => onHead(() => {
   WRITE.setKept(D, { word: 'kept', reason: null });
   CAM.setViewport(480, 900);
   assert.ok(CAM.fit().head, '480 px: the corner at the head');
@@ -2327,11 +2332,12 @@ test('below forty characters beside its column the corner stands at its document
   const row0 = /** @type {string} */ (el.innerHTML).split('class="hrow" data-row="1"')[0];
   assert.ok(row0.includes('data-row="0"') && row0.includes('data-kept="kept"') && row0.includes(`>${esc(t('B3.kept'))}<`), `the kept word in its slot on the first row: ${row0.slice(0, 400)}`);
   assert.equal(LAYER.heldOf(D), null, 'no held label over the text: the head names it');
-  // scrolled down past the band: the first row held below the line, over the text
+  // scrolled down past the band: the held rows held below the line, over the text
   CAM.set({ ...CAM.view(), y: CAM.cam.y + 200 / CAM.cam.scale });
   LAYER.frame();
-  const held = /** @type {{x: number, y: number}} */ (standsAt(LAYER.cornerOf(D)));
-  assert.ok(Math.abs(held.y - (LINE_PX + 8)) <= 1 && LAYER.headClear(D) === held.y + LINE_H * f.fs * CAM.cam.scale, `held below the line, its first row what it covers: ${JSON.stringify(held)}, ${LAYER.headClear(D)}`);
+  const held = /** @type {{x: number, y: number}} */ (standsAt(LAYER.cornerOf(D))), rows = headRows(LAYER.cornerOf(D)).filter((r) => r.held);
+  assert.ok(rows.length >= 1 && rows[0].k === 0, `the first row held: ${JSON.stringify(rows)}`);
+  assert.ok(Math.abs(held.y - (LINE_PX + 8)) <= 1 && Math.abs(/** @type {number} */ (LAYER.headClear(D)) - (held.y + rows.reduce((n, r) => n + r.h, 0))) < 1e-6, `held below the line, its held rows what it covers: ${JSON.stringify(held)}, ${LAYER.headClear(D)}`);
   // the kept word's act opens its statement beneath the head's rows
   LAYER.openStatement(D, true);
   LAYER.frame();
@@ -2339,6 +2345,161 @@ test('below forty characters beside its column the corner stands at its document
   assert.ok(String(opened.innerHTML).includes(`<div class="opened"`) && String(opened.innerHTML).includes(esc(sentence('B3.save.kept'))), 'the statement opened beneath the rows');
   assert.ok(/** @type {number} */ (LAYER.headClear(D)) > held.y + LINE_H * f.fs * CAM.cam.scale, 'what it covers runs to the form\'s foot');
   LAYER.openStatement(D, false);
+}));
+
+/**
+ * A corner's rows at its document's head as the stand-in holds them after a frame (`standIn`): each its row, whether it is
+ * marked held, its height as written, and the top, the clip and the visibility the frame set on it
+ * @param {any} el the corner's element
+ */
+function headRows(el) {
+  return [...String(el.innerHTML).matchAll(/<div class="hrow" data-row="(\d+)"( data-held="1")?(?: role="toolbar")? style="height:([\d.e-]+)px/g)].map((m) => {
+    const p = el.part('row' + m[1]);
+    return { k: Number(m[1]), held: !!m[2], h: Number(m[3]), top: p ? parseFloat(p.style.top) : NaN, clip: p ? p.style.clipPath || '' : '', hidden: !!p && p.style.visibility === 'hidden' };
+  });
+}
+
+/**
+ * D a draft held moved, its face naming a device by a label wider than its head at 390 px: at its head its first row and the
+ * face's two held, the chip's act on a row past them (`onHead`)
+ */
+function movedLong() {
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  LAYER.readers({ top: () => LINE_PX, face: FACES.cornerFace });
+  WRITE.setHeld(D, /** @type {any} */ (F.decodeHeldRows([{ held: 1, doc: D, base: 7, frame: { op: 'insert', doc: D, at: { ordinal: '1', subspace: '1' }, values: ['held'], as_of: 7, id: 'p.1' }, cause: 'moved', sent: true, time: 1, refusal: { kind: 'refused', name: 'arrangement_moved', status: 200, code: 'arrangement_moved', detail: null, op: 'insert', site: { as_of: 7, current: 9 }, body: null }, sendable: false, hands: [{ key: 'other', fingerprint: 'ab'.repeat(32), label: 'the long kitchen laptop by the window' }] }])));
+  WRITE.setKept(D, { word: 'not yet kept', reason: null, cause: { token: 'moved', arm: null } });
+}
+
+/** D an edition of three members a link names as a whole, its corner offering to read the third: at its head at 260 px its kind and its state on its held first row, the link's count and "1 more" on the row past it (`onHead`) */
+function editionOffering() {
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: EXTENT, placed: null, baseExtent: null, source: null, asOf: 1 });
+  const W1 = OTHER_HOME + '.0.2.900';
+  REC.takeLinks(D, [W1]);
+  REC.takeLink({ addr: W1, from: [span(OTHER_HOME, 1, 1)], to: [whole(D)], type: CITE });
+  REC.takeMembers(D, 3);
+  LAYER.readers({ top: () => LINE_PX, newer: (a) => (a === D ? 3 : null) });
+}
+
+/** the camera moved alone so D's head's band, across the column the corner stands across, tops the screen at `at` px */
+function bandAt(/** @type {number} */ at) {
+  const f = LAYER.foldOf(REC.doc(D)), col = f.columns[/** @type {NonNullable<ReturnType<typeof LAYER.cornerAt>>} */ (LAYER.cornerAt(D)).column];
+  const now = CAM.sy(docBox(D).y + col.y - f.band);
+  CAM.set({ ...CAM.view(), y: CAM.cam.y + (now - at) / CAM.cam.scale });
+  LAYER.frame();
+}
+
+test('at its document\'s head the rows past its held ones pass under them as its band rises, each at its own place, its part above their foot clipped away and never hidden, so each act keeps its place; the held rows marked held, as tall as the slots beginning on them, standing still below the one line, the corner\'s box and what it covers their foot; standing unheld, every row at its own place, unclipped (issue #689; FP-26, FP-37)', () => onHead(() => {
+  movedLong();
+  CAM.setViewport(390, 900);
+  landAt(null);
+  LAYER.frame();
+  const el = /** @type {any} */ (LAYER.cornerOf(D)), f = LAYER.foldOf(REC.doc(D)), P = LINE_H * f.fs * CAM.cam.scale, hold = LINE_PX + HOLD.gap;
+  const rows = headRows(el), held = rows.filter((r) => r.held), past = rows.filter((r) => !r.held);
+  const H = held.reduce((n, r) => n + r.h, 0), last = past[past.length - 1];
+  assert.ok(LAYER.cornerAt(D)?.head && held.length >= 1 && held.every((r, i) => rows[i] === r) && past.length >= 1 && String(el.innerHTML).split(`data-row="${last.k}"`)[1].includes('<button'), `at its head, its held rows first, then a row past them holding an act — ${JSON.stringify(rows)}`);
+  assert.ok(Math.abs(parseFloat(el.style.height) - H) < 1e-6 && Math.abs(past[0].k * P - H) < 1e-6, `the corner's box the held rows' height, ${H} px, the first row past them beginning at their foot: ${el.style.height}`);
+  // unheld: its band below the hold, every row where the band sets it
+  const at0 = CAM.sy(docBox(D).y + f.columns[/** @type {any} */ (LAYER.cornerAt(D)).column].y - f.band);
+  assert.ok(at0 > hold, `the band's top below the hold: ${at0}`);
+  assert.ok(rows.every((r) => Math.abs(r.top - r.k * P) < 1e-6 && !r.clip && !r.hidden), `standing unheld, every row at its own place, none clipped — ${JSON.stringify(rows)}`);
+  // the band risen half a pitch past the hold: the held rows held there, the row past them half a pitch above its place, clipped at their foot
+  for (const rise of [P / 2, 2 * P, last.k * P + P]) {
+    bandAt(hold - rise);
+    const now = headRows(el), y = standsAt(el)?.y ?? NaN, r = /** @type {(typeof now)[number]} */ (now.find((x) => x.k === last.k));
+    assert.ok(Math.abs(y - hold) <= 0.5 && now.filter((x) => x.held).every((x) => Math.abs(x.top - x.k * P) < 1e-6 && !x.clip), `risen ${rise} px past the hold: the held rows held there, standing still — ${y}, ${JSON.stringify(now)}`);
+    const cut = /^inset\(([-\d.e]+)px 0 0 0\)$/.exec(r.clip);
+    assert.ok(Math.abs(r.top - (r.k * P - rise)) < 1e-6 && cut && Math.abs(Number(cut[1]) - (H - r.top)) < 1e-6 && now.every((x) => !x.hidden), `risen ${rise} px: the row past them at its own place, ${rise} px above where it stood, its part above their foot clipped away, no row hidden — ${JSON.stringify(r)}`);
+    assert.ok(Math.abs(/** @type {number} */ (LAYER.headClear(D)) - (y + H)) < 1e-6, `what it covers: the held rows' foot — ${LAYER.headClear(D)}`);
+  }
+}));
+
+test('a head\'s rows are each as tall as the slots beginning on it take: a held face wrapping onto the row after it stands in a row of its slot\'s height, and the rows after it begin below it (issue #689; FP-26)', () => onHead(() => {
+  movedLong();
+  CAM.setViewport(390, 900);
+  landAt(null);
+  LAYER.frame();
+  const el = /** @type {any} */ (LAYER.cornerOf(D)), f = LAYER.foldOf(REC.doc(D)), P = LINE_H * f.fs * CAM.cam.scale, html = String(el.innerHTML);
+  const rows = headRows(el), face = rows.find((r) => html.split(`data-row="${r.k}"`)[1].split('<div class="hrow"')[0].includes('class="face'));
+  const slot = face ? /class="hslot wraps" style="left:[\d.e-]+px;width:[\d.e-]+px;height:([\d.e-]+)px/.exec(html.split(`data-row="${face.k}"`)[1]) : null;
+  assert.ok(face && slot && Number(slot[1]) > P + 1e-6, `the face wraps onto the row after its own: ${JSON.stringify(face)}, its slot ${slot && slot[1]} px`);
+  assert.ok(face && slot && Math.abs(face.h - Number(slot[1])) < 1e-6, `its row as tall as its slot: ${face && face.h} px`);
+  const next = rows.find((r) => face && r.k > face.k);
+  assert.ok(face && next && Math.abs(next.top - (face.top + face.h)) < 1e-6, `the row after it begins at its foot: ${JSON.stringify(next)}`);
+}));
+
+test('below the reading size a head whose rows are deeper than the band above its column holds every row with the first — none standing unheld on the column\'s text, none clipped or hidden — together below the one line as the band rises, what the head covers their foot; back at the reading size the rows past the held ones pass under them again (issue #689; FP-26, FP-37)', () => onHead(() => {
+  movedLong();
+  CAM.setViewport(390, 900);
+  landAt(null);
+  LAYER.frame();
+  const el = /** @type {any} */ (LAYER.cornerOf(D)), f = LAYER.foldOf(REC.doc(D)), reading = CAM.view(), hold = LINE_PX + HOLD.gap, band = f.band / (LINE_H * f.fs);
+  /** the head's depth in rows at the camera's scale: every row the frame wrote, each as tall as it set it */
+  const deep = () => headRows(el).reduce((n, r) => n + r.h, 0) / (LINE_H * f.fs * CAM.cam.scale);
+  assert.ok(LAYER.cornerAt(D)?.head && headRows(el).some((r) => !r.held) && deep() <= band + 1e-6, `at the reading size its rows inside the band, ${deep()} of ${band}, a row past the held ones — ${JSON.stringify(headRows(el))}`);
+  // the camera's em lowered about the view's centre until the head, narrower, wraps deeper than the band, the document still at its reading scale
+  let s = 1;
+  while (deep() <= band + 1e-6 && f.fs * reading.scale * (s - 0.05) >= LOD_TXT_LO) { s -= 0.05; CAM.set({ ...reading, scale: reading.scale * s }); LAYER.frame(); }
+  const P = LINE_H * f.fs * CAM.cam.scale, rows = headRows(el), H = rows.reduce((n, r) => n + r.h, 0);
+  assert.ok(LAYER.cornerAt(D)?.head && deep() > band + 1e-6, `at ${s.toFixed(2)} of the reading scale its rows deeper than the band: ${deep()} of ${band}`);
+  assert.ok(rows.every((r) => r.held && !r.clip && !r.hidden && Math.abs(r.top - r.k * P) < 1e-6), `every row held with the first, each at its own place, none clipped or hidden — ${JSON.stringify(rows)}`);
+  assert.ok(Math.abs(parseFloat(el.style.height) - H) < 1e-6, `the corner's box every row's: ${el.style.height}, ${H} px`);
+  // the band risen two rows past the hold: every row held there together, none passing under another
+  bandAt(hold - 2 * P);
+  const now = headRows(el), y = standsAt(el)?.y ?? NaN;
+  assert.ok(Math.abs(y - hold) <= 0.5 && now.every((r) => r.held && !r.clip && !r.hidden && Math.abs(r.top - r.k * P) < 1e-6), `risen past the hold: every row held there together — ${y}, ${JSON.stringify(now)}`);
+  assert.ok(Math.abs(/** @type {number} */ (LAYER.headClear(D)) - (y + H)) < 1e-6, `what the head covers: every row's foot — ${LAYER.headClear(D)}`);
+  // back at the reading size, its rows inside the band again: the rows past the held ones unheld
+  CAM.set(reading);
+  LAYER.frame();
+  assert.ok(deep() <= band + 1e-6 && headRows(el).some((r) => !r.held), `back at the reading size, a row past the held ones unheld — ${JSON.stringify(headRows(el))}`);
+}));
+
+test('over a column of a later row of its fold the corner stands at its document\'s head in that column\'s own band — its first row at the band\'s top, every row inside the band and none hidden — and a focus on an act of a row past its held rows is brought in by that row\'s own place, below them, a held row\'s by none (issue #689; FP-20, FP-26)', () => onHead(() => {
+  editionOffering();
+  CAM.setViewport(260, 900);
+  landAt(null);
+  LAYER.frame();
+  const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), k = f.across + 1, col = f.columns[k], scale = CAM.cam.scale, P = LINE_H * f.fs * scale;
+  assert.ok(f.band > 0 && col && col.y > f.columns[0].y, `a column of the fold's second row, under a band: ${f.band}`);
+  // the camera over that column, its text's top 200 px down the screen: its band below the hold
+  CAM.set({ x: box.x + col.x + col.w / 2, y: box.y + col.y + (450 - 200) / scale, scale });
+  LAYER.frame();
+  const el = /** @type {any} */ (LAYER.cornerOf(D)), placed = LAYER.cornerAt(D), at = CAM.sy(box.y + col.y - f.band), y = standsAt(el)?.y ?? NaN, rows = headRows(el);
+  assert.ok(placed && placed.head && placed.column === k && Math.abs(y - Math.round(at)) <= 0.5, `the corner at its head across column ${k}, at its band's top: ${y}, the band at ${at} — ${JSON.stringify(placed)}`);
+  assert.ok(rows.length >= 2 && rows.every((r) => !r.hidden && !r.clip && y + r.top >= at - 1 && y + r.top + r.h <= CAM.sy(box.y + col.y) + 1), `every row inside the band above the column's text, none hidden — ${JSON.stringify(rows)}`);
+  // risen until the row past the held one has passed wholly under it: its place below them, from its own place
+  const held = rows.filter((r) => r.held), row = /** @type {(typeof rows)[number]} */ (rows.find((r) => !r.held)), H = held.reduce((n, r) => n + r.h, 0);
+  assert.ok(String(el.innerHTML).split(`data-row="${row.k}"`)[1].includes('data-more'), `the row past the held one holds "1 more": ${el.innerHTML}`);
+  bandAt(LINE_PX + HOLD.gap - (row.k + 1) * P);
+  const c = /** @type {{x: number, y: number}} */ (standsAt(el)), rise = (row.k + 1) * P;
+  el.contains = (/** @type {unknown} */ x) => x === el.part('row' + row.k) || x === el.part('row0');
+  const inRow = (/** @type {number} */ n) => /** @type {any} */ ({ closest: (/** @type {string} */ s) => (s === '[data-corner]' ? el : s === '.hrow' ? el.part('row' + n) : null) });
+  const at2 = LAYER.headRowOf(inRow(row.k));
+  assert.ok(at2 && Math.abs(at2.rect.y - (c.y - rise + row.k * P)) < 1e-6 && at2.rect.x === c.x && Math.abs(at2.rect.w - parseFloat(el.style.width)) < 1e-6 && Math.abs(at2.rect.h - row.h) < 1e-6,
+    `an act on the row past the held one: that row's own place, ${rise} px above where it stood, across the head — ${JSON.stringify(at2)}`);
+  assert.ok(at2 && Math.abs(at2.clear - (c.y + H)) < 1e-6 && at2.clear === LAYER.headClear(D), `to be brought below the held rows' foot: ${at2 && at2.clear}`);
+  assert.equal(LAYER.headRowOf(inRow(0)), null, 'an act on a held row: none — the corner\'s box brings it in');
+  assert.equal(LAYER.headRowOf(/** @type {any} */ ({ closest: (/** @type {string} */ s) => (s === '[data-corner]' ? el : null) })), null, 'the corner\'s element itself: none');
+}));
+
+test('at reading scale the paging key continues into a later row\'s column with its row\'s band, the head standing in it below the one line: half a gutter below the visible view\'s top, its first row at the band\'s top (issue #689; FP-26, FP-37)', () => onHead(() => {
+  editionOffering();
+  CAM.setViewport(260, 900);
+  landAt(null);
+  LAYER.frame();
+  const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[f.across - 1], next = f.columns[f.across], scale = CAM.cam.scale;
+  assert.ok(next && next.y > c.y, 'the first row\'s last column, then a column of the second row');
+  // the camera over the first row's last column, its foot in view
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h - (800 - 450) / scale, scale });
+  LAYER.frame();
+  const to = /** @type {NonNullable<ReturnType<typeof LAYER.pageTarget>>} */ (LAYER.pageTarget(1));
+  assert.ok(to, 'a target');
+  CAM.set(to);
+  LAYER.frame();
+  const band = CAM.sy(box.y + next.y - f.band), g = (GUTTER / 2) * f.fs * scale, y = standsAt(LAYER.cornerOf(D))?.y ?? NaN;
+  assert.ok(Math.abs(band - (LINE_PX + g)) < 1e-6, `the band above the next column half a gutter below the one line: ${band}, the line at ${LINE_PX}`);
+  assert.ok(LAYER.cornerAt(D)?.column === f.across && Math.abs(y - Math.round(band)) <= 0.5, `the head across that column at its band's top, below the hold: ${y} — ${JSON.stringify(LAYER.cornerAt(D))}`);
 }));
 
 test('a standing corner\'s kept word is said once in the status region where it changes, beside its column and at its document\'s head alike; never at the frame it first stands, nor for a state cleared (issue #436; FP-36)', () => onHead(({ said }) => {

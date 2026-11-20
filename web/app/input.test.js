@@ -52,7 +52,10 @@
 // it, while one the platform's selection stands through keeps it;
 // and a focus landing in a corner the
 // view does not show whole pans the camera by the least that brings it in below
-// the one line, never while a flight runs. On the DOM under `web/test/`, the
+// the one line, never while a flight runs. On the DOM under `web/test/`: a
+// focus on an act of a row a corner at its document's head holds past its
+// held rows, passed under them, pans the camera by the least that brings that
+// row's own place in below them, one on a held row's act moving nothing; the
 // test standing for the platform's selection: a drag forward or backward, a
 // double-click and a Shift+click — from the live caret, the kept caret, a
 // selection's anchor or nothing — in a draft the person may edit, and a Shift
@@ -95,7 +98,7 @@ import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
 import { accountCell, boardCell, docBox } from '../plane/projection.js';
-import { outlineRects } from '../plane/layout.js';
+import { outlineRects, LINE_H } from '../plane/layout.js';
 import { t, tHTML, tRuns, addressedHTML, heard, opening } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { spanOfBlock } from '../text/span.js';
@@ -1462,6 +1465,61 @@ test('a focus landing in a corner the view does not show whole moves the camera 
   } finally {
     CAM._reset();
     globalThis.document = platform.document; globalThis.window = platform.window;
+  }
+});
+
+test('a focus landing on an act of a row a corner at its document\'s head holds past its held rows, passed wholly under them, pans the camera down alone by the least that brings that row\'s own place in below the held rows, where the next frame stands it unclipped; one on a held row\'s act, its box in view, moves nothing (issue #689; FP-20, FP-26)', () => {
+  const dom = page({ width: 260, height: 900 }), D = '1.0.1.0.3', OTHER = '1.0.2.0.5', W1 = OTHER + '.0.2.900';
+  const text = Array.from({ length: 84 }, (_, i) => Array.from({ length: 30 }, (_, j) => 'abcdefghij'.slice(0, 2 + ((j * 7 + i) % 8))).join(' ')).join('\n\n'), n = byteLength(text);
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  dom.install();
+  try {
+    REC._reset(); WRITE._reset(); LK._reset(); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    // D an edition of three members a link names as a whole, its corner offering the third: at 260 px its head's first row
+    // held, the link's count and "1 more" on the row past it
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }]);
+    REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: n, placed: null, baseExtent: null, source: null, asOf: 1 });
+    REC.takeLinks(D, [W1]);
+    REC.takeLink({ addr: W1, from: [{ start: OTHER + '.0.1.1', width: '0.0.0.0.0.0.0.1', doc: OTHER, account: '1.0.2', whole: false, subspace: 1, ordinal: 1, positions: 1 }], to: [{ start: D, width: '0.0.0.0.1', doc: D, account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null }], type: '1.1.0.1.0.1.0.3.13' });
+    REC.takeMembers(D, 3);
+    CAM._reset(); CAM.setViewport(260, 900);
+    const layer = dom.element('div'), corners = dom.element('div');
+    layer.clientWidth = 260; layer.clientHeight = 900;
+    dom.document.body.appendChild(layer); dom.document.body.appendChild(corners);
+    LAYER.attach(/** @type {any} */ (layer), /** @type {any} */ (corners));
+    LAYER.readers({ top: () => 30, newer: (a) => (a === D ? 3 : null) });
+    // the one line, its bottom edge 30 px down the viewport
+    LINE.attach(/** @type {any} */ ({ ...listens(null), setAttribute() {}, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ bottom: 30 }) }), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(null), corners }));
+    const at = LAYER.frameOf(D, null);
+    CAM.set(CAM.viewAt(at, at.fs));
+    LAYER.frame();
+    const el = /** @type {any} */ (LAYER.cornerOf(D)), f = LAYER.foldOf(REC.doc(D)), P = LINE_H * f.fs * CAM.cam.scale, hold = 30 + 8;
+    // the corner's box as the platform lays it out: where the frame placed it, as wide and as tall as it set it
+    el.getBoundingClientRect = () => { const m = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(el.style.transform) || [0, 0, 0], x = Number(m[1]), y = Number(m[2]), w = parseFloat(el.style.width), h = parseFloat(el.style.height); return { left: x, top: y, width: w, height: h, right: x + w, bottom: y + h, x, y }; };
+    const more = el.querySelector('[data-more]'), row = more && more.closest('.hrow'), version = el.querySelector('.hrow[data-row="0"] button');
+    assert.ok(LAYER.cornerAt(D)?.head && more && row && row.dataset.row !== '0' && !row.hasAttribute('data-held') && version, `at its head, "1 more" on a row past its held one: ${el.innerHTML}`);
+    const k = Number(row.dataset.row), col = f.columns[/** @type {any} */ (LAYER.cornerAt(D)).column];
+    // the band risen until that row has passed wholly under the held row
+    const rise = (k + 1) * P, band = CAM.sy(docBox(D).y + col.y - f.band);
+    CAM.set({ ...CAM.view(), y: CAM.cam.y + (band - (hold - rise)) / CAM.cam.scale });
+    LAYER.frame();
+    const risen = CAM.view(), clear = /** @type {number} */ (LAYER.headClear(D));
+    assert.ok(row.style.visibility !== 'hidden' && /^inset\(/.test(row.style.clipPath) && Math.abs(clear - (hold + P)) <= 0.5, `the row passed wholly under the held row, clipped and never hidden: ${row.style.top}, ${row.style.clipPath}, what the head covers ${clear}`);
+    corners.fire('focusin', { target: version });
+    assert.deepEqual(CAM.view(), risen, 'a focus on the held row\'s act, its box in view below the one line: nothing moves');
+    corners.fire('focusin', { target: more });
+    const moved = CAM.view(), down = (risen.y - moved.y) * moved.scale;
+    assert.ok(Math.abs(down - (P + rise - k * P)) < 1e-6 && moved.x === risen.x && moved.scale === risen.scale, `a focus on "1 more": the camera down alone by the least pan that brings its row's own place below the held row — ${down} px, the row's top ${P + rise - k * P} px above the held row's foot`);
+    LAYER.frame();
+    assert.ok(Math.abs(parseFloat(row.style.top) - k * P) < 1e-6 && !row.style.clipPath, `the next frame stands the row at the held row's foot, unclipped: ${row.style.top}, ${row.style.clipPath}`);
+  } finally {
+    LAYER.clear(); LAYER.readers({}); CAM._reset();
+    REC._reset(); WRITE._reset(); LK._reset();
+    dom.uninstall();
   }
 });
 

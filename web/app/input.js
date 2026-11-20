@@ -182,8 +182,12 @@
 // count a corner standing at its document's head folds its items into does;
 // and a focus landing in a corner the view does not show whole moves the
 // camera by the least pan that brings it in (P-CAM's `panInto`; FP-20), no
-// flight running. On the signs in the columns' edges (T-LAYER's): a withheld
-// origin's statement's mark, and a withheld run's key, open the run's card;
+// flight running — at a corner standing at its document's head, a focus on
+// an act of a row past its held rows by that row's own place, and one in the
+// form opened beneath its rows by the act's own box, each brought below the
+// held rows (T-LAYER's `headRowOf`). On the signs in the columns' edges
+// (T-LAYER's): a withheld origin's statement's mark, and a withheld run's
+// key, open the run's card;
 // C-67's pointer in the statement is a LEAP to the claim's home, the edition,
 // landed in whole and made at the run (B1-S7 → S6) — it carries no passage,
 // for an edition's bytes are fresh identity and no span of it resolves to the
@@ -383,11 +387,14 @@ export function attach(els) {
     const label = /** @type {HTMLElement | null} */ (holder ? null : target.closest('[data-held]'));
     if (label && label.dataset.held) followPointer(label.dataset.held, at);
   });
-  // a focus landing in a corner the view does not show whole brings it in by the least pan, no flight running (FP-20)
+  // a focus landing in a corner the view does not show whole brings it in by the least pan, no flight running (FP-20): an act
+  // on a row of a head past its held rows, or in the form opened beneath them, by that row's own place or the act's box,
+  // below the held rows (T-LAYER's `headRowOf`); anything else in a corner by the corner's box, below the one line
   els.corners.addEventListener('focusin', (e) => {
-    const holder = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-corner]'));
+    const target = /** @type {HTMLElement} */ (e.target), holder = /** @type {HTMLElement | null} */ (target.closest('[data-corner]'));
     if (!holder || CAM.flying()) return;
-    const q = holder.getBoundingClientRect(), moved = CAM.panInto({ x: q.left, y: q.top, w: q.width, h: q.height }, CAM.visibleView(LINE.bottom()));
+    const row = LAYER.headRowOf(target), q = holder.getBoundingClientRect();
+    const moved = row ? CAM.panInto(row.rect, CAM.visibleView(row.clear)) : CAM.panInto({ x: q.left, y: q.top, w: q.width, h: q.height }, CAM.visibleView(LINE.bottom()));
     if (moved.dx || moved.dy) CAM.markDirty();
   });
   window.addEventListener('wheel', (e) => {

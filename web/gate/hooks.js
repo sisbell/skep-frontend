@@ -468,18 +468,19 @@ export function install(deps) {
   }
   /**
    * A document's fold as the plane sets it (FP-12): its size, its step,
-   * its columns across, its room on the plane, its outline — its bounds, the
-   * disjoint rects that make it up and its first row — where its first line
-   * stands, which its label sets its first line at (P-LAY's `leadOf`) — and
-   * each column — its text box in world units, its count of lines, whether it
-   * is estimated.
+   * its columns across, the band its head takes above each row of them in
+   * world units (P-LAY's `Fold.band`), its room on the plane, its outline —
+   * its bounds, the disjoint rects that make it up and its first row — where
+   * its first line stands, which its label sets its first line at (P-LAY's
+   * `leadOf`) — and each column — its text box in world units, its count of
+   * lines, whether it is estimated.
    * @param {string} addr
    */
   function foldView(addr) {
     const f = LAYER.foldOf(REC.doc(addr)), box = docBox(addr), b = boundsOf(f), r0 = firstRow(f), l = leadOf(f);
     const at = (/** @type {{x: number, y: number, w: number, h: number}} */ r) => ({ x: box.x + r.x, y: box.y + r.y, w: r.w, h: r.h });
     return {
-      addr, fs: f.fs, step: f.step, across: f.across, lines: f.lines.length, cpl: f.cpl,
+      addr, fs: f.fs, step: f.step, across: f.across, band: f.band, lines: f.lines.length, cpl: f.cpl,
       room: { x: box.x, y: box.y, w: box.w, h: box.h }, outline: at(b), rects: outlineRects(f).map(at), row: at(r0), lead: { column: l.column, x: box.x + l.x, y: box.y + l.y, h: l.h },
       columns: f.columns.map((c) => ({ x: box.x + c.x, y: box.y + c.y, w: c.w, h: c.h, n: c.n, estimated: c.estimated, edge: at(edgeOf(f, c)) })),
     };
@@ -724,7 +725,7 @@ export function install(deps) {
     focus: () => ({ ring: FOCUS.ringShown(), plane: FOCUS.planeHolds(), standing: FOCUS.standing(), panel: WALK.panelShown() }),
     driftSample, overlapCheck, visible,
     beamAnchors, arrivalAnchors, barsOf, tailAnchors,
-    /** a document's fold as the plane sets it: its size, step, room, outline and columns */
+    /** a document's fold as the plane sets it: its size, step, the head's band, room, outline and columns */
     fold: foldView,
     /** the middle of the line holding a position, across its column; the first column's centre for none (T-LAYER's `centreOf`) */
     centreOf: (/** @type {string} */ addr, /** @type {number | null} */ pos = null) => LAYER.centreOf(addr, pos),
@@ -889,7 +890,7 @@ export function install(deps) {
     measure: () => ({ ...CAM.fit() }),
     /** a document's corner as T-LAYER placed it: the column it stands beside — or across, at its document's head — whether it stands compact, whether a reader's act opened it whole, and whether it stands at its head; null where none stands */
     corner: (/** @type {string} */ addr) => LAYER.cornerAt(addr),
-    /** where a corner standing at its document's head leaves the view clear of it, on screen: the bottom of its first row, or of a form opened beneath it (T-LAYER's `headClear`); null where none stands at the head */
+    /** where a corner standing at its document's head leaves the view clear of it, on screen: the bottom of its held rows, or of a form opened beneath its rows (T-LAYER's `headClear`); null where none stands at the head */
     headClear: (/** @type {string} */ addr) => LAYER.headClear(addr),
     /** a document's label T-LAYER held below the one line over its mounted article (FP-26): its parts' words, its rect on screen and whether it takes the pointer; null where none stands */
     heldLabel: (/** @type {string} */ addr) => LAYER.heldOf(addr),

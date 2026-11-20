@@ -380,11 +380,11 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    items above it alone (T-LAYER) */
 .corner .kept { display:block; padding-top:.3em; color:#cfd6df; white-space:normal; }
 /* A CORNER AT ITS DOCUMENT'S HEAD (FP-26, FP-31): across the column being read, its rows on the document's own ground at
-   the reading line's pitch, which T-LAYER sets — the first held below the one line, or the rows T-LAYER marks held at the
-   top of a reading scene's pane, and over the rest as they pass under them — its element the held rows' box, the focus's
-   ring on it; on the plane the document's name on the first row, drawn and never announced; each item in a slot of its
-   own width T-LAYER sets, its words on one line, one whose words are wider than the head wrapped on the rows it takes;
-   the forms its acts open whole beneath its rows, wrapped and never cut */
+   the reading line's pitch, which T-LAYER sets — the rows T-LAYER marks held, below the one line on the plane or at the top
+   of a reading scene's pane, over the rest as they pass under them, which T-LAYER clips at their foot and never hides — its
+   element the held rows' box, the focus's ring on it; on the plane the document's name on the first row, drawn and never
+   announced; each item in a slot of its own width T-LAYER sets, its words on one line, one whose words are wider than the
+   head wrapped on the rows it takes; the forms its acts open whole beneath its rows, wrapped and never cut */
 #corners .corner.head { padding:0; background:transparent; border-radius:0; }
 :is(#corners, .pane) .corner.head > .hrow { position:absolute; left:0; right:0; z-index:1; }
 :is(#corners, .pane) .corner.head > .hrow:is([data-row="0"], [data-held]) { z-index:2; }

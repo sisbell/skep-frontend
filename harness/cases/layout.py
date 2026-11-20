@@ -27,8 +27,15 @@ after a LEAP in the wide one framing the view across the landed line's column,
 its corner compact beside it inside the view, the line at its height (issue
 #436); in the narrow window a selection K-8 or the platform extends to a line
 under the head's held row bringing that line below the row by the camera moved
-down alone (issue #436); a corner standing left of the view tabbed to brought
-in by the camera moved across alone (issue #436); and Back made once the
+down alone (issue #436); in a window HEAD_ROWS_PX wide a draft's head's row
+past its held rows passing under them clipped and never hidden, Tab reaching
+each row's line of acts and a focus on the passed row's act bringing it in
+below them by the camera moved down alone, every row held with the first
+below the reading size where the head wraps deeper than its band, and over a
+column of a later row a head of several rows in that column's band (issue
+#689); a corner standing
+left of the view tabbed to brought in by the camera moved across alone (issue
+#436); and Back made once the
 window is put back lands on the
 passage left in the narrow one, which the view left there no longer reads —
 the same line under the visible view's centre, at the height it stood and at
@@ -568,6 +575,11 @@ NARROW_PX, PASSAGE = 480, 541
 # the window a resize narrows the measure to with the corner still beside its column (issue #436's design decision: "A refold
 # keeps the passage's line in place and frames sideways the way a LEAP does, with the corner included")
 REFIT_PX = 600
+# the window a head's rows are read passing under its held rows in (issue #689), and the label of the one other device a held
+# row moved names, too wide for a head there on one line: the face's compact form wraps onto a second row, which holds, so the
+# draft's chip stands on a row past the held ones; and the em, px, the camera is lowered to below the reading size, where the
+# head, narrower, wraps deeper than the band its fold reserves, still at its reading scale (P-LOD's LOD_TXT_LO, 8 px)
+HEAD_ROWS_PX, LONG_HAND, HEAD_ZOOM_EM = 390, 'the long kitchen laptop by the window', 10
 # the windows a LEAP onto lines set at no measure in force is held in (issue #296), the first where P-LAY's prediction of the
 # line holding the window run's first position stands half a line or more from the platform's: the seed's text sets that
 # line where the prediction does at some measures
@@ -4887,7 +4899,7 @@ def line_top(ctx, pos):
 
 def below_head(ctx, pos):
     """the camera moved up or down alone so the line holding a position of the first edition stands 2 px below what its
-    head covers (`headClear`) — its corner at its head, the first row held below the one line; what the head covers
+    head covers (`headClear`) — its corner at its head, its held rows held below the one line; what the head covers
     then, or None where no head stands"""
     clear = None
     for _ in range(4):
@@ -4968,6 +4980,178 @@ def head_guards(ctx, r):
     ctx.settle()
     ctx.frames(3)
     return {'window': NARROW_PX, 'block': b['pos'], 'before': prev['pos'], 'k8_down_px': down, 'platform_down_px': down4}
+
+
+# a corner at its document's head as the page lays it out (formatted with the document's address, as JSON): its box, what it
+# covers, where it stands, the one line's bottom, the viewport's height, how many of every corner's head rows compute hidden,
+# and each of its rows — its index, whether it is held, its box, its computed visibility and clip, and its acts, each its first
+# class, whether it is its line's stop and whether it holds the focus, and its box
+HEAD_ROWS_AT = '''((a) => { const e = document.querySelector(`#corners [data-corner="${a}"]`); if (!e) return null; const q = e.getBoundingClientRect(), f = document.activeElement;
+  return {head: e.classList.contains('head'), x: q.left, y: q.top, w: q.width, h: q.height, clear: window.__skep.headClear(a), placed: window.__skep.corner(a),
+          line: document.getElementById('line').getBoundingClientRect().bottom, vh: window.innerHeight,
+          hidden: [...document.querySelectorAll('#corners .corner.head > .hrow')].filter((r) => getComputedStyle(r).visibility === 'hidden').length,
+          rows: [...e.querySelectorAll(':scope > .hrow')].map((r) => { const b = r.getBoundingClientRect(), s = getComputedStyle(r);
+            return {k: Number(r.dataset.row), held: r.dataset.held === '1', y: b.top, h: b.height, visibility: s.visibility, clip: s.clipPath,
+                    acts: [...r.querySelectorAll('button')].map((x) => { const c = x.getBoundingClientRect(); return {cls: x.className.split(' ')[0], stop: x.tabIndex === 0, focus: x === f, y: c.top, h: c.height}; })}; })}; })(%s)'''
+
+# where the platform's focus stands: in a corner, the row and the act it stands on, by the act's first class (formatted with the
+# document's address, as JSON); null where it stands in none of that corner's rows
+FOCUS_IN_HEAD = '''((a) => { const f = document.activeElement, e = document.querySelector(`#corners [data-corner="${a}"]`); if (!f || !e || !e.contains(f)) return null;
+  const r = f.closest('.hrow'); return r ? {k: Number(r.dataset.row), act: f.tagName === 'BUTTON' ? f.className.split(' ')[0] : null} : {k: null, act: null}; })(%s)'''
+
+
+def head_rows_pass(ctx, r):
+    """THE HEAD'S ROWS PASS UNDER ITS HELD ROWS CLIPPED, NEVER HIDDEN (issue #689's design decision: "Rows passing under the
+    held rows are clipped, never hidden ... Every act keeps its Tab stop ... A focus on an act pans the camera the least
+    that brings its row into view below the held rows"; FP-20, FP-26, FP-37): in a window HEAD_ROWS_PX wide, the draft the
+    first edition windows held moved through the gate's doors — one held row naming one other device by LONG_HAND, its kept
+    word "not yet kept"; page state alone, nothing written — its corner at its head holding its held rows, the face's two
+    lines among them, and the chip's act on a row past them; the camera moved alone until that row has passed wholly under
+    the held rows: no head's row computes hidden, that row clipped, the held rows held below the one line, what the head
+    covers their foot; Tab from the walk's item reaching each row's line of acts, one stop a line in the rows' order, and →
+    and ← walking a line's acts; the Tab onto the passed row's act moving the camera down alone by the least pan, the act
+    inside the view below what the head covers; the camera's em then lowered to HEAD_ZOOM_EM, the head wrapping deeper than
+    the band above its column, every row held with the first, none hidden or clipped — unmeasured where it wraps no deeper
+    (FP-18); and over a column of the longest edition's second row a head of several rows standing in that column's band
+    above its text, none hidden — unmeasured where every head there is one row, which a band of one row sets where it stood
+    (FP-18); its figures"""
+    W = WINDOW[2]
+    row = {'held': 1, 'doc': W, 'base': 0, 'frame': {'op': 'insert', 'doc': W, 'at': {'ordinal': '1', 'subspace': '1'}, 'values': ['Held.']},
+           'cause': 'moved', 'sent': True, 'time': 0, 'refusal': None, 'sendable': False, 'hands': [{'key': 'other', 'fingerprint': 'ab' * 32, 'label': LONG_HAND}]}
+    rows_at = lambda a: ctx.js(HEAD_ROWS_AT % json.dumps(a))
+    out = {'window': HEAD_ROWS_PX, 'doc': W}
+    was = ctx.resize(HEAD_ROWS_PX, 900)
+    try:
+        ctx.settle()
+        held_set = ctx.js('window.__skep.write.setHeld(%s, %s)' % (json.dumps(W), json.dumps([row])))
+        ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(W), json.dumps({'word': 'not yet kept', 'reason': None, 'cause': {'token': 'moved', 'arm': None}})))
+        ctx.leap(W)
+        ctx.frames(3)
+        # the camera moved alone so the column the corner stands across tops at 400 px: its band below the hold, every row at its own place
+        placed, cam = ctx.js('window.__skep.corner(%s)' % json.dumps(W)), ctx.camera()
+        col = ctx.js('window.__skep.fold(%s).columns[%d]' % (json.dumps(W), placed['column'] if placed else 0))
+        ctx.set_view(cam['x'], col['y'] + (900 / 2 - 400) / cam['scale'], cam['scale'])
+        v0 = rows_at(W) or {}
+        rows0 = v0.get('rows') or []
+        held0 = [x for x in rows0 if x['held']]
+        passed = next((x for x in rows0 if not x['held'] and x['acts']), None)
+        ok = bool(held_set) and bool(v0.get('head')) and bool(held0) and held0 == rows0[:len(held0)] and passed is not None
+        r.check(ok, f'a {HEAD_ROWS_PX} px window, the draft held moved: its corner at its head, its held rows first, then a row past them holding an act (what the checks below stand on)',
+                {'set': held_set, 'corner': v0})
+        if not ok:
+            return dict(out, corner=v0)
+        hold, H = v0['line'] + HOLD_GAP_PX, sum(x['h'] for x in held0)
+        # the band risen until that row's own place ends 4 px above the hold: it has passed wholly under the held rows
+        own = passed['y'] - v0['y']
+        target = hold - own - passed['h'] - 4
+        cam0 = ctx.camera()
+        ctx.set_view(cam0['x'], cam0['y'] + (v0['y'] - target) / cam0['scale'], cam0['scale'])
+        v1 = rows_at(W) or {}
+        p1 = next((x for x in v1.get('rows') or [] if x['k'] == passed['k']), None)
+        r.check(v1.get('hidden') == 0 and bool(p1) and p1['visibility'] != 'hidden' and str(p1['clip']).startswith('inset(') and abs(v1.get('y', 0) - hold) <= 1
+                and v1.get('clear') is not None and abs(v1['clear'] - (v1['y'] + H)) <= 1,
+                f'the camera moved alone until the row past the held ones has passed wholly under them: no head\'s row computes hidden, that row clipped at their foot, the held rows held {HOLD_GAP_PX} px below the one line, what the head covers their foot',
+                {'passed': p1, 'hidden': v1.get('hidden'), 'corner_y': v1.get('y'), 'hold': hold, 'clear': v1.get('clear'), 'held_px': H})
+        # Tab from the walk's item through the corner: each row's line of acts one stop, in the rows' order
+        ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
+        ctx.frames(1)
+        lines = [x['k'] for x in rows0 if x['acts']]
+        steps, cam_before, at_passed = [], ctx.camera(), None
+        for _ in range(len(lines) + 1):
+            ctx.drv.key('Tab')
+            ctx.frames(3)
+            f = ctx.js(FOCUS_IN_HEAD % json.dumps(W))
+            if not f:
+                break
+            steps.append(f)
+            if f['k'] == passed['k'] and at_passed is None:
+                at_passed = {'before': cam_before, 'after': ctx.camera(), 'corner': rows_at(W)}
+            cam_before = ctx.camera()
+        r.check([s['k'] for s in steps] == lines,
+                f'Tab from the walk\'s item reaches each row\'s line of acts, one stop a line in the rows\' order — the passed row\'s among them',
+                {'reached': steps, 'lines': lines})
+        moved = None
+        if at_passed:
+            b, a, v2 = at_passed['before'], at_passed['after'], at_passed['corner'] or {}
+            act = next((x for row2 in v2.get('rows') or [] for x in row2['acts'] if x['focus']), None)
+            down = (b['y'] - a['y']) * a['scale']
+            want = (v1['clear'] if v1.get('clear') is not None else 0) - (target + own)
+            moved = {'down_px': down, 'want_px': want, 'act': act, 'clear': v2.get('clear')}
+            r.check(bool(act) and v2.get('clear') is not None and act['y'] >= v2['clear'] - 0.5 and act['y'] + act['h'] <= v2['vh'] + 0.5
+                    and abs(down - want) <= 1 and abs(a['x'] - b['x']) < 1e-9 and abs(a['scale'] - b['scale']) < 1e-12,
+                    'the Tab onto the passed row\'s act moves the camera down alone by the least pan that brings its row\'s own place below the held rows: the act inside the view below what the head covers',
+                    moved)
+        else:
+            r.check(False, 'the Tab onto the passed row\'s act moves the camera down alone by the least pan that brings its row\'s own place below the held rows: the act inside the view below what the head covers', {'reached': steps})
+        # → and ← along each line holding several acts: its acts in turn, then back
+        walked = []
+        for x in rows0:
+            if len(x['acts']) < 2:
+                continue
+            ctx.js('''((a, k) => { const b = document.querySelector(`#corners [data-corner="${a}"] > .hrow[data-row="${k}"] button[tabindex="0"]`); if (b) b.focus({preventScroll: true}); })(%s, %d)''' % (json.dumps(W), x['k']))
+            ctx.frames(1)
+            seen = [ctx.js(FOCUS_IN_HEAD % json.dumps(W))]
+            for key in ['ArrowRight'] * (len(x['acts']) - 1) + ['ArrowLeft'] * (len(x['acts']) - 1):
+                ctx.drv.key(key)
+                ctx.frames(2)
+                seen.append(ctx.js(FOCUS_IN_HEAD % json.dumps(W)))
+            names = [a['cls'] for a in x['acts']]
+            walked.append({'row': x['k'], 'acts': names, 'seen': seen})
+            r.check([s and s['k'] for s in seen] == [x['k']] * len(seen) and [s and s['act'] for s in seen] == names + names[-2::-1],
+                    f'→ and ← along row {x["k"]}\'s line of acts walk its acts in turn and back, never leaving its line', walked[-1])
+        # the camera's em lowered to HEAD_ZOOM_EM about the view's centre: the head, narrower, wraps deeper than the band above
+        # its column, and every row is held with the first — none standing unheld on the column's text, none hidden or clipped
+        cam1, f1 = ctx.camera(), ctx.js('window.__skep.fold(%s)' % json.dumps(W)) or {}
+        em1 = (f1.get('fs') or 0) * cam1['scale']
+        zoomed = {'em': em1, 'to_em': HEAD_ZOOM_EM}
+        if em1 > HEAD_ZOOM_EM:
+            ctx.set_view(cam1['x'], cam1['y'], cam1['scale'] * HEAD_ZOOM_EM / em1)
+            v4 = rows_at(W) or {}
+            rows4 = v4.get('rows') or []
+            band_px, deep = (f1.get('band') or 0) * ctx.camera()['scale'], sum(x['h'] for x in rows4)
+            zoomed.update({'band_px': band_px, 'deep_px': deep, 'corner': v4})
+            if v4.get('head') and deep > band_px + 0.5:
+                r.check(v4.get('hidden') == 0 and all(x['held'] and x['visibility'] != 'hidden' and x['clip'] in ('none', '') for x in rows4) and abs(v4.get('h', 0) - deep) <= 1,
+                        f'the camera\'s em lowered to {HEAD_ZOOM_EM} px, the head wrapping deeper than the band above its column: every row held with the first, none hidden or clipped, the corner\'s box every row\'s',
+                        zoomed)
+            else:
+                r.note(f'a head deeper than its band below the reading size is unmeasured here: at {HEAD_ZOOM_EM} px its rows stand {deep:.1f} px deep over a band of {band_px:.1f} px (FP-18; layer.test.js holds it)')
+            ctx.set_view(cam1['x'], cam1['y'], cam1['scale'])
+        else:
+            r.note(f'a head deeper than its band below the reading size is unmeasured here: the draft is read at {em1:.1f} px, no more than {HEAD_ZOOM_EM} px (FP-18; layer.test.js holds it)')
+        out.update({'held_px': H, 'passed_row': passed['k'], 'tabbed': steps, 'moved': moved, 'walked': walked, 'zoomed': zoomed})
+        ctx.js('window.__skep.write.setHeld(%s, [])' % json.dumps(W))
+        ctx.js('window.__skep.write.setKept(%s, null)' % json.dumps(W))
+        # over a column of the longest edition's second row: a head of several rows in that column's band above its text
+        longest = ctx.longest_edition()[0]
+        later = None
+        if longest:
+            ctx.leap(longest)
+            ctx.frames(3)
+            f = ctx.js('window.__skep.fold(%s)' % json.dumps(longest))
+            if len(f['columns']) > f['across']:
+                k2, cam = f['across'], ctx.camera()
+                c2, above = f['columns'][f['across']], f['columns'][0]
+                ctx.set_view(c2['x'] + c2['w'] / 2, c2['y'] + (900 / 2 - 400) / cam['scale'], cam['scale'])
+                v3 = rows_at(longest) or {}
+                scr = lambda y: (y - ctx.camera()['y']) * cam['scale'] + 900 / 2
+                text_top, foot = scr(c2['y']), scr(above['y'] + above['h'])
+                later = {'doc': longest, 'column': k2, 'corner': v3, 'text_top': text_top, 'foot_above': foot}
+                if len(v3.get('rows') or []) >= 2:
+                    rows3 = v3['rows']
+                    r.check((v3.get('placed') or {}).get('column') == k2 and v3.get('hidden') == 0 and all(x['visibility'] != 'hidden' and x['y'] >= foot - 0.5 and x['y'] + x['h'] <= text_top + 0.5 for x in rows3),
+                            f'over column {k2} of {longest}\'s second row the corner stands at its head in that column\'s band: every row between the foot of the column above and the column\'s text, none hidden',
+                            later)
+                else:
+                    r.note(f'a head of several rows over a later row of the fold is unmeasured on this board: {longest}\'s head over column {k2} is one row, which a band of one row sets where it stood (FP-18; layer.test.js holds it)')
+        out['later'] = later
+    finally:
+        ctx.js('window.__skep.write.setHeld(%s, [])' % json.dumps(W))
+        ctx.js('window.__skep.write.setKept(%s, null)' % json.dumps(W))
+        ctx.resize(*was)
+    ctx.settle()
+    ctx.frames(3)
+    return out
 
 
 # the first edition's corner on the plane: its rect on screen, whether the platform's focus stands in it and on which of its
@@ -5253,6 +5437,8 @@ def run(ctx):
     r.figures['resize_frames'] = resize_frames(ctx, r)
     # no selection an act makes is left under a head's held row (issue #436)
     r.figures['head_guards'] = head_guards(ctx, r)
+    # a head's rows pass under its held rows clipped and never hidden, each act keeping its stop and a focus on one bringing its row in (issue #689)
+    r.figures['head_rows'] = head_rows_pass(ctx, r)
     # a focus landing in a corner the view does not show brings it in (issue #436)
     r.figures['corner_tabbed'] = corner_tabbed(ctx, r)
     # Back after the window was put back from a narrow one lands on the passage left there (issue #221)
