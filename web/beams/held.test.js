@@ -9,7 +9,7 @@
 // heading its first sentence; why a line could not tell, keyed on the
 // refusal's name and kind, never its token, a lost session the text that
 // could not be read (FP-28), and "try again" only where a retry can change
-// the answer; a drawn link's far end's state before departure, read through
+// the answer, the board's own retry class read by one test; a drawn link's far end's state before departure, read through
 // the version its far box shows (FP-22), its short form heading its whole;
 // and the runs' labels, fields — stretches cut where their bytes break the
 // passage's order, pieces numbered in the passage's order, repeats, the
@@ -19,7 +19,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { heldOf, piecesOf, stretchesOf, piecesIn, labelOf, mergedLabel, stepFrom, lineOf, shortLineOf, saidOf, unknownOf, whyOf, retries, whereOf, nameIn, floatingOf, floatingLineOf, floatingSaid, farHolds, farSays, farShort } from './held.js';
+import { heldOf, piecesOf, stretchesOf, piecesIn, labelOf, mergedLabel, stepFrom, lineOf, shortLineOf, saidOf, unknownOf, whyOf, retries, busy, whereOf, nameIn, floatingOf, floatingLineOf, floatingSaid, farHolds, farSays, farShort } from './held.js';
 import { t, sentence, sentences } from '../strings.js';
 
 /** a field heading a sentence: its first letter a capital (style S1) */
@@ -114,6 +114,9 @@ test('couldn\'t tell says why, keyed on the refusal\'s name and kind, never its 
     [null, 'L.held.why.unread', true],
   ];
   for (const [r, why, again] of rows) assert.deepEqual([whyOf(r), retries(r)], [why, again], r ? r.name : 'none met');
+  // the board's own retry class: its admission, its scan permits, its history reader — never the board not answering, a session lost, a verdict, or none (skep-frontend #688)
+  assert.deepEqual(['busy', 'scan_busy', 'history_busy'].map((name) => busy({ kind: 'refused', name })), [true, true, true], 'the board classes these as retry');
+  assert.deepEqual([busy({ kind: 'refused', name: 'history_reclaimed' }), busy({ kind: 'unreachable', name: 'unreachable' }), busy({ kind: 'shell', name: 'session_ended' }), busy(null)], [false, false, false, false], 'and nothing else');
   const s = unknownOf({ kind: 'unreachable', name: 'unreachable' }, 'reading', '1.0.1.0.127');
   assert.deepEqual([s.state, s.again], ['unknown', true]);
   assert.equal(lineOf(s), sentence('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: '1.0.1.0.127' }), reason: t('F.daemon.unreachable') }));

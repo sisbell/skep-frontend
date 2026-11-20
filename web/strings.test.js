@@ -1289,3 +1289,14 @@ test('the lines a paste at a published edition draws beneath C-45: C-241 re-word
     ['DRAFT', '', true, 'K9', true, 'Writing the next version in a draft isn\'t built yet — this document is unchanged.'], 'the inert act\'s reason: the lane\'s own, a sentence');
   assert.ok(lacking().some((x) => x.id === 'L.write-next.inert'), 'listed for the report');
 });
+
+test('a past state\'s reclaimed line names the board and a time, never a position of the board\'s log: B3\'s entry re-worded as issue #688 decided it, keeping the words its source holds as its trace, and the time a state with none stands for the lane\'s own words, naming its screen (B3-S7; FP-34)', () => {
+  const e = STRINGS['B3.history.reclaimed'];
+  assert.deepEqual([e.text, e.was, e.cls, e.source, !!e.lane, /B3-S7/.test(e.screen ?? '')],
+    ['⟨board⟩ keeps this draft\'s history back to ⟨time⟩ — earlier states are not readable here', 'this board keeps history back to ⟨floor⟩ — earlier states are not readable here', 'DRAFT', 'designs/B3-editor.md', false, true],
+    'the decision\'s words, the design\'s its trace');
+  assert.equal(t('B3.history.reclaimed', { board: 'board 1', time: '09:05' }), 'board 1 keeps this draft\'s history back to 09:05 — earlier states are not readable here', 'its two tokens filled, none left');
+  const u = STRINGS['L.history.floor.untimed'];
+  assert.deepEqual([u.text, u.cls, u.source, u.lane, /B3-S7/.test(u.screen ?? '')], ['a time not recorded', 'DRAFT', '', true, true], 'the decision\'s words for a state with no recorded time: the lane\'s own');
+  assert.ok(lacking().some((x) => x.id === 'L.history.floor.untimed'), 'listed for the report');
+});

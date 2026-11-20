@@ -377,7 +377,7 @@ test('a withheld run\'s card reads the claims on its origin before it shows, whe
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('each of the editor\'s refusal names maps to its entry\'s words — the three own-bug tokens to the one own-bug entry, the halt to one of two forms by its `why`, a token the refusal does not carry filled from the caller and else left as the design writes it — a face saying words were lost under its head "not kept" with the act that copies them out, every other with no act; an unlisted name keeps the generic refusal line (issues #410, #533; B3; D6)', () => {
+test('each of the editor\'s refusal names maps to its entry\'s words — the three own-bug tokens to the one own-bug entry, the halt to one of two forms by its `why`, a token the refusal does not carry filled from the caller and else left as the design writes it, save history_reclaimed\'s, filled with the board this page holds and "a time not recorded" — a face saying words were lost under its head "not kept" with the act that copies them out, every other with no act; an unlisted name keeps the generic refusal line (issues #410, #533; B3; D6)', () => {
   const board = (/** @type {string} */ name, /** @type {object} */ [more] = [{}]) => /** @type {Refusal} */ ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'insert', site: {}, body: null, ...more });
   const shell = (/** @type {string} */ name, /** @type {object} */ [more] = [{}]) => /** @type {Refusal} */ ({ kind: 'shell', name, ...more });
   /** @type {Array<[Refusal, string, Record<string, string>?]>} each refusal, the id its face shows, and the values its words take */
@@ -390,7 +390,7 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
     [shell('answers_lost', [{ last: 'unreachable', elapsed_ms: 120480 }]), 'B3.answers_lost', { board: 'board 1', time: '2 minutes' }],
     [board('write_in_bare_session'), 'B3.keyless'],
     [board('history_busy'), 'B3.history.busy'],
-    [board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), 'B3.history.reclaimed', { floor: '12 March 2026' }],
+    [board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), 'B3.history.reclaimed', { board: 'board 1', time: '2 minutes' }],
     [board('slot_too_large'), 'B3.slot_too_large'],
     [board('source_not_registered'), 'B3.source_not_registered', { address: '1.0.2.0.9' }],
     [board('dangling_source'), 'B3.dangling_source'],
@@ -401,7 +401,7 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
   const LOSS = ['out_of_bounds', 'empty_content', 'not_content_subspace', 'held_full', 'answers_lost'];
   for (const [r, id, values] of cases) {
     let copied = 0;
-    const face = FACES.wordsFor(r, { addr: '1.0.2.0.9', board: 'board 1', time: '2 minutes', floor: '12 March 2026', copy: () => { copied++; } });
+    const face = FACES.wordsFor(r, { addr: '1.0.2.0.9', board: 'board 1', time: '2 minutes', copy: () => { copied++; } });
     assert.deepEqual([face.id, face.text], [id, t(id, values || {})], `${r.name}: its entry's words, filled from the caller`);
     assert.ok(!face.text.includes('⟨'), `${r.name}: no token left unfilled where the caller fills them: ${face.text}`);
     if (!LOSS.includes(r.name)) { assert.deepEqual([face.acts, face.head], [[], undefined], `${r.name}: no head and no act`); continue; }
@@ -411,6 +411,13 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
   }
   const bare = FACES.wordsFor(shell('answers_lost', [{ last: 'unreachable', elapsed_ms: 120480 }]));
   assert.equal(bare.text, STRINGS['B3.answers_lost'].text, 'a token the refusal does not carry and no caller fills stands as the design writes it');
+  // history_reclaimed's tokens never stand unfilled: the board as the line names it, a time not recorded — never the floor's position
+  const reclaimed = FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), { addr: '1.0.2.0.9' });
+  assert.deepEqual([reclaimed.id, reclaimed.text], ['B3.history.reclaimed', t('B3.history.reclaimed', { board: t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), time: t('L.history.floor.untimed') })],
+    'history_reclaimed with no board and no time handed in: the board this page holds, "a time not recorded" (issue #688)');
+  assert.ok(!reclaimed.text.includes('⟨') && !reclaimed.text.includes('2048'), `no token and no log position: ${reclaimed.text}`);
+  assert.equal(FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed' } }]), { time: '09:05' }).text, t('B3.history.reclaimed', { board: t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), time: '09:05' }),
+    'a refusal naming no floor, the time the state shown stood handed in: the same words, that time in them');
   assert.equal(FACES.wordsFor(board('published_target')).text, t('C-45', { D: '' }), 'C-45 at a target the act did not name');
   for (const name of ['empty_source', 'frame_too_large', 'attest_not_composed', 'self_supersession', 'ill_formed_successor', 'head_unreadable', 'session_died', 'nothing_to_undo', 'no_merge', 'not_followed']) {
     assert.deepEqual(FACES.wordsFor(shell(name)), { id: 'L.refused', text: t('L.refused', { name }), acts: [] }, `${name}: no entry drafted for it — the generic refusal line`);

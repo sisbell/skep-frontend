@@ -849,7 +849,7 @@ export function install(deps) {
       heldReason: () => SCENE.heldVersionReason(),
       /** a draft's history opened as its corner's "show its history" opens it (N-GO's `history`; B3-S7): whether the scene shows, or the focus went into its history pane */
       history: (/** @type {string} */ addr) => GO.history(addr),
-      /** the list of a draft's past states as it stands beside pane B (SC's `past`; B3-S7): its draft, the state shown, its top line, its days and their rows, the reads' figures; null where the scene is no draft's history */
+      /** the list of a draft's past states as it stands beside pane B (SC's `past`; B3-S7): its draft, the state shown and the state asked, its top line, the line saying why pane B shows its state, the refusal that line answers and whether the asked state is read again, its days and their rows, the reads' figures; null where the scene is no draft's history */
       past: () => SCENE.past(),
       /** a day of the list folded or opened as the reader's act at its head does (SC's `foldDay`) */
       foldDay: (/** @type {string} */ key) => { SCENE.foldDay(key); return true; },

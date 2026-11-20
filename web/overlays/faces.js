@@ -71,7 +71,8 @@
 // the second window's line, `answers_lost` the hand-over's, keyed on the
 // refusal's name alone and its ⟨board⟩ and ⟨time⟩ the caller's to fill,
 // `write_in_bare_session` the keyless line, `history_busy`,
-// `history_reclaimed` (its ⟨floor⟩ the caller's to fill, a date), S6's
+// `history_reclaimed` (its ⟨board⟩ the board as the line names it, its
+// ⟨time⟩ the caller's, else "a time not recorded" — never a token), S6's
 // each of those that says words were lost — the own-bug entry, the held
 // store's bound, the hand-over's — under the head "not kept" and offering
 // the act that copies the unkept words out (`Face.head`; D6 BM-10, BM-19,
@@ -401,14 +402,17 @@ function clauseFace(c, follow) {
  * The words for a refusal, by its name (see the head). A `withheld` refusal
  * is not among them: its face names the document it withholds (`withheld`).
  * The editor's names show their entries alone, no act: a token the entry
- * carries that the refusal does not — the board's name, the time elapsed, the
- * history's floor as a date — is the caller's to fill through `ctx`, and
- * stands as the design writes it where none is handed in.
+ * carries that the refusal does not — the board's name, the time elapsed — is
+ * the caller's to fill through `ctx`, and stands as the design writes it
+ * where none is handed in; save `history_reclaimed`'s, which never stand
+ * unfilled (FP-34): the board as the line names it where none is handed in,
+ * and the time the state shown stood, else "a time not recorded" — never the
+ * refusal's floor, a position of the board's log.
  * A face saying words were lost — the own-bug entry, the held store's
  * bound, the hand-over's — stands under the head "not kept" and offers the
  * act that copies the unkept words out, which the caller hands in (`ctx.copy`).
  * @param {Refusal} r
- * @param {{addr?: string, board?: string, time?: string, floor?: string, copy?: () => void}} [ctx] `addr` the document the act named; `board` the board's name as the line names it; `time` the time elapsed, in words; `floor` the history's floor, as a date; `copy` what "copy these words out" does at a loss face
+ * @param {{addr?: string, board?: string, time?: string, copy?: () => void}} [ctx] `addr` the document the act named; `board` the board's name as the line names it; `time` the time elapsed, in words — at `history_reclaimed`, the time the state shown stood (SC's `pastWhyOf`); `copy` what "copy these words out" does at a loss face
  * @returns {Face}
  */
 export function wordsFor(r, ctx = {}) {
@@ -420,7 +424,7 @@ export function wordsFor(r, ctx = {}) {
   /** a face saying words were lost: its head "not kept", and the act that copies the unkept words out */
   const lost = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ v = {}) => /** @type {Face} */ ({ ...f(id, v), head: { id: 'B3.not-kept', text: t('B3.not-kept') }, acts: [{ label: t('B3.copy-words-out'), run: ctx.copy }] });
   /** the tokens an entry carries that its refusal does not, filled where the caller hands them in */
-  const given = /** @type {Record<string, string>} */ (Object.fromEntries(Object.entries({ board: ctx.board, time: ctx.time, floor: ctx.floor }).filter(([, v]) => typeof v === 'string')));
+  const given = /** @type {Record<string, string>} */ (Object.fromEntries(Object.entries({ board: ctx.board, time: ctx.time }).filter(([, v]) => typeof v === 'string')));
   switch (name) {
     case 'doc_not_registered': return f('B1.doc_not_registered', { address: addr });
     case 'not_a_link': return said('B1.not_a_link');
@@ -445,7 +449,7 @@ export function wordsFor(r, ctx = {}) {
     case 'answers_lost': return lost('B3.answers_lost', given);
     case 'write_in_bare_session': return f('B3.keyless');
     case 'history_busy': return f('B3.history.busy');
-    case 'history_reclaimed': return f('B3.history.reclaimed', given);
+    case 'history_reclaimed': return f('B3.history.reclaimed', { board: ctx.board ?? boardName(), time: ctx.time ?? t('L.history.floor.untimed') });
     case 'slot_too_large': return f('B3.slot_too_large');
     case 'source_not_registered': return f('B3.source_not_registered', { address: addr });
     case 'dangling_source': return f('B3.dangling_source');

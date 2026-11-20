@@ -343,6 +343,9 @@ STATES = [
     dict(screen='B3-S7', state='read', walk='W-08', step=8, drawn=True,
          how="two lines typed into the case's own draft a minute apart, kept by the test board, then the act clicked; then `changes` armed with the draft's own rows and synthetic ones — a signed row, a publication, a row of lost testimony — and the act clicked again, one day's head clicked folded (skep-frontend #661, #662, #617)",
          claim='the scene stands on the draft beside its state before its newest change — the text the board held at the position the row below the top row ends at — pane B named "as it stood ⟨time⟩ · ⟨hand⟩" (B3.history.row) with the chip, the bar and the one line naming it "as it stood ⟨time⟩" (B3.history.as-of), the shared runs banded; beside it the list, newest first, each day\'s head its date or "time not recorded" (L.history.time-unrecorded), a folded day\'s head naming its hands, each row its time of day and what it did in the strings table\'s words, the shown row marked, no word of it drawn across two lines and every timed row\'s time in one slot; side by side both corners at their documents\' heads, both texts at one depth, and the list in a column of its own at pane B\'s outer side, from the panes\' top to the scene\'s foot, as wide as its head needs to hold its stop and both step acts on one line, the two panes one width either side of the whole gutter, each keeping forty characters a line or more; one px either side of the window at which beside the list the panes keep forty characters, the list in its column, then after pane B\'s text, the panes side by side; stacked at the narrow width the list after pane B\'s text and the current pane\'s kept line at its head, the rest of its corner at its foot (skep-frontend #668)'),
+    dict(screen='B3-S7', state='reclaimed', walk='W-08', step=8, drawn=True,
+         how="once the page is quiet, `op` armed to refuse the read of the state before the newest change as `history_reclaimed`, naming no floor, then the act clicked (skep-frontend #688)",
+         claim='the state asked is asked again at the last position it stood, the position before the draft\'s next change — the committed one the board names below it where that lies inside a commit — and never again at the position refused; where it stood at a position of its own past that one, read there and shown as asked, no line; where it stood at its row\'s position alone, the newest kept state stands in its place under the line naming the board and the time that state stood (B3.history.reclaimed), the list\'s floor mark below its row saying the same — no token left in pane B\'s corner either way'),
     dict(screen='B3-S7', state='now', walk='W-08', step=8, drawn=True,
          how="`changes` armed, once the page is quiet, with the draft's newest row alone, then the act clicked (skep-frontend #661, #678)",
          claim='the history opens on its one row\'s state, the current text, pane B\'s corner saying so beneath its title — "this is how the draft stands now" (B3.history.now) — on one line inside its slot; every word of both panes\' corners inside the box it stands in'),
@@ -1441,7 +1444,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
         for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept',
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'unkept',
                       'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal', 'pane-refused', 'pane-held-bars'):
             red(state, 'the machine\'s page did not open')
         return
@@ -1556,7 +1559,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
         for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept',
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'unkept',
                       'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal', 'pane-refused', 'pane-held-bars'):
             red(st, 'the case\'s own draft did not mount')
         return
@@ -2874,11 +2877,19 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     and the rest of its corner at its foot (D2); stacked at STACKED_BESIDE, between them, the past pane's corner beside its
     column led by its title, no kind's slot, each of its lines inside the corner, and the pane's name the one the AX tree
     computed at both widths (issue #687).
+    `reclaimed`: `op` armed, once the page is quiet, to refuse the state before the newest change as `history_reclaimed`,
+    naming no floor, then the act — the arm taken by that read, the page's own state reads in order read off its call
+    record with each answer's refusal and the committed position it names, the position refused never asked again; where
+    the board wrote between the two newest rows, the state asked again at the position before the newest change, the
+    board's named position followed only past the one refused, and where a read there lands shown as asked, no line and no
+    floor mark; else — no position between the rows, or the board naming the one refused — the newest kept state read in
+    its place, pane B's corner and the list's floor mark below its row saying the board keeps the draft's history back to
+    the time that state stood, in the strings table's words; no token in pane B's corner either way (skep-frontend #688).
     `now`: `changes` armed, once the page is quiet, with the draft's newest row alone, then the act — the history on that
     row's state, the current text, pane B's corner saying it is how the draft stands now, on one line inside its slot, the
     pane named by its title and described by that line as the AX tree computes them (issue #687).
-    `unkept`: a line held, then the act — the newest kept state, the list's top line saying so. At `read`, `now` and
-    `unkept`, at both widths, every word of both panes' corners stands inside the box it is set in, 1 px either way, the
+    `unkept`: a line held, then the act — the newest kept state, the list's top line saying so. At `read`, `reclaimed`,
+    `now` and `unkept`, at both widths, every word of both panes' corners stands inside the box it is set in, 1 px either way, the
     worst excess a figure (`fit_part`; issue #678). No `history.past` is called; the rows' writes are the two typed lines
     and the held line's drop."""
     mine, corner, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'corner', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
@@ -3137,6 +3148,83 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
             f"B3-S7 · read: one px either side of the window at which, beside the list's column, the panes keep {HEAD_CH} characters a line — the list in its column at pane B's outer side, then after pane B's text — the panes side by side with both corners at their documents' heads at both (skep-frontend #668)",
             {'edge': edge, 'flips': flips})
     r.figures['history_list_edge'] = dict(edge, flips={str(k): v for k, v in flips.items()})
+    close_scene()
+
+    # ---- `reclaimed`: the state before the newest change refused as reclaimed by an `op` arm, naming no floor, then the act
+    # (skep-frontend #688). The arm answers the page's next `op`, the history pane's first state read, at the row below the top
+    # row; where the board wrote between the two rows, the page asks that state again at the position before the newest
+    # change, where it stood last — read there, else at the committed position the board names below it where that lies
+    # inside a commit, past the position asked — and shows it as asked; where no position stands between the rows, or the
+    # board names the position asked, the state stood there alone: never asked there again, the newest kept state stands in
+    # its place under the line. The board's real history answers every read after the arm
+    recentre(); ctx.settle(10); ctx.frames(2); quiet()
+    seq_r, calls_r = ctx.editor_seq(), ctx.js('window.__skep.bridge.calls().length') or 0
+    armed_r = ctx.arm('op', refusal={'kind': 'refused', 'name': 'history_reclaimed', 'status': 410, 'code': 'history_reclaimed', 'detail': None, 'op': 'retrieve_doc_v_span_set', 'site': {}, 'body': {'error': 'history_reclaimed'}})
+    clicked_r = ctx.js('((s) => { const b = document.querySelector(s); if (b) b.click(); return !!b; })(%s)' % json.dumps(act_sel))
+    opened_r = clicked_r and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return window.__skep.scene.isOpen() && !!p && p.draft === %s; })()' % json.dumps(mine), 30)
+    ctx.settle(20); ctx.frames(3)
+    taken_r = ctx.consumed('op', seq_r)
+    # the page's own reads of the draft's state, in order: the position each asked, how it was answered, and where refused the
+    # refusal's name and the committed position it names below — read off the answer the gate's call record keeps
+    states_r = ctx.js('''((from) => window.__skep.bridge.calls().slice(from).filter((c) => c.name === "op" && c.op === "retrieve_doc_v_span_set" && /"at":/.test(c.frame || ""))
+      .map((c) => { let a = null; try { a = JSON.parse(c.answer || "null"); } catch (e) { a = null; }
+        const no = a && a.refused ? a.refused : null, near = no && no.body ? no.body.nearest : null;
+        return {at: JSON.parse(c.frame).at, outcome: c.outcome, refused: no ? no.name : null, nearest: typeof near === "number" ? near : null}; }))(%d)''' % calls_r) or []
+    P_r = ctx.js('window.__skep.scene.past()') or {}
+    rows_r = [row for d in P_r.get('days') or [] for row in d['rows']]
+    top_r, below_r = (rows_r[0] if rows_r else {}), (rows_r[1] if len(rows_r) > 1 else {})
+    asked_r, next_r = below_r.get('last'), top_r.get('first')
+    gap_r = bool(top_r) and bool(below_r) and next_r - 1 > asked_r
+    words_r = ctx.js('''(async () => { const T = await import("./strings.js"), U = await import("./util.js"), p = (await import("./scene/scene.js")).past(), top = p && p.days.flatMap((d) => d.rows)[0];
+      return top ? T.t("B3.history.reclaimed", {board: T.t("L.mirror.board.name", {node: "1", origin: window.__skep.model.board().origin}), time: top.time == null ? T.t("L.history.floor.untimed") : U.timeOf(top.time)}) : null; })()''')
+    after_r = states_r[1:]
+
+    def follows(reads):
+        """every read the board refused as lying inside a commit, naming the committed position below it: the page's next read
+        made there where that lies past the position asked, and never there where it does not"""
+        for i, x in enumerate(reads):
+            if x.get('refused') == 'not_a_position' and x.get('nearest') is not None:
+                nxt = reads[i + 1]['at'] if i + 1 < len(reads) else None
+                if (nxt == x['nearest']) != (x['nearest'] > asked_r):
+                    return False
+        return True
+    # the state asked read where it stood last: a read between the two rows the board answered — the page then reads no more
+    landed_r = bool(top_r) and bool(below_r) and any(asked_r < x['at'] < next_r and x['outcome'] == 'result' for x in after_r)
+    # the armed read at the row below the top refused as reclaimed; never asked again there, nor below it; where the state stood
+    # past it, asked again first at the position before the newest change; the board's named positions followed past the one
+    # asked alone; the last read answered — the state where it stood last, else the newest kept state read in its place
+    reads_ok = (bool(top_r) and bool(below_r) and len(states_r) >= 2
+                and (states_r[0]['at'], states_r[0]['outcome'], states_r[0]['refused']) == (asked_r, 'refused', 'history_reclaimed')
+                and all(x['at'] > asked_r for x in after_r)
+                and (not gap_r or after_r[0]['at'] == next_r - 1)
+                and follows(after_r) and after_r[-1]['outcome'] == 'result'
+                and (after_r[-1]['at'] < next_r if landed_r else (after_r[-1]['at'] == top_r['last'] and all(x['at'] < next_r for x in after_r[:-1]))))
+    r.check((armed_r.get('result') or {}).get('armed') == 'op' and opened_r and taken_r and len(rows_r) >= 2 and reads_ok,
+            "B3-S7 · reclaimed: `op` armed, once the page is quiet, to refuse the state before the newest change as reclaimed — the arm taken by that read, never asked there again; the state asked again where it stood last, past that position, else the newest kept state read in its place, the scene opening",
+            {'armed': armed_r, 'opened': opened_r, 'consumed': taken_r, 'reads': states_r[:5], 'gap': gap_r, 'landed': landed_r, 'rows': [(x['first'], x['last']) for x in rows_r[:3]]})
+    r.figures['history_reclaimed'] = {'reads': states_r[:5], 'gap': gap_r, 'landed': landed_r, 'rows': [(x['first'], x['last']) for x in rows_r[:3]]}
+
+    def reclaimed_check(w):
+        P = ctx.js('window.__skep.scene.past()') or {}
+        seen = ctx.js('''(() => { const c = document.querySelector("#sceneB > .corner"), why = c && c.querySelector(".why"), l = document.getElementById("scenepast");
+          const floor = l && l.querySelector(".pl-floor"), row = floor && floor.previousElementSibling;
+          return {corner: c ? c.textContent : null, why: why ? {words: why.textContent, id: why.dataset.string || null, busy: why.getAttribute("aria-busy")} : null,
+                  floor: floor ? {words: floor.textContent, after: row && row.dataset ? Number(row.dataset.row) : null} : null}; })()''') or {}
+        no_token = seen.get('corner') is not None and '⟨' not in seen['corner'] and '⟩' not in seen['corner']
+        if landed_r:
+            ok = (P.get('at') == below_r.get('last') and P.get('why') is None and seen.get('why') is None and seen.get('floor') is None
+                  and flat(pane_text('b')) == flat(text1))
+            part = 'the state asked, read where it stood last'
+        else:
+            why = P.get('why') or {}
+            ok = (P.get('at') == top_r.get('last') and why.get('id') == 'B3.history.reclaimed' and why.get('text') == words_r and why.get('running') is False
+                  and seen.get('why') == {'words': words_r, 'id': 'B3.history.reclaimed', 'busy': None} and seen.get('floor') == {'words': words_r, 'after': top_r.get('last')}
+                  and flat(pane_text('b')) == flat(text2))
+            part = 'the newest kept state, the line and the floor mark naming the board and its time'
+        return {part: (ok, {'at': P.get('at'), 'why': P.get('why'), 'seen': seen, 'want': words_r, 'gap': gap_r, 'landed': landed_r, 'b': pane_text('b')[-40:], 'rows': [(x['first'], x['last']) for x in rows_r[:3]]}),
+                "no token in pane B's corner": (no_token, {'corner': (seen.get('corner') or '')[:200]}),
+                "the corners' words in their boxes": fit_part(ctx, figures, 'reclaimed', w, *pane_corners)}
+    shoot('reclaimed', reclaimed_check)
     close_scene()
 
     # ---- `now`: the history's one row the draft's newest, its state how the draft stands now, its corner saying so (issue #678) -------

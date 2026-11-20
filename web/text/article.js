@@ -244,7 +244,7 @@
 // FP-26, FP-30, FP-31, FP-33, FP-34, FP-41.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint, numeral } from '../util.js';
-import { t, tHTML, tRuns, plural, counted, bracketed, withheldLine, endingOf, addressedHTML, sentence, sentences, asSentence, asSentenceRuns, asRuns, runsText, joinRuns, fields, heard, FIELD } from '../strings.js';
+import { t, tHTML, tRuns, plural, counted, bracketed, withheldLine, endingOf, addressedHTML, sentence, sentences, asSentence, asSentenceRuns, asRuns, runsText, joinRuns, fields, heard, runningHTML, FIELD } from '../strings.js';
 import { below } from '../overlays/statement.js';
 import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType, isAddress } from '../model/address.js';
@@ -317,10 +317,11 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  */
 
 /**
- * @typedef {Object} PastWhy — why a past state's pane shows another state than its act asked (`PastLine.why`; B3-S7; N-GO's `history`)
+ * @typedef {Object} PastWhy — why a past state's pane shows another state than its act asked (`PastLine.why`; B3-S7; SC's `pastWhyOf`)
  * @property {string} id its string's id
  * @property {string} text its words
  * @property {boolean} substituted the state its act asked could not be read and the newest kept one stands in its place, these the refusal's words: a substitution, held in the title after its line (`cornerTitle`); false for the words saying the state shown is how the draft stands now, an item of their own after the title
+ * @property {boolean} running the state asked is being read again (SC's `reissue`): its words then the one running mark, their element busy (`whyHTML`); false where nothing reads
  */
 
 /**
@@ -1772,8 +1773,10 @@ const HOLDING = new Set(['kind', 'version', 'st', 'kept', 'face', 'held', 'past'
 
 /**
  * A title as markup (`Title`; FP-26): its line in its class, carrying its
- * string, then a substitution's words in the why's class, carrying theirs,
- * each beginning a line of its own; its line on the lines `lines` breaks it
+ * string, then a substitution's words in the why's class, carrying theirs —
+ * while the state asked is read again, the one running mark after them, their
+ * element busy, never the pane (`whyHTML`) — each beginning a line of its own;
+ * its line on the lines `lines` breaks it
  * into, each a line of its own — a line whose words are wider than the width
  * marked so, the platform wrapping it between its words — else whole. The
  * lines read together are the line's words, each joiner it breaks at at the
@@ -1789,10 +1792,29 @@ const HOLDING = new Set(['kind', 'version', 'st', 'kept', 'face', 'held', 'past'
  */
 export function titleHTML(title, lines = null, named = null) {
   const line = lines ? lines.map((l) => `<span class="tl${l.wraps ? ' wraps' : ''}">${esc(l.words)}</span>`).join('') : esc(runsText(titleRuns(title)));
-  const sub = title.substituted ? `<span class="why" data-string="${esc(title.substituted.id)}">${esc(title.substituted.text)}</span>` : '';
+  const sub = title.substituted ? whyHTML(title.substituted) : '';
   const as = named ? ` id="${esc(named.id)}" role="img" aria-label="${esc(heard(named.words))}"` : '';
   return `<span class="title"><span class="${title.cls}" data-string="${esc(title.id)}"${as}>${line}</span>${sub}</span>`;
 }
+
+/**
+ * A substitution's words as markup (`PastWhy`; foundations §2.1 (4b)): its
+ * words in the why's class, carrying their string; while the state asked is
+ * read again (`PastWhy.running`), the one running mark after them, hidden
+ * from assistive technology, and their element busy (ST's `runningHTML`).
+ * @param {PastWhy} w
+ * @returns {string}
+ */
+const whyHTML = (w) => `<span class="why" data-string="${esc(w.id)}"${w.running ? ' aria-busy="true"' : ''}>${esc(w.text)}${w.running ? runningHTML() : ''}</span>`;
+
+/**
+ * The words a substitution takes room for on its lines (`PastWhy`): its words,
+ * the one running mark after them while the state asked is read again —
+ * what its width is measured by (`cornerItems`; T-LAYER's `titleLines`).
+ * @param {PastWhy} w
+ * @returns {string}
+ */
+export const whyRoom = (w) => w.text + (w.running ? t('L.running') : '');
 
 /**
  * The corner's items in foundations' one order (§3.1): its document's kind,
@@ -1831,8 +1853,8 @@ export function cornerItems(d, v, compact = false, statement = true) {
       return { cls: i.cls, html: faceHTML(i.face, v, compact), words: said, em: v.measure(said, 'client'), yields: false, holds: true };
     }
     if (i.title) {
-      const said = fields(runsText(titleRuns(i.title)), i.title.substituted && i.title.substituted.text);
-      return { cls: i.cls, html: titleHTML(i.title), words: said, em: v.measure(said, 'client'), yields: false, holds: true, title: i.title };
+      const sub = i.title.substituted, said = fields(runsText(titleRuns(i.title)), sub && sub.text);
+      return { cls: i.cls, html: titleHTML(i.title), words: said, em: v.measure(fields(runsText(titleRuns(i.title)), sub && whyRoom(sub)), 'client'), yields: false, holds: true, title: i.title };
     }
     const words = i.cls === 'kind' ? (v.kind === 'reading' ? '' : t(i.id)) : i.cls === 'kept' ? (i.id ? (v.history ? fields(t(i.id), t(HISTORY_ID)) : t(i.id)) : '') : i.words ?? t(i.id, i.vals), glyph = compact && i.glyph ? t(i.glyph) : null;
     const em = i.cls === 'kind' ? kindSlotEm(v.measure) : i.cls === 'kept' ? keptLineEm(v) : glyph != null ? v.measure(glyph, 'client') : i.words != null ? v.measure(i.words, 'client') : filledEm(i.id, i.vals, i.faces, v.measure) + (i.cls === 'chip' ? 0.8 : 0);

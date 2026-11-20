@@ -4098,7 +4098,7 @@ test('the launch\'s reads: the newest row of this hand is asked of the account\'
   assert.equal(PUMP.inflightCount(), 0, 'no read left counted in flight');
 });
 
-test('a document\'s text and its image as they stood at a position of the board\'s history are read for an act and kept nowhere: the extent there, asked again at the committed position the board names below it, then the text and its image one after the other; empty where the document was not registered then; asked again whole after the board\'s reconstructions were busy; any other refusal handed up; counted in flight while out (B3-S2; D6 BM-14; wire.md §Reading history)', async () => {
+test('a document\'s text and its image as they stood at a position of the board\'s history are read for an act and kept nowhere: the extent there, asked again at the committed position the board names below it — save where that lies at or below the position the caller bounds it by, the board\'s refusal handed up — then the text and its image one after the other; empty where the document was not registered then; asked again whole after the board\'s reconstructions were busy, as many times as the caller allows, the busy refusal handed up past them; any other refusal handed up; counted in flight while out (B3-S2; D6 BM-14; wire.md §Reading history)', async () => {
   const X = '1.0.1.0.120';
   /** a history read's key: the frame asked as of `at` */
   const K = (/** @type {number} */ at, /** @type {object} */ frame) => FAKE.keyOf('op', { frame: F.opAt(at, frame) });
@@ -4132,6 +4132,14 @@ test('a document\'s text and its image as they stood at a position of the board\
   assert.deepEqual(await PUMP.stateAt(X, 2), { runs: [], image: [], at: 2 }, 'the document not registered then: it held nothing');
   assert.deepEqual(await PUMP.stateAt(X, 6), { runs: [{ pos: 1, width: 5, kind: 'content', text: 'Newer', ref: null, origin: null }], image: [{ pos: 1, width: 5, prefix: X + '.0.1', ordinal: 1 }], at: 6 }, 'the reconstructions busy: the whole asked again after the pause');
   assert.equal(fake.asked.filter((k) => k === K(6, F.retrieveDocVSpanSet(X))).length, 2, 'its extent asked twice');
+  busy = 1;
+  const once = await PUMP.stateAt(X, 6, { attempts: 1 });
+  assert.deepEqual(['refused' in once && once.refused.name, fake.asked.filter((k) => k === K(6, F.retrieveDocVSpanSet(X))).length], ['history_busy', 3], 'asked for one attempt: the busy refusal handed up, its extent asked once (issue #688)');
+  const fours = () => fake.asked.filter((k) => k === K(4, F.retrieveDocVSpanSet(X))).length, four = fours();
+  const bounded = await PUMP.stateAt(X, 5, { above: 4 });
+  assert.deepEqual(['refused' in bounded && bounded.refused.name, fours() - four], ['not_a_position', 0], 'the position the board names no higher than the bound: its refusal handed up, 4 never asked (issue #688)');
+  const past = await PUMP.stateAt(X, 5, { above: 3 });
+  assert.deepEqual(['at' in past && past.at, fours() - four], [4, 1], 'the position it names above the bound: read there');
   const reclaimed = await PUMP.stateAt(X, 3), refused = await PUMP.stateAt(X, 7);
   assert.deepEqual(['refused' in reclaimed && reclaimed.refused.name, 'refused' in refused && refused.refused.name], ['history_reclaimed', 'withheld'], 'any other refusal handed up: the history reclaimed, the image\'s own');
   assert.deepEqual([PUMP.inflightCount(), REC.has(X)], [was, false], 'none left in flight, and nothing kept');
@@ -4225,10 +4233,11 @@ test('a draft\'s history is read off the feed narrowed to the draft — `under` 
   assert.ok(asked.length > 0 && asked.every((a) => a.under === W && a.session === 's-1'), `every page narrowed to the draft, under the session: ${JSON.stringify(asked.slice(0, 2))}`);
   assert.deepEqual([asked[0].since, first.from], [AT - OWN_W, AT - OWN_W], 'the first window the newest OWN_WINDOW positions before the page\'s place');
   assert.deepEqual([first.rows.map((u) => u.position), first.pages, first.read, first.next], [[4500, 4600, 4700, 4800, 4900], 2, 5, HEAD], 'its rows in position order: two rows and more read, no window after it — its pages paged by `next`, its rows counted, its last `next` the narrowed feed\'s head');
+  assert.equal(first.head, AT, 'the head it read up to: the page\'s place on the feed as it began, the newest row\'s state standing until it (issue #688)');
   assert.deepEqual([REC.feedAt(), REC.draftsAt()], [was, d0], 'the narrowed feed\'s `next`, past the page\'s place, moved neither of the page\'s own positions on the whole feed');
   asked.length = 0;
   const older = await PUMP.historyOf(W, { below: first.from });
-  assert.deepEqual([asked[0].since, older.from, older.rows.length, older.rows[0].position, older.rows.at(-1)?.position], [first.from - OWN_W, 0, 44, 100, 4400], 'below the first read\'s reach: windows from there back to the feed\'s first position, every row there and none above');
+  assert.deepEqual([asked[0].since, older.from, older.rows.length, older.rows[0].position, older.rows.at(-1)?.position, older.head], [first.from - OWN_W, 0, 44, 100, 4400, first.from], 'below the first read\'s reach: windows from there back to the feed\'s first position, every row there and none above, read up to where it was asked below');
   assert.equal(REC.feedAt(), was, 'nor did those');
   asked.length = 0;
   const all = await PUMP.historyOf(W);

@@ -313,14 +313,14 @@
 // scene, the focus moved into its history pane; else a departure — the
 // draft's open burst committed and its flight landed (W-WRITE's), its history
 // read from the head back (M-PUMP's `historyOf`), the state it opens on read
-// at a position (`stateAt`) and derived (M-DERIVE's `recordAt`) — the state
-// before the draft's newest change, or the newest kept one where words not
-// kept yet stand, or where the board reads not the one asked, a substitution
-// its corner holds with its line (T-ARTICLE's `PastWhy`) — then the scene
-// opened on the draft's current text and that
-// state, levelled at the selection standing in the draft, else at the newest
-// change's place nearest the caret (`changeNear`), its entry keeping the
-// derived record, so a return reopens it reading nothing.
+// at a position and derived (SC's `pastState`) — the state before the draft's
+// newest change, or the newest kept one where words not kept yet stand, or
+// where the board reads not the one asked, a substitution its corner holds
+// with its line (T-ARTICLE's `PastWhy`) — then the scene opened on the
+// draft's current text and that state, levelled at the selection standing in
+// the draft, else at the newest change's place nearest the caret
+// (`changeNear`), its entry keeping the state asked, so a return asks it
+// again (SC's `Held.past`).
 // HOME (the acting account's region), WHOLE BOARD (the board at the clamp)
 // and an account's region push too (foundations §2.2), and so does a walk's
 // moment unfolded where the camera stands away from the view its walk showed
@@ -523,7 +523,6 @@ import * as FOCUS from './focus.js';
 import { accountCell, boardCell, continuationCell, continuationOf } from '../plane/projection.js';
 import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf, accountOf } from '../model/address.js';
 import { sameSpan } from '../text/span.js';
-import { recordAt } from '../model/derive.js';
 import * as PAST from '../model/past.js';
 import { t, sentence } from '../strings.js';
 import { esc, byteLength } from '../util.js';
@@ -2885,9 +2884,9 @@ const addrOf = (/** @type {string | import('../model/records.js').Doc} */ x) => 
  * to fail at the act is. Where no board is held, the act answered where it
  * was made (FP-35).
  * @param {string | import('../model/records.js').Doc} a the document its first pane opens on: the reader's, save at a landing's line, the source of the passage landed; or the record the page shows of it (T-LAYER's `paneSource`), where the opener's positions are that text's
- * @param {string | import('../model/records.js').Doc} b the one its second pane opens on; or a record the page derived of it (M-DERIVE's) — a past state's (`history`) — which the trail entry keeps, so a return reopens it reading nothing
+ * @param {string} b the document its second pane opens on — at a draft's history the draft, its past state the one `held.past` asks (SC's `Held.past`) — which the trail entry keeps, so a return reads it again
  * @param {import('../scene/scene.js').Held} [held] the passage the opener holds, which the scene sets level — with the link a link's end `from` names, where `held` names none (SC's `Held.link`)
- * @param {{beside?: 'a' | 'b', from?: {shown: Shown} | {passage: Span} | null, site?: Site | null}} [opts] `beside` the pane holding the document opened beside the reader's, the entry's address — the second where none is named; `from` the link's end or the passage the scene is opened from, which Back lights (`sceneStep`), a link's end naming the far end a face at a far document the board will say nothing of speaks of; `site` where the act was made. The scene takes the focus however the act was made (SC's)
+ * @param {{beside?: 'a' | 'b', from?: {shown: Shown} | {passage: Span} | null, site?: Site | null, past?: import('../scene/scene.js').PastGot | null}} [opts] `beside` the pane holding the document opened beside the reader's, the entry's address — the second where none is named; `from` the link's end or the passage the scene is opened from, which Back lights (`sceneStep`), a link's end naming the far end a face at a far document the board will say nothing of speaks of; `site` where the act was made; `past` the past state a draft's history read for its second pane, handed to the opening so it reads nothing again (SC's `Showing.past`). The scene takes the focus however the act was made (SC's)
  * @returns {Promise<boolean>} the scene shows
  */
 export async function toScene(a, b, held = {}, opts = {}) {
@@ -2902,7 +2901,7 @@ export async function toScene(a, b, held = {}, opts = {}) {
   const departed = departure(), addr = addrOf(opts.beside === 'a' ? a : b);
   const entry = TRAIL.push({ addr, pos: null, width: null, view: departed.view, label: null, notice: null, scene: { a, b, held: kept, left: null } }, departed, false, sceneStep(opts.from ?? null));
   reach = { act, addr, entry };
-  const out = await SCENE.open(a, b, kept, { leaving: () => { reach = null; dismissChrome(entry); } });
+  const out = await SCENE.open(a, b, kept, { leaving: () => { reach = null; dismissChrome(entry); }, past: opts.past ?? null });
   if (out.shown) return true;
   if (!reach || reach.act !== act) return false;
   reach = null;
@@ -2968,20 +2967,21 @@ export function changeNear(past, now, near) {
  * first (W-WRITE's `commit`, `landed`; D6 BM-4), then the draft's
  * history read from the head back (M-PUMP's `historyOf`) until it holds the
  * list's top row and the row below it (M-PAST's `rowsOf`), then the state the
- * history pane opens on read whole at its position (M-PUMP's `stateAt`) and
- * its record derived (M-DERIVE's `recordAt`), then the scene opened as a step
- * on the trail (`toScene`), the current text in pane A — the text the page
- * shows of the draft (T-LAYER's `paneSource`) — and the past state in pane B,
- * the trail entry keeping the record so a return reopens it reading nothing.
- * The state is the draft as it stood before its newest change, the position
+ * history pane opens on read whole and derived (SC's `pastState`), then the
+ * scene opened as a step on the trail (`toScene`) on the draft's address, the
+ * current text in pane A — the text the page shows of the draft (T-LAYER's
+ * `paneSource`) — and in pane B the state read, handed to the opening so it
+ * reads nothing again, the trail entry keeping the state asked and never the
+ * state shown nor why, so a return asks it again (SC's `Held.past`).
+ * The state asked is the draft as it stood before its newest change, the position
  * the row below the top row ends at; where the draft holds words the board has
  * not kept, the newest kept state, the position the top row ends at, the list
  * saying so above it; where no row stands below the top, the top row's own,
- * which is how the draft stands now, its corner saying so. A state the board
- * does not read yields to the newest kept one, read the same way, its corner
- * saying why in the refusal's words (O-FACES' `wordsFor`) — a substitution,
- * which its corner holds with its line (T-ARTICLE's `PastWhy`); where that is
- * not read either, or the
+ * which is how the draft stands now, its corner saying so. A state refused as
+ * reclaimed is asked again where it last stood, and one the board does not
+ * read yields to the newest kept one, its corner saying why in the refusal's
+ * words — a substitution — which the scene asks again while the board
+ * classes it as retry (SC's); where that is not read either, or the
  * history read is refused, nothing opens and the act's site says why; where
  * it reads no row, the status region says the draft stands as it is. The panes
  * level at a selection standing in the draft, else at the newest change's
@@ -3012,28 +3012,17 @@ export async function history(addr, opts = {}) {
   const rows = PAST.rowsOf(read.rows), unkept = WRITE.unkept(addr);
   // no row read, no state to open on: the draft as it stands is all its history holds
   if (!rows.length) { FOCUS.say(sentence('B3.history.now'), false, true); return false; }
-  const top = rows[0], below = unkept ? null : rows[1] ?? null;
-  const want = below ? below.last : top.last;
-  const t1 = performance.now();
-  let s = await PUMP.stateAt(addr, want);
-  /** @type {import('../text/article.js').PastWhy | null} */
-  let why = !unkept && !below ? { id: 'B3.history.now', text: t('B3.history.now'), substituted: false } : null;
-  if ('refused' in s && want !== top.last) {
-    const r = FACES.wordsFor(s.refused);
-    s = await PUMP.stateAt(addr, top.last);
-    why = { id: r.id, text: r.text, substituted: true };
-  }
-  const stateMs = performance.now() - t1;
+  const asked = (unkept ? null : rows[1]) ?? rows[0];
+  const got = await SCENE.pastState(addr, rows, asked, read.head);
   if (!stands()) return false;
-  if ('refused' in s) { FACES.showRefusal(site, s.refused, addr); return false; }
-  const record = { ...recordAt(addr, s.runs, s.at, { image: s.image }), meta: REC.has(addr) ? REC.doc(addr).meta : null };
+  if ('refused' in got) { FACES.showRefusal(site, got.refused, addr); return false; }
   const sel = SEL.selected(), caret = LAYER.caretIn(addr), f = WALK.focusedSpan();
   const near = caret ? caret.pos : f && f.addr === addr ? f.pos : null;
-  const change = sel && sel.addr === addr ? null : changeNear(s.image, LAYER.shownOf(addr).image, near);
+  const change = sel && sel.addr === addr ? null : changeNear(got.state.image, LAYER.shownOf(addr).image, near);
   /** @type {import('../scene/scene.js').Held} */
   const held = sel && sel.addr === addr ? { posA: sel.pos, widthA: sel.width } : change ? { posA: change.a, widthA: 1, posB: change.b } : {};
-  held.past = { draft: addr, entries: read.rows, from: read.from, at: s.at, unkept, why, figures: { pages: read.pages, read: read.read, readMs, stateMs, at: s.at } };
-  return toScene(LAYER.paneSource(addr), record, held, { site: opts.site ?? null });
+  held.past = { draft: addr, entries: read.rows, from: read.from, head: read.head, asked: asked.last, unkept, figures: { pages: read.pages, read: read.read, readMs } };
+  return toScene(LAYER.paneSource(addr), addr, held, { site: opts.site ?? null, past: got });
 }
 
 /** HOME's place and view: the acting account's region at mid scale; a guest's the board's extent (R92 rider (c)) */

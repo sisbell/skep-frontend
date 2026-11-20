@@ -75,7 +75,7 @@ import { keptStatement as keptSaying } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
-import { t, tHTML, tRuns, bracketed, CLIENT_CLOSE, sentence, sentences, asSentence, fields, heard, runsText, FIELD } from '../strings.js';
+import { t, tHTML, tRuns, bracketed, CLIENT_CLOSE, sentence, sentences, asSentence, fields, heard, runsText, runningHTML, FIELD } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { accountOf, homeOf, resolveSpan } from '../model/address.js';
 import { deriveBlocks, textOf } from '../model/records.js';
@@ -623,7 +623,7 @@ test('a past state\'s corner names what it is, its title in the place of the kin
   assert.ok(cornerHTML(draft, draftView({ past, kind: 'reading' })).startsWith(line), 'its kind being read: its line first still, no slot being read');
 });
 
-test('a past state\'s corner and the held version\'s lead with their line in the kind\'s place at every fit, no kind\'s slot standing: the line\'s parts and the joiners it breaks at — the time and the hand at rank 1, the hand\'s label and its cue at rank 2; the held words to their dash and after it — a substitution\'s words held in it, while the words saying the state is how the draft stands now and the chip stand as items that scroll at a pane\'s head; each item saying whether it holds at the pane\'s top; the corner\'s first item its line, a device\'s label in it the person\'s own words; any other draft\'s its kind (issues #677, #687; FP-26, FP-39)', () => {
+test('a past state\'s corner and the held version\'s lead with their line in the kind\'s place at every fit, no kind\'s slot standing: the line\'s parts and the joiners it breaks at — the time and the hand at rank 1, the hand\'s label and its cue at rank 2; the held words to their dash and after it — a substitution\'s words held in it, the one running mark after them and their element busy while the state asked is read again, its width counting the mark, while the words saying the state is how the draft stands now and the chip stand as items that scroll at a pane\'s head; each item saying whether it holds at the pane\'s top; the corner\'s first item its line, a device\'s label in it the person\'s own words; any other draft\'s its kind (issues #677, #687; FP-26, FP-39)', () => {
   const draft = doc({ kind: 'draft', meta: null }), past = { time: 'at 14:02', hand: HAND, why: null };
   for (const compact of [false, true]) {
     const items = cornerItems(draft, draftView({ past }), compact);
@@ -648,6 +648,11 @@ test('a past state\'s corner and the held version\'s lead with their line in the
   const subbed = cornerItems(draft, draftView({ past: { ...past, why: sub } }), true);
   assert.deepEqual([subbed.map((i) => i.cls), subbed[0].title?.substituted], [['past', 'chip'], sub], 'a substitution\'s words held in the title, after its line');
   assert.ok(subbed[0].html.endsWith(`<span class="why" data-string="B3.history.busy">${esc(sub.text)}</span></span>`), `drawn after the line, on lines of their own: ${subbed[0].html}`);
+  // the state asked read again (issue #688): the line's words then the one running mark, their element busy — the item's width counting the mark
+  const ran = cornerItems(draft, draftView({ past: { ...past, why: { ...sub, running: true } } }), true);
+  assert.ok(ran[0].html.endsWith(`<span class="why" data-string="B3.history.busy" aria-busy="true">${esc(sub.text)}${runningHTML()}</span></span>`), `while the state asked is read again: the one running mark after its words, their element busy: ${ran[0].html}`);
+  assert.ok(ran[0].em > subbed[0].em && ran[0].words === subbed[0].words, 'its width counts the mark; its words, as a person reads them, do not');
+  assert.ok(!subbed[0].html.includes('aria-busy') && !subbed[0].html.includes('class="running"'), 'nothing read again: neither the mark nor busy');
   const held = cornerItems(draft, draftView({ held: true }), true), words = t('B3.history.held'), dash = words.indexOf('— ') + 1;
   assert.deepEqual(held.map((i) => [i.cls, i.holds, i.title?.parts.map(runsText), i.title?.joins]), [['held', true, [words.slice(0, dash), words.slice(dash + 1)], [{ text: ' ', rank: 1 }]]], 'the held version: its words to their dash and after it, and nothing else');
   assert.deepEqual([cornerLead(draft, draftView({ held: true })), cornerLead(draft, draftView())], [words, t('F.kind.draft')], 'its first item the held words; any other draft\'s, its kind');

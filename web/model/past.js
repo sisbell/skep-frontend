@@ -34,7 +34,9 @@
 // list as it stands (`entriesOf`): each day's head, then — where it stands
 // open — each run of one hand's rows led by that hand once, where it differs
 // from the row above, and the rows; where it is folded, its landmarks alone,
-// the hands its head names standing for theirs.
+// the hands its head names standing for theirs. How long a row's state stood
+// (`stoodUntil`): to the position before the row after it, the newest row's
+// to the head the rows were read up to.
 // Rules: FP-1, FP-2, FP-6, FP-34.
 
 import { dayOf } from '../util.js';
@@ -222,6 +224,24 @@ export const dayHolding = (/** @type {readonly Day[]} */ days, /** @type {number
 
 /** the row holding a position (`rowsOf`); null where none does */
 export const rowHolding = (/** @type {readonly Row[]} */ rows, /** @type {number} */ pos) => rows.find((r) => r.positions.includes(pos)) ?? null;
+
+/**
+ * The last position a row's state stood at (wire.md §Reading history): the
+ * position before the draft's next change — the first position of the row
+ * after it less one, every commit of the draft standing in a row of the
+ * narrowed feed — else, for the newest row, the head the rows were read up
+ * to; the row's own last position where the row is no row of `rows`, or the
+ * newest where no head is known.
+ * @param {readonly Row[]} rows newest first (`rowsOf`)
+ * @param {Row} row
+ * @param {number | null} head the position the rows were read up to (M-PUMP's `HistoryRead.head`)
+ * @returns {number}
+ */
+export function stoodUntil(rows, row, head) {
+  const i = rows.findIndex((r) => r.last === row.last);
+  if (i > 0) return Math.max(row.last, rows[i - 1].first - 1);
+  return i === 0 && head != null && head > row.last ? head : row.last;
+}
 
 /**
  * The days open on opening (FP-36): the newest day, the day of

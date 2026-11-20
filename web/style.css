@@ -649,13 +649,15 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    after the text (`--past-held`, SC's) — a folded one marked so and naming its hands; a hand once at the head of its run;
    a row its time of day in a slot of tabular figures as wide as the widest (`--pl-time`, SC's) and what it did beside it,
    wrapping only between words and hanging under its own first word; the row of the state pane B shows, or its folded
-   day's head, marked by a bar at its edge; a focused head or row scrolled clear of the held head */
+   day's head, marked by a bar at its edge; the asked row whose state SC reads again saying "reading" right after what it
+   did; the line saying why the state shown stands in the place of a reclaimed one, below its row, set as the top line is; a focused head
+   or row scrolled clear of the held head */
 #scenepast { font:var(--corner-px)/1.4 var(--face-client); color:#8b8f96; user-select:none; -webkit-user-select:none; }
 #scenepast.beside { position:absolute; top:26px; right:0; bottom:0; width:var(--scene-list); padding:8px var(--scene-list-pad); border-left:var(--scene-list-rule) solid var(--line); overflow:auto; z-index:1; background:var(--bg); scroll-padding-top:1.7em; }
 #scenepast.after { flex:none; align-self:stretch; margin-top:1em; border-top:1px solid var(--line); padding-top:6px; }
 #sceneB.past-after:not(.head) { flex-wrap:wrap; }
 #sceneB.past-after:not(.head) > #scenepast.after { flex:0 0 100%; }
-#scenepast .pl-now { padding:0 0 .2em 6px; color:#cfd6df; }
+#scenepast .pl-now, #scenepast .pl-floor { padding:0 0 .2em 6px; color:#cfd6df; }
 #scenepast .pl-head { position:sticky; top:var(--past-held, 0px); z-index:1; display:block; width:100%; margin:0; padding:.15em 0 .15em 6px; border:0; border-left:3px solid transparent; background:var(--bg); color:#cfd6df; font:inherit; text-align:left; white-space:normal; }
 #scenepast button.pl-head { cursor:pointer; }
 #scenepast .pl-head .pl-fold { margin-right:.3em; }
@@ -665,6 +667,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #scenepast .pl-time { flex:none; min-width:var(--pl-time, auto); }
 #scenepast .pl-join { flex:none; white-space:pre; }
 #scenepast .pl-what { flex:1 1 0; min-width:0; }
+#scenepast .pl-row.reading .pl-what { flex:0 1 auto; }
+#scenepast .pl-reading { flex:none; color:#8b8f96; }
 #scenepast.after .pl-head { scroll-margin-top:var(--past-held, 0px); }
 #scenepast.after .pl-row { scroll-margin-top:calc(var(--past-held, 0px) + 1.6em); }
 #scenepast [data-shown] { border-left-color:#cfd6df; }

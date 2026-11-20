@@ -603,7 +603,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W, GRID } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX, ELLIPSIS } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, titleHTML, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, titleHTML, whyRoom, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop, stretchIn } from '../model/derive.js';
 import { iRuns } from '../model/frames.js';
@@ -1779,7 +1779,8 @@ function linesAt(/** @type {string} */ words, /** @type {number} */ width, wide 
  * wrapped between its words, never cut. Each line its words, the joiner it
  * breaks at at its end, so the lines read together are the line's words;
  * `count` the lines they take — a wrapped one counted line by line — with a
- * substitution's words after them on lines of their own (`linesAt`).
+ * substitution's words after them on lines of their own, the running mark
+ * among them while it runs (`linesAt`; T-ARTICLE's `whyRoom`).
  * @param {import('./article.js').Title} title
  * @param {number} width px
  * @param {(s: string) => number} [wide] words' width, px: the corner's type at its own size (`cornerPx`) where none is given
@@ -1802,7 +1803,7 @@ export function titleLines(title, width, wide = cornerPx) {
   };
   if (n) lay(0, n);
   const lines = spans.map(([i, j]) => ({ words: words(i, j), wraps: !fits(i, j) }));
-  const count = lines.reduce((c, l) => c + (l.wraps ? linesAt(l.words.trimEnd(), width, wide) : 1), 0) + (title.substituted ? linesAt(title.substituted.text, width, wide) : 0);
+  const count = lines.reduce((c, l) => c + (l.wraps ? linesAt(l.words.trimEnd(), width, wide) : 1), 0) + (title.substituted ? linesAt(whyRoom(title.substituted), width, wide) : 0);
   return { lines, count };
 }
 

@@ -349,6 +349,15 @@ export function stepFrom(p, i, dir) {
 const BUSY = new Set(['busy', 'scan_busy', 'history_busy']);
 
 /**
+ * Does the board class a refusal as retry: a read it could not take now and
+ * takes asked again (`BUSY`; wire.md §Errors)? False for every other refusal,
+ * the board not answering among them, and for none.
+ * @param {Met | null} r
+ * @returns {boolean}
+ */
+export const busy = (r) => !!r && BUSY.has(r.name);
+
+/**
  * Why no answer told what a text holds of a passage (see the head): the id
  * of the words keyed on the refusal met — the board out, the board busy, a
  * read still too large in parts, the passage's range no longer where it was,
@@ -361,7 +370,7 @@ const BUSY = new Set(['busy', 'scan_busy', 'history_busy']);
 export function whyOf(r) {
   if (!r || lostSession(r)) return 'L.held.why.unread';
   if (r.kind === 'unreachable') return 'F.daemon.unreachable';
-  if (BUSY.has(r.name)) return 'L.held.why.busy';
+  if (busy(r)) return 'L.held.why.busy';
   if (SIZE_REFUSALS.includes(r.name)) return 'L.held.why.size';
   if (r.name === 'range_not_present') return 'B1.range_not_present';
   if (r.name === 'withheld') return 'L.held.why.withheld';
@@ -376,7 +385,7 @@ export function whyOf(r) {
  * @param {Met | null} r
  * @returns {boolean}
  */
-export const retries = (r) => !r || r.kind === 'unreachable' || lostSession(r) || BUSY.has(r.name);
+export const retries = (r) => !r || r.kind === 'unreachable' || lostSession(r) || busy(r);
 
 /**
  * A document's label as a line sets it (see the head): the first line the

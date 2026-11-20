@@ -2,10 +2,11 @@
 // states — one row per minute and hand, newest first, a landmark a row of its
 // own, each row's hand and kind read off the row as the wire spells it — and
 // the list's days, what folds and what stands open, and what arriving rows do
-// (B3-S7 THE LIST; skep-frontend #662).
+// (B3-S7 THE LIST; skep-frontend #662); and how long a row's state stood,
+// to the position before the draft's next change (skep-frontend #688).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { handOf, kindOf, landmarkOf, rowsOf, daysOf, openOnOpening, isFolded, entriesOf, arrive, versionOf, dayHolding, rowHolding } from './past.js';
+import { handOf, kindOf, landmarkOf, rowsOf, daysOf, openOnOpening, isFolded, entriesOf, arrive, versionOf, dayHolding, rowHolding, stoodUntil } from './past.js';
 
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 
@@ -115,4 +116,14 @@ test('rows arriving once the list stands move nothing open and open no day: the 
   assert.deepEqual([got.entries.length, got.days.map((d) => d.key), [...got.open]], [4, ['d:2026-11-16', 'd:2026-11-15'], ['d:2026-11-16']]);
   assert.deepEqual(got.days.map((d) => isFolded(d, got.open)), [false, true], 'yesterday arrived folded; today as it stood');
   assert.notEqual(got.open, open, 'the open days a set of their own, the reader\'s left as it was');
+});
+
+test('a row\'s state stood until the position before the draft\'s next change — the first of the row after it, less one — the newest row\'s until the head its rows were read up to, and the row\'s own last position where no head is known, the head stands at it, or the row is none of the rows (skep-frontend #688)', () => {
+  const rows = rowsOf([row(30, { op: 'create_new_document' }), row(40, { time: NOON + 2 * MIN }), row(48, { time: NOON + 5 * MIN }), row(49, { time: NOON + 5 * MIN })]);
+  assert.deepEqual(rows.map((r) => [r.first, r.last]), [[48, 49], [40, 40], [30, 30]], 'three rows, the newest of two commits');
+  assert.deepEqual([stoodUntil(rows, rows[1], 60), stoodUntil(rows, rows[2], 60)], [47, 39], 'each to the position before the next row\'s first');
+  assert.deepEqual([stoodUntil(rows, rows[0], 60), stoodUntil(rows, rows[0], null), stoodUntil(rows, rows[0], 49)], [60, 49, 49], 'the newest to the head, else its own last position');
+  const adjacent = rowsOf([row(40), row(41, { time: NOON + 3 * MIN })]);
+  assert.equal(stoodUntil(adjacent, adjacent[1], 60), 40, 'the next change right after it: its own last position');
+  assert.equal(stoodUntil(rows, { first: 20, last: 20, positions: [20], time: null, hand: { kind: 'bare', fingerprint: null }, kind: 'typed', landmark: null }, 60), 20, 'a row none of the rows: its own last position');
 });

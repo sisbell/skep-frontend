@@ -580,7 +580,7 @@ export const STRINGS = {
   // the steps, the put-back, the restore, the rows named for what a publication, a merge, its undo, the withdrawal and the
   // restore made
   'B3.history.busy': { text: 'history is busy — trying again', cls: 'DRAFT', kind: 'K7', source: 'designs/B3-editor.md', screen: 'B3-S7: `history_busy` at the place' },
-  'B3.history.reclaimed': { text: 'this board keeps history back to ⟨floor⟩ — earlier states are not readable here', cls: 'DRAFT', kind: 'K16', source: 'designs/B3-editor.md', screen: 'B3-S7: `history_reclaimed`, where the list ends' },
+  'B3.history.reclaimed': { text: '⟨board⟩ keeps this draft\'s history back to ⟨time⟩ — earlier states are not readable here', cls: 'DRAFT', kind: 'K16', source: 'designs/B3-editor.md', screen: 'B3-S7: `history_reclaimed` — the past state\'s line in its pane\'s corner, the list\'s floor mark below the state shown, and the act\'s site', was: 'this board keeps history back to ⟨floor⟩ — earlier states are not readable here' },
   'B3.history.corner': { text: 'kept · past states', cls: 'DRAFT', kind: 'K11', source: 'designs/B3-editor.md', screen: 'B3-S7: the corner\'s kept state with its second act' },
   'B3.history.row': { text: 'as it stood ⟨time⟩ · ⟨hand⟩', cls: 'DRAFT', kind: 'K25', source: 'designs/B3-editor.md', screen: 'B3-S7: a row of the list of past states (D6 BM-49)' },
   'B3.history.not-last': { text: 'one of ⟨n⟩ changes that minute, not the last', cls: 'DRAFT', kind: 'K16', source: 'designs/B3-editor.md', screen: 'B3-S7: the pane\'s corner after the state\'s hand, a state before its minute\'s last', cid: 'C-288' },
@@ -628,8 +628,8 @@ export const STRINGS = {
   'B3.history.row.withdrawn.draft': { text: 'the words kept, as an ordinary draft', cls: 'DRAFT', kind: 'K25', source: 'designs/B3-editor.md', screen: 'B3-S7: the withdrawal\'s row at a draft side' },
   'B3.history.row.restored': { text: 'set to how it stood ⟨time⟩', cls: 'DRAFT', kind: 'K25', source: 'designs/B3-editor.md', screen: 'B3-S7: the restore\'s row' },
   // B3-S7's words no design document carries: the corner's act inert while the board is
-  // not answering, the list's top line over words not yet kept, the head of rows with no recorded time, a folded day's mark,
-  // a signed row's hand, and the kinds of change the design gives no word
+  // not answering, the list's top line over words not yet kept, the head of rows with no recorded time, the reclaimed line's
+  // time where the state shown holds none, a folded day's mark, a signed row's hand, and the kinds of change the design gives no word
   'L.history.unanswered': { text: '⟨board⟩ is not answering — its past states can be read once it answers', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B3-S7: the corner\'s "show its history" inert while the board is not answering', lane: true },
   // B3-S3's words no design document carries: the undo chord reading where its step was made, then the running mark, and
   // the step not taken where that read fails or the board already does not answer, a redo's alike
@@ -641,6 +641,7 @@ export const STRINGS = {
   'L.redo.unanswered.next': { text: 'that change is still the next to redo; ⟨redo chord⟩ again once it answers', cls: 'DRAFT', kind: 'K18', source: '', screen: 'B3-S3: after the redo chord\'s not-answering line (D5 K-75)', lane: true },
   'L.history.unkept': { text: 'now — not yet kept', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: the list\'s top line where the draft holds words the board has not kept', lane: true },
   'L.history.time-unrecorded': { text: 'time not recorded', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: the list\'s head over rows with no recorded time, folding like a day', lane: true },
+  'L.history.floor.untimed': { text: 'a time not recorded', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: the time B3.history.reclaimed names, where the state shown in the place of the one asked holds no recorded time', lane: true },
   'L.history.folded': { text: '▸', cls: 'DRAFT', kind: 'K17', source: '', screen: 'B3-S7: the mark of a folded day\'s head in the list', lane: true },
   'L.history.hand.signed': { text: 'signed', cls: 'DRAFT', kind: 'K28', source: '', screen: 'B3-S7: the list\'s hand at a signed row, which names no key', lane: true },
   'L.history.kind.rearranged': { text: 'rearranged', cls: 'DRAFT', kind: 'K25', source: '', screen: 'B3-S7: a row\'s kind, a `rearrange`, or a `set_arrangement` naming no base and no merge', lane: true },

@@ -355,7 +355,7 @@ const FETCH_EM = 5;
 /** the view's probe of a chain reads at most this many members (`D.1`, `D.2`, …); an act's probe reads to the chain's end */
 const MEMBER_PROBE_CAP = 8;
 /** a retry-class refusal (`scan_busy`, `history_busy`) is reissued after this pause */
-const RETRY_MS = 120;
+export const RETRY_MS = 120;
 /** a view's read the board did not answer is held this long, then asked again, where the board did not answer again first (`answering`) — the interval `skep-shell`'s `PROBE_CADENCE` asks a board's `/health` again at (unmeasured here) */
 export const UNREACHED_MS = 2000;
 /** a class scan read whole is asked at most this many times while the board answers `scan_busy` */
@@ -1401,6 +1401,7 @@ export async function newestOwn() {
  * @property {number} pages how many `changes` pages were read
  * @property {number} read how many rows those pages held
  * @property {number} from the position the windows read down to, the read covering `(from, head]`: 0 where it reached the feed's first position
+ * @property {number | null} head the position the windows read up to: `below` where the read was asked below it, else the page's place on the feed as the read began (M-REC's `feedAt`); null where the page held none, the windows read from position 0 up
  * @property {number | null} next the last page's `next`, a position of the feed narrowed to the draft — kept here alone, never the page's own positions on the whole feed; null where no page answered
  * @property {Refusal | null} refused the refusal a page met, the read ended there; null where every page answered
  */
@@ -1430,7 +1431,7 @@ export async function historyOf(draft, o = {}) {
   /** @type {Map<number, FeedUpdate>} */
   const rows = new Map();
   /** @type {HistoryRead} */
-  const out = { rows: [], pages: 0, read: 0, from: head ?? 0, next: null, refused: null };
+  const out = { rows: [], pages: 0, read: 0, from: head ?? 0, head, next: null, refused: null };
   inflight.add(key);
   try {
     /** the window read last: it read `(since, until]` */
@@ -1506,23 +1507,26 @@ export async function landedOf(doc, position) {
  * its extent there, then its text over its first WHOLE_CAP positions and that
  * text's image, one read after the other (`textParts`, `imageParts`), for the
  * board reconstructs at most two states at once — all of it read at the
- * position the board names where the one asked lies inside a commit; empty
- * where the document was not registered there; asked again whole RETRY_MS
- * after the board's reconstructions were busy, HISTORY_ATTEMPTS times in all.
- * Any other refusal is handed up, the board not answering among them. The
- * reads count as a read in flight.
+ * position the board names where the one asked lies inside a commit, save
+ * where that lies at or below `o.above`, the board's `not_a_position` then
+ * handed up; empty where the document was not registered there; asked again
+ * whole RETRY_MS after the board's reconstructions were busy, `o.attempts`
+ * times in all — the busy refusal handed up past them. Any other refusal is
+ * handed up, the board not answering among them. The reads count as a read
+ * in flight.
  * @param {string} addr
  * @param {number} at the position of the board's history
+ * @param {{attempts?: number, above?: number}} [o] `attempts` how many whole reads at most while the board's reconstructions are busy, HISTORY_ATTEMPTS where none is given; `above` the position the board names is read only where it lies above this one — a position the caller asked already, or one it knows the board reads nothing at
  * @returns {Promise<State | {refused: Refusal}>}
  */
-export async function stateAt(addr, at) {
-  const key = 'state ' + addr;
+export async function stateAt(addr, at, o = {}) {
+  const key = 'state ' + addr, attempts = o.attempts ?? HISTORY_ATTEMPTS, above = o.above ?? -Infinity;
   inflight.add(key);
   try {
-    let out = await stateOnce(addr, at);
-    for (let asks = 1; asks < HISTORY_ATTEMPTS && 'refused' in out && out.refused.name === 'history_busy'; asks++) {
+    let out = await stateOnce(addr, at, above);
+    for (let asks = 1; asks < attempts && 'refused' in out && out.refused.name === 'history_busy'; asks++) {
       await new Promise((r) => setTimeout(r, RETRY_MS));
-      out = await stateOnce(addr, at);
+      out = await stateOnce(addr, at, above);
     }
     return out;
   } finally { inflight.delete(key); dirty(); }
@@ -1530,20 +1534,21 @@ export async function stateAt(addr, at) {
 
 /**
  * One whole read of `stateAt`'s: the extent at the position, asked again
- * once at the committed position the board names below it, then the text
- * and its image there.
+ * once at the committed position the board names below it where that lies
+ * above `above`, then the text and its image there.
  * @param {string} addr
  * @param {number} at
+ * @param {number} above
  * @returns {Promise<State | {refused: Refusal}>}
  */
-async function stateOnce(addr, at) {
+async function stateOnce(addr, at, above) {
   for (let pos = at, asks = 0; ; asks++) {
     const out = await read(F.opAt(pos, F.retrieveDocVSpanSet(addr)));
     if ('refused' in out) {
       // a document the board had not minted at that position held nothing then
       if (out.refused.name === 'doc_not_registered') return { runs: [], image: [], at: pos };
       const nearest = /** @type {{body?: {nearest?: unknown}}} */ (out.refused).body?.nearest;
-      if (asks || out.refused.name !== 'not_a_position' || typeof nearest !== 'number' || nearest >= pos) return out;
+      if (asks || out.refused.name !== 'not_a_position' || typeof nearest !== 'number' || nearest >= pos || nearest <= above) return out;
       pos = nearest;
       continue;
     }
