@@ -352,7 +352,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner button.history { text-decoration:underline dotted; cursor:pointer; }
 .corner button.history.inert { color:#8b8f96; text-decoration:none; }
 /* a past state's corner (B3-S7): its line in the kept word's place, and the line saying why it shows that state, each on a
-   line of its own, wrapped and never cut */
+   line of its own, wrapped and never cut — the why on one line in a head's row its words fit */
 .corner .past { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
 .corner .why { display:block; margin-top:.3em; white-space:normal; }
 /* THE FACE BENEATH THE KEPT WORD (B3-S2; P48; P67): a moved document's, never yielding — whole, its sentence and its hands
@@ -363,7 +363,6 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .face > .face-text, .corner .face > .hands, .corner .face > .face-acts { display:block; }
 .corner .face > .face-acts { margin-top:.3em; }
 .corner .face .face-act { display:inline-block; margin-right:.6em; white-space:nowrap; text-decoration:underline dotted; }
-:is(#corners, .pane) .corner.head .hslot:not(.wraps) > .face { white-space:nowrap; }
 .corner .face .face-act.inert { color:#8b8f96; text-decoration:none; }
 .corner .face > .said { margin-top:.3em; }
 .corner button.face.compact { text-align:left; text-decoration:underline dotted; }
@@ -377,7 +376,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .read { display:block; margin-top:.3em; color:#cfd6df; }
 .corner button.read { text-decoration:underline dotted; }
 /* a kept document's clause, the corner's last item on a line of its own: its words whole in either form, wrapped and never
-   cut, the room above it its own padding, so the corner is placed by the items above it alone (T-LAYER) */
+   cut — on one line in a head's row its words fit — the room above it its own padding, so the corner is placed by the
+   items above it alone (T-LAYER) */
 .corner .kept { display:block; padding-top:.3em; color:#cfd6df; white-space:normal; }
 /* A CORNER AT ITS DOCUMENT'S HEAD (FP-26, FP-31): across the column being read, its rows on the document's own ground at
    the reading line's pitch, which T-LAYER sets — the first held below the one line, or the rows T-LAYER marks held at the
@@ -400,6 +400,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 :is(#corners, .pane) .corner.head .hslot { position:absolute; top:0; display:flex; align-items:center; white-space:nowrap; }
 :is(#corners, .pane) .corner.head .hslot.wraps { white-space:normal; align-items:flex-start; }
 :is(#corners, .pane) .corner.head .hslot > * { display:inline-block; margin:0; padding-top:0; }
+:is(#corners, .pane) .corner.head .hslot:not(.wraps) > :is(.face, .why, .kept) { white-space:nowrap; }
 :is(#corners, .pane) .corner.head .more { color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
 :is(#corners, .pane) .corner.head > .opened { position:absolute; left:0; z-index:3; padding:4px var(--corner-pad); white-space:normal; }
 /* A LABEL HELD BELOW THE ONE LINE over a mounted article's text (issue #169's design decision: "Held below the line"): one line

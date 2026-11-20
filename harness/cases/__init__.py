@@ -128,6 +128,38 @@ SELECTED_WHOLE = '''((sel) => { const e = document.querySelector(sel), s = windo
   return nodes.length > 0 && nodes.every((n) => r.comparePoint(n, 0) === 0 && r.comparePoint(n, n.data.length) === 0); })(%s)'''
 
 
+# every corner the selectors match, its words read against the boxes they stand in, each text node's line boxes by a Range in
+# fractional px: each slot of a head's rows — every line box inside the slot's right edge and its foot, and in a slot of one
+# row every line box's top within half a line of the first's — and each box of fixed width showing a value, the kind's, the
+# kept slot's and a kept word's — every line box inside its right edge; each corner read and its form, each slot and box read
+# with how far its words run past its right edge and its foot, those that run past by more than `tol` px or break a one-row
+# slot's line, and the worst excess past an edge (`corner_fit`)
+CORNER_FIT = '''((sels, tol) => { const where = [], read = []; let worst = null;
+  const rectsIn = (e) => { const rs = [], w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) if (n.data.trim()) { const g = document.createRange(); g.selectNodeContents(n); rs.push(...[...g.getClientRects()].filter((k) => k.width > 0)); }
+    return rs; };
+  const fits = (c, e, kind, oneRow) => { const rs = rectsIn(e); if (!rs.length) return;
+    const q = e.getBoundingClientRect(), right = Math.max(...rs.map((k) => k.right)) - q.right, foot = kind === "slot" ? Math.max(...rs.map((k) => k.bottom)) - q.bottom : null;
+    const tops = rs.map((k) => k.top), spread = Math.max(...tops) - Math.min(...tops);
+    worst = Math.max(worst ?? -Infinity, right, foot ?? -Infinity);
+    read.push({corner: c.dataset.corner || null, in: c.parentElement ? c.parentElement.id : null, kind, cls: e.className || null, words: e.textContent,
+               right: +right.toFixed(2), foot: foot == null ? null : +foot.toFixed(2), spread: +spread.toFixed(2), oneRow, broken: oneRow && spread > rs[0].height / 2}); };
+  for (const s of sels) for (const c of document.querySelectorAll(s)) {
+    where.push({corner: c.dataset.corner || null, in: c.parentElement ? c.parentElement.id : null, form: c.className});
+    if (c.classList.contains("head")) for (const h of c.querySelectorAll(".hslot")) fits(c, h, "slot", !h.classList.contains("wraps"));
+    for (const b of c.querySelectorAll(".kind:not(.pending), .kept-slot, .kept-word:not(.pending)")) fits(c, b, "box", false);
+  }
+  return {corners: where, read, over: read.filter((x) => x.right > tol || (x.foot ?? 0) > tol || x.broken), worst: worst == null ? null : +worst.toFixed(2)}; })(%s, %s)'''
+
+
+def corner_fit(ctx, *selectors, tol=1):
+    """every corner the selectors match, as a person meets its words in the boxes they stand in (`CORNER_FIT`; issue #678;
+    FP-26, FP-34): the corners read and their forms, each slot and box that held words with how far they run past its right
+    edge and a head slot's foot, those that run past by more than `tol` px or break a one-row slot's line, and the worst
+    excess past an edge, px — a figure (FP-18)"""
+    return ctx.js(CORNER_FIT % (json.dumps(list(selectors)), json.dumps(tol))) or {}
+
+
 def fields(addr):
     """an address's fields, split at its zeros (the page's `fieldsOf`)"""
     out = [[]]

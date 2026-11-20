@@ -14,8 +14,9 @@
 // fold reserves, its first row held below the line, a form opened beneath it,
 // the band's change re-anchoring the camera — and a kept word said where it
 // changes; a reading scene's pane's view at its measure and its corner,
-// compact beside its column or at its document's head, no row naming it, its
-// rows held at the pane's top through what says which state it shows — a past
+// compact beside its column or at its document's head, measured in the
+// corner's own type whatever its view measures the article at, no row naming
+// it, its rows held at the pane's top through what says which state it shows — a past
 // state's or the held version's title on its first rows, broken at its middle
 // dots first and the held words after their dash, as many rows as its lines
 // take and never fewer than the floor handed in; a
@@ -2140,6 +2141,29 @@ test('a reading scene\'s pane\'s view is at the pane\'s measure, and its corner 
   const wide = rowsOf(LAYER.sceneHead(d, view, { px, kept, open: false }).html), rowOf = (/** @type {string} */ s) => wide.find((r) => r.html.includes(s));
   assert.ok(wide[0].held && wide[0].h > pitch && wide[0].html.includes('data-string="L.kept.links"') && rowOf('class="kind"')?.held && rowOf('data-members="3"')?.held && rowOf('data-more="1"')?.held === false,
     `a clause wider than the head held whole on the one row its words wrap across, the kind and the version statement on the rows after it held too, so which state the pane shows never scrolls; the count of what folds not held (issue #677): ${JSON.stringify(wide.map((r) => [r.k, r.held, r.h]))}`);
+});
+
+test('a pane\'s corner is measured in the corner\'s own type whatever measure the pane\'s view carries for its article: a view whose measure answers nonsense sets the same items beside its column, whole and compact, and the same head, its rows and its held rows — each slot of words its words\' width in the corner\'s type, the kind\'s the widest of its words\', a glyph\'s the glyph\'s own and never its words\' (issue #678; FP-26, FP-34)', () => {
+  deliver();
+  const d = { ...REC.doc(D), meta: /** @type {any} */ ({ published: true, birth: D + '.1' }) };
+  const view = { ...LAYER.sceneView(d, 30), members: 3, read: 2 }, odd = { ...view, measure: () => 1000 };
+  assert.equal(LAYER.sceneCorner(d, odd), LAYER.sceneCorner(d, view), 'beside its column, whole');
+  assert.equal(LAYER.sceneCorner(d, odd, true), LAYER.sceneCorner(d, view, true), 'beside its column, compact');
+  const as = { px: 17, kept: null, open: false }, head = LAYER.sceneHead(d, view, as);
+  assert.deepEqual(LAYER.sceneHead(d, odd, as), head, 'at its document\'s head: its rows, its markup and its rows held');
+  assert.deepEqual(LAYER.sceneHead(d, odd, { ...as, open: true }), LAYER.sceneHead(d, view, { ...as, open: true }), 'opened whole beneath its rows');
+  /** each slot of the head: its width and its words, the markup's tags and escapes taken out */
+  const slots = [...head.html.matchAll(/<span class="hslot( wraps)?" style="left:[\d.]+px;width:([\d.]+)px;[^"]*">(.*?)<\/span>(?=<span class="hslot|<\/div>)/g)]
+    .map((m) => ({ w: Number(m[2]), html: m[3], words: m[3].replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&') }));
+  const slotOf = (/** @type {string} */ cls) => slots.find((s) => s.html.includes(`class="${cls}`));
+  const kind = slotOf('kind'), version = slotOf('version'), glyph = slotOf('st glyph');
+  assert.ok(kind && version && glyph, `its kind, its version statement and its state's glyph each in a slot: ${head.html}`);
+  const near = (/** @type {number} */ a, /** @type {number} */ b) => Math.abs(a - b) < 1e-6;
+  const kindPx = Math.max(...['F.kind.draft', 'F.published', 'L.slot.unread'].map((id) => LAYER.cornerPx(t(id))));
+  assert.ok(near(kind.w, kindPx), `the kind's slot the widest of its words in the corner's type: ${kind.w} = ${kindPx}`);
+  assert.ok(near(version.w, LAYER.cornerPx(version.words)), `the version statement's slot its words' width in the corner's type: ${version.w} = ${LAYER.cornerPx(version.words)} ("${version.words}")`);
+  const glyphWords = /aria-label="([^"]*)"/.exec(glyph.html)?.[1] ?? '';
+  assert.ok(near(glyph.w, LAYER.cornerPx(glyph.words)) && glyph.w < LAYER.cornerPx(glyphWords) - 1, `the glyph's slot the glyph's own width, never its words': ${glyph.w} = ${LAYER.cornerPx(glyph.words)}, its words ${LAYER.cornerPx(glyphWords)}`);
 });
 
 /** a past state's line as T-ARTICLE titles it (`cornerTitle`): its time, then its hand's label and cue */

@@ -60,7 +60,11 @@ inside its outline, hidden from assistive technology and taking the pointer
 bottom on that foot inside the half gutter; and following the column nearest the view's centre — issue
 #151's design decision: at the reading size over the second column it stands
 beside that column in the gutter, compact, clear of the first column's text
-and inside its own box, its glyph's act opening it whole there). THE TAILS (issue #132's design decision: a link whose far
+and inside its own box, its glyph's act opening it whole there; and at each
+level, compact there, opened whole and at its head in the narrow window,
+its every word inside the box it is set in — its kind's slot holding
+"published" whole — 1 px either way, the worst excess a figure, issue
+#678). THE TAILS (issue #132's design decision: a link whose far
 document the plane draws nowhere leaves its near end by a short tail, never
 pointed at its address's place): at em 12.5 with the reveal at stage 3,
 every link of the first edition whose far document the plane draws nowhere
@@ -464,7 +468,7 @@ import json
 import math
 import re
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, heard
+from . import BEAMED, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, heard
 
 LEVELS_EM = [9, 12, 18, 30]
 # the room about the viewport the text layer stands a document's lines in (issue #122: a document stands by line) — the
@@ -4707,7 +4711,8 @@ def corner_follows(ctx, r):
     column; then over its second column, the corner beside that one — its right edge CORNER_GAP_PX short of the column's
     text, below the one line and in view, inside its own document's box and clear of the first column's text — compact,
     narrower than it stands whole, the gutter and the edge there holding less; its glyph's act opening it whole where it
-    stands, the act again compacting it (FP-26: "A compact sign opens whole on its act"); its figures"""
+    stands, the act again compacting it (FP-26: "A compact sign opens whole on its act"); compact and opened whole, every
+    word of it inside the box it is set in, 1 px either way (issue #678); its figures"""
     f = ctx.js('window.__skep.fold(%s)' % json.dumps(DOC))
     if len(f['columns']) < 2:
         r.note('the corner beside a later column is unmeasured on this board: the first edition folds into one column')
@@ -4730,12 +4735,21 @@ def corner_follows(ctx, r):
             {'corner': c and c['rect'], 'placed': v['placed'], 'column': col, 'first_column': col0, 'box': v['box'], 'whole_px': whole})
     ov = ctx.js('window.__skep.overlapCheck()')
     r.check(not ov['corners_into'] and not ov['corners_clipped'], 'over the second column the corner reaches into no other document\'s box, and nothing clips it', {'into': ov['corners_into'][:4], 'clipped': ov['corners_clipped']})
+    # the corner's words read against their boxes (`corner_fit`): whether the corner read stood compact, and whether every word
+    # stood inside its box, its kind's slot read among them
+    fit = corner_fit(ctx, CORNER)
+    compacted = lambda f: [('compact' in (x.get('form') or '').split()) for x in f.get('corners') or []]
+    words_in = lambda f: any(x['cls'] == 'kind' for x in f.get('read') or []) and f.get('over') == []
+    r.check(compacted(fit) == [True] and words_in(fit), 'over the second column, compact: every word of the corner inside the box it is set in, 1 px either way — its kind\'s slot among them (issue #678; FP-26, FP-34)',
+            {'over': fit.get('over'), 'worst_px': fit.get('worst'), 'corners': fit.get('corners')})
     # its glyph's act opens it whole where it stands; the act again compacts it
     act = '''(() => { const g = document.querySelector(%s + ' .%%s'); if (!g) return false; const q = g.getBoundingClientRect();
       g.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, clientX: q.left + q.width / 2, clientY: q.top + q.height / 2})); return true; })()''' % json.dumps(CORNER)
     acted = ctx.js(act % 'glyph')
     ctx.frames(3)
-    opened = corner_rect(ctx)
+    opened, fit_open = corner_rect(ctx), corner_fit(ctx, CORNER)
+    r.check(acted and compacted(fit_open) == [False] and words_in(fit_open), 'over the second column, opened whole on its glyph\'s act: every word of the corner inside the box it is set in, 1 px either way (issue #678; FP-26, FP-34)',
+            {'over': fit_open.get('over'), 'worst_px': fit_open.get('worst'), 'corners': fit_open.get('corners')})
     ctx.js(act % 'st')
     ctx.frames(3)
     closed = corner_rect(ctx)
@@ -4743,7 +4757,7 @@ def corner_follows(ctx, r):
     r.check(acted and bool(oc and cc) and abs(oc['rect']['w'] - whole) <= 1 and abs(oc['rect']['x'] + oc['rect']['w'] - (col['left'] - CORNER_GAP_PX)) <= 1 and opened['placed'] == {'column': 1, 'compact': False, 'opened': True, 'head': False}
             and abs(cc['rect']['w'] - c['rect']['w']) <= 1 and closed['placed'] == {'column': 1, 'compact': True, 'opened': False, 'head': False},
             'the compact corner\'s glyph opens it whole on its act, standing where it stood, and the act at the corner opened compacts it again', {'opened': oc and oc['rect'], 'closed': cc and cc['rect'], 'acted': acted})
-    return {'whole_px': whole, 'compact': c and c['rect'], 'opened': oc and oc['rect']}
+    return {'whole_px': whole, 'compact': c and c['rect'], 'opened': oc and oc['rect'], 'words_past_px': {'compact': fit.get('worst'), 'opened': fit_open.get('worst')}}
 
 
 def seen_centre(ctx):
@@ -4766,7 +4780,8 @@ def measure_narrows(ctx, r):
     and the first edition LEAPt to a passage — every mounted column a whole count of its face's average advance fewer than
     the full measure, one for every column, the page's measure in force, the corner at the document's head; the landed
     line's column and its edge, EDGE_EM em at the reading size, inside the visible view at the reading size, the corner
-    across them, in view below the one line; a zoom changing no count; and the window put back — every column at the full
+    across them, in view below the one line, every word of its rows inside its slot and a one-row slot's on one line
+    (issue #678); a zoom changing no count; and the window put back — every column at the full
     measure again, the line under the view's centre at the height it stood, from the view's centre, at its em; its
     figures"""
     pos = PASSAGE
@@ -4793,6 +4808,12 @@ def measure_narrows(ctx, r):
         r.check(framed and abs(em - READING_PX) < 1e-6 and v['placed'] and v['placed']['head'],
                 f'a {NARROW_PX} px window: the landed line\'s column and its {EDGE_EM} em edge inside the view, at the reading size, {READING_PX} px an em — the corner across them at the document\'s head, below the one line',
                 {'corner': c and c['rect'], 'column': col, 'edge_right': edge, 'view': vp, 'em': em, 'placed': v['placed']})
+        boxed = corner_fit(ctx, CORNER)
+        words_past = boxed.get('worst')
+        heads = [('head' in (x.get('form') or '').split()) for x in boxed.get('corners') or []]
+        r.check(heads == [True] and any(x['kind'] == 'slot' for x in boxed.get('read') or []) and any(x['cls'] == 'kind' for x in boxed.get('read') or []) and boxed.get('over') == [],
+                f'a {NARROW_PX} px window, the corner at the document\'s head: every word of its rows inside its slot\'s right edge and its foot, a one-row slot\'s on one line, its kind\'s inside its box, 1 px either way (issue #678; FP-26, FP-34)',
+                {'over': boxed.get('over'), 'worst_px': words_past, 'corners': boxed.get('corners'), 'read': boxed.get('read')})
         ctx.set_view(cam['x'], cam['y'], cam['scale'] * 1.6)
         zoomed = [c for a in measure_view(ctx) for c in (a['cpl'] or [])]
         r.check(bool(zoomed) and all(abs(z - cpl[0]) <= 2 * MEASURE_CH_TOL for z in zoomed) and ctx.js('window.__skep.measure()') == fit,
@@ -4813,7 +4834,7 @@ def measure_narrows(ctx, r):
     r.check(bool(back) and all(abs(b - MEASURE_CH[1]) <= MEASURE_CH_TOL for b in back) and abs(after['dy'] - before['dy']) <= 1 and abs(after['em'] - before['em']) <= 1e-6,
             f'the window put back: every column at the full measure again, the line under the visible view\'s centre at the height it stood from that centre, 1 px either way, at its em',
             {'back': sorted(set(round(b, 3) for b in back)), 'before': before, 'after': after, 'pos': under})
-    return {'window': NARROW_PX, 'cpl': round(cpl[0], 3) if cpl else None, 'fit': fit, 'before': before, 'after': after}
+    return {'window': NARROW_PX, 'cpl': round(cpl[0], 3) if cpl else None, 'fit': fit, 'before': before, 'after': after, 'corner_words_past_px': words_past}
 
 
 def resize_frames(ctx, r):
@@ -5145,6 +5166,7 @@ def run(ctx):
     r = Result()
     ctx.leap(DOC, WINDOW[0])
     drift = {}
+    published = ctx.js('(async () => (await import("./strings.js")).t("F.published"))()')
     for em in LEVELS_EM:
         view_reading(ctx, em)
         sample = ctx.js('window.__skep.driftSample(%s)' % json.dumps('em%d' % em))
@@ -5161,9 +5183,15 @@ def run(ctx):
         c = corner_of(ctx)
         shown = c['corner'] is not None and c['corner']['inClip'] and c['corner']['inView'] and c['corner']['rect']['y'] >= c['line'] - 0.5
         r.check(shown, f'em {em}: the first edition\'s corner is in view, below the one line', c)
+        fit = corner_fit(ctx, CORNER)
+        kind = next((x for x in fit.get('read') or [] if x['kind'] == 'box' and x['cls'] == 'kind'), None)
+        r.check(bool(kind) and kind['words'] == published and fit.get('over') == [],
+                f'em {em}: every word of the first edition\'s corner inside the box it is set in, 1 px either way — its kind\'s slot holding "{published}" whole (issue #678; FP-26, FP-34)',
+                {'kind': kind, 'over': fit.get('over'), 'worst_px': fit.get('worst'), 'corners': fit.get('corners')})
         ho = handoff(ctx)
         r.check(ho['compared'] > 0 and not ho['off'], f'em {em}: the handoff — every part of every block of every mounted article stands on the canvas\'s bars for it in its column: its top and its height within {HANDOFF_TOL_PX} px of its bars\', and as many lines', {'compared': ho['compared'], 'off': ho['off'][:6]})
-        drift['em%d' % em] = {'samples': sample, 'worst_px': worst, 'containment': ov, 'em_px_measured': mine[0]['em_px'] if mine else None, 'corner': c['corner'] and c['corner']['rect'], 'handoff': {'compared': ho['compared'], 'off': len(ho['off']), 'gaps': ho['gaps']}}
+        drift['em%d' % em] = {'samples': sample, 'worst_px': worst, 'containment': ov, 'em_px_measured': mine[0]['em_px'] if mine else None, 'corner': c['corner'] and c['corner']['rect'], 'handoff': {'compared': ho['compared'], 'off': len(ho['off']), 'gaps': ho['gaps']},
+                              'corner_words_past_px': fit.get('worst')}
         drift['em%d' % em]['measure'] = measure_holds(r, f'em {em}', measure_view(ctx))
     r.figures['drift'] = drift
     # the corner holds to the top of the document's visible part (foundations §3.1): its first column's top risen past

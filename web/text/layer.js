@@ -85,7 +85,10 @@
 // fits a withheld run's key, a cut label and a byline's slots by (the view's
 // `measure`), and what a held label's line is set by (P-LABEL's
 // `heldContents`, `runHTML`); where the platform gives no canvas, every character one advance
-// of the reading face. A face that arrives after the articles were set is a
+// of the reading face. A corner's items are measured so at P-REG's CORNER
+// size, the size they are drawn at — each slot's box and each item's room on
+// a head's rows — never at LAY_FS (`cornerMeasure`, `cornerView`; FP-26,
+// FP-34). A face that arrives after the articles were set is a
 // re-set (`refaced`): the widths, the lines the platform set and the folds
 // made of them dropped, so every standing article goes stale and is set again
 // in its place, the passage being read held (FP-8). A resize that moves the measure folds
@@ -1717,6 +1720,26 @@ function headKey(d) {
 /** words' width in the corner's type — the client's face at the interface's size, P-REG's CORNER — in px, as the platform sets them (`measureRun`) */
 export const cornerPx = (/** @type {string} */ text) => measureRun(text, CORNER.px, 'normal', 'client');
 
+/**
+ * A string's width set in a face at the corner's size, in em of that size
+ * (T-ARTICLE's `Measure`): what every width a corner's items take is read by
+ * — a slot's box, an item's room on a head's row — for they are drawn at
+ * P-REG's CORNER size, never the article's (`widthOf`; FP-26, FP-34).
+ * @param {string} text
+ * @param {import('../plane/register.js').Face} f
+ */
+const cornerMeasure = (text, f) => measureRun(text, CORNER.px, 'normal', f) / CORNER.px;
+
+/**
+ * A corner's view: the view its document's article is made from (`viewFor`,
+ * `sceneView`), its words measured at the corner's own size
+ * (`cornerMeasure`). Every maker of a corner's items reads its view through
+ * this — beside its column, at its head and in the band its fold reserves.
+ * @param {ArticleView} v
+ * @returns {ArticleView}
+ */
+const cornerView = (v) => ({ ...v, measure: cornerMeasure });
+
 /** the lines a corner's words take wrapped at their spaces at a width, measured by `wide` — the interface's size (`cornerPx`) where none is given */
 function linesAt(/** @type {string} */ words, /** @type {number} */ width, wide = cornerPx) {
   const space = wide(' ');
@@ -1773,8 +1796,8 @@ const clauseWidth = (/** @type {{text: string}} */ k) => measureRun(k.text, ADDR
 /** the least room a document's name keeps on its head's first row: its address whole at its one size, so whether its region is named moves no row (`docLabel`) */
 const nameWidth = (/** @type {Doc} */ d) => measureRun(d.addr, ADDRESS.px, ADDRESS.weight, 'ident');
 
-/** a corner's items as a head's rows read them (`headLayout`): each one's width at the interface's size — a face's its words measured there (`cornerPx`), for they wrap where a row cannot hold them — its words, whether it yields, and whether it holds at a reading scene's pane's top */
-const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => ({ w: i.cls === 'face' ? cornerPx(i.words) : i.em * CORNER.px, yields: i.yields, words: i.words, holds: i.holds }));
+/** a corner's items as a head's rows read them (`headLayout`): each one's width at the interface's size, as its corner's view measures it (`cornerView`), its words, whether it yields, and whether it holds at a reading scene's pane's top */
+const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => ({ w: i.em * CORNER.px, yields: i.yields, words: i.words, holds: i.holds }));
 
 /**
  * The depth a document's head takes above its first row, in the body's em
@@ -1783,7 +1806,9 @@ const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => 
  * at the reading line's pitch — the name's room and the kept clause counted
  * whether or not the one line names it, so the depth never moves with the
  * camera; none where its corner stands beside its column. Every corner
- * carries an item — its kind's slot, else a refused document's own words.
+ * carries an item — its kind's slot, else a refused document's own words —
+ * each measured as the rows `headOf` writes measure it, at the corner's own
+ * size (`cornerView`).
  * @param {Doc} d
  * @param {ArticleView} v its view (`viewFor`)
  * @returns {number}
@@ -1791,7 +1816,7 @@ const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => 
 function headBand(d, v) {
   const F = fit();
   if (!F.head) return 0;
-  const items = cornerItems(d, v, true, false);
+  const items = cornerItems(d, cornerView(v), true, false);
   const k = keptIn(d.addr), pitch = LINE_H * F.px;
   const L = headLayout(headItems(items), nameWidth(d), k ? { w: clauseWidth(k), words: k.text } : null, (F.cpl * CHAR_W + EDGE) * F.px, pitch);
   return L.rows * LINE_H;
@@ -3178,10 +3203,11 @@ const cornerKey = (/** @type {string} */ addr) => JSON.stringify([kindOf(REC.doc
  * A document's corner's items made over its view (`Mounted.corner`), keyed by what they were made from (`cornerKey`):
  * whole, compact, and opened whole on its act where its room holds its compact form alone; compact one by one for a
  * head's rows, closed and opened; and their words alone, whole, for the form a head opens beneath its rows
- * (`ArticleView.opened`, `ArticleView.acts`).
+ * (`ArticleView.opened`, `ArticleView.acts`) — every width among them measured at the corner's own size
+ * (`cornerView`), whatever the article's view measures at.
  */
-function cornerOfView(/** @type {Doc} */ d, /** @type {ArticleView} */ view) {
-  const opened = { ...view, opened: true };
+function cornerOfView(/** @type {Doc} */ d, /** @type {ArticleView} */ article) {
+  const view = cornerView(article), opened = { ...view, opened: true };
   return {
     whole: cornerHTML(d, view), compact: cornerHTML(d, view, true), opened: cornerHTML(d, opened), key: cornerKey(d.addr),
     items: cornerItems(d, view, true, false), openedItems: cornerItems(d, opened, true, false), words: cornerItems(d, { ...view, acts: false }).map((i) => i.html),
@@ -5466,18 +5492,20 @@ export function planOf(d) { d = shownDoc(d); return articlePlan(d, viewFor(d), R
 /**
  * A pane's corner items beside its column (ux-T2: each pane its own), whole
  * or compact (FP-26), from the view the pane's article is made from — the
- * record's now where none is given (`sceneView`); the scene holds their
+ * record's now where none is given (`sceneView`) — measured at the corner's
+ * own size (`cornerView`); the scene holds their
  * element, on the pane's outer side, and hands in the version it names, the
  * chain's count and the corner's act (SC) — those `keep` takes alone, where it
  * is given: the part of an editor pane's corner standing at its foot (SC's
  * `footed`; foundations §2.5).
  * @param {Doc} d
- * @param {ArticleView} [view]
+ * @param {ArticleView} [article]
  * @param {boolean} [compact] the compact form: its usual states glyphs named by their words
  * @param {(cls: string) => boolean} [keep] the items it holds, by their class (T-ARTICLE's `CornerItem.cls`); every item where none is given
  * @returns {string}
  */
-export function sceneCorner(d, view = viewFor(d, true), compact = false, keep = undefined) {
+export function sceneCorner(d, article = viewFor(d, true), compact = false, keep = undefined) {
+  const view = cornerView(article);
   return keep ? cornerItems(d, view, compact).filter((i) => keep(i.cls)).map((i) => i.html).join('') : cornerHTML(d, view, compact);
 }
 
@@ -5493,6 +5521,8 @@ export function sceneCorner(d, view = viewFor(d, true), compact = false, keep = 
  * item whole on a glyph's or the count's act, its words alone where its rows
  * hold its act (`openedHTML`), a draft's kept statement on its kept word's
  * (K-74). No row names the document: the scene's bar names each pane's.
+ * Its items measured at the corner's own size (`cornerView`), whatever the
+ * pane's view measures its article at.
  * Titled (T-ARTICLE's `ArticleView.titled`), its title across the head on its
  * first rows, laid out on its lines in the corner's type at its own size and
  * leading (`titleLines`, `cornerPx`), as many rows as those lines take and
@@ -5506,11 +5536,12 @@ export function sceneCorner(d, view = viewFor(d, true), compact = false, keep = 
  * stacked scene, its kept line and any face (SC's `footed`; foundations
  * §2.5). The scene stands its stops (`setStops`).
  * @param {Doc} d
- * @param {ArticleView} view the pane's view, at its measure (`sceneView`), with the corner's state the scene hands in
+ * @param {ArticleView} article the pane's view, at its measure (`sceneView`), with the corner's state the scene hands in
  * @param {{px: number, kept: KeptClause | null, open: boolean, keep?: (cls: string) => boolean, floor?: number}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act; `keep` the items its rows hold, by their class — every item where none is given; `floor` the rows a title takes at the least — none where none is given
  * @returns {{html: string, rows: number, held: number}} `held` its rows held at the pane's top (`HeadLayout.held`)
  */
-export function sceneHead(d, view, as) {
+export function sceneHead(d, article, as) {
+  const view = cornerView(article);
   const take = (/** @type {import('./article.js').CornerItem[]} */ all) => (as.keep ? all.filter((i) => /** @type {(cls: string) => boolean} */ (as.keep)(i.cls)) : all);
   const items = take(cornerItems(d, { ...view, opened: as.open }, true, false)), clause = as.kept;
   const pitch = LINE_H * as.px, width = ((view.cpl ?? MEASURE_CPL) * CHAR_W + EDGE) * as.px;

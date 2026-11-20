@@ -266,7 +266,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
 /** @typedef {import('../plane/layout.js').Piece} Piece */
 /** @typedef {import('../plane/layout.js').Keep} Keep */
 /** @typedef {import('../plane/register.js').Face} Face */
-/** @typedef {(text: string, face: Face) => number} Measure a string's width set in a face at 1 em, in em (T-LAYER's `widthOf`) */
+/** @typedef {(text: string, face: Face) => number} Measure a string's width set in a face at 1 em, in em of the size its words are drawn at: the article's (T-LAYER's `widthOf`), a corner's its own (T-LAYER's `cornerView`) */
 /** @typedef {{text: string, face: Face}} Faced a stretch of words in one face */
 
 /**
@@ -302,7 +302,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {boolean} [opened] the corner, compact in its room, stands opened whole on the reader's act (FP-26): the item its compact form draws as a glyph stands in its words as the act that compacts it again, and the glyph, where it stands, says it is expanded; absent, false
  * @property {boolean} [acts] false: the corner's items stand as their words, no act among them, save a face's own acts, which no row holds — the form a corner at its document's head opens beneath its rows, which hold its acts (T-LAYER's `headOf`, `sceneHead`); absent, true
  * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
- * @property {Measure} measure a string's width in a face as the platform sets it (T-LAYER's `widthOf`): every fit the article judges — what a gap holds, a label's cut, a slot's box — reads it
+ * @property {Measure} measure a string's width in a face as the platform sets it, at the size the words it fits are drawn at: every fit the article judges — what a gap holds, a label's cut, a byline's slot — reads it at the article's (T-LAYER's `widthOf`), and every width a corner's items take — a slot's box, an item's room on a head's row — at the corner's own, the view its holder makes its corner from measuring there (T-LAYER's `cornerView`)
  */
 
 /**
