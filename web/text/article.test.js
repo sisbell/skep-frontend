@@ -69,7 +69,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerLeadRuns, cornerWords, cornerTitle, titleRuns, titleHTML, keptHTML, keptStatement, statementHTML, faceWords, faceRuns, faceRow, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerLeadRuns, cornerWords, cornerTitle, titleRuns, titleHTML, keptHTML, keptStatement, statementHTML, faceWords, faceRuns, faceRow, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, pastClauses, notLastWords, inFlightWords, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { below, spoken } from '../overlays/statement.js';
 import { keptStatement as keptSaying } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
@@ -653,7 +653,7 @@ test('a past state\'s corner names what it is, its title in the place of the kin
   assert.ok(cornerHTML(draft, draftView({ past, kind: 'reading' })).startsWith(line), 'its kind being read: its line first still, no slot being read');
 });
 
-test('a past state\'s corner and the held version\'s lead with their line in the kind\'s place at every fit, no kind\'s slot standing: the line\'s parts and the joiners it breaks at — the time and the hand at rank 1, the hand\'s label and its cue at rank 2; the held words to their dash and after it — a substitution\'s words held in it, the one running mark after them and their element busy while the state asked is read again, its width counting the mark, while the words saying the state is how the draft stands now and the chip stand as items that scroll at a pane\'s head; each item saying whether it holds at the pane\'s top; the corner\'s first item its line, a device\'s label in it the person\'s own words; any other draft\'s its kind (issues #677, #687; FP-26, FP-39)', () => {
+test('a past state\'s corner and the held version\'s lead with their line in the kind\'s place at every fit, no kind\'s slot standing: the line\'s parts and the joiners it breaks at — the time and the hand at rank 1, the hand\'s label and its cue at rank 2; the held words to their dash and after it — a substitution\'s words held in it, never busy and with no running mark, while the words saying the state is how the draft stands now and the chip stand as items that scroll at a pane\'s head; each item saying whether it holds at the pane\'s top; the corner\'s first item its line, a device\'s label in it the person\'s own words; any other draft\'s its kind (issues #677, #687, #696; FP-26, FP-39)', () => {
   const draft = doc({ kind: 'draft', meta: null }), past = { time: 'at 14:02', hand: HAND, why: null };
   for (const compact of [false, true]) {
     const items = cornerItems(draft, draftView({ past }), compact);
@@ -678,11 +678,10 @@ test('a past state\'s corner and the held version\'s lead with their line in the
   const subbed = cornerItems(draft, draftView({ past: { ...past, why: sub } }), true);
   assert.deepEqual([subbed.map((i) => i.cls), subbed[0].title?.substituted], [['past', 'chip'], sub], 'a substitution\'s words held in the title, after its line');
   assert.ok(subbed[0].html.endsWith(`<span class="why" data-string="B3.history.busy">${esc(sub.text)}</span></span>`), `drawn after the line, on lines of their own: ${subbed[0].html}`);
-  // the state asked read again (issue #688): the line's words then the one running mark, their element busy — the item's width counting the mark
-  const ran = cornerItems(draft, draftView({ past: { ...past, why: { ...sub, running: true } } }), true);
-  assert.ok(ran[0].html.endsWith(`<span class="why" data-string="B3.history.busy" aria-busy="true">${esc(sub.text)}${runningHTML()}</span></span>`), `while the state asked is read again: the one running mark after its words, their element busy: ${ran[0].html}`);
-  assert.ok(ran[0].em > subbed[0].em && ran[0].words === subbed[0].words, 'its width counts the mark; its words, as a person reads them, do not');
-  assert.ok(!subbed[0].html.includes('aria-busy') && !subbed[0].html.includes('class="running"'), 'nothing read again: neither the mark nor busy');
+  // the state asked read again: the running mark and the busy element are the in-flight clause's, never the substitution's (issue #696)
+  const ran = cornerItems(draft, draftView({ past: { ...past, why: sub, reading: 'at 14:00' } }), true);
+  assert.deepEqual([ran.map((i) => i.cls), ran[0].html, ran[0].em], [['past', 'inflight', 'chip'], subbed[0].html, subbed[0].em], 'the title as it stands with nothing read again: its substitution neither busy nor marked, its width its words\'');
+  assert.ok(!ran[0].html.includes('aria-busy') && !ran[0].html.includes('class="running"') && ran[1].html.includes('aria-busy="true"') && ran[1].html.includes(runningHTML()), `the mark and busy on the in-flight clause alone: ${ran.map((i) => i.html).join('')}`);
   const held = cornerItems(draft, draftView({ held: true }), true), words = t('B3.history.held'), dash = words.indexOf('— ') + 1;
   assert.deepEqual(held.map((i) => [i.cls, i.holds, i.title?.parts.map(runsText), i.title?.joins]), [['held', true, [words.slice(0, dash), words.slice(dash + 1)], [{ text: ' ', rank: 1 }]]], 'the held version: its words to their dash and after it, and nothing else');
   assert.deepEqual([cornerLead(draft, draftView({ held: true })), cornerLead(draft, draftView())], [words, t('F.kind.draft')], 'its first item the held words; any other draft\'s, its kind');
@@ -702,6 +701,36 @@ test('a title naming a region carries on its line\'s own element — never the s
   assert.ok(titleHTML(title, lines, { id: 'sceneB-title', words: other }).includes(`aria-label="${esc(heard(other))}"`), 'the words handed in, whatever the line draws');
   const plain = titleHTML(title, lines);
   assert.ok(!plain.includes(' id=') && !plain.includes('role=') && !plain.includes('aria-label'), `drawn with none: neither id nor name — ${plain}`);
+});
+
+test('a past state\'s clauses stand between its title and its chip while its holder hands them in, each held at a pane\'s top and none ever yielding, in either form: "one of ⟨n⟩ changes that minute, not the last" in the place of the words saying the state is how the draft stands now, its count in a slot of one width whether it shows 2 or 9 or is not yet known — then an empty box named as being read; "reading ⟨time⟩" ahead of the chip, its element busy and the one running mark after its words, its words alone where the view asks no act; each in the mirror\'s words, and in the order drawn in the clauses its pane is described by (issue #696; B3-S7; FP-26, FP-34)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), past = { time: 'at 14:02', hand: HAND, why: null };
+  const now = { id: 'B3.history.now', text: t('B3.history.now'), substituted: false }, sub = { id: 'B3.history.busy', text: t('B3.history.busy'), substituted: true };
+  const shape = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => [i.cls, i.holds, i.yields]);
+  for (const compact of [false, true]) {
+    const form = compact ? 'compact' : 'whole';
+    assert.deepEqual(shape(cornerItems(draft, draftView({ past: { ...past, notLast: { n: 2 } } }), compact)), [['past', true, false], ['not-last', true, false], ['chip', false, false]], `${form}: the not-last clause after the title, held, never yielding`);
+    assert.deepEqual(shape(cornerItems(draft, draftView({ past: { ...past, why: now, notLast: { n: 2 } } }), compact)), [['past', true, false], ['not-last', true, false], ['chip', false, false]], `${form}: in the place of the words saying the state is how the draft stands now — never both`);
+    assert.deepEqual(shape(cornerItems(draft, draftView({ past: { ...past, notLast: { n: 2 }, reading: 'at 14:01' } }), compact)), [['past', true, false], ['not-last', true, false], ['inflight', true, false], ['chip', false, false]], `${form}: the in-flight clause after the not-last clause, ahead of the chip`);
+    assert.deepEqual(shape(cornerItems(draft, draftView({ past: { ...past, why: sub, reading: 'at 14:01' } }), compact)), [['past', true, false], ['inflight', true, false], ['chip', false, false]], `${form}: after the title and its substitution where no not-last clause stands`);
+  }
+  const notLast = (/** @type {number | null} */ n) => /** @type {import('./article.js').CornerItem} */ (cornerItems(draft, draftView({ past: { ...past, notLast: { n } } }))[1]);
+  const boxOf = (/** @type {string} */ html) => /<span class="count( pending)?"( role="img" aria-label="([^"]*)")? style="width:([\d.]+)em">([^<]*)<\/span>/.exec(html);
+  const [two, nine, unknown] = [notLast(2), notLast(9), notLast(null)];
+  assert.deepEqual([two.words, nine.words, unknown.words], [t('B3.history.not-last', { n: 2 }), t('B3.history.not-last', { n: 9 }), t('B3.history.not-last', { n: t('L.slot.reading') })], 'its words: the count\'s numeral in its place, "being read" while it is not known');
+  assert.ok(two.html.startsWith('<span class="not-last" data-string="B3.history.not-last">') && two.html.replace(/<[^>]*>/g, '') === esc(two.words), `drawn as its words, carrying its string: ${two.html}`);
+  const [b2, b9, bu] = [boxOf(two.html), boxOf(nine.html), boxOf(unknown.html)];
+  assert.ok(b2 && b9 && bu, `the count in a box of its own: ${two.html} ${unknown.html}`);
+  assert.deepEqual([b2[5], b9[5], bu[5], !!b2[1], !!bu[1], bu[3]], ['2', '9', '', false, true, esc(heard(t('L.slot.reading')))], 'the numeral in its box; not known, an empty box named as being read');
+  assert.ok(b2[4] === b9[4] && b2[4] === bu[4] && two.em === nine.em && two.em === unknown.em, `one width whatever the box shows, the clause's too: ${b2[4]}, ${b9[4]}, ${bu[4]} em; ${two.em}, ${nine.em}, ${unknown.em}`);
+  assert.ok(Math.abs(two.em - (advances('one of ') + advances('00') + advances(' changes that minute, not the last'))) < 1e-9, `the clause's width its words' with the box in its token's place, two figures wide: ${two.em}`);
+  const reading = /** @type {import('./article.js').CornerItem} */ (cornerItems(draft, draftView({ past: { ...past, reading: 'at 14:01' } }))[1]), words = t('B3.history.in-flight', { time: 'at 14:01' });
+  assert.deepEqual([reading.words, reading.html, reading.em], [words, `<span class="inflight" data-string="B3.history.in-flight" aria-busy="true">${esc(words)}${runningHTML()}</span>`, advances(words + t('L.running'))], 'the in-flight clause: its words, the running mark after them, its element busy, its width counting the mark');
+  assert.equal(words, 'reading at 14:01', 'no joiner of its own: "reading ⟨time⟩"');
+  assert.equal(cornerItems(draft, draftView({ past: { ...past, reading: 'at 14:01' }, acts: false }))[1].html, `<span class="inflight" data-string="B3.history.in-flight">${esc(words)}</span>`, 'where the view asks no act: its words alone, so one mark stands');
+  assert.equal(cornerWords(draft, draftView({ past: { ...past, notLast: { n: 3 }, reading: 'at 14:01' } })), [t('B3.history.not-last', { n: 3 }), words, t('C-28.flag-on')].join(', '), 'the mirror voices them after the title, in their order');
+  assert.deepEqual(pastClauses({ ...past, why: sub, notLast: { n: 3 }, reading: 'at 14:01' }), [sub.text, notLastWords(3), inFlightWords('at 14:01')], 'what its pane is described by: why, then not the minute\'s last, then reading — in the order drawn');
+  assert.deepEqual([pastClauses({ ...past, why: now, notLast: null, reading: null }), pastClauses({ ...past, notLast: null, reading: null })], [[now.text], []], 'each where it stands, none where none does');
 });
 
 /** a moved document's face as O-FACES hands it to the corner: one device's hand, "send again" inert, the discard last, its statement ending on its exit */

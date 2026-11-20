@@ -2177,7 +2177,7 @@ test('a pane\'s corner is measured in the corner\'s own type whatever measure th
 const PAST_LINE = /** @type {import('../strings.js').Run[]} */ ([{ text: 'dev-notebook', face: 'reading' }, { text: 'e427 2902 a114 39e5', face: 'ident' }]);
 const PAST_TITLE = /** @type {import('./article.js').Title} */ (cornerTitle({ past: { time: 'at 00:35', hand: PAST_LINE, why: null } }));
 
-test('a title\'s lines at a width: its line whole where the width holds it; else broken at its middle dots first — the time over the hand — then the hand\'s label over its cue where the hand alone is wider; the held words after their dash; a part wider than the width on a line of its own, wrapped between its words and counted line by line, never cut — each line ending with the joiner it breaks at, the lines read together the line\'s words, a substitution\'s words counted on lines of their own after them, the running mark\'s room with them while it runs (issues #677, #688; FP-26)', () => {
+test('a title\'s lines at a width: its line whole where the width holds it; else broken at its middle dots first — the time over the hand — then the hand\'s label over its cue where the hand alone is wider; the held words after their dash; a part wider than the width on a line of its own, wrapped between its words and counted line by line, never cut — each line ending with the joiner it breaks at, the lines read together the line\'s words, a substitution\'s words counted on lines of their own after them (issues #677, #696; FP-26)', () => {
   const all = t('B3.history.row', { time: 'at 00:35', hand: 'dev-notebook · e427 2902 a114 39e5' }), hand = 'dev-notebook · e427 2902 a114 39e5', w = LAYER.cornerPx;
   assert.deepEqual(LAYER.titleLines(PAST_TITLE, w(all)), { lines: [{ words: all, wraps: false }], count: 1 }, 'held whole on one line where the width holds it');
   const two = LAYER.titleLines(PAST_TITLE, w(all) - 1);
@@ -2191,9 +2191,37 @@ test('a title\'s lines at a width: its line whole where the width holds it; else
   assert.deepEqual(LAYER.titleLines(held, w(words) - 1).lines.map((l) => l.words), [words.slice(0, dash), words.slice(dash)], 'the held words broken after their dash');
   const busy = { id: 'B3.history.busy', text: t('B3.history.busy'), substituted: true };
   assert.equal(LAYER.titleLines({ ...PAST_TITLE, substituted: busy }, w(all)).count, 2, 'a substitution\'s words on a line of their own after the line');
-  // while the state asked is read again (issue #688): the running mark after the words takes its room too
-  const still = LAYER.titleLines({ ...PAST_TITLE, substituted: busy }, w(busy.text)).count, running = LAYER.titleLines({ ...PAST_TITLE, substituted: { ...busy, running: true } }, w(busy.text)).count;
-  assert.equal(running, still + 1, 'the words with the mark after them wider than the width that holds the words alone: a line more');
+  assert.equal(LAYER.titleLines({ ...PAST_TITLE, substituted: busy }, w(busy.text)).count, LAYER.titleLines(PAST_TITLE, w(busy.text)).count + 1, 'at the width its words take: one line of them — no running mark among them, which is the in-flight clause\'s');
+});
+
+test('at a pane\'s head a past state\'s clauses stand on rows held with its title, after it, the chip after them, none folded however narrow the head — "one of ⟨n⟩ changes that minute, not the last", then "reading ⟨time⟩" with the running mark; the floor handed in sizes the title alone, the rows it took handed back, so the clauses held after it never deepen it; beside its column, whole and compact, the clauses after the title, none folded (issue #696; FP-26, FP-34)', () => {
+  deliver();
+  const d = { ...REC.doc(D), kind: /** @type {const} */ ('draft'), meta: null }, px = 17, pitch = LINE_H * px;
+  const past = { time: 'at 00:35', hand: PAST_LINE, why: null, notLast: { n: 2 }, reading: 'at 00:34' };
+  const viewAt = (/** @type {number} */ cpl, /** @type {Partial<import('./article.js').ArticleView>} */ o) => ({ ...LAYER.sceneView(d, cpl), kind: /** @type {const} */ ('draft'), ...o });
+  /** a head's rows: each its index, whether it is held, and its markup */
+  const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)"( data-held="1")?( role="toolbar")? style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>(?=<div|$)/g)].map((m) => ({ k: Number(m[1]), held: !!m[2], h: Number(m[5]), html: m[6] }));
+  const rowWith = (/** @type {ReturnType<typeof rowsOf>} */ rows, /** @type {string} */ s) => rows.find((r) => r.html.includes(s));
+  for (const cpl of [MEASURE_CPL, 30, 12]) {
+    const head = LAYER.sceneHead(d, viewAt(cpl, { past }), { px, kept: null, open: false }), rows = rowsOf(head.html);
+    const title = rowWith(rows, 'data-string="B3.history.row"'), notLast = rowWith(rows, 'data-string="B3.history.not-last"'), reading = rowWith(rows, 'data-string="B3.history.in-flight"'), chip = rowWith(rows, 'data-chip');
+    assert.ok(title && notLast && reading && chip, `${cpl} characters: the title, both clauses and the chip, each on the head's rows — ${head.html}`);
+    const drawn = ['data-string="B3.history.row"', 'data-string="B3.history.not-last"', 'data-string="B3.history.in-flight"', 'data-chip'].map((s) => head.html.indexOf(s));
+    assert.ok(title.held && notLast.held && reading.held && title.k < notLast.k && drawn.every((x, i) => !i || x > drawn[i - 1]),
+      `${cpl} characters: the clauses held on the rows after the title's, in their order, the chip after them — ${JSON.stringify(rows.map((r) => [r.k, r.held]))}`);
+    assert.ok(!head.html.includes('class="more') && reading.html.includes('aria-busy="true"') && reading.html.includes('data-string="L.running"'), `${cpl} characters: nothing folded; the running mark on the in-flight clause — ${head.html}`);
+    assert.equal(head.held, Math.max(...rows.filter((r) => r.held).map((r) => r.k + Math.round(r.h / pitch))), `${cpl} characters: its rows held through the in-flight clause's`);
+  }
+  const free = LAYER.sceneHead(d, viewAt(MEASURE_CPL, { past }), { px, kept: null, open: false });
+  const floored = LAYER.sceneHead(d, viewAt(MEASURE_CPL, { past }), { px, kept: null, open: false, floor: free.held });
+  assert.ok(free.title >= 1 && free.held > free.title, `the title's rows handed back, fewer than the rows held with the clauses: ${free.title}, ${free.held}`);
+  assert.deepEqual([floored.title, floored.held - free.held], [free.held, free.held - free.title], 'a floor of the rows held sizes the title alone, the clauses on rows after it: handed back, a floor of the title\'s rows leaves the head as it stood');
+  assert.deepEqual(LAYER.sceneHead(d, viewAt(MEASURE_CPL, { past }), { px, kept: null, open: false, floor: free.title }), free, 'floored at the rows its title took: the head as it stood, written again and again');
+  for (const compact of [false, true]) {
+    const html = LAYER.sceneCorner(d, viewAt(MEASURE_CPL, { past }), compact), at = (/** @type {string} */ s) => html.indexOf(s);
+    assert.ok(at('data-string="B3.history.row"') < at('data-string="B3.history.not-last"') && at('data-string="B3.history.not-last"') < at('data-string="B3.history.in-flight"') && at('data-string="B3.history.in-flight"') < at('data-chip')
+      && !html.includes('class="more'), `${compact ? 'compact' : 'whole'}, beside its column: the title, then the clauses, then the chip, none folded — ${html}`);
+  }
 });
 
 test('a past state\'s corner titled at a pane\'s head stands its title across the head on its first rows, held at the pane\'s top, no kind\'s slot: one row where its line holds one line, more as the head narrows — as many as its lines take at the corner\'s own leading, never fewer than the floor handed in — the words saying it is how the draft stands now and the chip on the rows after, which scroll; the held version\'s words broken after their dash (issue #677; FP-26)', () => {

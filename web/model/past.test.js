@@ -2,11 +2,12 @@
 // states — one row per minute and hand, newest first, a landmark a row of its
 // own, each row's hand and kind read off the row as the wire spells it — and
 // the list's days, what folds and what stands open, and what arriving rows do
-// (B3-S7 THE LIST; skep-frontend #662); and how long a row's state stood,
-// to the position before the draft's next change (skep-frontend #688).
+// (B3-S7 THE LIST; skep-frontend #662); how long a row's state stood, to the
+// position before the draft's next change (skep-frontend #688); and whether a
+// row's state is not its minute's last (skep-frontend #696).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { handOf, kindOf, landmarkOf, rowsOf, daysOf, openOnOpening, isFolded, entriesOf, arrive, versionOf, dayHolding, rowHolding, stoodUntil } from './past.js';
+import { handOf, kindOf, landmarkOf, rowsOf, daysOf, openOnOpening, isFolded, entriesOf, arrive, versionOf, dayHolding, rowHolding, stoodUntil, notLastOf } from './past.js';
 
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 
@@ -126,4 +127,19 @@ test('a row\'s state stood until the position before the draft\'s next change �
   const adjacent = rowsOf([row(40), row(41, { time: NOON + 3 * MIN })]);
   assert.equal(stoodUntil(adjacent, adjacent[1], 60), 40, 'the next change right after it: its own last position');
   assert.equal(stoodUntil(rows, { first: 20, last: 20, positions: [20], time: null, hand: { kind: 'bare', fingerprint: null }, kind: 'typed', landmark: null }, 60), 20, 'a row none of the rows: its own last position');
+});
+
+test('a row\'s state is not its minute\'s last where a newer row of the list shares its recorded minute: the rows of that minute counted once a row of an earlier minute stands below every one of them, or the rows read reach their bottom, else not yet; never where its time is lost, where no newer row shares the minute, or where no row holds the position (skep-frontend #696)', () => {
+  const mint = row(30, { op: 'create_new_document', key: 'bare' }), mine = row(40, { key: 'bare', time: NOON + 2 * MIN }), theirs = row(48, { key: OTHER, time: NOON + 2 * MIN + 40 * 1000 });
+  const all = rowsOf([mint, mine, theirs]), part = rowsOf([mine, theirs]);
+  assert.deepEqual(all.map((r) => r.positions), [[48], [40], [30]], 'another hand\'s change in the minute of the bare one: a row of its own');
+  assert.deepEqual([notLastOf(all, 40, false), notLastOf(part, 40, false), notLastOf(part, 40, true)], [{ n: 2 }, { n: null }, { n: 2 }],
+    'the minute holding a newer row: two rows counted once the mint\'s earlier minute stands below them; not yet with the rows below unread; counted at the bottom');
+  assert.deepEqual([notLastOf(all, 48, false), notLastOf(all, 30, true)], [null, null], 'the newest of its minute, and a minute of one row: its minute\'s last');
+  const landmark = rowsOf([mint, mine, row(44, { op: 'publish', docs: ['1.0.1.0.3.2', D], key: undefined, attest: { alg: 'mldsa65-ed25519', sig: 'cd' }, time: NOON + 2 * MIN + 10 * 1000 }), theirs]);
+  assert.deepEqual([notLastOf(landmark, 40, false), notLastOf(landmark, 44, false)], [{ n: 3 }, { n: 3 }], 'a landmark of the minute a row of its own, counted with the rest');
+  const lost = rowsOf([mint, row(40, { key: 'bare', time: null }), row(48, { key: OTHER, time: null })]);
+  assert.deepEqual([notLastOf(lost, 40, true), notLastOf(all, 99, true)], [null, null], 'its time lost: never; no row holding the position: none');
+  const gap = rowsOf([row(20, { key: 'bare', time: NOON + 2 * MIN }), row(30, { key: OTHER, time: null }), mine, theirs]);
+  assert.deepEqual(notLastOf(gap, 40, false), { n: null }, 'below its minute\'s rows only one whose time is lost, and one of that minute below it: not yet');
 });

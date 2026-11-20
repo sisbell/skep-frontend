@@ -443,8 +443,10 @@
 // past state's or the held version's title leading it in either, broken at
 // its joiners as the corner's width asks (`titleLines`), its line's own
 // element carrying the id and the words the scene names the pane's region by
-// (T-ARTICLE's `titleHTML`), and at the head the rows the scene holds at the
-// pane's top marked so (`HeadLayout.held`); and
+// (T-ARTICLE's `titleHTML`), a past state's clauses after it never folded, and
+// at the head the rows the scene holds at the pane's top marked so
+// (`HeadLayout.held`), the rows the title took handed back to floor it at the
+// next writing (`sceneHead`); and
 // what it was made from is kept beside it as a
 // mounted article's is (`madeOf`) — its document's blocks, runs and image as
 // the model held them, which the model replaces whole and never edits in
@@ -608,7 +610,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W, GRID } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX, ELLIPSIS } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, titleHTML, whyRoom, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, titleHTML, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop, stretchIn } from '../model/derive.js';
 import { iRuns } from '../model/frames.js';
@@ -1796,8 +1798,7 @@ function linesAt(/** @type {string} */ words, /** @type {number} */ width, wide 
  * wrapped between its words, never cut. Each line its words, the joiner it
  * breaks at at its end, so the lines read together are the line's words;
  * `count` the lines they take — a wrapped one counted line by line — with a
- * substitution's words after them on lines of their own, the running mark
- * among them while it runs (`linesAt`; T-ARTICLE's `whyRoom`).
+ * substitution's words after them on lines of their own (`linesAt`).
  * @param {import('./article.js').Title} title
  * @param {number} width px
  * @param {(s: string) => number} [wide] words' width, px: the corner's type at its own size (`cornerPx`) where none is given
@@ -1820,7 +1821,7 @@ export function titleLines(title, width, wide = cornerPx) {
   };
   if (n) lay(0, n);
   const lines = spans.map(([i, j]) => ({ words: words(i, j), wraps: !fits(i, j) }));
-  const count = lines.reduce((c, l) => c + (l.wraps ? linesAt(l.words.trimEnd(), width, wide) : 1), 0) + (title.substituted ? linesAt(whyRoom(title.substituted), width, wide) : 0);
+  const count = lines.reduce((c, l) => c + (l.wraps ? linesAt(l.words.trimEnd(), width, wide) : 1), 0) + (title.substituted ? linesAt(title.substituted.text, width, wide) : 0);
   return { lines, count };
 }
 
@@ -5612,10 +5613,12 @@ export function sceneCorner(d, article = viewFor(d, true), compact = false, as =
  * A past state's or the held version's (T-ARTICLE's `cornerTitle`), its title
  * across the head on its first rows, laid out on its lines in the corner's
  * type at its own size and leading (`titleLines`, `cornerPx`), as many rows as
- * those lines take and never fewer than `floor`, its line's own element
- * carrying the id and the words the scene names the pane's region by where
- * `title` hands them in (T-ARTICLE's `titleHTML`), the rest of its items on
- * the rows after; the form opened beneath restating it carries neither. Each
+ * those lines take and never fewer than `floor` — the rows it takes handed
+ * back, so its holder floors the title alone, never the clauses held after it
+ * — its line's own element carrying the id and the words the scene names the
+ * pane's region by where `title` hands them in (T-ARTICLE's `titleHTML`), the
+ * rest of its items on the rows after; the form opened beneath restating it
+ * carries neither. Each
  * row stands where its band sets it, as tall as the slots beginning on it take — a
  * wrapped slot's later rows standing in its own row — and the form beneath,
  * each absolutely placed (the scene moves them as its pane scrolls), the rows
@@ -5627,7 +5630,7 @@ export function sceneCorner(d, article = viewFor(d, true), compact = false, as =
  * @param {Doc} d
  * @param {ArticleView} article the pane's view, at its measure (`sceneView`), with the corner's state the scene hands in
  * @param {{px: number, kept: KeptClause | null, open: boolean, keep?: (cls: string) => boolean, floor?: number, title?: import('./article.js').TitleName | null}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act; `keep` the items its rows hold, by their class — every item where none is given; `floor` the rows a title takes at the least — none where none is given; `title` the id and the words its title's line names the pane's region by — none where none is given
- * @returns {{html: string, rows: number, held: number}} `held` its rows held at the pane's top (`HeadLayout.held`)
+ * @returns {{html: string, rows: number, held: number, title: number}} `held` its rows held at the pane's top (`HeadLayout.held`); `title` the rows its title takes, 0 where none leads it
  */
 export function sceneHead(d, article, as) {
   const view = headView(article);
@@ -5651,7 +5654,7 @@ export function sceneHead(d, article, as) {
   const form = as.open ? openedHTML(take(cornerItems(d, { ...view, acts: false })).map((i) => i.html), items, L) : view.kept && view.keptOpen ? statementHTML(view.kept, view.keptSaid) : '';
   const html = rows.map((r, i) => (tall[i] ? hrowHTML(i, `top:${i * pitch}px;height:${tall[i] * pitch}px`, r, i < L.held) : '')).join('')
     + (form ? openedFormHTML(`top:${L.rows * pitch}px;width:${width}px`, form) : '');
-  return { html, rows: L.rows, held: L.held };
+  return { html, rows: L.rows, held: L.held, title: titled };
 }
 
 /** a document's corner on the plane, or null where it carries none now (the gate's containment check reads it) */

@@ -4245,5 +4245,54 @@ test('a draft\'s history is read off the feed narrowed to the draft — `under` 
   refuse = true;
   const no = await PUMP.historyOf(W);
   assert.deepEqual([no.refused?.name, no.rows, PUMP.inflightCount()], ['feed_rebuilding', [], 0], 'a refused page ends the read, its refusal handed up; nothing left in flight');
+  assert.deepEqual([first.floor, older.floor, all.floor, no.floor], [false, false, false, false], 'no floor met: none reached');
   assert.deepEqual(fake.unanswered, []);
+});
+
+test('a draft\'s history read hands up every row of the positions it covers and none outside them: a page refused partway ends it at the windows read whole above it, their rows alone; a page refused below the first position the feed\'s files hold, naming it, is read again from the position before it — from the floor itself where that is refused too — and the read ends there, the floor reached (B3-S7 THE LIST; wire.md §The change feed, Retention; issue #696)', async () => {
+  const W = '1.0.1.0.13', HEAD = 5000, OWN_W = PUMP.OWN_WINDOW;
+  /** the draft's rows on the narrowed feed: one every hundred positions from 100 */
+  const ROWS = Array.from({ length: 49 }, (_, i) => ({ position: 100 * (i + 1), at: 100 * (i + 1), op: 'insert', docs: [W], class: 'drafts', key: 'bare', time: 1 }));
+  /** @type {number[]} each page's `since`, as asked */
+  const asked = [];
+  /** @type {{since: number} | null} the page asked from a `since` the board does not answer */
+  let silentAt = null;
+  /** @type {{floor: number, lenient: boolean} | null} the feed's files holding rows from `floor` alone: a `since` below it refused — below the position before it, where the board is lenient */
+  let held = null;
+  const fake = FAKE.create(new Proxy({}, { get: (_t, k) => {
+    const key = String(k);
+    if (!key.startsWith('changes:')) return undefined;
+    const a = JSON.parse(key.slice(8));
+    asked.push(a.since);
+    if (silentAt && a.since === silentAt.since) return { refused: { kind: 'unreachable', name: 'unreachable' } };
+    if (held && a.since < (held.lenient ? held.floor - 1 : held.floor)) return { refused: { kind: 'refused', name: 'history_reclaimed', status: 410, body: { error: 'history_reclaimed', floor: held.floor } } };
+    const page = ROWS.filter((u) => u.position > a.since).slice(0, 3);
+    return { result: { entries: page, next: page.length === 3 ? page[2].position : HEAD, head: HEAD } };
+  } }));
+  PORT.boot(fake);
+  REC._reset();
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  const AT = HEAD - 50, W1 = AT - OWN_W, W2 = Math.max(0, AT - OWN_W * 8);
+  REC.reachFeed(AT);
+  // the second window's second page not answered: the first window read whole, the second's first page's rows below it
+  silentAt = { since: ROWS.find((u) => u.position > W2 + 200)?.position ?? 0 };
+  const cut = await PUMP.historyOf(W);
+  assert.deepEqual([cut.refused?.name, cut.from, cut.floor, cut.rows.map((u) => u.position)], ['unreachable', W1, false, [4500, 4600, 4700, 4800, 4900]],
+    'refused partway through the second window: the read covering the first alone, its rows every row there, none of the second\'s read before the refusal');
+  assert.ok(asked.includes(W2) && asked.includes(silentAt.since), `the second window begun, its next page refused: ${JSON.stringify(asked)}`);
+  silentAt = null;
+  // the feed's files holding rows from 2,000 alone, a `since` below it refused, naming it
+  held = { floor: 2000, lenient: false }; asked.length = 0;
+  const strict = await PUMP.historyOf(W, { below: W1 }), below = Math.max(0, W1 - OWN_W * 8);
+  assert.deepEqual([strict.refused, strict.floor, strict.from, strict.rows[0]?.position, strict.rows.at(-1)?.position, asked.slice(asked.indexOf(below), asked.indexOf(below) + 3)], [null, true, 2000, 2100, 4400, [below, 1999, 2000]],
+    'below the floor: read again from the position before it, refused there too, then from the floor itself, the read ending there — the floor reached, every row above it read');
+  assert.deepEqual(asked.filter((s) => s < 1999), [below], 'nothing asked below the floor after the refusal that named it');
+  held = { floor: 2000, lenient: true }; asked.length = 0;
+  const lenient = await PUMP.historyOf(W, { below: W1 });
+  assert.deepEqual([lenient.refused, lenient.floor, lenient.from, lenient.rows[0]?.position], [null, true, 1999, 2000], 'a board answering from the position before its floor: the row at the floor read too');
+  held = { floor: 2000, lenient: false }; asked.length = 0;
+  const top = await PUMP.historyOf(W, { below: 2500 });
+  assert.deepEqual([top.refused, top.floor, top.from, top.rows.map((u) => u.position)], [null, true, 2000, [2100, 2200, 2300, 2400, 2500]], 'the first window reaching below the floor: read from it, and no window after');
+  assert.deepEqual([PUMP.inflightCount(), fake.unanswered], [0, []]);
 });

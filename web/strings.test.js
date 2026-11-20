@@ -545,6 +545,7 @@ test('every line the editor\'s design added or re-said on 2026-11-09 stands as i
     ['B3.link.hold-other.act', 'B3-S6', 'open a document beside this one'],
     ['B3.link.corner.yours.row', 'B3-S6', '⟨first words | form | type⟩\u00a0— in version ⟨k⟩'],
     ['B3.history.not-last', 'B3-S7', 'one of ⟨n⟩ changes that minute, not the last'],
+    ['B3.history.in-flight', 'B3-S7', 'reading ⟨time⟩'],
     ['B3.history.as-of', 'B3-S7', 'as it stood ⟨time⟩'],
     ['B3.history.nothing-to-set', 'B3-S7', 'nothing to set'],
     ['B3.history.read-only', 'B3-S7', 'a past state is read, never edited\u00a0— to bring its words into the current text, put a removed passage back, or quote it'],

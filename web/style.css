@@ -365,6 +365,13 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    line of its own, wrapped and never cut — the why on one line in a head's row its words fit */
 .corner .past { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
 .corner .why { display:block; margin-top:.3em; white-space:normal; }
+/* a past state's clauses after its title (B3-S7; FP-26, FP-34): that it is not its minute's last, its count in a slot of
+   tabular figures as wide as T-ARTICLE sets it, an empty box on a faint ground while the count is not known; that the state
+   its act asked is read again, the running mark after its words — each on a line of its own, wrapped between its words and
+   never cut, folded or hidden, in either form — on one line in a head's row its words fit */
+.corner .not-last, .corner .inflight { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
+.corner .not-last .count { display:inline-block; height:1lh; vertical-align:top; text-align:center; white-space:pre; font-variant-numeric:tabular-nums; }
+.corner .not-last .count.pending { background:rgba(139,143,150,.12); border-radius:2px; }
 /* THE FACE BENEATH THE KEPT WORD (B3-S2; P48; P67): a moved document's, never yielding — whole, its sentence and its hands
    on lines of their own, its acts a line of slots, each its label's width where its line holds it, else its words wrapped
    between them inside the corner and never cut (FP-26), its click cue its act's, an inert one dim, and the discard's
@@ -413,7 +420,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 :is(#corners, .pane) .corner.head .hslot { position:absolute; top:0; display:flex; align-items:center; white-space:nowrap; }
 :is(#corners, .pane) .corner.head .hslot.wraps { white-space:normal; align-items:flex-start; }
 :is(#corners, .pane) .corner.head .hslot > * { display:inline-block; margin:0; padding-top:0; }
-:is(#corners, .pane) .corner.head .hslot:not(.wraps) > :is(.face, .why, .kept) { white-space:nowrap; }
+:is(#corners, .pane) .corner.head .hslot:not(.wraps) > :is(.face, .why, .kept, .not-last, .inflight) { white-space:nowrap; }
 :is(#corners, .pane) .corner.head .more { color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
 :is(#corners, .pane) .corner.head > .opened { position:absolute; left:0; z-index:3; padding:4px var(--corner-pad); white-space:normal; }
 /* A LABEL HELD BELOW THE ONE LINE over a mounted article's text (issue #169's design decision: "Held below the line"): one line

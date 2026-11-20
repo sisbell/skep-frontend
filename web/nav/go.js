@@ -3021,7 +3021,7 @@ export async function history(addr, opts = {}) {
   const change = sel && sel.addr === addr ? null : changeNear(got.state.image, LAYER.shownOf(addr).image, near);
   /** @type {import('../scene/scene.js').Held} */
   const held = sel && sel.addr === addr ? { posA: sel.pos, widthA: sel.width } : change ? { posA: change.a, widthA: 1, posB: change.b } : {};
-  held.past = { draft: addr, entries: read.rows, from: read.from, head: read.head, asked: asked.last, unkept, figures: { pages: read.pages, read: read.read, readMs } };
+  held.past = { draft: addr, entries: read.rows, from: read.from, bottom: read.from === 0 || read.floor, head: read.head, asked: asked.last, unkept, figures: { pages: read.pages, read: read.read, readMs } };
   return toScene(LAYER.paneSource(addr), addr, held, { site: opts.site ?? null, past: got });
 }
 

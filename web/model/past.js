@@ -36,7 +36,10 @@
 // from the row above, and the rows; where it is folded, its landmarks alone,
 // the hands its head names standing for theirs. How long a row's state stood
 // (`stoodUntil`): to the position before the row after it, the newest row's
-// to the head the rows were read up to.
+// to the head the rows were read up to. Whether a row's state is not its
+// minute's last (`notLastOf`): a newer row shares its recorded minute, the
+// rows of that minute counted once the rows read pass the minute or reach
+// their bottom, and never where its time is lost.
 // Rules: FP-1, FP-2, FP-6, FP-34.
 
 import { dayOf } from '../util.js';
@@ -241,6 +244,35 @@ export function stoodUntil(rows, row, head) {
   const i = rows.findIndex((r) => r.last === row.last);
   if (i > 0) return Math.max(row.last, rows[i - 1].first - 1);
   return i === 0 && head != null && head > row.last ? head : row.last;
+}
+
+/**
+ * @typedef {Object} NotLast — a row's state is not its minute's last (`notLastOf`; B3-S7)
+ * @property {number | null} n how many rows its minute holds, itself and the newer among them; null while the rows read neither pass that minute nor reach their bottom
+ */
+
+/**
+ * Whether the state of the row holding `at` is not its minute's last (B3-S7):
+ * where that row's time is recorded and a newer row of `rows` shares its
+ * minute, the rows of that minute — counted once the rows read pass it, a row
+ * of an earlier minute standing below every row of it, or reach their bottom
+ * (`bottom`), else not yet; null where its time is lost, no newer row shares
+ * its minute, or no row holds `at`. Rows read from the newest down, every row
+ * of the positions they cover among them (M-PUMP's `historyOf`), so a row of an
+ * earlier minute below the minute's rows leaves none of the minute unread.
+ * @param {readonly Row[]} rows newest first (`rowsOf`)
+ * @param {number} at a position of the row whose state is shown
+ * @param {boolean} bottom the rows read reach their bottom — the feed's first position, or the first one its files hold: no row below them is to be read
+ * @returns {NotLast | null}
+ */
+export function notLastOf(rows, at, bottom) {
+  const row = rowHolding(rows, at), minute = row ? minuteOf(row.time) : null;
+  if (!row || minute == null) return null;
+  const same = rows.filter((r) => minuteOf(r.time) === minute);
+  if (!same.some((r) => r.last > row.last)) return null;
+  const first = Math.min(...same.map((r) => r.first));
+  const passed = bottom || rows.some((r) => r.last < first && r.time != null && /** @type {number} */ (minuteOf(r.time)) < minute);
+  return { n: passed ? same.length : null };
 }
 
 /**

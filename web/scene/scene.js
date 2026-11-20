@@ -292,10 +292,13 @@
 // the article it holds (`namePane`) — pane B, where the far end names its
 // document whole, by those and ST's `L.scene.whole-end` after them,
 // `aria-current="location"` on it, the end being the document and no passage
-// of it; a past state's pane described by the line saying why it shows that
-// state, where one stands (`PastWhy`) — its kind said once in the status
-// region where its corner's slot fills while the focus stands in the pane, a
-// titled corner, which stands no slot, saying none (`sayKind`; FP-36).
+// of it; a past state's pane described by its line's clauses that stand, in
+// the order its corner draws them — why it shows that state (`PastWhy`), that
+// it is not its minute's last, that the state its act asked is read again —
+// and described anew wherever they change (`pastClauses`), never named by
+// them — its kind said once in the status region where its corner's slot
+// fills while the focus stands in the pane, a titled corner, which stands no
+// slot, saying none (`sayKind`; FP-36).
 // Each pane holds a span focus of its own (`Pane.focus`), the platform's
 // focus in one pane at a time (FP-20), walked by T-SPAN's grain over the
 // pane's own record — a past state's and the held version's apart from the
@@ -418,15 +421,24 @@
 // the last answer, each pause twice the one before, PAST_RETRY_MAX_MS at the
 // most (`reissueGap`), and only while its answer is one the board classes as
 // retry (BM-HELD's `busy`) — until it lands, the scene closes or reopens, or
-// another state is asked; the line carrying the one running mark, its element
-// busy and never the pane (T-ARTICLE's `PastWhy.running`), and where the
-// state lands pane B set again to it in one step (`setPanes`; FP-23), the
-// line gone. The line is said once in the status region as it first stands,
-// again only where a later answer changes its words, and a landing once, in
-// the words pane B's title names its state by (`sayLine`, `landPast`; FP-36)
-// — the bar naming the state shown with
-// when it stood, "as it stood ⟨time⟩" (C-363), which the one line names too
-// (`pastAsOf`); beside it
+// another state is asked; and where the state lands pane B set again to it in
+// one step (`setPanes`; FP-23), the line gone. Between the title and the chip
+// stand its line's clauses, each derived from the rows and the reads as they
+// stand (`pastLine`), held with the title at its document's head and none ever
+// folded (T-ARTICLE's `stateItems`): where a newer row of the list shares the
+// shown row's recorded minute, "one of ⟨n⟩ changes that minute, not the
+// last", in the place of the words saying the state is how the draft stands
+// now, its count an empty slot of its width until the rows read pass that
+// minute or reach their bottom (M-PAST's `notLastOf`; `readOlder`); and while
+// the scene reissues the state its act asked, "reading ⟨time⟩", that state's
+// time in the title's form, carrying the one running mark, its own element
+// busy and never the pane (T-ARTICLE's `PastLine.reading`). The line is said
+// once in the status region as it first stands — while the scene reissues,
+// with the in-flight clause after it — again only where a later answer
+// changes those words, and a landing once, in the words pane B's title names
+// its state by (`sayLine`, `landPast`; FP-36) — the bar naming the state
+// shown with when it stood, "as it stood ⟨time⟩" (C-363), which the one line
+// names too (`pastAsOf`); beside it
 // stands the list of the draft's past states (`standList`; FP-36): side by
 // side, in a column of its own at pane B's outer side, from the panes' top to
 // the scene's foot, as wide as its head needs (`listPx`), while the panes
@@ -444,12 +456,16 @@
 // floor mark (`listHTML`); above them, where the draft
 // held words the board had not kept, "now — not yet kept". Rows arriving
 // after it stands — those below the history read's reach, read as it stands
+// down to the feed's first position, or the first one its files hold, and read
+// again once the board answers while the not-last clause's count waits on them
 // (`readOlder`), and a feed row naming the draft — open no day, the first row
 // or day standing in view held where it stands; pane B's corner and its
-// description follow the line the rows now decide (`pastWhyOf`) together, in
+// description follow the line the rows now decide (`pastLine`) together, in
 // one step (FP-33), so a row above the state shown takes from both the words
-// saying it is how the draft stands now; nothing is said in the status region
-// (`arriveRows`). Pane A, the draft's current text, stays its
+// saying it is how the draft stands now, and a newer row of its minute gives
+// both the not-last clause, said once in the status region, politely, as it
+// first stands; nothing else is said there (`arriveRows`). Pane A, the
+// draft's current text, stays its
 // editor: its corner keeps the draft's kept word and its
 // second act, which there moves the focus into the history pane (`focusPast`;
 // N-GO's), and opens the draft's history from any other scene's pane
@@ -526,7 +542,8 @@
 // its line first, in the kind's place, no kind's slot standing, broken at its
 // joiners first and then between its words as T-LAYER breaks it, never folded
 // — beside its column on the lines the corner's width takes, a substitution's
-// words after it, the rest of its corner after them. At its
+// words after it, the rest of its corner after them, a past state's clauses
+// among them wrapped between their words, whole and compact. At its
 // document's head (the plane's head form; T-LAYER's `sceneHead`) it stands
 // above its text across the column and its edge, its rows at the reading
 // line's pitch, both heads reserving the more of the two corners' rows, so
@@ -535,8 +552,9 @@
 // lose: which state it shows, a face, its title (T-LAYER's `HeadLayout.held`),
 // the corner's own box (`Pane.heldRows`). A title there stands on rows of its
 // own — as many as its lines take at the fit, and never fewer while the fit
-// stands — a substitution's words held with it, the rest of its corner on the
-// rows after. Its later rows
+// stands (`Pane.titleRows`) — a substitution's words held with it, a past
+// state's clauses held on the rows after it, the rest of its corner on the
+// rows after them. Its later rows
 // scroll with the text, under the held rows and out at the pane's top, clipped
 // there and never hidden, so each keeps its Tab stops, a focus coming to one
 // scrolling the pane the least that brings it below them (`placeHeads`,
@@ -625,7 +643,7 @@ import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord, keyShortcut } from '../nav/keys.js';
-import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLeadRuns, cornerTitle, titleRuns, kindWord, statedChain } from '../text/article.js';
+import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLeadRuns, cornerTitle, titleRuns, kindWord, statedChain, notLastWords, inFlightWords, pastClauses } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn, pastSigns } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingLineOf, busy } from '../beams/held.js';
 import { SAMENESS, HOLD, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
@@ -683,6 +701,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {string} draft the draft
  * @property {FeedUpdate[]} entries its feed rows read, in position order
  * @property {number} from the position its read reached down to: rows below it are read as the scene stands (`readOlder`); 0 where every row is read
+ * @property {boolean} bottom its read reached the feed's first position, or the first one the feed's files hold (M-PUMP's `HistoryRead.floor`): no row below `from` is to be read
  * @property {number | null} head the position its read reached up to (M-PUMP's `HistoryRead.head`): the newest row's state stood until it (M-PAST's `stoodUntil`); null where none is known
  * @property {number} asked the last position of the row whose state the act asked: the row below the top row, else the top row
  * @property {boolean} unkept the draft held words the board had not kept as the act was taken: the list's top line says so
@@ -709,11 +728,12 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {number} at the last position of the row whose state pane B shows
  * @property {number} asked the last position of the row whose state the act asked (`PastHeld.asked`)
  * @property {Refusal | null} met the latest refusal the asked state's reads met, where pane B shows another state in its place: why it does (`pastWhyOf`); null where it shows the one asked
- * @property {boolean} running the scene reissues the asked state (`reissue`): its line carries the running mark and the asked row says "reading"
+ * @property {boolean} running the scene reissues the asked state (`reissue`): pane B's corner carries the in-flight clause, the running mark after it (`pastLine`), and the asked row says "reading"
  * @property {number | null} head the position the rows were first read up to (`PastHeld.head`)
  * @property {boolean} unkept the list's top line says the draft holds words not yet kept
  * @property {string | null} said the line's words as the status region last said them (`sayLine`); null where it said none
- * @property {number} from the position the rows read reach down to; 0 where every row is read
+ * @property {number} from the position the rows read reach down to, every row above it read; 0 where every row is read
+ * @property {boolean} bottom the rows read reach the feed's first position, or the first one the feed's files hold: no row below `from` is to be read (`readOlder`)
  * @property {boolean} reading rows below `from` are being read
  * @property {PastHeld['figures'] & {stateMs: number, at: number, older: {pages: number, read: number, ms: number} | null}} figures the reads' figures — the state read's time and the position it read at, set again where a reissue lands, and the read of the older rows once it lands (FP-18)
  * @property {string} html the list's markup as last written
@@ -886,7 +906,8 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {AccountFacts | undefined} facts the owner's byline facts its article's byline was made with (`ownerFacts`), undefined where they were not read: what owner facts taken anew are checked against (`dropped`)
  * @property {boolean} open the reader's act opened its corner whole where it stands compact or at its document's head (`openWhole`; FP-26), until the act again closes it
  * @property {number} rows its corner's rows at its document's head as last written (`cornerForm`); 0 beside its column
- * @property {number} heldRows its corner's rows held at the pane's top at its document's head as last written (T-LAYER's `HeadLayout.held`): a titled corner's never fewer than at the last writing at the same fit, so a change of its line within the fit removes none (`titled`); 0 beside its column, and as the pane is set again at another fit or from another record
+ * @property {number} heldRows its corner's rows held at the pane's top at its document's head as last written (T-LAYER's `HeadLayout.held`): its title's (`titleRows`) and those of the items held after it; 0 beside its column, and as the pane is set again at another fit or from another record
+ * @property {number} titleRows the rows its corner's title took at its document's head as last written (T-LAYER's `sceneHead`): the floor its title is laid out on at the next writing, so a change of its line within the fit removes none of them — the clauses held after it standing and leaving on rows of their own (`titled`); 0 beside its column, where its corner carries no title, and as the pane is set again at another fit or from another record
  * @property {import('../text/article.js').Kind} heard its corner's kind slot as the scene last read it (`markKept`): what the slot filling under the focus is told against
  * @property {import('../strings.js').Run[] | null} titleWords the words its title's line's own element names its region by, as stretches in their faces (`namePane`, `cornerForm`; T-ARTICLE's `titleHTML`): its title's line (T-ARTICLE's `titleRuns`) when the state it shows was set — as the scene stands and as it is set from another record (`nameTitle`) — held while that state stands, whatever its title draws since (FP-26); null where its corner carries no title
  * @property {boolean} heldVersion it shows the moved scene's held version (`Held.heldB`; D6 BM-14): the derived record it was opened on, which its corner names so and at a selection in which the acts that send give their reason (`heldVersionReason`); false on every other pane, and once the pane is set from a record not derived
@@ -1131,20 +1152,22 @@ const titleId = (/** @type {'a' | 'b'} */ side) => (side === 'a' ? 'sceneA' : 's
  * then its own document's address, the head of the article it holds; and,
  * where it is the whole document a link's far end names, by the bar's hidden
  * words saying so after them (`WHOLE_ID`), `aria-current="location"` on it;
- * a past state's pane described by the line saying why it shows that state,
- * rendered for the ear (`PastWhy`; ST's `heard`); none of these on any other
+ * a past state's pane described by its line's clauses in the order its corner
+ * draws them — why it shows that state, that it is not its minute's last,
+ * that the state its act asked is read again — as fields, rendered for the
+ * ear (T-ARTICLE's `pastClauses`; ST's `heard`); none of these on any other
  * pane, whatever the scene it stood in before.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {Pane} P
  */
 function namePane(E, S, P) {
-  const pane = paneEl(E, P.side), whole = P.side === 'b' && S.whole, id = (P.side === 'a' ? 'sceneA' : 'sceneB') + '-name', why = pastWhy(P);
+  const pane = paneEl(E, P.side), whole = P.side === 'b' && S.whole, id = (P.side === 'a' ? 'sceneA' : 'sceneB') + '-name', clauses = pastSaid(P);
   pane.setAttribute('role', 'region');
   const addr = /** @type {HTMLElement | null} */ (pane.querySelector('.hd .addr'));
   if (addr) { addr.id = id; pane.setAttribute('aria-labelledby', [titled(P) ? titleId(P.side) : leadId(P.side), id, ...(whole ? [WHOLE_ID] : [])].join(' ')); }
   if (whole) pane.setAttribute('aria-current', 'location'); else pane.removeAttribute('aria-current');
-  if (why) pane.setAttribute('aria-description', heard(why.text)); else pane.removeAttribute('aria-description');
+  if (clauses.length) pane.setAttribute('aria-description', heard(fields(...clauses))); else pane.removeAttribute('aria-description');
 }
 
 /** both panes named (`namePane`), pane B as the whole document where the scene's far end names it so */
@@ -1342,13 +1365,14 @@ export function heldVersionReason() {
  * the one it shows, its kind, its version and the chain's count, its corner's
  * act and what its corner says it lacks, whether its record is one the page
  * derived, whether it shows the moved scene's held version, its corner's rows
- * held at its top at its document's head (`Pane.heldRows`), and the blocks
- * its article was made from.
+ * held at its top at its document's head and those its title took there
+ * (`Pane.heldRows`, `Pane.titleRows`), and the blocks its article was made
+ * from.
  */
 export function panes() {
   const S = scene;
   if (!S) return null;
-  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, held: P.heldVersion, heldRows: P.heldRows, editor: editor(P), focus: P.focus, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
+  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, held: P.heldVersion, heldRows: P.heldRows, titleRows: P.titleRows, editor: editor(P), focus: P.focus, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
   return { a: of(S.a), b: of(S.b) };
 }
 
@@ -1940,7 +1964,7 @@ function paneAt(side, src, r) {
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
     d: { ...r.d }, view: LAYER.sceneView(r.d), corner: '', placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
-    open: false, rows: 0, heldRows: 0, heard: LAYER.kindOf(r.d), titleWords: null, heldVersion: false, focus: null,
+    open: false, rows: 0, heldRows: 0, titleRows: 0, heard: LAYER.kindOf(r.d), titleWords: null, heldVersion: false, focus: null,
   };
 }
 
@@ -1992,8 +2016,8 @@ function paneCorner(P) {
 /** does a pane show a past state of a draft (see the head; `Held.past`): pane B of a draft's history, on a record derived at a position of the board's history */
 const pastShown = (/** @type {Pane} */ P) => !!scene && !!scene.past && P.side === 'b' && !!P.d.derived && P.d.derived.at != null;
 
-/** why a pane shows the past state it shows (`PastLine.why`; B3-S7; `pastWhyOf`): the line its region is described by (`namePane`); null where none stands, or it shows no past state */
-const pastWhy = (/** @type {Pane} */ P) => (scene && scene.past && pastShown(P) ? pastWhyOf(scene.past) : null);
+/** the clauses a pane's past state's line carries, in the order its corner draws them (T-ARTICLE's `pastClauses`; B3-S7; `pastLine`): what its region is described by (`namePane`); none where none stands, or it shows no past state */
+const pastSaid = (/** @type {Pane} */ P) => (scene && scene.past && pastShown(P) ? pastClauses(pastLine(scene.past)) : []);
 
 /** does a pane's corner carry a title (see the head; T-ARTICLE's `cornerTitle`): a past state's or the held version's, at every fit */
 const titled = (/** @type {Pane} */ P) => !!cornerTitle(paneCorner(P).view);
@@ -2041,14 +2065,15 @@ const footed = (P, F) => F.stacked && F.corner === 'head' && current(P) && !!LAY
  * `ArticleView.opened`) — the clause its last item (`sceneCorner`); at its
  * document's head, the clause first on its first row and a form the act
  * opened beneath its rows (`sceneHead`) — a title on rows never fewer than its
- * held rows as last written (`Pane.heldRows`) — save an editor pane in a
+ * title took as last written (`Pane.titleRows`) — save an editor pane in a
  * stacked scene (`footed`), whose head holds its kept line and any face alone
  * (`HEAD_ITEMS`) and whose foot, after its text, the rest of its corner,
  * compact, its kept clause last (`foot`); with the rows of its head held at
- * the pane's top (`held`), none beside its column.
+ * the pane's top (`held`) and those its title took (`title`), none beside its
+ * column.
  * @param {Pane} P
  * @param {PaneFit} F
- * @returns {{html: string, rows: number, held: number, foot: string | null}}
+ * @returns {CornerMade}
  */
 function cornerForm(P, F) {
   const { d, view } = paneCorner(P), title = cornerTitle(view);
@@ -2057,10 +2082,19 @@ function cornerForm(P, F) {
     const head = LAYER.sceneHead(d, view, { px: F.px, kept: null, open: P.open, keep: HEAD_ITEMS });
     return { ...head, foot: LAYER.sceneCorner(d, view, true, { keep: (cls) => !HEAD_ITEMS(cls) }) + keptHTML(paneKept(P)) };
   }
-  if (F.corner === 'head') return { ...LAYER.sceneHead(d, view, { px: F.px, kept: paneKept(P), open: P.open, floor: title ? P.heldRows : 0, title: named }), foot: null };
+  if (F.corner === 'head') return { ...LAYER.sceneHead(d, view, { px: F.px, kept: paneKept(P), open: P.open, floor: title ? P.titleRows : 0, title: named }), foot: null };
   const compact = F.corner === 'compact';
-  return { html: LAYER.sceneCorner(d, { ...view, opened: compact && P.open }, compact && !P.open, { title: named }) + keptHTML(paneKept(P)), rows: 0, held: 0, foot: null };
+  return { html: LAYER.sceneCorner(d, { ...view, opened: compact && P.open }, compact && !P.open, { title: named }) + keptHTML(paneKept(P)), rows: 0, held: 0, title: 0, foot: null };
 }
+
+/**
+ * @typedef {Object} CornerMade — a pane's corner's items as made in the fit's form (`cornerForm`)
+ * @property {string} html its items' markup
+ * @property {number} rows its rows at its document's head; 0 beside its column
+ * @property {number} held its rows held at the pane's top there (`Pane.heldRows`); 0 beside its column
+ * @property {number} title the rows its title took there (`Pane.titleRows`); 0 beside its column, and where it carries no title
+ * @property {string | null} foot an editor pane's foot's items in a stacked scene (`footed`); null where it stands none
+ */
 
 /**
  * An editor pane's corner's foot stood after its text, or taken down (see the
@@ -2214,16 +2248,17 @@ const formClass = (/** @type {PaneFit} */ F, /** @type {Pane} */ P) => (F.corner
  * plane's corner is (D5 K-57), in the fit's form (`formClass`), marked with
  * whether the board lagged as it was made (`data-lags`) — its element a
  * group and its one Tab stop, until its stops are stood on its acts
- * (T-LAYER's `setStops`); the items it holds, its rows and its rows held at
- * the pane's top kept on the pane as last written (`Pane.corner`,
- * `Pane.rows`, `Pane.heldRows`) — an editor pane's foot's among them, which
- * its foot holds and never its head (`placeFoot`).
+ * (T-LAYER's `setStops`); the items it holds, its rows, its rows held at the
+ * pane's top and those its title took kept on the pane as last written
+ * (`Pane.corner`, `Pane.rows`, `Pane.heldRows`, `Pane.titleRows`) — an editor
+ * pane's foot's among them, which its foot holds and never its head
+ * (`placeFoot`).
  * @param {Pane} P
  * @param {PaneFit} F
  */
 function cornerMarkup(P, F) {
   const made = cornerForm(P, F);
-  P.corner = made.html + (made.foot ?? ''); P.rows = made.rows; P.heldRows = made.held;
+  P.corner = made.html + (made.foot ?? ''); P.rows = made.rows; P.heldRows = made.held; P.titleRows = made.title;
   return `<div class="corner${formClass(F, P)}" data-corner="${esc(P.shows)}" data-lags="${lags()}" id="${cornerId(P.side)}" role="group" aria-labelledby="${cornerId(P.side)}" tabindex="0">${made.html}</div>`;
 }
 
@@ -2251,18 +2286,18 @@ function shapeCorner(c, F, P) {
  * standing in its place, else on its first stop (FP-20; T-LAYER's
  * `cornerAct`); shaped for the form (`shapeCorner`); the items as given, else
  * made now (`cornerForm`), its foot stood or taken down with them
- * (`placeFoot`), and its rows and its rows held at the pane's top kept on the
- * pane before it is shaped. The band the heads reserve is set apart
- * (`setBand`).
+ * (`placeFoot`), and its rows, its rows held at the pane's top and those its
+ * title took kept on the pane before it is shaped. The band the heads reserve
+ * is set apart (`setBand`).
  * @param {NonNullable<typeof els>} E
  * @param {Pane} P
- * @param {{html: string, rows: number, held: number, foot: string | null} | null} [items]
+ * @param {CornerMade | null} [items]
  */
 function writeCorner(E, P, items = null) {
   const S = scene, c = cornerEl(E, P.side);
   if (!S || !c) return;
   const made = items || cornerForm(P, S.fit);
-  P.corner = made.html + (made.foot ?? ''); P.rows = made.rows; P.heldRows = made.held;
+  P.corner = made.html + (made.foot ?? ''); P.rows = made.rows; P.heldRows = made.held; P.titleRows = made.title;
   c.dataset.corner = P.shows;
   c.dataset.lags = String(lags());
   shapeCorner(c, S.fit, P);
@@ -4092,7 +4127,7 @@ function setPanes(S, sets, pairs) {
   for (const { side, next, same } of carried) {
     const P = S[side], view = { ...(next.view ?? LAYER.sceneView(next.d)), cpl: S.fit.cpl };
     // set at another fit, or from another record: its held rows counted anew there; from another record, its title's name too
-    Object.assign(P, { d: { ...next.d }, view, kind: next.kind, src: next.src, names: next.names, shows: next.shows, k: next.k, n: next.n, read: next.read, lacks: next.lacks, heldVersion: P.heldVersion && !!next.d.derived, heldRows: 0 });
+    Object.assign(P, { d: { ...next.d }, view, kind: next.kind, src: next.src, names: next.names, shows: next.shows, k: next.k, n: next.n, read: next.read, lacks: next.lacks, heldVersion: P.heldVersion && !!next.d.derived, heldRows: 0, titleRows: 0 });
     if (!same) { P.sets++; nameTitle(P); }
     swap(E, P);
     writeCorner(E, P);
@@ -4351,13 +4386,18 @@ function newest(row, src) {
  * corner's act's among them, lands as asked, with them — and reading it again
  * in its place where its byline was made with other facts (`Pane.facts`),
  * nothing else of it touched; and a row naming the draft whose history the
- * scene stands on arriving at its list (`arriveRows`).
+ * scene stands on arriving at its list (`arriveRows`), the rows below read on
+ * where its not-last clause stands with its count not yet told (`owes`,
+ * `readOlder`).
  * @param {Dropped} x
  */
 export function dropped(x) {
   const S = scene;
   if (!S) return;
-  if (S.past && x.row && Array.isArray(x.row.docs) && x.row.docs.includes(S.past.draft)) arriveRows(S, [x.row]);
+  if (S.past && x.row && Array.isArray(x.row.docs) && x.row.docs.includes(S.past.draft)) {
+    arriveRows(S, [x.row]);
+    if (owes(S.past)) void readOlder(S);
+  }
   if (!x.addrs) {
     setPanes(S, SIDES.map((side) => {
       const P = S[side], d = REC.doc(P.src);
@@ -5442,14 +5482,22 @@ export function listHTML(L) {
  * A past state's corner line (see the head; B3-S7): when the state pane B
  * shows stood — the time its row's last commit was made, as a sentence names
  * a time (ST's `stoodAt`), "not recorded" where the board lost it — whose hand
- * made it, its fields in their faces (`handFields`), and the line saying why
- * the pane shows it where one stands (`pastWhyOf`).
+ * made it, its fields in their faces (`handFields`), the line saying why the
+ * pane shows it where one stands (`pastWhyOf`), whether it is not its
+ * minute's last and how many changes that minute holds as the rows read tell
+ * (M-PAST's `notLastOf`), and, while the scene reissues the state its act
+ * asked (`PastList.running`), when that state stood, in the title's form — "a
+ * time not recorded" where its row holds none. Derived, never kept.
  * @param {PastList} L
  * @returns {import('../text/article.js').PastLine}
  */
 function pastLine(L) {
-  const row = PAST.rowHolding(L.rows, L.at);
-  return { time: row && row.time != null ? stoodAt(row.time) : t('F.slot.not-recorded'), hand: row ? handFields(row.hand) : [{ text: t('F.slot.not-recorded'), face: 'client' }], why: pastWhyOf(L) };
+  const row = PAST.rowHolding(L.rows, L.at), asked = L.running ? PAST.rowHolding(L.rows, L.asked) : null;
+  return {
+    time: row && row.time != null ? stoodAt(row.time) : t('F.slot.not-recorded'), hand: row ? handFields(row.hand) : [{ text: t('F.slot.not-recorded'), face: 'client' }], why: pastWhyOf(L),
+    notLast: PAST.notLastOf(L.rows, L.at, L.bottom),
+    reading: L.running ? (asked && asked.time != null ? stoodAt(asked.time) : t('L.history.floor.untimed')) : null,
+  };
 }
 
 /**
@@ -5457,11 +5505,10 @@ function pastLine(L) {
  * where it shows another than its act asked, the latest refusal the asked
  * state's reads met in O-FACES' words (`Faces.words`) — reclaimed naming the
  * board and the time the state shown stood, "a time not recorded" where its
- * row holds none — a substitution, running while the scene reissues the asked
- * state (`reissue`); else, where it shows the state asked, that state the
- * newest row's and the draft holding no words the board has not kept, the
- * words saying it is how the draft stands now; else none. Derived, never kept:
- * a row arriving above the state shown takes the last away.
+ * row holds none — a substitution; else, where it shows the state asked, that
+ * state the newest row's and the draft holding no words the board has not
+ * kept, the words saying it is how the draft stands now; else none. Derived,
+ * never kept: a row arriving above the state shown takes the last away.
  * @param {PastList} L
  * @returns {import('../text/article.js').PastWhy | null}
  */
@@ -5469,10 +5516,10 @@ function pastWhyOf(L) {
   if (L.met) {
     if (!faces) return null;
     const row = PAST.rowHolding(L.rows, L.at), w = faces.words(L.met, { time: row && row.time != null ? timeOf(row.time) : t('L.history.floor.untimed') });
-    return { id: w.id, text: w.text, substituted: true, running: L.running };
+    return { id: w.id, text: w.text, substituted: true };
   }
   const top = L.rows[0];
-  return !L.unkept && !!top && L.at === top.last && L.asked === top.last ? { id: 'B3.history.now', text: t('B3.history.now'), substituted: false, running: false } : null;
+  return !L.unkept && !!top && L.at === top.last && L.asked === top.last ? { id: 'B3.history.now', text: t('B3.history.now'), substituted: false } : null;
 }
 
 /** the draft whose history the scene stands on (`Held.past`); null where it stands on none (N-GO's `history`) */
@@ -5507,7 +5554,7 @@ function pastListOf(h, got) {
   const rows = PAST.rowsOf(h.entries);
   return {
     draft: h.draft, entries: [...h.entries], rows, days: PAST.daysOf(rows), open: new Set(), opened: false, at: got.shown, asked: h.asked, met: got.met, running: busy(got.met),
-    head: h.head, unkept: h.unkept, said: null, from: h.from, reading: false, figures: { ...h.figures, stateMs: got.ms, at: got.state.at, older: null }, html: '',
+    head: h.head, unkept: h.unkept, said: null, from: h.from, bottom: h.bottom, reading: false, figures: { ...h.figures, stateMs: got.ms, at: got.state.at, older: null }, html: '',
   };
 }
 
@@ -5541,15 +5588,18 @@ function pastStood(S, lead) {
 
 /**
  * A past state's line said in the status region (see the head; FP-36): a
- * substitution's words once as they first stand, and again only where a later
- * answer changed them (`PastList.said`), after `lead` in one message where it
- * is given; `lead` alone where nothing is to be said of the line.
+ * substitution's words — while the scene reissues the state its act asked,
+ * with the in-flight clause after them, as fields (`pastLine`) — once as they
+ * first stand, and again only where a later answer changed them
+ * (`PastList.said`), after `lead` in one message where it is given; `lead`
+ * alone where nothing is to be said of the line.
  * @param {Scene} S
  * @param {string | null} [lead]
  */
 function sayLine(S, lead = null) {
-  const L = S.past, why = L ? pastWhyOf(L) : null;
-  const line = L && why && why.substituted && why.text !== L.said ? why.text : null;
+  const L = S.past, p = L ? pastLine(L) : null;
+  const words = p && p.why && p.why.substituted ? fields(p.why.text, p.reading != null ? inFlightWords(p.reading) : null) : null;
+  const line = L && words && words !== L.said ? words : null;
   if (L && line) L.said = line;
   if (line || lead) FOCUS.say(lead && line ? fields(lead, line) : /** @type {string} */ (lead || line));
 }
@@ -5605,8 +5655,9 @@ function lineMoved(S) {
  * The asked state landed (`reissue`; see the head): pane B set again to it in
  * one step (`setPanes`; FP-23) — the runs it shares with pane A read off the
  * two records' images (`sharedBetween`) — the list marking its row, the line
- * gone, and the landing said once in the status region in the words pane B's
- * title names its state by (T-ARTICLE's `cornerTitle`, `titleRuns`).
+ * and the in-flight clause gone, and the landing said once in the status
+ * region in the words pane B's title names its state by (T-ARTICLE's
+ * `cornerTitle`, `titleRuns`).
  * @param {Scene} S
  * @param {PastGot} got
  */
@@ -5734,65 +5785,93 @@ export function foldDay(key) {
  * below the read's reach (`readOlder`), a feed row naming the draft
  * (`dropped`) — taken in (M-PAST's `arrive`): each position once, the rows and
  * days made again, the days open as the reader left them — a day the rows name
- * anew standing folded. Then, where the scene stands, pane B follows the line
- * the rows decide now (`pastWhyOf`) in one step — its corner marked where its
- * items moved (`markCorner`), the heads' band set again where its rows
- * changed (`rebanded`), its region described anew (`namePane`) — so its
- * corner and its description never say different lines (FP-33): a row above the
- * state shown takes from both the words saying it is how the draft stands
- * now. The list is then written again, the first row or day standing in view
- * held where it stands (`writeList`). Arriving rows open no day (FP-36), and
- * nothing is said in the status region.
+ * anew standing folded; none, where an older read reached the bottom with no
+ * row. Then, where the scene stands, pane B follows the line the rows decide
+ * now (`pastLine`) in one step — its corner marked where its items moved
+ * (`markCorner`), the heads' band set again where its rows changed
+ * (`rebanded`), its region described anew (`namePane`) — so its corner and
+ * its description never say different lines (FP-33): a row above the state
+ * shown takes from both the words saying it is how the draft stands now, a
+ * newer row of its minute gives both the clause saying it is not its minute's
+ * last, and the rows read passing that minute or reaching their bottom fill
+ * that clause's count in both. The list is then written again, the first row
+ * or day standing in view held where it stands (`writeList`). Arriving rows
+ * open no day (FP-36); the not-last clause standing where it did not is said
+ * once in the status region, politely, and nothing else is.
  * @param {Scene} S
  * @param {readonly FeedUpdate[]} came
  */
 function arriveRows(S, came) {
   const L = S.past, E = els;
-  if (!L || !came.length) return;
-  const got = PAST.arrive(L.entries, came, L.open);
-  L.entries = got.entries; L.rows = got.rows; L.days = got.days; L.open = got.open;
+  if (!L) return;
+  const was = PAST.notLastOf(L.rows, L.at, L.bottom);
+  if (came.length) {
+    const got = PAST.arrive(L.entries, came, L.open);
+    L.entries = got.entries; L.rows = got.rows; L.days = got.days; L.open = got.open;
+  }
   if (!E || scene !== S) return;
   markCorner(E, S, S.b);
   rebanded(E, S);
   namePane(E, S, S.b);
   writeList(E, S, true);
+  const now = PAST.notLastOf(L.rows, L.at, L.bottom);
+  if (now && !was) FOCUS.say(notLastWords(now.n));
 }
+
+/** does pane B's not-last clause stand with its count not yet told (M-PAST's `notLastOf`): the rows below are owed it (`readOlder`) */
+const owes = (/** @type {PastList} */ L) => { const n = PAST.notLastOf(L.rows, L.at, L.bottom); return !!n && n.n == null; };
 
 /**
  * The draft's rows below the history read's reach, read as the list stands
- * (M-PUMP's `historyOf` from `PastList.from` down): each arriving at the list
- * (`arriveRows`), the read's pages, rows and time kept with the list's
- * figures (FP-18). One read at a time; none where every row is read, and none
- * taken once the scene no longer stands on the list.
+ * (M-PUMP's `historyOf` from `PastList.from` down): those of the windows read
+ * whole arriving at the list (`arriveRows`), whether or not any came, the
+ * positions they cover taken as read — the bottom reached where the read
+ * reached the feed's first position, or the first one its files hold — and
+ * the read's pages, rows and time kept with the list's figures (FP-18). A read
+ * the board did not answer is asked again once M-PUMP's pause ends, while
+ * pane B's not-last clause waits on it for its count (M-PAST's `notLastOf`);
+ * any other refusal ends the reads there. One read at a time; none where the
+ * rows read reach their bottom, and none taken once the scene no longer
+ * stands on the list.
  * @param {Scene} S
+ * @returns {Promise<void>}
  */
 async function readOlder(S) {
   const L = S.past;
-  if (!L || L.reading || L.from <= 0) return;
+  if (!L || L.reading || L.bottom || L.from <= 0) return;
   L.reading = true;
   const t0 = performance.now(), got = await PUMP.historyOf(L.draft, { below: L.from });
   L.reading = false;
-  if (scene !== S) return;
+  if (scene !== S || S.past !== L) return;
   L.figures.older = { pages: got.pages, read: got.read, ms: performance.now() - t0 };
-  if (!got.refused) L.from = got.from;
+  L.from = Math.min(L.from, got.from);
+  L.bottom = !got.refused && (got.from <= 0 || got.floor);
   arriveRows(S, got.rows);
+  if (!got.refused || !PUMP.unanswered(got.refused) || !owes(L)) return;
+  await PUMP.afterPause();
+  if (scene === S && S.past === L && owes(L)) void readOlder(S);
 }
 
 /**
  * The list of a draft's past states as it stands (the gate reads it): its
  * draft, the state shown and the state asked, its top line, the line saying
  * why pane B shows its state (`pastWhyOf`), the refusal that line answers by
- * its name and whether the scene reissues the asked state, its days — each its
- * key, its date, whether it is folded, the hands a folded head names and its
- * rows, each its positions, its time, its hand, its kind and its landmark —
- * the reads' figures and whether rows below are still read; null where the
- * scene is no draft's history.
+ * its name and whether the scene reissues the asked state, the clause saying
+ * the state shown is not its minute's last with its count (M-PAST's
+ * `notLastOf`) and the time the in-flight clause names (`pastLine`), its days
+ * — each its key, its date, whether it is folded, the hands a folded head
+ * names and its rows, each its positions, its time, its hand, its kind and its
+ * landmark — the reads' figures, whether rows below are still read and
+ * whether the rows read reach their bottom; null where the scene is no
+ * draft's history.
  */
 export function past() {
   const L = scene && scene.past;
   if (!L) return null;
+  const line = pastLine(L);
   return {
-    draft: L.draft, at: L.at, asked: L.asked, unkept: L.unkept, why: pastWhyOf(L), met: L.met ? L.met.name : null, running: L.running, from: L.from, reading: L.reading, figures: { ...L.figures },
+    draft: L.draft, at: L.at, asked: L.asked, unkept: L.unkept, why: pastWhyOf(L), met: L.met ? L.met.name : null, running: L.running, notLast: line.notLast, inFlight: line.reading,
+    from: L.from, bottom: L.bottom, reading: L.reading, figures: { ...L.figures },
     days: L.days.map((d) => ({ key: d.key, date: d.time == null ? null : dayOf(d.time), folded: PAST.isFolded(d, L.open), landmarks: d.landmarks,
       rows: d.rows.map((r) => ({ first: r.first, last: r.last, positions: [...r.positions], time: r.time, hand: { ...r.hand }, kind: r.kind, landmark: r.landmark ? { ...r.landmark } : null, words: whatOf(r).text })) })),
     entries: L.entries.length,
