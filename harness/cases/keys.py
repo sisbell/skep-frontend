@@ -284,8 +284,10 @@ no-caret line anywhere else — each ending on the constant sentence where it
 stands whole; the trail's list is its platform's history chord, Mod+Y on
 macOS and Ctrl+H elsewhere, where Ctrl+Y is the redo (`undo_chords`; D5 K-41,
 K-75; D6 BM-42); and the moved scene's held version names what it is at its
-corner in the place of the kept word and the chip — at its document's head
-its title, held at its pane's top as its text scrolls, naming the pane — and
+corner in the place of the kind, the kept word and the chip — its title,
+beside its column and at its document's head alike, held at its pane's top
+there as its text scrolls, naming the pane the same at both as the AX tree
+computes its name — and
 at a selection in it the acts that send and a printable key give the one
 reason the selection keys — that its words are not in the current text, or
 are there too — Space keeping K-9's line (`held_version`; D6 BM-14; B3-S2;
@@ -312,7 +314,7 @@ import json
 import re
 import time
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, drawn_keys, heard, item_words, key_fingerprint, trunk_of
+from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, corner_fit, drawn_keys, heard, item_words, key_fingerprint, named_as, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -2630,19 +2632,21 @@ HELD_WORDS = 'Held words here. '
 HEAD_WINDOW = (390, 900)
 # a pane's padding above its content, px (the style's `.pane`): the most a corner held at its pane's top stands below it
 PANE_PAD_PX = 14
-# the held version's pane at its document's head as the person meets it, its text scrolled `down` px first (formatted with
-# it): the fit, whether its corner stands at its head and holds a kind's slot, the title's words — the element carrying the
+# the held version's pane as the person meets it, its text scrolled `down` px first (formatted with it): the fit, whether its
+# corner stands at its head and holds a kind's slot, whether its title leads it, the title's words — the element carrying the
 # held words' string — whether it stands on a held row, its box and the corner's below the pane's visible top, whether the
-# pointer meets it at its first words, pane B's scroll, the rows the scene says it holds, pane B's name and how it is
-# labelled, and how many of both heads' rows are hidden
+# pointer meets it at its first words, pane B's scroll, the rows the scene says it holds, the words the title's own element
+# names pane B by, how pane B is labelled and the address its head names, and how many of both heads' rows are hidden
 HELD_TITLE = '''(async (down) => { const pane = document.getElementById('sceneB'), c = pane && pane.querySelector(':scope > .corner'); if (!c) return null;
   if (down) { pane.scrollTop = down; await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); }
   const top = pane.getBoundingClientRect().top + pane.clientTop, box = (e) => { const q = e.getBoundingClientRect(); return {top: q.top - top, bottom: q.bottom - top}; };
-  const t = c.querySelector('[data-string="B3.history.held"]'), row = t && t.closest('.hrow'), f = window.__skep.scene.fit(), name = document.getElementById('sceneB-kind');
+  const t = c.querySelector('[data-string="B3.history.held"]'), row = t && t.closest('.hrow'), f = window.__skep.scene.fit(), name = document.getElementById('sceneB-title'), addr = document.getElementById('sceneB-name');
   const hit = !!t && (() => { const q = t.getBoundingClientRect(), e = document.elementFromPoint(q.left + Math.min(8, q.width / 2), q.top + Math.min(8, q.height / 2)); return !!e && t.contains(e); })();
   const hidden = [...document.querySelectorAll('#sceneA > .corner.head > .hrow, #sceneB > .corner.head > .hrow')].filter((r) => getComputedStyle(r).visibility === 'hidden').length;
-  return {fit: f && {corner: f.corner, stacked: f.stacked, cpl: f.cpl}, head: c.classList.contains('head'), kind: !!c.querySelector('.kind'), words: t ? t.textContent : null, held: !!row && row.dataset.held === '1',
-          title: t ? box(t) : null, corner: box(c), hit, scroll: pane.scrollTop, rows: ((window.__skep.scene.panes() || {}).b || {}).heldRows, name: name ? name.textContent : null, labelled: pane.getAttribute('aria-labelledby'), hidden}; })(%s)'''
+  const lead = c.classList.contains('head') ? c.querySelector('.hrow[data-row="0"] .hslot > .title') : c.firstElementChild;
+  return {fit: f && {corner: f.corner, stacked: f.stacked, cpl: f.cpl}, head: c.classList.contains('head'), kind: !!c.querySelector('.kind'), leads: !!lead && lead.classList.contains('title') && lead.contains(t), words: t ? t.textContent : null, held: !!row && row.dataset.held === '1',
+          title: t ? box(t) : null, corner: box(c), hit, scroll: pane.scrollTop, rows: ((window.__skep.scene.panes() || {}).b || {}).heldRows, name: name && name === t ? name.getAttribute('aria-label') : null,
+          labelled: pane.getAttribute('aria-labelledby'), address: addr ? addr.textContent : null, hidden}; })(%s)'''
 # the platform's selection set over the first stretch of a reading scene's pane's body text that reads the words given, the
 # focus put on the pane first: whether the focus stands on the pane and the selection over them there (formatted with the
 # pane's id and the words, as JSON)
@@ -2659,8 +2663,10 @@ def held_version(ctx, r):
     """THE MOVED SCENE'S HELD VERSION (D6 BM-14; B3-S2; issue #599): the scene opened through the gate's door as the moved
     scene on the draft the first edition windows, read whole, a line held moved inserting words of its own before its first
     paragraph of its own words — page state alone, nothing read for the held version:
-    (a) pane B, the held version, its corner naming what it is in the place of the kept word and the chip — "what you typed
-        while it was held — not on the board" — pane A, the current text, a draft's kept slot and chip;
+    (a) pane B, the held version, its corner titled by what it is in the place of the kind, the kept word and the chip —
+        "what you typed while it was held — not on the board" — beside its column at the run's window, its title first and
+        no kind's slot, pane B named by the title's own element then its address as the AX tree computes it (issue #687);
+        pane A, the current text, a draft's kept slot and chip;
     (b) the platform's selection over the held words in pane B, the focus there: Mod+K, Mod+Shift+A and Mod+Shift+C, then a
         printable key, each give "these words are not in your current text — …" as its hint, said through the status region
         at the press — the region emptied before each — no overlay opening and the scene standing;
@@ -2668,8 +2674,8 @@ def held_version(ctx, r):
         text too — …";
     (d) Space there keeps K-9's own line;
     (e) at a narrow window, both corners at their documents' heads, pane B's corner titled by the held words — first, in
-        the kind's place, held at the pane's top while its text scrolls under them — pane B named by them, no head's row
-        hidden (issue #677).
+        the kind's place, held at the pane's top while its text scrolls under them — pane B named by them, its name in the
+        AX tree the one it had beside its column, no head's row hidden (issues #677, #687).
     The scene ended and the selection cleared after"""
     W = WINDOW[2]
     ctx.leap(DOC, WINDOW[0])
@@ -2696,6 +2702,16 @@ def held_version(ctx, r):
         r.check(bool(opened) and opened['shown'] and opened['applied'] == 1 and got['held'] == [False, True] and got['derived'] is True
                 and got['b'] == {'held': want, 'kept': False, 'chip': False} and got['a'] == {'held': None, 'kept': True, 'chip': True},
                 '(a) the moved scene opens, pane B the held version: its corner names it "%s" in the place of the kept word and the chip; pane A, the current text, a draft\'s kept slot and chip (issue #599; B3-S2; D6 BM-14)' % want, dict(got, opened=opened))
+        # (a) beside its column at the run's window: the title first, no kind's slot, pane B named by the title's own element
+        # then its address — the name the AX tree computes, read again at (e)
+        named = heard(ctx, want)
+        beside = ctx.js(HELD_TITLE % json.dumps(0)) or {}
+        beside_as, boxes = named_as(ctx, '#sceneB') or {}, corner_fit(ctx, '#sceneB > .corner')
+        r.check((beside.get('fit') or {}).get('corner') in ('whole', 'compact') and not beside.get('head') and not beside.get('kind') and beside.get('leads') and beside.get('words') == want
+                and bool(boxes.get('read')) and not boxes.get('over')
+                and beside.get('name') == named and beside.get('labelled') == 'sceneB-title sceneB-name' and beside_as.get('name') == '%s %s' % (named, beside.get('address')),
+                '(a) beside its column at the run\'s window, pane B\'s corner leads with its title "%s" — no kind\'s slot, each of its lines inside the corner — and pane B is named by the title\'s own element, then its address: "%s %s" (issue #687; FP-26, FP-39)' % (want, named, beside.get('address')),
+                dict(beside, named_as=beside_as, boxes=boxes, want=named))
         figures = {}
         for words, sid, what in ((HELD_WORDS[:10], 'B3.held-version.not-current', '(b) over the held words'), (shared, 'B3.held-version.in-current', '(c) over "%s", words the current text holds too' % shared)):
             selected = ctx.js(SELECT_IN_PANE % (json.dumps('sceneB'), json.dumps(words)))
@@ -2725,22 +2741,25 @@ def held_version(ctx, r):
             ctx.frames(3)
             ctx.js('window.getSelection().removeAllRanges()')
             at = ctx.js(HELD_TITLE % json.dumps(0)) or {}
+            at_as = named_as(ctx, '#sceneB') or {}
             down = ctx.js(HELD_TITLE % json.dumps(300)) or {}
         finally:
             ctx.resize(*was)
             ctx.settle(10)
             ctx.frames(3)
-        named = heard(ctx, want)
-        r.check((at.get('fit') or {}).get('corner') == 'head' and at.get('head') and not at.get('kind') and at.get('words') == want and at.get('held') and (at.get('rows') or 0) >= 1
-                and at.get('name') == named and (at.get('labelled') or '').startswith('sceneB-kind ') and at.get('hidden') == 0,
+        r.check((at.get('fit') or {}).get('corner') == 'head' and at.get('head') and not at.get('kind') and at.get('leads') and at.get('words') == want and at.get('held') and (at.get('rows') or 0) >= 1
+                and at.get('name') == named and at.get('labelled') == 'sceneB-title sceneB-name' and at.get('hidden') == 0,
                 '(e) at a %d px window both corners at their documents\' heads: pane B\'s corner titled "%s" — the held words first, in the kind\'s place, on its first row held at the pane\'s top, no kind\'s slot — pane B named by them, no head\'s row hidden (issue #677; FP-26)' % (HEAD_WINDOW[0], want),
                 dict(at, want=named))
+        r.check(bool(at_as.get('name')) and at_as.get('name') == beside_as.get('name'),
+                '(e) pane B\'s name as the AX tree computes it at its document\'s head the one it had beside its column at the run\'s window: a resize changes how its corner is drawn, never its name (issue #687; FP-26)',
+                {'head': at_as, 'beside': beside_as})
         title, head = down.get('title') or {}, down.get('corner') or {}
         r.check((down.get('scroll') or 0) >= 100 and down.get('words') == want and down.get('hit') and down.get('hidden') == 0 and -0.5 <= head.get('top', -1) <= PANE_PAD_PX + 0.5
                 and title.get('top', -1) >= head.get('top', 0) - 0.5 and title.get('bottom', 1e9) <= head.get('bottom', 0) + 0.5,
                 '(e) pane B scrolled: its title held at the pane\'s top inside its held rows, drawn and met by the pointer there, its text passing under it, no head\'s row hidden (issue #677; FP-26)', {'at': at, 'down': down})
         r.figures['held_version'] = figures
-        r.figures['held_version_title'] = {'at': at, 'scrolled': down}
+        r.figures['held_version_title'] = {'at': at, 'scrolled': down, 'beside': beside, 'named_as': {'beside': beside_as, 'head': at_as}}
     finally:
         ctx.js('window.__skep.scene.close(); window.getSelection().removeAllRanges()')
         ctx.frames(2)

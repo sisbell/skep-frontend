@@ -65,8 +65,10 @@ line's second act, "show its history", at one place whichever kept word stands, 
 newest change, that state the test board's text at the position the row below the top row ends at, the history read a
 figure — then `changes` armed once the page is quiet with the draft's own rows and three of the harness's, the list's days
 and rows in the strings table's words, the past pane's corner, the bands, side by side and stacked, the current pane's
-corner split at the narrow width (`read`); `changes` armed with the draft's newest row alone, the act opening on that
-row's state, pane B's corner saying it is how the draft stands now on one line inside its slot (`now`); and a held line,
+corner split at the narrow width (`read`), then stacked between those widths with the past pane's corner beside its column,
+led by its title, the pane's name the AX tree computes the same at all three (issue #687); `changes` armed with the
+draft's newest row alone, the act opening on that row's state, pane B's corner saying it is how the draft stands now on one
+line inside its slot, that line the pane's description (`now`); and a held line,
 the act opening on the newest kept state under "now — not yet kept" (`unkept`) — every word of both panes' corners inside
 the box it stands in at each (issue #678).
 The editor pane follows them (`pane_rows`; skep-frontend #556, B3-S1's scene rule, B3-S13): a reading scene's pane holding
@@ -181,7 +183,7 @@ import re
 import time
 from collections import Counter
 
-from . import DOC, VERSIONED, Result, WINDOW, corner_fit, drawn_keys, heard, trunk_of
+from . import DOC, VERSIONED, Result, WINDOW, corner_fit, drawn_keys, heard, named_as, trunk_of
 from .layout import EDGE_EM, HEAD_CH, READING_PX, SIDE_GAP_PX
 from .wire import READ_PATHS, READ_ROWS, read_ops
 
@@ -2810,8 +2812,8 @@ TITLE_SCROLL_PX = 300
 # words, whether it stands on a held row, its box and the held rows' box below the pane's visible top, whether the pointer
 # meets it at its first words — before and after pane B is scrolled `down` px (formatted with it), and how far the pane moved;
 # then, so scrolled, the chip's glyph focused — whether the focus stands on it, whether its row is held, its row's box and the
-# held rows' box; whether a kind's slot stands in the corner, the rows the scene says it holds, pane B's name, and how many of
-# both heads' rows are hidden; pane B's scroll put back after
+# held rows' box; whether a kind's slot stands in the corner, the rows the scene says it holds, and how many of both heads'
+# rows are hidden; pane B's scroll put back after
 PAST_TITLE = '''(async (down) => { const pane = document.getElementById("sceneB"), c = pane && pane.querySelector(":scope > .corner.head"); if (!c) return null;
   const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   const box = (e) => { const t0 = pane.getBoundingClientRect().top + pane.clientTop, q = e.getBoundingClientRect(); return {top: q.top - t0, bottom: q.bottom - t0}; };
@@ -2825,7 +2827,19 @@ PAST_TITLE = '''(async (down) => { const pane = document.getElementById("sceneB"
   if (chip) { chip.focus(); await frames(); const r = chip.closest(".hrow"); focused = {on: document.activeElement === chip, held: r ? r.dataset.held === "1" : null, row: r ? box(r) : null, head: box(c)}; chip.blur(); }
   const hidden = [...document.querySelectorAll("#sceneA > .corner.head > .hrow, #sceneB > .corner.head > .hrow")].filter((r) => getComputedStyle(r).visibility === "hidden").length;
   pane.scrollTop = s0; await frames();
-  return {at, scrolled, moved, focused, hidden, kind: !!c.querySelector(".kind"), rows: ((window.__skep.scene.panes() || {}).b || {}).heldRows, name: (document.getElementById("sceneB-kind") || {}).textContent || null}; })(%s)'''
+  return {at, scrolled, moved, focused, hidden, kind: !!c.querySelector(".kind"), rows: ((window.__skep.scene.panes() || {}).b || {}).heldRows}; })(%s)'''
+# a past state's pane's corner and name as the person meets them at any fit (issue #687): whether its corner stands at its
+# document's head, whether its title leads it — beside its column its first item, at its head on its first row — and the
+# past line's words; whether a kind's slot stands in it; the words the past line's own element names pane B by, how pane B
+# is labelled and the address its head names
+PAST_LEAD = '''(() => { const pane = document.getElementById("sceneB"), c = pane && pane.querySelector(":scope > .corner"); if (!c) return null;
+  const head = c.classList.contains("head"), t = c.querySelector('[data-string="B3.history.row"]'), lead = head ? c.querySelector('.hrow[data-row="0"] .hslot > .title') : c.firstElementChild;
+  const name = document.getElementById("sceneB-title"), addr = document.getElementById("sceneB-name");
+  return {head, leads: !!lead && !!t && lead.classList.contains("title") && lead.contains(t), words: t ? t.textContent : null, kind: !!c.querySelector(".kind"),
+          name: name && name === t ? name.getAttribute("aria-label") : null, labelled: pane.getAttribute("aria-labelledby"), address: addr ? addr.textContent : null}; })()'''
+# a window between the two `read` is shot at, where a draft's history stands stacked with both corners beside their columns
+# — the fit its check reads there and holds it to (issue #687)
+STACKED_BESIDE = (800, 900)
 # the line saying why a past state's pane shows the state it shows, as a person meets it in pane B's corner (issue #678): its
 # words and its string, whether it stands in a slot of a head's rows and that slot one row tall, how many lines its words take
 # — their line boxes read by a Range, in fractional px — and how far they run past the slot's right edge, px
@@ -2849,16 +2863,20 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     taken, one day's head clicked folded; the list's heads and rows in the strings table's words, each word whole on one
     line and each timed row's time in one slot, the past pane's corner, the bar's and the one line's second address, the
     past pane's title at its document's head — its line first, held at the pane's top as its text scrolls, no kind's slot,
-    the pane named by it, the chip on a row that scrolls brought below the held rows as the focus comes to it, no head's
-    row hidden (issue #677) — the bands; side by side both corners at their heads, both texts at one depth, and the list in its own column at pane B's
+    the pane named by its own element, the chip on a row that scrolls brought below the held rows as the focus comes to it,
+    no head's row hidden (issue #677) — the pane's name as the AX tree computes it, its title then its address, with no
+    description; the bands; side by side both corners at their heads, both texts at one depth, and the list in its own column at pane B's
     outer side from the panes' top to the scene's foot, as wide as a line of its head's stop and both step acts needs, the
     panes one width either side of the whole gutter, the column's width and the panes' measure figures (FP-18); one px
     either side of the window at which beside it the panes keep HEAD_CH characters — the case's own arithmetic, by the
     page's measured advance and the column as laid out — the list in its column, then after pane B's text, the panes side
     by side (skep-frontend #668); stacked at the narrow width after pane B's text, the current pane's kept line at its head
-    and the rest of its corner at its foot (D2).
+    and the rest of its corner at its foot (D2); stacked at STACKED_BESIDE, between them, the past pane's corner beside its
+    column led by its title, no kind's slot, each of its lines inside the corner, and the pane's name the one the AX tree
+    computed at both widths (issue #687).
     `now`: `changes` armed, once the page is quiet, with the draft's newest row alone, then the act — the history on that
-    row's state, the current text, pane B's corner saying it is how the draft stands now, on one line inside its slot.
+    row's state, the current text, pane B's corner saying it is how the draft stands now, on one line inside its slot, the
+    pane named by its title and described by that line as the AX tree computes them (issue #687).
     `unkept`: a line held, then the act — the newest kept state, the list's top line saying so. At `read`, `now` and
     `unkept`, at both widths, every word of both panes' corners stands inside the box it is set in, 1 px either way, the
     worst excess a figure (`fit_part`; issue #678). No `history.past` is called; the rows' writes are the two typed lines
@@ -2984,6 +3002,8 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
               rows: rows.map((r) => ({last: r.last, time: r.time == null ? null : U.timeOf(r.time), words: r.words, hand: S.handWords(r.hand)}))}; })()''')
     want = {'signed': t(ctx, 'L.history.hand.signed'), 'unrecorded': t(ctx, 'L.history.time-unrecorded'), 'not_recorded': t(ctx, 'F.slot.not-recorded'), 'folded': t(ctx, 'L.history.folded'),
             'version': t(ctx, 'B3.history.row.version', {'k': 1, 'E': trunk_of(DOC)}), 'typed': t(ctx, 'B3.history.kind.typed'), 'linked': t(ctx, 'L.history.kind.linked')}
+    # pane B's name and description as the AX tree computes them at each width `read` is checked at, by width
+    pane_names = {}
 
     def read_check(w):
         P, fit = ctx.js('window.__skep.scene.past()') or {}, ctx.js('window.__skep.scene.fit()') or {}
@@ -3009,13 +3029,14 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         bar_as_of = ctx.js('(() => { const e = document.querySelector("#scenebar .as-of"); return e ? e.textContent : null; })()')
         line_as_of = ctx.js('(() => { const e = document.querySelector("#line .seg.as-of"); return e ? e.textContent : null; })()')
         corner_ok = corner_line == ex.get('corner') and chip and bar_as_of == ex.get('asOf') and line_as_of == ex.get('asOf')
-        # the line pane B's title at its document's head: first, on its held rows, no kind's slot, pane B named by it; held
-        # there as the text scrolls under it; the chip on a row that scrolls, brought below the held rows as the focus comes
-        # to it; no head's row hidden (issue #677)
-        ti = ctx.js(PAST_TITLE % json.dumps(TITLE_SCROLL_PX)) or {}
+        # the line pane B's title at its document's head: first, on its held rows, no kind's slot, pane B named by its own
+        # element; held there as the text scrolls under it; the chip on a row that scrolls, brought below the held rows as
+        # the focus comes to it; no head's row hidden (issues #677, #687)
+        ti, lead = ctx.js(PAST_TITLE % json.dumps(TITLE_SCROLL_PX)) or {}, ctx.js(PAST_LEAD) or {}
         at, down, chip_at = ti.get('at') or {}, ti.get('scrolled') or {}, ti.get('focused') or {}
         held_box, title_box, chip_row = down.get('head') or {}, down.get('box') or {}, chip_at.get('row') or {}
-        title_ok = (bool(ti) and not ti.get('kind') and at.get('words') == ex.get('corner') and at.get('held') and (ti.get('rows') or 0) >= 1 and ti.get('name') == heard(ctx, ex.get('corner') or '')
+        title_ok = (bool(ti) and not ti.get('kind') and at.get('words') == ex.get('corner') and at.get('held') and (ti.get('rows') or 0) >= 1
+                    and lead.get('leads') and lead.get('name') == heard(ctx, ex.get('corner') or '') and lead.get('labelled') == 'sceneB-title sceneB-name'
                     and (ti.get('moved') or 0) >= 100 and down.get('words') == ex.get('corner') and down.get('hit') and title_box.get('top', -1) >= held_box.get('top', 0) - 0.5
                     and title_box.get('bottom', 1e9) <= held_box.get('bottom', 0) + 0.5 and chip_at.get('on') and chip_at.get('held') is False
                     and chip_row.get('top', -1) >= (chip_at.get('head') or {}).get('bottom', 1e9) - 0.5 and ti.get('hidden') == 0)
@@ -3049,17 +3070,46 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
                       after: !!f && !!a && !!(a.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING)}; })()''')
             form_ok = fit.get('stacked') is True and L.get('after') and not L.get('beside') and d2 == {'head': True, 'foot': True, 'after': True}
             form = {'stacked': fit.get('stacked'), 'after': L.get('after'), 'd2': d2}
+        # pane B's name as the AX tree computes it: its title's own element, then its address — the same at every fit (`named`,
+        # below) — and no description, the state shown the one its act asked (issue #687)
+        pane_names[w] = got_as = named_as(ctx, '#sceneB') or {}
+        name_ok = got_as.get('name') == '%s %s' % (heard(ctx, ex.get('corner') or ''), lead.get('address')) and got_as.get('description') is None
         return {'the state': (state_ok, {'at': P.get('at'), 'rows': [x['last'] for x in rows[:4]], 'b': pane_text('b')[:100], 'want': text1[:100]}),
                 'the days': (dates_ok and folded_ok, {'heads': {k: (v['head'], v['folded'], v['act']) for k, v in heads.items()}, 'want': exdays, 'yesterday': y}),
                 'the rows': (rows_ok and marks_ok, {'lines': lines[:10], 'want': list(exrows.values())[:10], 'version': want['version']}),
                 'the corner': (corner_ok, {'corner': corner_line, 'chip': chip, 'bar': bar_as_of, 'line': line_as_of, 'want': [ex.get('corner'), ex.get('asOf')]}),
-                'the title': (title_ok, dict(ti, want=ex.get('corner'))),
+                'the title': (title_ok, dict(ti, lead=lead, want=ex.get('corner'))),
+                'the name': (name_ok, dict(got_as, want=ex.get('corner'), address=lead.get('address'))),
                 'the bands': (bands_ok, {'ties': [x['kind'] for x in ties]}),
                 'the words': (words_ok, {'broken': broken, 'slots': slots[:8]}),
                 'the form': (form_ok, form),
                 "the corners' words in their boxes": in_boxes}
     head_words = ' '.join(t(ctx, k) for k in LIST_HEAD_IDS)
     shoot('read', read_check)
+
+    # ---- `read`, stacked with both corners beside their columns (issue #687): pane B's corner led by its title, no kind's
+    # slot, every word of it inside its box; pane B named by its title's own element, then its address — the name the AX tree
+    # computes there the one it computed at both widths `read` was shot at ---------------------------------------------------------
+    was = ctx.resize(*STACKED_BESIDE)
+    try:
+        ctx.settle(10); ctx.frames(3)
+        fit3, lead3 = ctx.js('window.__skep.scene.fit()') or {}, ctx.js(PAST_LEAD) or {}
+        boxes3, as3 = corner_fit(ctx, '#sceneB > .corner'), named_as(ctx, '#sceneB') or {}
+    finally:
+        ctx.resize(*was); ctx.settle(10); ctx.frames(3)
+    named3 = heard(ctx, (lists or {}).get('corner') or '')
+    r.check(fit3.get('stacked') is True and fit3.get('corner') in ('whole', 'compact') and not lead3.get('head') and lead3.get('leads') and not lead3.get('kind')
+            and lead3.get('words') == (lists or {}).get('corner') and lead3.get('name') == named3 and lead3.get('labelled') == 'sceneB-title sceneB-name'
+            and bool(boxes3.get('read')) and not boxes3.get('over'),
+            "B3-S7 · read at %d px: the panes stacked, both corners beside their columns — pane B's led by its title, the past line, no kind's slot, every word inside its box (issue #687; FP-26, FP-39)" % STACKED_BESIDE[0],
+            {'fit': fit3, 'lead': lead3, 'boxes': boxes3, 'want': named3})
+    same = [(pane_names.get(w) or {}).get('name') for w in (WIDE[0], NARROW[0])] + [as3.get('name')]
+    # pane B's name and description as the AX tree computed them at each width read, keyed by the width as words
+    names = {str(w): got for w, got in list(pane_names.items()) + [(STACKED_BESIDE[0], as3)]}
+    r.check(bool(same[0]) and same[0] == '%s %s' % (named3, lead3.get('address')) and len(set(same)) == 1,
+            "B3-S7 · read: pane B's name as the AX tree computes it — its title, then its address — the same at %d, %d and %d px, side by side at its head, stacked at its head and stacked beside its column: a resize changes how its corner is drawn, never its name (issue #687; FP-26)" % (WIDE[0], NARROW[0], STACKED_BESIDE[0]),
+            {'names': names, 'want': '%s %s' % (named3, lead3.get('address'))})
+    r.figures['history_read_names'] = names
 
     # ---- `read`, the list's column's edge: one px either side of the window at which, beside the list, the panes keep HEAD_CH
     # characters a line — the list in its column, then after pane B's text, the panes side by side with their corners at their
@@ -3114,8 +3164,14 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         why = ctx.js(WHY_LINE) or {}
         line_ok = (why.get('words') == now_words and why.get('id') == 'B3.history.now' and why.get('slot') and why.get('oneRow') and why.get('lines') == 1
                    and why.get('past') is not None and why['past'] <= 1)
+        # pane B named by its title's own element, then its address, and described by the line saying the state is how the
+        # draft stands now, each as the AX tree computes it (issue #687)
+        lead, got_as = ctx.js(PAST_LEAD) or {}, named_as(ctx, '#sceneB') or {}
+        named_ok = (lead.get('leads') and not lead.get('kind') and lead.get('labelled') == 'sceneB-title sceneB-name'
+                    and got_as.get('name') == '%s %s' % (heard(ctx, lead.get('words') or ''), lead.get('address')) and got_as.get('description') == heard(ctx, now_words))
         return {'the state': (state_ok, {'at': P.get('at'), 'rows': [(x['first'], x['last'], x['kind']) for x in rows[:3]], 'why': P.get('why'), 'b': pane_text('b')[-40:], 'want_b': text2[-40:]}),
                 'its corner\'s line': (line_ok, dict(why, want=now_words)),
+                'its name and description': (named_ok, dict(got_as, lead=lead, want_description=now_words)),
                 "the corners' words in their boxes": fit_part(ctx, figures, 'now', w, *pane_corners)}
     shoot('now', now_check)
     close_scene()

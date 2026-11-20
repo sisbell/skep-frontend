@@ -29,6 +29,7 @@
 // its corner, the head stating none in any state, a refused document's among
 // them; every corner's first slot its document's kind, one width whatever it
 // shows, an empty box while it is being read and none at a refused document,
+// a past state's or the held version's corner, which its title leads,
 // the item the mirror leads with, an edition's version statement after it and
 // its state — its venue's clause and R20's teaching — after that, whole and
 // compact, on a notebook and a realm board, in the corner and in the mirror's
@@ -36,11 +37,12 @@
 // their widths and whether they yield to a head's narrow row, outside the
 // article, a pane's with its read act and its lacking line, the plane's with
 // the read an arrival offers as a control, a kept clause after them on a line
-// of its own, the moved scene's held version's line in the place of a draft's
-// kept word and chip — titled at a pane's head, that line or a past state's
-// leading the corner in the kind's place, with the parts and joiners it breaks
-// at and a substitution held in it, each item saying whether it holds at the
-// pane's top — a moved document's face beneath its kept word and
+// of its own, the moved scene's held version's line or a past state's leading
+// the corner as its title in the kind's place at every fit, with the parts and
+// joiners it breaks at and a substitution held in it, its line's own element
+// carrying the id and the heard words a region is named by where its holder
+// hands them in, each item saying whether it holds at a pane's top — a moved
+// document's face beneath its kept word and
 // before its chip, never yielding — whole with its hands, its line and each
 // hand a sentence, its acts and its discard's statement below them, compact
 // its compact form an act opening the corner whole, its words whole where its
@@ -67,7 +69,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerLeadRuns, cornerWords, titleHTML, keptHTML, keptStatement, statementHTML, faceWords, faceRuns, faceRow, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerLeadRuns, cornerWords, cornerTitle, titleRuns, titleHTML, keptHTML, keptStatement, statementHTML, faceWords, faceRuns, faceRow, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { below, spoken } from '../overlays/statement.js';
 import { keptStatement as keptSaying } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
@@ -565,20 +567,21 @@ test('a draft\'s corner carries its kept state in a slot of fixed width — the 
   assert.ok(!cornerHTML(doc(), view({ kept: { word: 'kept', reason: null }, keptOpen: true })).includes('kept-'), 'an edition\'s corner carries no kept slot, whatever state is handed in');
 });
 
-test('the moved scene\'s held version\'s corner names what it is in the place of both the kept word and the chip — "what you typed while it was held — not on the board", carrying its string, its words whole in either form and never an act, after its kind — whatever kept state is handed in; a draft\'s corner the view does not mark so keeps its kept slot and its chip (issue #599; B3-S2; D6 BM-14; FP-26)', () => {
+test('the moved scene\'s held version\'s corner is its line alone, its title — "what you typed while it was held — not on the board", carrying its string — in the place of the kind, the kept word and the chip, its words whole in either form and never an act, whatever kept state or kind is handed in; a draft\'s corner the view does not mark so keeps its kind, its kept slot and its chip (issues #599, #687; B3-S2; D6 BM-14; FP-26, FP-39)', () => {
   const draft = doc({ kind: 'draft', meta: null }), kind = kindSlot('draft');
-  const line = `<span class="held" data-string="B3.history.held">${esc(t('B3.history.held'))}</span>`;
+  const line = `<span class="title"><span class="held" data-string="B3.history.held">${esc(t('B3.history.held'))}</span></span>`;
   for (const compact of [false, true]) {
     for (const kept of [null, { word: /** @type {const} */ ('not yet kept'), reason: null }]) {
       const c = cornerHTML(draft, draftView({ held: true, kept, keptOpen: true }), compact);
-      assert.equal(c, kind + line, `${compact ? 'compact' : 'whole'}, ${kept ? 'a kept state handed in' : 'none'}: the kind, then the held version's line alone — no kept word, no statement, no chip`);
+      assert.equal(c, line, `${compact ? 'compact' : 'whole'}, ${kept ? 'a kept state handed in' : 'none'}: the held version's line alone — no kind's slot, no kept word, no statement, no chip`);
     }
+    assert.equal(cornerHTML(draft, draftView({ held: true, kind: 'reading' }), compact), line, `${compact ? 'compact' : 'whole'}, its kind being read: its line alone, no slot being read`);
   }
-  assert.equal(cornerHTML(draft, draftView({ held: true, acts: false })), kind + line, 'its words alone where the view asks no act');
+  assert.equal(cornerHTML(draft, draftView({ held: true, acts: false })), line, 'its words alone where the view asks no act');
   const items = cornerItems(draft, draftView({ held: true }), true);
-  assert.deepEqual(items.map((i) => [i.cls, i.words, i.em, i.yields]), [['kind', t('F.kind.draft'), KIND_EM, false], ['held', t('B3.history.held'), advances(t('B3.history.held')), false]], 'its items: the kind, then the line, its width its words\', neither yielding');
+  assert.deepEqual(items.map((i) => [i.cls, i.words, i.em, i.yields]), [['held', t('B3.history.held'), advances(t('B3.history.held')), false]], 'its one item: the line, its width its words\', never yielding');
   const plain = cornerHTML(draft, draftView());
-  assert.ok(plain.includes('kept-word pending') && plain.includes('class="chip"') && !plain.includes('B3.history.held'), `a draft not marked so: its kept slot and its chip — ${plain}`);
+  assert.ok(plain.startsWith(kind) && plain.includes('kept-word pending') && plain.includes('class="chip"') && !plain.includes('B3.history.held'), `a draft not marked so: its kind, its kept slot and its chip — ${plain}`);
 });
 
 test('where its holder offers it, a draft\'s kept line carries its second act, "show its history" — the strings table\'s words — after the kept word at each of the three words, none where no state is set: the word\'s slot then holds the joiner flush after its word, its width the longest word\'s with the joiner\'s, so the act stands at one place whichever word stands; a native button out of the Tab order as made, keyed on the line; inert while it cannot act, standing in its place, focusable, marked so and described by its reason; its words alone where the view asks no act; the line\'s width its slot and the act\'s words (B3-S7; D5 K-57; skep-frontend #585, #661; FP-41)', () => {
@@ -608,43 +611,62 @@ test('where its holder offers it, a draft\'s kept line carries its second act, "
 /** a past state's hand as SC hands its fields to the corner: a device's label, the person's own words, then its fingerprint's cue */
 const HAND = /** @type {import('../strings.js').Run[]} */ ([{ text: 'desk', face: 'reading' }, { text: 'e427 2902 a114 39e5', face: 'ident' }]);
 
-test('a past state\'s corner names what it is in the kept word\'s place — "as it stood ⟨time⟩ · ⟨hand⟩", its words whole in either form and never an act — then the line saying why it shows that state where its holder hands one in, then the chip; no kept word, no second act (B3-S7; skep-frontend #661)', () => {
-  const draft = doc({ kind: 'draft', meta: null }), kind = kindSlot('draft');
+test('a past state\'s corner names what it is, its title in the place of the kind and the kept word — "as it stood ⟨time⟩ · ⟨hand⟩", its words whole in either form and never an act — then the line saying why it shows that state where its holder hands one in, then the chip; no kind\'s slot, no kept word, no second act (B3-S7; skep-frontend #661, #687; FP-26, FP-39)', () => {
+  const draft = doc({ kind: 'draft', meta: null });
   const past = { time: 'at 14:02', hand: HAND, why: null };
-  const line = `<span class="past" data-string="B3.history.row">${esc(t('B3.history.row', { time: past.time, hand: 'desk · e427 2902 a114 39e5' }))}</span>`;
+  const line = `<span class="title"><span class="past" data-string="B3.history.row">${esc(t('B3.history.row', { time: past.time, hand: 'desk · e427 2902 a114 39e5' }))}</span></span>`;
   const chip = `<span class="chip" data-chip="1">${esc(t('C-28.flag-on'))}</span>`;
-  assert.equal(cornerHTML(draft, draftView({ past, kept: { word: 'kept', reason: null }, history: { inert: null } })), kind + line + chip, 'its kind, its line — the hand\'s fields parted by the field joiner — its chip; no kept word and no act');
+  assert.equal(cornerHTML(draft, draftView({ past, kept: { word: 'kept', reason: null }, history: { inert: null } })), line + chip, 'its line — the hand\'s fields parted by the field joiner — then its chip; no kind\'s slot, no kept word and no act');
   const why = { id: 'B3.history.now', text: t('B3.history.now'), substituted: false };
-  assert.equal(cornerHTML(draft, draftView({ past: { ...past, why } })), kind + line + `<span class="why" data-string="B3.history.now">${esc(why.text)}</span>` + chip, 'the line saying why beneath it, before the chip');
-  assert.ok(cornerHTML(draft, draftView({ past }), true).startsWith(kind + line), 'compact: its words whole');
+  assert.equal(cornerHTML(draft, draftView({ past: { ...past, why } })), line + `<span class="why" data-string="B3.history.now">${esc(why.text)}</span>` + chip, 'the line saying why beneath it, before the chip');
+  assert.ok(cornerHTML(draft, draftView({ past }), true).startsWith(line), 'compact: its words whole, first');
+  assert.ok(cornerHTML(draft, draftView({ past, kind: 'reading' })).startsWith(line), 'its kind being read: its line first still, no slot being read');
 });
 
-test('titled at its document\'s head in a reading scene\'s pane, a past state\'s corner and the held version\'s lead with their line in the kind\'s place, no kind\'s slot standing: the line\'s parts and the joiners it breaks at — the time and the hand at rank 1, the hand\'s label and its cue at rank 2; the held words to their dash and after it — a substitution\'s words held in it, while the words saying the state is how the draft stands now and the chip stand as items that scroll; each item saying whether it holds at the pane\'s top; the corner\'s first item its line, a device\'s label in it the person\'s own words (issue #677; FP-26)', () => {
+test('a past state\'s corner and the held version\'s lead with their line in the kind\'s place at every fit, no kind\'s slot standing: the line\'s parts and the joiners it breaks at — the time and the hand at rank 1, the hand\'s label and its cue at rank 2; the held words to their dash and after it — a substitution\'s words held in it, while the words saying the state is how the draft stands now and the chip stand as items that scroll at a pane\'s head; each item saying whether it holds at the pane\'s top; the corner\'s first item its line, a device\'s label in it the person\'s own words; any other draft\'s its kind (issues #677, #687; FP-26, FP-39)', () => {
   const draft = doc({ kind: 'draft', meta: null }), past = { time: 'at 14:02', hand: HAND, why: null };
-  const titled = cornerItems(draft, draftView({ past, titled: true }), true);
-  assert.deepEqual(titled.map((i) => [i.cls, i.holds]), [['past', true], ['chip', false]], 'its line first, holding, then the chip, which scrolls: no kind\'s slot');
-  const title = titled[0].title;
+  for (const compact of [false, true]) {
+    const items = cornerItems(draft, draftView({ past }), compact);
+    assert.deepEqual(items.map((i) => [i.cls, i.holds]), [['past', true], ['chip', false]], `${compact ? 'compact' : 'whole'}: its line first, holding, then the chip, which scrolls — no kind's slot`);
+  }
+  const title = cornerItems(draft, draftView({ past }), true)[0].title;
   assert.deepEqual([title?.cls, title?.id, title?.parts.map(runsText), title?.joins, title?.substituted], ['past', 'B3.history.row', ['as it stood at 14:02', 'desk', 'e427 2902 a114 39e5'], [{ text: FIELD, rank: 1 }, { text: FIELD, rank: 2 }], null],
     'its parts: the time, the label, the cue — the time\'s middle dot broken at before the one between the hand\'s fields');
+  assert.deepEqual(cornerTitle(draftView({ past })), title, 'the one rule a corner\'s title is read by');
   const whole = t('B3.history.row', { time: 'at 14:02', hand: 'desk · e427 2902 a114 39e5' });
-  assert.equal(cornerLead(draft, draftView({ past, titled: true })), whole, 'the corner\'s first item in words: the line');
-  assert.deepEqual(cornerLeadRuns(draft, draftView({ past, titled: true })), [{ text: 'as it stood at 14:02', face: 'client' }, { text: FIELD, face: 'client' }, ...HAND.flatMap((r, k) => (k ? [{ text: FIELD, face: 'client' }, r] : [r]))],
+  assert.equal(cornerLead(draft, draftView({ past })), whole, 'the corner\'s first item in words: the line');
+  assert.deepEqual(cornerLeadRuns(draft, draftView({ past })), [{ text: 'as it stood at 14:02', face: 'client' }, { text: FIELD, face: 'client' }, ...HAND.flatMap((r, k) => (k ? [{ text: FIELD, face: 'client' }, r] : [r]))],
     'as stretches: the label the person\'s own words, the cue the identifier\'s');
-  assert.equal(heard(cornerLeadRuns(draft, draftView({ past: { ...past, hand: [{ text: 'desk – 2', face: 'reading' }] }, titled: true }))).includes('desk – 2'), true, 'a label kept as written where the line is rendered for the ear');
+  assert.equal(heard(cornerLeadRuns(draft, draftView({ past: { ...past, hand: [{ text: 'desk – 2', face: 'reading' }] } }))).includes('desk – 2'), true, 'a label kept as written where the line is rendered for the ear');
   const lines = [{ words: 'as it stood at 14:02 · ', wraps: false }, { words: 'desk · e427 2902 a114 39e5', wraps: false }];
   const drawn = titleHTML(/** @type {any} */ (title), lines);
   assert.equal(drawn, `<span class="title"><span class="past" data-string="B3.history.row"><span class="tl">${esc(lines[0].words)}</span><span class="tl">${esc(lines[1].words)}</span></span></span>`, 'drawn on the lines handed in, each a line of its own');
   assert.equal(drawn.replace(/<[^>]*>/g, ''), esc(whole), 'the lines read together are the line\'s words');
   const now = { id: 'B3.history.now', text: t('B3.history.now'), substituted: false };
-  assert.deepEqual(cornerItems(draft, draftView({ past: { ...past, why: now }, titled: true }), true).map((i) => [i.cls, i.holds]), [['past', true], ['why', false], ['chip', false]], 'the words saying it is how the draft stands now an item of their own, which scrolls');
+  assert.deepEqual(cornerItems(draft, draftView({ past: { ...past, why: now } }), true).map((i) => [i.cls, i.holds]), [['past', true], ['why', false], ['chip', false]], 'the words saying it is how the draft stands now an item of their own, which scrolls');
   const sub = { id: 'B3.history.busy', text: t('B3.history.busy'), substituted: true };
-  const subbed = cornerItems(draft, draftView({ past: { ...past, why: sub }, titled: true }), true);
+  const subbed = cornerItems(draft, draftView({ past: { ...past, why: sub } }), true);
   assert.deepEqual([subbed.map((i) => i.cls), subbed[0].title?.substituted], [['past', 'chip'], sub], 'a substitution\'s words held in the title, after its line');
   assert.ok(subbed[0].html.endsWith(`<span class="why" data-string="B3.history.busy">${esc(sub.text)}</span></span>`), `drawn after the line, on lines of their own: ${subbed[0].html}`);
-  const held = cornerItems(draft, draftView({ held: true, titled: true }), true), words = t('B3.history.held'), dash = words.indexOf('— ') + 1;
+  const held = cornerItems(draft, draftView({ held: true }), true), words = t('B3.history.held'), dash = words.indexOf('— ') + 1;
   assert.deepEqual(held.map((i) => [i.cls, i.holds, i.title?.parts.map(runsText), i.title?.joins]), [['held', true, [words.slice(0, dash), words.slice(dash + 1)], [{ text: ' ', rank: 1 }]]], 'the held version: its words to their dash and after it, and nothing else');
-  assert.deepEqual([cornerLead(draft, draftView({ held: true, titled: true })), cornerLead(draft, draftView({ past }))], [words, t('F.kind.draft')], 'its first item the held words; untitled, the kind as ever');
+  assert.deepEqual([cornerLead(draft, draftView({ held: true })), cornerLead(draft, draftView())], [words, t('F.kind.draft')], 'its first item the held words; any other draft\'s, its kind');
+  assert.equal(cornerTitle(draftView()), null, 'no title where the corner is neither one\'s');
   assert.deepEqual(cornerItems(doc(), view({ scene: true, members: 3, read: 2 }), true).map((i) => [i.cls, i.holds]), [['kind', true], ['version', true], ['st', true], ['read', false]], 'an edition\'s: which state it shows holds; the read it offers scrolls');
+});
+
+test('a title naming a region carries on its line\'s own element — never the substitution\'s words, nor the title\'s wrapper — the id its holder hands in and, as an image of its words, the words handed in rendered for the ear, a device\'s label in them kept as written; drawn with none, it carries neither (issue #687; FP-26; style S22)', () => {
+  const sub = { id: 'B3.history.busy', text: t('B3.history.busy'), substituted: true };
+  const title = /** @type {import('./article.js').Title} */ (cornerTitle({ past: { time: 'at 14:02', hand: [{ text: 'desk – 2', face: 'reading' }], why: sub } }));
+  const words = titleRuns(title), lines = [{ words: 'as it stood at 14:02 · ', wraps: false }, { words: 'desk – 2', wraps: false }];
+  const named = titleHTML(title, lines, { id: 'sceneB-title', words });
+  assert.equal(named, `<span class="title"><span class="past" data-string="B3.history.row" id="sceneB-title" role="img" aria-label="${esc(heard(words))}"><span class="tl">${esc(lines[0].words)}</span><span class="tl">${esc(lines[1].words)}</span></span><span class="why" data-string="B3.history.busy">${esc(sub.text)}</span></span>`,
+    'the id, the role and the name on the line\'s own element; the substitution\'s words after it, outside it');
+  assert.ok(heard(words).includes('desk – 2') && !heard(words).includes('·'), `the name the line's words heard, the label as written, the joiner a pause: ${heard(words)}`);
+  const other = [{ text: 'as it stood at 09:00', face: /** @type {const} */ ('client') }];
+  assert.ok(titleHTML(title, lines, { id: 'sceneB-title', words: other }).includes(`aria-label="${esc(heard(other))}"`), 'the words handed in, whatever the line draws');
+  const plain = titleHTML(title, lines);
+  assert.ok(!plain.includes(' id=') && !plain.includes('role=') && !plain.includes('aria-label'), `drawn with none: neither id nor name — ${plain}`);
 });
 
 /** a moved document's face as O-FACES hands it to the corner: one device's hand, "send again" inert, the discard last, its statement ending on its exit */
@@ -733,7 +755,7 @@ test('the moved face is one of the corner\'s items that never yield, its words a
   assert.equal(faceRow(MOVED), fields(t('B3.moved'), t('B3.hand.device', { 'device label': 'desk' })), 'the face as a row: its line, then its hand, a field');
   assert.equal(cornerWords(draft, v), [t('B3.not-yet-kept'), faceRow(MOVED), t('C-28.flag-on')].join(', '), 'the mirror\'s words: the kept word, the face whole as a row, the chip');
   assert.equal(cornerWords(draft, draftView({ kept: { word: 'not yet kept', reason: null } })), [t('B3.not-yet-kept'), t('C-28.flag-on')].join(', '), 'no face: none voiced');
-  assert.equal(cornerHTML(draft, draftView({ held: true, face: MOVED })), kindSlot('draft') + `<span class="held" data-string="B3.history.held">${esc(t('B3.history.held'))}</span>`, 'the moved scene\'s held version carries none');
+  assert.equal(cornerHTML(draft, draftView({ held: true, face: MOVED })), `<span class="title"><span class="held" data-string="B3.history.held">${esc(t('B3.history.held'))}</span></span>`, 'the moved scene\'s held version carries none');
 });
 
 test('the corner\'s items one by one, in their one order: each its markup — the corner\'s, joined — its words and its width as the view measures them, the kind and a kept word their slots\'; the offered read alone yields, the kind, its version statement, the state, the kept word, the chip and the whole-document count never do; a draft\'s statement left out of its slot where its holder opens it beneath a head (issue #436; foundations §3.1; FP-26)', () => {

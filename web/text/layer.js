@@ -427,9 +427,11 @@
 // pane is set again from them with no read (SC; FP-23); its corner's items
 // are made here too, beside its column whole or compact (`sceneCorner`), or
 // at its document's head in the plane's head form (`sceneHead`; FP-26) — a
-// past state's or the held version's title on its first rows, broken at its
-// joiners as its width asks (`titleLines`), and the rows the scene holds at
-// the pane's top marked so (`HeadLayout.held`); and
+// past state's or the held version's title leading it in either, broken at
+// its joiners as the corner's width asks (`titleLines`), its line's own
+// element carrying the id and the words the scene names the pane's region by
+// (T-ARTICLE's `titleHTML`), and at the head the rows the scene holds at the
+// pane's top marked so (`HeadLayout.held`); and
 // what it was made from is kept beside it as a
 // mounted article's is (`madeOf`) — its document's blocks, runs and image as
 // the model held them, which the model replaces whole and never edits in
@@ -5497,16 +5499,22 @@ export function planOf(d) { d = shownDoc(d); return articlePlan(d, viewFor(d), R
  * element, on the pane's outer side, and hands in the version it names, the
  * chain's count and the corner's act (SC) — those `keep` takes alone, where it
  * is given: the part of an editor pane's corner standing at its foot (SC's
- * `footed`; foundations §2.5).
+ * `footed`; foundations §2.5). A past state's or the held version's title
+ * leads it as it leads the corner at its document's head (T-ARTICLE's
+ * `cornerTitle`; FP-26): laid out on its lines at the corner's own width,
+ * whole or compact, in the corner's type (`titleLines`; P-REG's
+ * `cornerWidth`), its line's own element carrying the id and the words the
+ * scene names the pane's region by where `title` hands them in (T-ARTICLE's
+ * `titleHTML`).
  * @param {Doc} d
  * @param {ArticleView} [article]
  * @param {boolean} [compact] the compact form: its usual states glyphs named by their words
- * @param {(cls: string) => boolean} [keep] the items it holds, by their class (T-ARTICLE's `CornerItem.cls`); every item where none is given
+ * @param {{keep?: (cls: string) => boolean, title?: import('./article.js').TitleName | null}} [as] `keep` the items it holds, by their class (T-ARTICLE's `CornerItem.cls`) — every item where none is given; `title` the id and the words its title's line names the pane's region by — none where none is given
  * @returns {string}
  */
-export function sceneCorner(d, article = viewFor(d, true), compact = false, keep = undefined) {
-  const view = cornerView(article);
-  return keep ? cornerItems(d, view, compact).filter((i) => keep(i.cls)).map((i) => i.html).join('') : cornerHTML(d, view, compact);
+export function sceneCorner(d, article = viewFor(d, true), compact = false, as = {}) {
+  const keep = as.keep, items = cornerItems(d, cornerView(article), compact).filter((i) => !keep || keep(i.cls));
+  return items.map((i) => (i.title ? titleHTML(i.title, titleLines(i.title, cornerWidth(compact)).lines, as.title ?? null) : i.html)).join('');
 }
 
 /**
@@ -5523,11 +5531,14 @@ export function sceneCorner(d, article = viewFor(d, true), compact = false, keep
  * (K-74). No row names the document: the scene's bar names each pane's.
  * Its items measured at the corner's own size (`cornerView`), whatever the
  * pane's view measures its article at.
- * Titled (T-ARTICLE's `ArticleView.titled`), its title across the head on its
- * first rows, laid out on its lines in the corner's type at its own size and
- * leading (`titleLines`, `cornerPx`), as many rows as those lines take and
- * never fewer than `floor`, the rest of its items on the rows after. Each row
- * stands where its band sets it, as tall as the slots beginning on it take — a
+ * A past state's or the held version's (T-ARTICLE's `cornerTitle`), its title
+ * across the head on its first rows, laid out on its lines in the corner's
+ * type at its own size and leading (`titleLines`, `cornerPx`), as many rows as
+ * those lines take and never fewer than `floor`, its line's own element
+ * carrying the id and the words the scene names the pane's region by where
+ * `title` hands them in (T-ARTICLE's `titleHTML`), the rest of its items on
+ * the rows after; the form opened beneath restating it carries neither. Each
+ * row stands where its band sets it, as tall as the slots beginning on it take — a
  * wrapped slot's later rows standing in its own row — and the form beneath,
  * each absolutely placed (the scene moves them as its pane scrolls), the rows
  * held at the pane's top marked so (`HeadLayout.held`); every corner carries
@@ -5537,7 +5548,7 @@ export function sceneCorner(d, article = viewFor(d, true), compact = false, keep
  * §2.5). The scene stands its stops (`setStops`).
  * @param {Doc} d
  * @param {ArticleView} article the pane's view, at its measure (`sceneView`), with the corner's state the scene hands in
- * @param {{px: number, kept: KeptClause | null, open: boolean, keep?: (cls: string) => boolean, floor?: number}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act; `keep` the items its rows hold, by their class — every item where none is given; `floor` the rows a title takes at the least — none where none is given
+ * @param {{px: number, kept: KeptClause | null, open: boolean, keep?: (cls: string) => boolean, floor?: number, title?: import('./article.js').TitleName | null}} as `px` the em the pane's text is set at; `kept` the pane's kept clause; `open` its items opened whole by the reader's act; `keep` the items its rows hold, by their class — every item where none is given; `floor` the rows a title takes at the least — none where none is given; `title` the id and the words its title's line names the pane's region by — none where none is given
  * @returns {{html: string, rows: number, held: number}} `held` its rows held at the pane's top (`HeadLayout.held`)
  */
 export function sceneHead(d, article, as) {
@@ -5555,7 +5566,7 @@ export function sceneHead(d, article, as) {
   for (const s of L.slots) {
     const html = s.k === -1 ? keptHTML(clause)
       : s.k === -2 ? moreHTML(L.folded, as.open)
-        : title && lines && s.k === 0 ? titleHTML(title, lines.lines) : items[s.k].html;
+        : title && lines && s.k === 0 ? titleHTML(title, lines.lines, as.title ?? null) : items[s.k].html;
     rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
     tall[s.row] = Math.max(tall[s.row], s.rows);
   }

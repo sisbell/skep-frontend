@@ -119,11 +119,14 @@
 // the draft's address, once the draft's flight has landed, from the text at
 // its lines' base read from the board's history with its image, those lines
 // applied, the text the page shows where it cannot be so derived — its corner
-// naming what it is in the place of the kept word and the chip — at its
-// document's head that line, like a past state's, the corner's title in the
-// kind's place, held at the pane's top on rows that its line's widest form at
-// the fit takes, a substitution held with it, the pane named by it and a hand
-// of the reader's own key by its label alone (FP-26, FP-34) — and at a
+// naming what it is in the place of the kind, the kept word and the chip —
+// that line, like a past state's, the corner's title in the kind's place at
+// every fit, beside its column and at its document's head, held at the pane's
+// top there on rows that its line's widest form at the fit takes, a
+// substitution held with it, the pane named by its own element in the words
+// it held when the state showed, the same at every fit, a past state's pane
+// described by the line saying why it shows that state, and a hand of the
+// reader's own key by its label alone (FP-26, FP-34, FP-39) — and at a
 // selection in it, the
 // focus there, the acts that send and a printable key giving the one reason
 // the selection keys against the current text, Space keeping K-9's line
@@ -181,7 +184,7 @@ import { t, tHTML, lastRead, addressedHTML, sentence, sentences, hintSentences, 
 import { esc, fingerprintCue } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
-import { edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML } from '../text/article.js';
+import { edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML, cornerTitle, titleRuns } from '../text/article.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, SAMENESS } from '../plane/register.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as PROV from '../overlays/provenance.js';
@@ -2577,18 +2580,23 @@ test('the reason the acts that send give at a selection in the held version is k
   assert.equal(heldVersionReasonOf(lost, held, { pos: 39, width: 5 }), 'B3.held-version.in-current', 'base words it still holds, though elsewhere');
 });
 
-test('the moved scene\'s held version\'s corner names what it is in the place of the kept word and the chip — "what you typed while it was held — not on the board" — beside its kind, the pane marked the held version; its trail\'s entry keeps it so as Back and Forward reopen it; a pane set from a record not derived, at a change of the page\'s class, is the held version no more (issue #599; B3-S2; D6 BM-14)', () => onPage(async (p) => {
+test('the moved scene\'s held version\'s corner is titled by what it is — "what you typed while it was held — not on the board" — in the place of the kind, the kept word and the chip, its line\'s own element naming the pane, the pane marked the held version; its trail\'s entry keeps it so as Back and Forward reopen it; a pane set from a record not derived, at a change of the page\'s class, is the held version no more, its kind leading its corner and its name again (issues #599, #687; B3-S2; D6 BM-14; FP-26, FP-39)', () => onPage(async (p) => {
   const unanswered = fake.unanswered.length;
   await PUMP.loadWhole(G);
-  const line = `<span class="held" data-string="B3.history.held">${esc(t('B3.history.held'))}</span>`;
+  /** the held version's line leading a corner's markup, its line's own element named by the held words heard — its name, else undefined */
+  const titled = (/** @type {string} */ html) => /^(?:<div class="corner[^"]*"[^>]*>)?<span class="title"><span class="held" data-string="B3\.history\.held" id="sceneB-title" role="img" aria-label="([^"]*)">/.exec(html)?.[1];
+  const named = esc(heard(t('B3.history.held')));
   await SCENE.open(G, heldVersionOfG(), { heldB: true });
   assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.a.held, SCENE.panes()?.b.held, SCENE.panes()?.b.derived], [true, false, true, true], 'pane B the held version, pane A the current text');
-  assert.ok(p.paneB.innerHTML.includes(`data-corner="${G}"`) && p.paneB.innerHTML.includes(line) && !p.paneB.innerHTML.includes('kept-word') && !p.paneB.innerHTML.includes('data-chip'), `pane B's corner: its kind, then the line in place of the kept word and the chip — ${p.paneB.innerHTML}`);
+  assert.ok(p.paneB.innerHTML.includes(`data-corner="${G}"`) && titled(p.paneB.innerHTML) === named && !p.paneB.innerHTML.includes('class="kind') && !p.paneB.innerHTML.includes('kept-word') && !p.paneB.innerHTML.includes('data-chip'),
+    `pane B's corner beside its column: the line first, in the place of the kind, the kept word and the chip, its own element named — ${p.paneB.innerHTML}`);
+  assert.deepEqual([p.paneB.attrs['aria-labelledby'], p.paneA.attrs['aria-labelledby']], ['sceneB-title sceneB-name', 'sceneA-kind sceneA-name'], 'pane B named by its title\'s own element, then its address; pane A by its kind');
+  assert.ok(p.bar.innerHTML.includes('<span id="sceneB-kind" hidden></span>') && p.bar.innerHTML.includes(`<span id="sceneA-kind" hidden>${esc(t('F.kind.draft'))}</span>`), `the bar's hidden words: none for pane B, pane A's kind — ${p.bar.innerHTML}`);
   assert.ok(p.paneA.innerHTML.includes('kept-word pending') && p.paneA.innerHTML.includes('data-chip="1"') && !p.paneA.innerHTML.includes('B3.history.held'), 'pane A, the current text: a draft\'s kept slot and chip');
   const left = SCENE.asLeft();
   SCENE.close();
   await SCENE.reopen({ a: G, b: G, held: { heldB: true }, left: /** @type {import('./scene.js').Left} */ (left) });
-  assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.b.held, p.paneB.innerHTML.includes(line)], [true, true, true], 'reopened from its entry: the held version, its corner the line again');
+  assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.b.held, titled(p.paneB.innerHTML), p.paneB.attrs['aria-labelledby']], [true, true, named, 'sceneB-title sceneB-name'], 'reopened from its entry: the held version, its corner the line again, naming the pane');
   SCENE.close();
   await SCENE.open(G, heldVersionOfG());
   assert.deepEqual([SCENE.panes()?.b.held, p.paneB.innerHTML.includes('kept-word pending'), p.paneB.innerHTML.includes('B3.history.held')], [false, true, false], 'a derived pane the opener does not ask as the moved scene: the kept slot, never the line');
@@ -2596,7 +2604,8 @@ test('the moved scene\'s held version\'s corner names what it is in the place of
   await SCENE.open(G, heldVersionOfG(), { heldB: true });
   SCENE.dropped({ row: null, addrs: null, at: Date.now() });
   assert.deepEqual([SCENE.panes()?.b.derived, SCENE.panes()?.b.held], [false, false], 'set from the model\'s record at a change of the page\'s class: the held version no more');
-  assert.ok(!p.cornerB.innerHTML.includes('B3.history.held') && p.cornerB.innerHTML.includes('data-chip="1"'), `its corner a draft's again: ${p.cornerB.innerHTML}`);
+  assert.ok(!p.cornerB.innerHTML.includes('B3.history.held') && p.cornerB.innerHTML.startsWith('<span class="kind') && p.cornerB.innerHTML.includes('data-chip="1"'), `its corner a draft's again, its kind first: ${p.cornerB.innerHTML}`);
+  assert.deepEqual([p.paneB.attrs['aria-labelledby'], SCENE.panes()?.b.held], ['sceneB-kind sceneB-name', false], 'named by its kind again, then its address');
   await landed();
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
 }));
@@ -3083,13 +3092,15 @@ test('a draft\'s history opens from its corner\'s act beside the current text: p
     assert.ok(panes?.b.blocks.map((b) => b.text).join('') === PAST_OLD, `pane B the text as it stood: ${JSON.stringify(panes?.b.blocks)}`);
     const time = lastRead(PAST_T0 + 2 * 60000), hand = t('F.slot.unsigned'), line = t('B3.history.row', { time, hand });
     const rowB = /^<div class="hrow" data-row="0" data-held="1"[^>]*>(.*?)<\/div>/.exec(p.cornerB.innerHTML);
-    assert.ok(rowB && rowB[1].includes(`<span class="title"><span class="past" data-string="B3.history.row"><span class="tl">${esc(line)}</span></span></span>`) && !rowB[1].includes('data-chip') && !p.cornerB.innerHTML.includes('class="kind'),
-      `pane B's corner at its document's head titled: its line first, in the kind's place, on its first row, held at the pane's top — no kind's slot (issue #677) — ${p.cornerB.innerHTML}`);
+    assert.ok(rowB && rowB[1].includes(`<span class="title"><span class="past" data-string="B3.history.row" id="sceneB-title" role="img" aria-label="${esc(heard(line))}"><span class="tl">${esc(line)}</span></span></span>`) && !rowB[1].includes('data-chip') && !p.cornerB.innerHTML.includes('class="kind'),
+      `pane B's corner at its document's head titled: its line first, in the kind's place, on its first row, held at the pane's top, its own element named by its words heard — no kind's slot (issues #677, #687) — ${p.cornerB.innerHTML}`);
     assert.ok(/<div class="hrow" data-row="[1-9]\d*" role="toolbar"[^>]*>.*data-chip="1"/.test(p.cornerB.innerHTML) && !p.cornerB.innerHTML.includes('kept-word') && !p.cornerB.innerHTML.includes('data-history'),
       `the chip on a row after it, which scrolls; no kept word and no act — ${p.cornerB.innerHTML}`);
     assert.deepEqual([SCENE.panes()?.b.heldRows, SCENE.panes()?.a.heldRows], [1, 1], 'one row held in each: the line the head holds whole, and pane A\'s kind and kept line');
-    assert.ok(p.bar.innerHTML.includes(`<span id="sceneB-kind" hidden>${esc(heard(line))}</span>`) && p.bar.innerHTML.includes(`<span id="sceneA-kind" hidden>${esc(t('F.kind.draft'))}</span>`),
-      `pane B named by its line, pane A by its kind (issue #677) — ${p.bar.innerHTML}`);
+    assert.deepEqual([p.paneB.attrs['aria-labelledby'], p.paneA.attrs['aria-labelledby'], p.paneB.attrs['aria-description']], ['sceneB-title sceneB-name', 'sceneA-kind sceneA-name', undefined],
+      'pane B named by its line\'s own element, then its address, and described by nothing, showing the state its act asked; pane A by its kind (issues #677, #687)');
+    assert.ok(p.bar.innerHTML.includes('<span id="sceneB-kind" hidden></span>') && p.bar.innerHTML.includes(`<span id="sceneA-kind" hidden>${esc(t('F.kind.draft'))}</span>`),
+      `the bar's hidden words: none for pane B, its kind for pane A — ${p.bar.innerHTML}`);
     assert.ok(p.cornerA.innerHTML.includes('class="kind"') && p.cornerA.innerHTML.includes('data-kept="kept"') && p.cornerA.innerHTML.includes('data-history'), `pane A, the current text: its kind, the draft's kept word and its second act — ${p.cornerA.innerHTML}`);
     assert.ok(p.bar.innerHTML.includes(`<span class="as-of" data-string="B3.history.as-of">${esc(t('B3.history.as-of', { time }))}</span>`), `the bar names pane B with when it stood — ${p.bar.innerHTML}`);
     assert.deepEqual(SCENE.pastAsOf(), { id: 'B3.history.as-of', text: t('B3.history.as-of', { time }) }, 'the one line\'s second address');
@@ -3196,8 +3207,10 @@ function fitAt(/** @type {ReturnType<typeof page>} */ p, /** @type {number} */ w
 const headPx = (/** @type {{cpl: number, px: number}} */ F) => (F.cpl * CHAR_W + EDGE) * F.px;
 /** the first row of a corner at its document's head, held at the pane's top: its height and the title's lines */
 const titleRow = (/** @type {string} */ html) => { const m = /^<div class="hrow" data-row="0" data-held="1" style="top:0px;height:([\d.]+)px">(.*?)<\/div>/.exec(html); return m ? { h: Number(m[1]), lines: [...m[2].matchAll(/<span class="tl(?: wraps)?">(.*?)<\/span>/g)].map((x) => x[1]) } : null; };
+/** the words pane B's title's line's own element names the pane by, as its corner's markup carries them; undefined where none does */
+const titleName = (/** @type {string} */ html) => /id="sceneB-title" role="img" aria-label="([^"]*)"/.exec(html)?.[1];
 
-test('the moved scene\'s held version at its document\'s head is titled: its words first, in the kind\'s place, held at the pane\'s top on their first row, no kind\'s slot, and pane B named by them; pane A, the current text, its kind first and named by it (issue #677; FP-26, FP-39)', () => onPage(async (p) => {
+test('the moved scene\'s held version at its document\'s head is titled: its words first, in the kind\'s place, held at the pane\'s top on their first row, no kind\'s slot, and pane B named by them; pane A, the current text, its kind first and named by it (issues #677, #687; FP-26, FP-39)', () => onPage(async (p) => {
   const restore = fitAt(p, 1100);
   try {
     await PUMP.loadWhole(G);
@@ -3205,13 +3218,14 @@ test('the moved scene\'s held version at its document\'s head is titled: its wor
     const fit = SCENE.fitted(), words = t('B3.history.held');
     assert.deepEqual([fit?.corner, fit?.stacked, SCENE.panes()?.b.held], ['head', false, true], 'side by side, both corners at their documents\' heads, pane B the held version');
     const row = titleRow(p.cornerB.innerHTML);
-    assert.ok(row && row.lines.join('') === esc(words) && p.cornerB.innerHTML.includes('<span class="held" data-string="B3.history.held">') && !p.cornerB.innerHTML.includes('class="kind'), `pane B's corner: the held words on its first row, held, no kind's slot — ${p.cornerB.innerHTML}`);
-    assert.ok(p.bar.innerHTML.includes(`<span id="sceneB-kind" hidden>${esc(heard(words))}</span>`) && p.bar.innerHTML.includes(`<span id="sceneA-kind" hidden>${esc(t('F.kind.draft'))}</span>`), `pane B named by the held words, pane A by its kind — ${p.bar.innerHTML}`);
+    assert.ok(row && row.lines.join('') === esc(words) && p.cornerB.innerHTML.includes('<span class="held" data-string="B3.history.held" id="sceneB-title" role="img"') && !p.cornerB.innerHTML.includes('class="kind'), `pane B's corner: the held words on its first row, held, no kind's slot — ${p.cornerB.innerHTML}`);
+    assert.deepEqual([titleName(p.cornerB.innerHTML), p.paneB.attrs['aria-labelledby'], p.paneA.attrs['aria-labelledby']], [esc(heard(words)), 'sceneB-title sceneB-name', 'sceneA-kind sceneA-name'], 'pane B named by the held words\' own element, then its address; pane A by its kind');
+    assert.ok(p.bar.innerHTML.includes(`<span id="sceneA-kind" hidden>${esc(t('F.kind.draft'))}</span>`), `pane A's kind in the bar's hidden words — ${p.bar.innerHTML}`);
     assert.ok(/^<div class="hrow" data-row="0" data-held="1"[^>]*><span class="hslot"[^>]*><span class="kind"/.test(p.cornerA.innerHTML), `pane A's corner: its kind first — ${p.cornerA.innerHTML}`);
   } finally { restore(); }
 }, { acts: true }));
 
-test('a titled corner keeps its held rows while its fit stands: its line narrower once the reader\'s own key is told — its label alone — holds the rows the wider line took, and a refit counts them anew; its line\'s label kept as written in pane B\'s name (issue #677; FP-26)', () => onPage(async (p) => {
+test('a titled corner keeps its held rows while its fit stands: its line narrower once the reader\'s own key is told — its label alone — holds the rows the wider line took, and a refit counts them anew; pane B\'s name its line as it stood when the state showed, its label kept as written, unchanged by the key told or the refit, the state it shows standing (issues #677, #687; FP-26)', () => onPage(async (p) => {
   await onTrail(p);
   const fp = '7a'.repeat(32), cue = fingerprintCue(fp), time = lastRead(PAST_T0 + 2 * 60000);
   const fit1 = { cpl: MEASURE_CPL, px: 17 }, fit2 = SCENE.paneFit(1440, { pad: 0, gap: 8, column: SCENE.columnPx(), outer: SCENE.listPx(0) }, 17);
@@ -3229,15 +3243,18 @@ test('a titled corner keeps its held rows while its fit stands: its line narrowe
     assert.equal(await opening, true, 'the scene shows');
     const two = titleRow(p.cornerB.innerHTML), pitch = LINE_H * 17;
     assert.deepEqual([SCENE.panes()?.b.heldRows, two?.lines.length, Math.round((two?.h ?? 0) * 100)], [2, 2, Math.round(2 * pitch * 100)], `another's key: the time over the hand, two rows held — ${p.cornerB.innerHTML}`);
-    assert.ok(p.bar.innerHTML.includes(esc(/** @type {string} */ (label))), `pane B's name keeps the label as written, its dash never read as "to": ${p.bar.innerHTML}`);
+    const shown = esc(heard(titleRuns(/** @type {import('../text/article.js').Title} */ (cornerTitle({ past: { time, hand: [{ text: /** @type {string} */ (label), face: 'reading' }, { text: cue, face: 'ident' }], why: null } })))));
+    assert.ok(titleName(p.cornerB.innerHTML) === shown && shown.includes(esc(/** @type {string} */ (label))), `pane B's name its line heard, the label as written, its dash never read as "to": ${titleName(p.cornerB.innerHTML)}`);
     REC.takeKeyStore([{ label: /** @type {string} */ (label), fingerprint: fp, bindings: [] }], 'origin-1');
     SCENE.markKept();
     const one = titleRow(p.cornerB.innerHTML);
     assert.deepEqual([one?.lines, SCENE.panes()?.b.heldRows, Math.round((one?.h ?? 0) * 100)], [[esc(t('B3.history.row', { time, hand: /** @type {string} */ (label) }))], 2, Math.round(2 * pitch * 100)],
       'the reader\'s own key told: its label alone, one line — and the two rows the wider line took still held at this fit');
+    assert.deepEqual([titleName(p.cornerB.innerHTML), p.paneB.attrs['aria-labelledby']], [shown, 'sceneB-title sceneB-name'], 'the state shown standing, pane B\'s name as it was: the key told moves what the title draws, never the name (issue #687)');
     restore = fitAt(p, 1440);
     SCENE.refaced(); SCENE.draw();
     assert.deepEqual([SCENE.fitted()?.cpl, SCENE.panes()?.b.heldRows, titleRow(p.cornerB.innerHTML)?.lines.length], [fit2.cpl, 1, 1], 'a refit to another fit counts them anew: one row');
+    assert.equal(titleName(p.cornerB.innerHTML), shown, 'nor the refit');
   } finally { restore(); REC.takeKeyStore(null, 'origin-1'); WRITE.setKept(PASTD, null); }
 }, { acts: true }));
 
@@ -3253,6 +3270,73 @@ test('where the board will not read the state before the newest change, the hist
     assert.ok(row && row[1].includes('data-string="B3.history.row"') && row[1].includes(`<span class="why" data-string="B3.history.reclaimed">${esc(why?.text ?? '')}</span>`) && (SCENE.panes()?.b.heldRows ?? 0) >= 2,
       `its line and the refusal's words after it on the held rows, two at the least: ${p.cornerB.innerHTML}`);
   } finally { script[key] = was; WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+/** the narrowest scene width, from 300 px, at which the panes stack with both corners beside their columns — the list's column `outer` px wide asked for (`SCENE.paneFit`, as `fitAt` lays the scene out) */
+const stackedBeside = (/** @type {number} */ outer) => [...Array(1500).keys()].map((w) => w + 300).find((w) => { const F = SCENE.paneFit(w, { pad: 0, gap: 8, column: SCENE.columnPx(), outer }, 17); return F.stacked && F.corner !== 'head'; });
+/** pane B as the scene's fit stands it: the fit's form and whether the panes stack, its name's references, the words its title's line's own element names it by, whether its corner stands a kind's slot, the bar's hidden words for it, and its description */
+const paneBNamed = (/** @type {ReturnType<typeof page>} */ p) => ({ corner: SCENE.fitted()?.corner, stacked: SCENE.fitted()?.stacked, labelledby: p.paneB.attrs['aria-labelledby'], name: titleName(p.cornerB.innerHTML), kind: p.cornerB.innerHTML.includes('class="kind'), lead: /<span id="sceneB-kind" hidden>([^<]*)<\/span>/.exec(p.bar.innerHTML)?.[1], description: p.paneB.attrs['aria-description'] });
+
+test('the held version\'s pane carries no kind at any fit — beside its column, whole and compact, side by side and stacked, as at its document\'s head — its title leading its corner, and is named by its title\'s own element, then its address, the same at every fit: a resize changes how its corner is drawn, never what it or its name says (issue #687; FP-26, FP-39)', () => onPage(async (p) => {
+  await PUMP.loadWhole(G);
+  await SCENE.open(G, heldVersionOfG(), { heldB: true });
+  const named = { labelledby: 'sceneB-title sceneB-name', name: esc(heard(t('B3.history.held'))), kind: false, lead: '', description: undefined };
+  const lead = /^<span class="title"><span class="held" data-string="B3\.history\.held" id="sceneB-title" role="img" aria-label="[^"]*">(?:<span class="tl(?: wraps)?">[^<]*<\/span>)+<\/span><\/span>$/;
+  assert.deepEqual(paneBNamed(p), { corner: 'whole', stacked: false, ...named }, 'side by side, beside its column, whole');
+  assert.ok(lead.test(p.cornerB.innerHTML), `its title alone, first, on the lines the corner's width takes: ${p.cornerB.innerHTML}`);
+  const width = stackedBeside(0);
+  assert.ok(width, 'a width at which the panes stack, their corners beside their columns');
+  /** @type {Array<[string, (p: ReturnType<typeof page>) => () => void, (corner: string | undefined, stacked: boolean | undefined) => boolean]>} each fit, the act that lays the scene out at it, and the form it stands the panes in */
+  const FITS = [
+    ['side by side, beside its column, compact', compactFit, (corner, stacked) => corner === 'compact' && !stacked],
+    ['side by side, at its document\'s head', (q) => fitAt(q, 1100), (corner, stacked) => corner === 'head' && !stacked],
+    ['stacked, beside its column', (q) => fitAt(q, /** @type {number} */ (width)), (corner, stacked) => corner !== 'head' && !!stacked],
+  ];
+  for (const [what, at, stands] of FITS) {
+    const restore = at(p);
+    try {
+      SCENE.refaced(); SCENE.draw();
+      const { corner, stacked, ...name } = paneBNamed(p);
+      assert.ok(stands(corner, stacked), `${what}: the scene stands so — ${corner}, ${stacked ? 'stacked' : 'side by side'}`);
+      assert.deepEqual(name, named, `${what}: no kind's slot, named as at every other fit`);
+      if (corner !== 'head') assert.ok(lead.test(p.cornerB.innerHTML), `${what}: its title alone, first — ${p.cornerB.innerHTML}`);
+    } finally { restore(); }
+  }
+}, { acts: true }));
+
+test('a past state\'s pane carries no kind at any fit — at its document\'s head side by side and stacked, beside its column stacked — its title leading its corner, named by its title\'s own element, then its address, the same at every fit; described by the line saying why it shows that state — a substitution\'s words, else that the state is how the draft stands now — rendered for the ear and no part of its name, at every fit (issue #687; FP-26, FP-39; B3-S7)', () => onPage(async (p) => {
+  await onTrail(p);
+  const key = FAKE.keyOf('op', { frame: F.opAt(PAST_AT, F.retrieveDocVSpanSet(PASTD)) }), was = script[key];
+  script[key] = { refused: { kind: 'refused', name: 'history_reclaimed', body: { error: 'history_reclaimed', floor: 35 } } };
+  const width = stackedBeside(SCENE.listPx(0));
+  let restore = () => {};
+  try {
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    const why = /** @type {import('../text/article.js').PastWhy} */ (SCENE.past()?.why), time = lastRead(PAST_T0 + 5 * 60000);
+    const named = { labelledby: 'sceneB-title sceneB-name', name: esc(heard(t('B3.history.row', { time, hand: t('F.slot.unsigned') }))), kind: false, lead: '', description: heard(why.text) };
+    assert.deepEqual([why.substituted, paneBNamed(p)], [true, { corner: 'head', stacked: false, ...named }], 'side by side, at its document\'s head: named by its line, described by the substitution\'s words');
+    assert.ok(width, 'a width at which the panes stack, their corners beside their columns');
+    restore = fitAt(p, /** @type {number} */ (width));
+    SCENE.refaced(); SCENE.draw();
+    const { corner, stacked, ...beside } = paneBNamed(p);
+    assert.ok(corner !== 'head' && stacked, `the scene stacked, the corners beside their columns — ${corner}`);
+    assert.deepEqual(beside, named, 'stacked, beside its column: no kind\'s slot, named and described as at its head');
+    assert.ok(p.cornerB.innerHTML.startsWith('<span class="title"><span class="past" data-string="B3.history.row" id="sceneB-title"') && p.cornerB.innerHTML.includes(`<span class="why" data-string="${why.id}">`),
+      `its title first, the substitution's words held in it after its line's own element: ${p.cornerB.innerHTML}`);
+    restore(); restore = fitAt(p, 390);
+    SCENE.refaced(); SCENE.draw();
+    assert.deepEqual(paneBNamed(p), { corner: 'head', stacked: true, ...named }, 'stacked, at its document\'s head: the same');
+  } finally { restore(); script[key] = was; WRITE.setKept(PASTD, null); }
+  SCENE.close();
+  await PUMP.loadWhole(PASTD);
+  WRITE.setKept(PASTD, { word: 'kept', reason: null });
+  pastRows([PAST_ROWS[2]]);
+  try {
+    const opening = GO.history(PASTD); await flown();
+    assert.equal(await opening, true, 'a draft of one change: its history shows');
+    const now = /** @type {import('../text/article.js').PastWhy} */ (SCENE.past()?.why);
+    assert.deepEqual([now.id, now.substituted, p.paneB.attrs['aria-description'], p.paneB.attrs['aria-labelledby']], ['B3.history.now', false, heard(now.text), 'sceneB-title sceneB-name'], 'the state shown how the draft stands now: described so, named by its title');
+  } finally { WRITE.setKept(PASTD, null); }
 }, { acts: true }));
 
 test('a hand is named by its fields, each in its face: a key of the reader\'s own by its device label alone, as their byline names them; another\'s key by its label and its fingerprint\'s cue; a key no label names by its cue; a keyless hand by its words — the list and a past state\'s corner alike (issue #677; FP-34)', () => {

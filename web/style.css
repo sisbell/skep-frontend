@@ -388,10 +388,11 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #corners .corner.head { padding:0; background:transparent; border-radius:0; }
 :is(#corners, .pane) .corner.head > .hrow { position:absolute; left:0; right:0; z-index:1; }
 :is(#corners, .pane) .corner.head > .hrow:is([data-row="0"], [data-held]) { z-index:2; }
-/* a past state's or the held version's title in a reading scene's pane (SC's; FP-26): its line and a substitution's words
-   held at the pane's top, each beginning a line of its own, the line's lines as T-LAYER breaks it — each whole on one line,
-   one wider than the head wrapped between its words — never cut, folded or hidden */
-.pane .corner.head .hslot > .title { display:block; white-space:normal; }
+/* a past state's or the held version's title in a reading scene's pane, at every fit (SC's; FP-26): the corner's first item
+   beside its column, as at its document's head, where it is held at the pane's top; its line and a substitution's words each
+   beginning a line of its own, the line's lines as T-LAYER breaks it at the corner's width — each whole on one line, one wider
+   than the corner wrapped between its words — never cut, folded or hidden */
+.pane .corner .title { display:block; white-space:normal; }
 .pane .corner .title > .past, .pane .corner .title > .held, .pane .corner .title > .why { display:block; margin:0; }
 .pane .corner .title .tl { display:block; white-space:nowrap; }
 .pane .corner .title .tl.wraps { white-space:normal; }

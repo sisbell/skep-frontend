@@ -131,9 +131,10 @@ SELECTED_WHOLE = '''((sel) => { const e = document.querySelector(sel), s = windo
 # every corner the selectors match, its words read against the boxes they stand in, each text node's line boxes by a Range in
 # fractional px: each slot of a head's rows — every line box inside the slot's right edge and its foot, and in a slot of one
 # row every line box's top within half a line of the first's — and each box of fixed width showing a value, the kind's, the
-# kept slot's and a kept word's — every line box inside its right edge; each corner read and its form, each slot and box read
-# with how far its words run past its right edge and its foot, those that run past by more than `tol` px or break a one-row
-# slot's line, and the worst excess past an edge (`corner_fit`)
+# kept slot's and a kept word's, and each line of a title as the page breaks it at its corner's width — every line box inside
+# its right edge; each corner read and its form, each slot and box read with how far its words run past its right edge and
+# its foot, those that run past by more than `tol` px or break a one-row slot's line, and the worst excess past an edge
+# (`corner_fit`)
 CORNER_FIT = '''((sels, tol) => { const where = [], read = []; let worst = null;
   const rectsIn = (e) => { const rs = [], w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) if (n.data.trim()) { const g = document.createRange(); g.selectNodeContents(n); rs.push(...[...g.getClientRects()].filter((k) => k.width > 0)); }
@@ -147,7 +148,7 @@ CORNER_FIT = '''((sels, tol) => { const where = [], read = []; let worst = null;
   for (const s of sels) for (const c of document.querySelectorAll(s)) {
     where.push({corner: c.dataset.corner || null, in: c.parentElement ? c.parentElement.id : null, form: c.className});
     if (c.classList.contains("head")) for (const h of c.querySelectorAll(".hslot")) fits(c, h, "slot", !h.classList.contains("wraps"));
-    for (const b of c.querySelectorAll(".kind:not(.pending), .kept-slot, .kept-word:not(.pending)")) fits(c, b, "box", false);
+    for (const b of c.querySelectorAll(".kind:not(.pending), .kept-slot, .kept-word:not(.pending), .title .tl")) fits(c, b, "box", false);
   }
   return {corners: where, read, over: read.filter((x) => x.right > tol || (x.foot ?? 0) > tol || x.broken), worst: worst == null ? null : +worst.toFixed(2)}; })(%s, %s)'''
 
@@ -158,6 +159,36 @@ def corner_fit(ctx, *selectors, tol=1):
     edge and a head slot's foot, those that run past by more than `tol` px or break a one-row slot's line, and the worst
     excess past an edge, px — a figure (FP-18)"""
     return ctx.js(CORNER_FIT % (json.dumps(list(selectors)), json.dumps(tol))) or {}
+
+
+# an element's name and description as its `aria-labelledby` and `aria-description` state them in the DOM, where the
+# platform's accessibility tree is not read: each element the reference names by its `aria-label`, else its words, joined by a
+# space, its white space collapsed — accname's steps for a reference (formatted with the element's selector, as JSON)
+LABELLED = '''((sel) => { const e = document.querySelector(sel); if (!e) return null;
+  const name = (e.getAttribute('aria-labelledby') || '').split(/\\s+/).filter(Boolean).map((id) => { const n = document.getElementById(id); return n ? (n.getAttribute('aria-label') || n.textContent || '') : ''; }).join(' ');
+  return {name: name.replace(/\\s+/g, ' ').trim(), description: e.getAttribute('aria-description')}; })(%s)'''
+
+
+def named_as(ctx, selector):
+    """the name and the description assistive technology announces the element a selector names by — the platform's
+    accessibility tree's, where CDP answers it (`Accessibility.getFullAXTree`, the node keyed by the element's backend DOM
+    node id), else as its references state them in the DOM (`LABELLED`) — with where they were read, `ax` or `dom`; None
+    where no element stands"""
+    ax = ctx.drv.ax_tree()
+    if 'error' not in ax:
+        obj = ctx.drv.call('Runtime.evaluate', {'expression': 'document.querySelector(%s)' % json.dumps(selector)})['result']
+        if not obj.get('objectId'):
+            return None
+        try:
+            backend = ctx.drv.call('DOM.describeNode', {'objectId': obj['objectId']})['node']['backendNodeId']
+        finally:
+            ctx.drv.call('Runtime.releaseObject', {'objectId': obj['objectId']})
+        node = next((n for n in ax.get('nodes', []) if n.get('backendDOMNodeId') == backend), None)
+        if node is not None:
+            value = lambda k: (((node.get(k) or {}).get('value')) or '').strip() or None
+            return {'name': value('name'), 'description': value('description'), 'from': 'ax'}
+    got = ctx.js(LABELLED % json.dumps(selector))
+    return dict(got, **{'from': 'dom'}) if got else None
 
 
 def fields(addr):

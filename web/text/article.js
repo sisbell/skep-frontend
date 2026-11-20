@@ -176,22 +176,22 @@
 // joiner flush after its word, so the act stands in a slot of its own whose
 // place no word moves (P67); where the act cannot act it stands in its place,
 // focusable, marked inert and described by its reason (FP-41). A past state's
-// corner names what it is in the kept word's place (`ArticleView.past`;
-// B3-S7). Where its holder stands a past state's corner or the held version's
-// at its document's head in a reading scene's pane (`ArticleView.titled`;
-// FP-26), its line is the corner's title, first, in the kind's place, no
-// kind's slot standing (`cornerTitle`): its parts and the joiners its holder
-// breaks it at (`Title`) — the time and the hand, the hand's label and its
-// cue, the held words to their dash and after it — a substitution's words
-// held after it, drawn on the lines its holder gives it (`titleHTML`); the
-// words saying the state is how the draft stands now and the chip after it,
-// items of their own. Its line is the corner's first item in words
+// corner and the held version's (`ArticleView.past`, `ArticleView.held`;
+// B3-S7, B3-S2) are titled at every fit (FP-26, FP-39): the line naming what
+// the pane shows is the corner's title, first, in the kind's place, no kind's
+// slot standing (`cornerTitle`): its parts and the joiners its holder breaks
+// it at (`Title`) — the time and the hand, the hand's label and its cue, the
+// held words to their dash and after it — a substitution's words held after
+// it, drawn on the lines its holder gives it, the line's own element carrying
+// the id and the words its holder names the pane's region by (`titleHTML`);
+// the words saying the state is how the draft stands now and the chip after
+// it, items of their own. Its line is the corner's first item in words
 // (`cornerLead`), and as stretches in their faces a device's label in it the
 // person's own words (`cornerLeadRuns`). Each item says whether it holds at
-// such a pane's top (`CornerItem.holds`): which state the corner names, the
-// face, a past state's line, a substitution, the held version's line; the
-// rest scroll. They stand outside the
-// article: the article's box clips whatever stands past its measure, so the
+// a reading scene's pane's top at its document's head (`CornerItem.holds`):
+// which state the corner names, the face, a past state's line, a
+// substitution, the held version's line; the rest scroll. They stand outside
+// the article: the article's box clips whatever stands past its measure, so the
 // corner's element is its holder's, T-LAYER's beside the article on the plane
 // and each pane's own in the scene.
 // The plan (`articlePlan`): the same article as P-LAY's rows — the head's
@@ -293,10 +293,9 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {boolean} [lags] the board lags past a second (M-PUMP's `boardKept`; FP-23): the corner names neither the latest version nor the chain's count; absent, false
  * @property {KeptState | null} [kept] a draft's kept state (W-WRITE's `keptOf`): the word its corner's slot shows; absent or null, no state is set and the slot stands empty
  * @property {HistoryAct | null} [history] the kept line's second act, "show its history" (B3-S7; D5 K-57), where its holder offers it: drawn after the kept word while a state is set; absent or null, the line carries the word alone
- * @property {PastLine | null} [past] the corner is a past state's (SC; B3-S7): its line, "as it stood ⟨time⟩ · ⟨hand⟩", in the place of a draft's kept word, the chip beside it; absent or null, none
- * @property {boolean} [titled] the corner of a past state or of the held version stands at its document's head in a reading scene's pane (SC's): its line the corner's title in the kind's place, no kind's slot standing (`cornerTitle`); absent, false
+ * @property {PastLine | null} [past] the corner is a past state's (SC; B3-S7): its line, "as it stood ⟨time⟩ · ⟨hand⟩", the corner's title in the kind's place (`cornerTitle`), the chip after it; absent or null, none
  * @property {boolean} [keptOpen] the kept word's statement stands open in the corner, on its act (T-LAYER's `openStatement`, SC's); absent, closed
- * @property {boolean} [held] the corner is the moved scene's held version's (SC; B3-S2; D6 BM-14): no document, with no chip, its line standing in the place of a draft's kept word and its chip; absent, false
+ * @property {boolean} [held] the corner is the moved scene's held version's (SC; B3-S2; D6 BM-14): no document, with no chip, its line the corner's title, standing in the place of the kind, a draft's kept word and its chip (`cornerTitle`); absent, false
  * @property {CornerFace | null} [face] the face standing at a draft's corner beneath its kept word (T-LAYER's reader `face`; B3-S2): a moved document's; absent or null, none
  * @property {KeptSaid} [keptSaid] what the kept word's statement is said by, beside its state (T-LAYER's `keptSaid`): the board's silence, the venue, the board's name and what opened it; absent, the save chord's on the notebook, the board answering
  * @property {boolean} [opened] the corner, compact in its room, stands opened whole on the reader's act (FP-26): the item its compact form draws as a glyph stands in its words as the act that compacts it again, and the glyph, where it stands, says it is expanded; absent, false
@@ -321,16 +320,22 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @typedef {Object} PastWhy — why a past state's pane shows another state than its act asked (`PastLine.why`; B3-S7; N-GO's `history`)
  * @property {string} id its string's id
  * @property {string} text its words
- * @property {boolean} substituted the state its act asked could not be read and the newest kept one stands in its place, these the refusal's words: a substitution, which a pane at its document's head holds with its title (`cornerTitle`); false for the words saying the state shown is how the draft stands now, which scroll with the text
+ * @property {boolean} substituted the state its act asked could not be read and the newest kept one stands in its place, these the refusal's words: a substitution, held in the title after its line (`cornerTitle`); false for the words saying the state shown is how the draft stands now, an item of their own after the title
  */
 
 /**
- * @typedef {Object} Title — a past state's line or the held version's as its pane's title at its document's head (`ArticleView.titled`; `cornerTitle`; FP-26)
+ * @typedef {Object} Title — a past state's line or the held version's as its pane's title, at every fit (`cornerTitle`; FP-26, FP-39)
  * @property {'past' | 'held'} cls the line it is, the class its words stand in
  * @property {string} id its line's string
  * @property {import('../strings.js').Run[][]} parts its line's parts in their order, each whole on a line where the line holds it, as stretches in their faces: the time, then the hand's fields; the held words to their dash, then the rest
  * @property {Array<{text: string, rank: number}>} joins the joiner between each part and the next, and its rank — the lowest broken at first: the time's and the hand's middle dot 1, the label's and the cue's 2; the space after the held words' dash 1
  * @property {PastWhy | null} substituted a substitution's words, held after the line on lines of their own; null where none stands
+ */
+
+/**
+ * @typedef {Object} TitleName — what a title's line's own element carries where its holder names a region by it (`titleHTML`; SC's `namePane`)
+ * @property {string} id the element's id, which the region's name refers to
+ * @property {import('../strings.js').Run[]} words the words the element names the region by, as stretches in their faces (`titleRuns`), rendered for the ear where it carries them (ST's `heard`)
  */
 
 /**
@@ -1544,7 +1549,7 @@ function kindHTML(v) {
 export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.birth ? n : null);
 
 /**
- * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'history' | 'held' | 'past' | 'titled' | 'face' | 'originOwner' | 'kind'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state and the act its kept line offers, whether it is the moved scene's held version's or a past state's and titled so, the face standing at it, the one owner rule and the document's kind
+ * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'history' | 'held' | 'past' | 'face' | 'originOwner' | 'kind'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state and the act its kept line offers, whether it is the moved scene's held version's or a past state's, which its title names, the face standing at it, the one owner rule and the document's kind
  */
 
 /**
@@ -1557,33 +1562,31 @@ export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.bi
  * @property {number | null} members the chain's count the version statement is of, which its act carries; null on every other item, and on the statement while the board lags
  * @property {CornerFace} [face] the face a `face` item draws (`faceHTML`)
  * @property {string} [words] its words as its holder made them, standing for its string's filled: a past state's line saying why
- * @property {Title} [title] the title a titled corner's first item is (`cornerTitle`): its line's parts and the joiners they break at, a substitution's words after it
+ * @property {Title} [title] the title a past state's corner's or the held version's first item is (`cornerTitle`): its line's parts and the joiners they break at, a substitution's words after it
  */
 
 /**
  * A document's state as its corner states it, in foundations' one order
  * (§3.1; C-346): withheld, its withheld box's words, its owner by the one
  * owner rule (`originOwner`); nothing the board will say of it, the words for
- * that (`L.far.unregistered`); every other document its kind first (`kind`),
- * in its slot, then by it — published, where it states its box's chain
- * (`members`, `statedChain`), its version statement: "version ⟨k⟩ of ⟨n⟩",
- * its own number at a pinned version, the head's at the bare address
- * (FP-22), "version ⟨k⟩" while the board lags; then its state, its venue's
- * clause before it on a notebook (P7): "no versions yet" where its chain
- * holds no member, its own version at a pinned one, "the latest version" at
- * the bare address, the venue's clause alone while the board lags (FP-23); a
- * draft, its kept word (B3-S2), beneath it the face standing at its corner
- * where one stands (`ArticleView.face`; B3-S2; foundations §3.1), then its
- * chip (C-28) — the moved scene's held version, which is no document and has
- * no chip, its line in the place of the kept word and the chip
+ * that (`L.far.unregistered`); the moved scene's held version, which is no
+ * document and has no chip, its line alone, the corner's title
  * (`ArticleView.held`; B3-S2; D6 BM-14); a past state, its line "as it stood
- * ⟨time⟩ · ⟨hand⟩" in the place of the kept word, the line saying why the pane
- * shows it where it shows another than its act asked, and the chip
- * (`ArticleView.past`; B3-S7); being read or not read, its slot
- * alone. Titled (`ArticleView.titled`): the held version's line, or a past
- * state's with a substitution's words held in it (`cornerTitle`), first, no kind's
- * slot standing; then a past state's words saying the state is how the draft
- * stands now, and its chip. The one rule the corner draws its state by
+ * ⟨time⟩ · ⟨hand⟩" the corner's title, a substitution's words held in it,
+ * then the line saying the state is how the draft stands now where its act
+ * asked another, and the chip (`ArticleView.past`; B3-S7) — each title first,
+ * in the kind's place, no kind's slot standing, at every fit (`cornerTitle`;
+ * FP-26, FP-39); every other document its kind first (`kind`), in its slot,
+ * then by it — published, where it states its box's chain (`members`,
+ * `statedChain`), its version statement: "version ⟨k⟩ of ⟨n⟩", its own number
+ * at a pinned version, the head's at the bare address (FP-22), "version ⟨k⟩"
+ * while the board lags; then its state, its venue's clause before it on a
+ * notebook (P7): "no versions yet" where its chain holds no member, its own
+ * version at a pinned one, "the latest version" at the bare address, the
+ * venue's clause alone while the board lags (FP-23); a draft, its kept word
+ * (B3-S2), beneath it the face standing at its corner where one stands
+ * (`ArticleView.face`; B3-S2; foundations §3.1), then its chip (C-28); being
+ * read or not read, its slot alone. The one rule the corner draws its state by
  * (`cornerHTML`) and the ARIA mirror's item voices it by (`cornerLead`,
  * `cornerWords`; R94).
  * @param {Doc} d
@@ -1597,12 +1600,11 @@ function stateItems(d, v) {
     /** @type {StateItem} */ ({ cls, id, vals, faces: {}, glyph, members: null, ...more });
   if (d.refused === 'withheld') return [item('st', 'F.corner.withheld', { owner: v.originOwner(d.addr) }, null, { faces: { owner: 'ident' } })];
   if (d.refused === 'unregistered') return [item('st', 'L.far.unregistered', {})];
-  /** a past state's line and its chip */
-  const line = (/** @type {PastLine} */ p, /** @type {Partial<StateItem>} */ more = {}) => item('past', 'B3.history.row', { time: p.time, hand: fields(...p.hand.map((r) => r.text)) }, null, more);
+  /** a draft's chip, a past state's too */
   const chip = () => item('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft');
   const title = cornerTitle(v);
   if (title && title.cls === 'held') return [item('held', title.id, {}, null, { title })];
-  if (title && v.past) return [line(v.past, { title }), ...(v.past.why && !v.past.why.substituted ? [item('why', v.past.why.id, {}, null, { words: v.past.why.text })] : []), chip()];
+  if (title && v.past) return [item('past', title.id, {}, null, { title }), ...(v.past.why && !v.past.why.substituted ? [item('why', v.past.why.id, {}, null, { words: v.past.why.text })] : []), chip()];
   const kind = item('kind', KIND_WORDS[v.kind], {});
   if (v.kind === 'published') {
     const n = v.members !== undefined ? v.members : d.members;
@@ -1620,8 +1622,6 @@ function stateItems(d, v) {
     if (st) out.push(st);
     return out;
   }
-  if (v.kind === 'draft' && v.held) return [kind, item('held', 'B3.history.held', {})];
-  if (v.kind === 'draft' && v.past) return [kind, line(v.past), ...(v.past.why ? [item('why', v.past.why.id, {}, null, { words: v.past.why.text })] : []), chip()];
   if (v.kind === 'draft') {
     const face = v.face ? [item('face', v.face.line.id, {}, null, { face: v.face })] : [];
     return [kind, item('kept', v.kept ? KEPT_WORDS[v.kept.word] : '', {}), ...face, chip()];
@@ -1630,18 +1630,18 @@ function stateItems(d, v) {
 }
 
 /**
- * A titled corner's title (`ArticleView.titled`; FP-26): the held version's
+ * A past state's corner's title or the held version's, at every fit
+ * (`ArticleView.past`, `ArticleView.held`; FP-26, FP-39): the held version's
  * line, its words to their dash one part and the rest another, the space after
  * the dash the joiner it breaks at; a past state's line, "as it stood ⟨time⟩ ·
  * ⟨hand⟩", its time one part and each of the hand's fields one, the middle dot
  * after the time broken at before the one between the hand's fields, a
  * substitution's words held after it (`PastWhy.substituted`); null where the
- * corner is not titled, or is neither one's.
- * @param {Pick<ArticleView, 'titled' | 'held' | 'past'>} v
+ * corner is neither one's.
+ * @param {Pick<ArticleView, 'held' | 'past'>} v
  * @returns {Title | null}
  */
 export function cornerTitle(v) {
-  if (!v.titled) return null;
   if (v.held) {
     const text = t('B3.history.held'), cut = text.search(/(?<=—) /u);
     const parts = cut < 0 ? [text] : [text.slice(0, cut), text.slice(cut + 1)];
@@ -1675,7 +1675,9 @@ export const titleRuns = (title) => title.parts.flatMap((p, k) => (k ? [{ text: 
  * A corner's first item as stretches in their faces (`stateItems`): a title's
  * line (`titleRuns`), a device's label in it the person's own words; else
  * its words the client's (`cornerLead`). What a reading scene's pane's name
- * leads with, rendered for the ear (SC's; ST's `heard`).
+ * leads with where its corner carries no title — a titled one's leads with
+ * its title's own element (`titleHTML`) — rendered for the ear (SC's; ST's
+ * `heard`).
  * @param {Doc} d
  * @param {CornerFacts} v
  * @returns {import('../strings.js').Run[]}
@@ -1685,9 +1687,9 @@ export const cornerLeadRuns = (d, v) => { const [i] = stateItems(d, v); return i
 /**
  * A corner's first item in words (`stateItems`): the document's kind in its
  * slot's words (`kindWord`) — "being read" while it is — or, at a document a
- * read refused, its own words; a titled corner's title's line (`cornerTitle`).
- * What the ARIA mirror's item and a reading scene's pane's name lead with
- * (R94; `cornerLeadRuns`).
+ * read refused, its own words; a past state's corner's or the held version's
+ * title's line (`cornerTitle`). What the ARIA mirror's item and a reading
+ * scene's pane's name lead with (R94; `cornerLeadRuns`).
  * @param {Doc} d
  * @param {CornerFacts} v
  * @returns {string}
@@ -1715,11 +1717,12 @@ export const cornerWords = (d, v) => stateItems(d, v).slice(1).filter((i) => i.i
  * reads, the act that opens the corner whole (FP-26), and, the corner opened
  * whole on it, its words the act that compacts it again, each saying whether
  * the corner stands opened (`ArticleView.opened`); else its words, an owner
- * it names in the identifier's face, a draft's chip marked so, the held
- * version's line carrying its string and the version statement carrying the
- * count it is of — on the plane the act that opens the versions list (D5
- * K-57). Its words alone, no act, where the view asks none
- * (`ArticleView.acts`); every act a native button (`actHTML`).
+ * it names in the identifier's face, a draft's chip marked so, the line
+ * saying a past state is how the draft stands now carrying its string and the
+ * version statement carrying the count it is of — on the plane the act that
+ * opens the versions list (D5 K-57). Its words alone, no act, where the view
+ * asks none (`ArticleView.acts`); every act a native button (`actHTML`). A
+ * title is its own markup (`titleHTML`).
  * @param {StateItem} i
  * @param {ArticleView} v
  * @param {boolean} compact
@@ -1729,7 +1732,7 @@ function stateHTML(i, v, compact, statement = true) {
   if (i.cls === 'kind') return kindHTML(v);
   if (i.cls === 'kept') return keptLineHTML(v, statement);
   if (i.face) return faceHTML(i.face, v, compact);
-  const extra = i.cls === 'chip' ? ' data-chip="1"' : i.cls === 'held' || i.cls === 'past' || i.cls === 'why' ? ` data-string="${esc(i.id)}"` : i.members != null ? ` data-members="${i.members}"` : '';
+  const extra = i.cls === 'chip' ? ' data-chip="1"' : i.cls === 'why' ? ` data-string="${esc(i.id)}"` : i.members != null ? ` data-members="${i.members}"` : '';
   const words = i.words != null ? esc(i.words) : Object.keys(i.faces).length ? htmlIn(i.id, i.vals, i.faces) : esc(t(i.id, i.vals)), acts = v.acts !== false;
   if (compact && i.glyph) {
     return acts ? actHTML(`${i.cls} glyph`, `${extra} data-whole aria-expanded="${!!v.opened}" aria-label="${esc(heard(tRuns(i.id, i.vals, i.faces)))}"`, esc(t(i.glyph)))
@@ -1761,7 +1764,7 @@ function filledEm(id, vals, faces, measure) {
  * @property {number} em its width in em of the corner's size, as the view measures its words (`Measure`): its slot's, where it has one of fixed width — the kind's, a kept word's
  * @property {boolean} yields it may fold into the corner's count where a row cannot hold it: the offered read alone; every other item never yields (foundations §3.1)
  * @property {boolean} holds it holds at the top of a reading scene's pane where the corner stands at its document's head, whole (SC's; FP-26): which state the corner names — the kind, the version statement, the state, a draft's kept word — the face, which never yields, a past state's line and a substitution of its state, the held version's line; the chip, the words saying a past state is how the draft stands now, the offered read, the lacking line and the whole-document count scroll with the text
- * @property {Title} [title] the title a titled corner's first item is (`cornerTitle`), which its holder lays out on the lines its width gives it (`titleHTML`)
+ * @property {Title} [title] the title a past state's corner's or the held version's first item is (`cornerTitle`), which its holder lays out on the lines its width gives it (`titleHTML`)
  */
 
 /** the items a reading scene's pane at its document's head holds at its top (`CornerItem.holds`), by their class */
@@ -1774,15 +1777,21 @@ const HOLDING = new Set(['kind', 'version', 'st', 'kept', 'face', 'held', 'past'
  * into, each a line of its own — a line whose words are wider than the width
  * marked so, the platform wrapping it between its words — else whole. The
  * lines read together are the line's words, each joiner it breaks at at the
- * end of its line.
+ * end of its line. Where its holder names a region by it (`named`), the
+ * line's own element — never the substitution's words — carries the id the
+ * region's name refers to and, as an image of its words, the words that name
+ * it, rendered for the ear (ST's `heard`); elsewhere it carries neither, so
+ * the id stands once.
  * @param {Title} title
  * @param {Array<{words: string, wraps: boolean}> | null} [lines] its line's lines as its holder breaks them (T-LAYER's `titleLines`); null, whole
+ * @param {TitleName | null} [named] the id and the words its holder names a region by; null, none
  * @returns {string}
  */
-export function titleHTML(title, lines = null) {
+export function titleHTML(title, lines = null, named = null) {
   const line = lines ? lines.map((l) => `<span class="tl${l.wraps ? ' wraps' : ''}">${esc(l.words)}</span>`).join('') : esc(runsText(titleRuns(title)));
   const sub = title.substituted ? `<span class="why" data-string="${esc(title.substituted.id)}">${esc(title.substituted.text)}</span>` : '';
-  return `<span class="title"><span class="${title.cls}" data-string="${esc(title.id)}">${line}</span>${sub}</span>`;
+  const as = named ? ` id="${esc(named.id)}" role="img" aria-label="${esc(heard(named.words))}"` : '';
+  return `<span class="title"><span class="${title.cls}" data-string="${esc(title.id)}"${as}>${line}</span>${sub}</span>`;
 }
 
 /**
@@ -1800,14 +1809,14 @@ export function titleHTML(title, lines = null) {
  * pinned version (foundations §3.1) — and a draft's chip a glyph, each named
  * by its whole words, the act that opens the corner whole (`stateHTML`); the
  * face its compact form (`faceHTML`); the kind in its slot, "version ⟨k⟩ of
- * ⟨n⟩", the whole-document count, the kept word in its slot, the held
- * version's line and the state of a document a read refused keep their words.
- * Each with its words and its width (`CornerItem`): the kind, its version
- * statement, the state, a draft's kept word, the face, its chip, the held
- * version's line and the whole-document count never yield; the offered read
- * does. Each says whether it holds at a pane's top (`CornerItem.holds`); a
- * titled corner's title (`cornerTitle`) whole, its holder laying it out on its
- * lines (`titleHTML`).
+ * ⟨n⟩", the whole-document count, the kept word in its slot, a title and the
+ * state of a document a read refused keep their words. Each with its words
+ * and its width (`CornerItem`): the kind, its version statement, the state, a
+ * draft's kept word, the face, its chip, a title and the whole-document count
+ * never yield; the offered read does. Each says whether it holds at a pane's
+ * top (`CornerItem.holds`); a past state's or the held version's title
+ * (`cornerTitle`) whole, its holder laying it out on its lines and naming its
+ * region by it (`titleHTML`).
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {boolean} [compact] the compact form
@@ -1827,8 +1836,7 @@ export function cornerItems(d, v, compact = false, statement = true) {
     }
     const words = i.cls === 'kind' ? (v.kind === 'reading' ? '' : t(i.id)) : i.cls === 'kept' ? (i.id ? (v.history ? fields(t(i.id), t(HISTORY_ID)) : t(i.id)) : '') : i.words ?? t(i.id, i.vals), glyph = compact && i.glyph ? t(i.glyph) : null;
     const em = i.cls === 'kind' ? kindSlotEm(v.measure) : i.cls === 'kept' ? keptLineEm(v) : glyph != null ? v.measure(glyph, 'client') : i.words != null ? v.measure(i.words, 'client') : filledEm(i.id, i.vals, i.faces, v.measure) + (i.cls === 'chip' ? 0.8 : 0);
-    const holds = HOLDING.has(i.cls) || (i.cls === 'why' && !!v.past && !!v.past.why && v.past.why.substituted);
-    return { cls: i.cls, html: stateHTML(i, v, compact, statement), words, em, yields: false, holds };
+    return { cls: i.cls, html: stateHTML(i, v, compact, statement), words, em, yields: false, holds: HOLDING.has(i.cls) };
   });
   /** an item of words alone, scrolling with the text */
   const words = (/** @type {string} */ cls, /** @type {string} */ text, /** @type {string} */ html, yields = false) => out.push({ cls, html, words: text, em: v.measure(text, 'client'), yields, holds: false });

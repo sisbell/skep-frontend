@@ -19,7 +19,9 @@
 // it, its rows held at the pane's top through what says which state it shows — a past
 // state's or the held version's title on its first rows, broken at its middle
 // dots first and the held words after their dash, as many rows as its lines
-// take and never fewer than the floor handed in; a
+// take and never fewer than the floor handed in, and beside its column on the
+// lines the corner's width takes, its line's own element carrying the name the
+// scene hands in, once; a
 // document's region and the view's window over it; a span in the visible
 // view, read in a draft's typed text where the edits carried it; what a view
 // reads in a draft's typed text read of the text shown, and a stretch the
@@ -114,7 +116,7 @@ import { CORNER, ADDRESS, COL, HOLD, MARGIN, cornerWidth } from '../plane/regist
 import { holdTop, holdStack, lineHeight, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
-import { CLAUSE_READING, articleHTML, faceRuns, cornerTitle } from './article.js';
+import { CLAUSE_READING, articleHTML, faceRuns, cornerTitle, titleHTML, titleRuns } from './article.js';
 import * as FACES from '../overlays/faces.js';
 import { farSays } from '../beams/held.js';
 import { pastSigns } from '../beams/beams.js';
@@ -2168,7 +2170,7 @@ test('a pane\'s corner is measured in the corner\'s own type whatever measure th
 
 /** a past state's line as T-ARTICLE titles it (`cornerTitle`): its time, then its hand's label and cue */
 const PAST_LINE = /** @type {import('../strings.js').Run[]} */ ([{ text: 'dev-notebook', face: 'reading' }, { text: 'e427 2902 a114 39e5', face: 'ident' }]);
-const PAST_TITLE = /** @type {import('./article.js').Title} */ (cornerTitle({ titled: true, past: { time: 'at 00:35', hand: PAST_LINE, why: null } }));
+const PAST_TITLE = /** @type {import('./article.js').Title} */ (cornerTitle({ past: { time: 'at 00:35', hand: PAST_LINE, why: null } }));
 
 test('a title\'s lines at a width: its line whole where the width holds it; else broken at its middle dots first — the time over the hand — then the hand\'s label over its cue where the hand alone is wider; the held words after their dash; a part wider than the width on a line of its own, wrapped between its words and counted line by line, never cut — each line ending with the joiner it breaks at, the lines read together the line\'s words, a substitution\'s words counted on lines of their own after them (issue #677; FP-26)', () => {
   const all = t('B3.history.row', { time: 'at 00:35', hand: 'dev-notebook · e427 2902 a114 39e5' }), hand = 'dev-notebook · e427 2902 a114 39e5', w = LAYER.cornerPx;
@@ -2180,7 +2182,7 @@ test('a title\'s lines at a width: its line whole where the width holds it; else
   assert.equal(three.lines.map((l) => l.words).join(''), all, 'the lines read together are the line\'s words');
   const tight = LAYER.titleLines(PAST_TITLE, w('e427 2902 a114 39e5'));
   assert.deepEqual([tight.lines[0], tight.count], [{ words: `as it stood at 00:35${JOINER}`, wraps: true }, 2 + 1 + 1], 'a time wider than the width: on its own line, wrapped between its words, two lines of it counted');
-  const held = /** @type {import('./article.js').Title} */ (cornerTitle({ titled: true, held: true })), words = t('B3.history.held'), dash = words.indexOf('— ') + 2;
+  const held = /** @type {import('./article.js').Title} */ (cornerTitle({ held: true })), words = t('B3.history.held'), dash = words.indexOf('— ') + 2;
   assert.deepEqual(LAYER.titleLines(held, w(words) - 1).lines.map((l) => l.words), [words.slice(0, dash), words.slice(dash)], 'the held words broken after their dash');
   const busy = { id: 'B3.history.busy', text: t('B3.history.busy'), substituted: true };
   assert.equal(LAYER.titleLines({ ...PAST_TITLE, substituted: busy }, w(all)).count, 2, 'a substitution\'s words on a line of their own after the line');
@@ -2190,7 +2192,7 @@ test('a past state\'s corner titled at a pane\'s head stands its title across th
   deliver();
   const d = { ...REC.doc(D), kind: /** @type {const} */ ('draft'), meta: null }, px = 17, pitch = LINE_H * px, leading = CORNER.px * 1.4;
   const now = { id: 'B3.history.now', text: t('B3.history.now'), substituted: false };
-  const viewAt = (/** @type {number} */ cpl, /** @type {Partial<import('./article.js').ArticleView>} */ o) => ({ ...LAYER.sceneView(d, cpl), kind: /** @type {const} */ ('draft'), titled: true, ...o });
+  const viewAt = (/** @type {number} */ cpl, /** @type {Partial<import('./article.js').ArticleView>} */ o) => ({ ...LAYER.sceneView(d, cpl), kind: /** @type {const} */ ('draft'), ...o });
   /** a head's rows: each its index, whether it is held, its top and its height, and its markup */
   const rowsOf = (/** @type {string} */ html) => [...html.matchAll(/<div class="hrow" data-row="(\d+)"( data-held="1")?( role="toolbar")? style="top:([\d.]+)px;height:([\d.]+)px">(.*?)<\/div>(?=<div|$)/g)].map((m) => ({ k: Number(m[1]), held: !!m[2], top: Number(m[4]), h: Number(m[5]), html: m[6] }));
   const linesIn = (/** @type {string} */ html) => [...html.matchAll(/<span class="tl(?: wraps)?">(.*?)<\/span>/g)].map((m) => m[1]);
@@ -2211,6 +2213,30 @@ test('a past state\'s corner titled at a pane\'s head stands its title across th
   assert.deepEqual([floored.held, rowsOf(floored.html)[0].h > 2.9 * pitch], [3, true], 'never fewer rows than the floor handed in');
   const heldVersion = LAYER.sceneHead(d, viewAt(MEASURE_CPL, { held: true }), { px, kept: null, open: false });
   assert.ok(heldVersion.held >= 1 && heldVersion.rows === heldVersion.held && rowsOf(heldVersion.html)[0].html.includes('data-string="B3.history.held"') && !heldVersion.html.includes('class="kind'), `the held version: its words alone, held: ${heldVersion.html}`);
+});
+
+test('beside a pane\'s column, whole and compact, a past state\'s corner and the held version\'s lead with their title as at the head — no kind\'s slot, its line on the lines the corner\'s width takes in its own type, broken at its joiners first — its line\'s own element carrying the id and the words the scene hands in, heard; at the head that element on the title\'s rows once, the form opened beneath restating the title with neither; handed none, it carries neither (issue #687; FP-26, FP-39)', () => {
+  deliver();
+  const d = { ...REC.doc(D), kind: /** @type {const} */ ('draft'), meta: null }, px = 17;
+  const view = { ...LAYER.sceneView(d), kind: /** @type {const} */ ('draft'), past: { time: 'at 00:35', hand: PAST_LINE, why: null } };
+  const named = { id: 'sceneB-title', words: titleRuns(PAST_TITLE) }, mark = `id="sceneB-title" role="img" aria-label="${esc(heard(named.words))}"`;
+  const count = (/** @type {string} */ html) => html.split('id="sceneB-title"').length - 1;
+  for (const compact of [false, true]) {
+    const html = LAYER.sceneCorner(d, view, compact, { title: named }), lines = LAYER.titleLines(PAST_TITLE, cornerWidth(compact)).lines;
+    assert.ok(lines.length >= 2 && lines[0].words === `as it stood at 00:35${JOINER}`, `${compact ? 'compact' : 'whole'}: the line broken at the corner's width, the time over the hand — ${JSON.stringify(lines)}`);
+    assert.ok(html.startsWith(titleHTML(PAST_TITLE, lines, named)) && !html.includes('class="kind') && html.includes(mark) && count(html) === 1,
+      `${compact ? 'compact' : 'whole'}: the title first, on the corner's lines, named on its line's own element, no kind's slot — ${html}`);
+    assert.ok(html.indexOf('data-chip') > html.indexOf('</span></span>'), `${compact ? 'compact' : 'whole'}: the chip after the title`);
+  }
+  const plain = LAYER.sceneCorner(d, view);
+  assert.ok(plain.startsWith('<span class="title">') && !plain.includes(' id="') && !plain.includes('aria-label="' + esc(heard(named.words))), `handed no title's name: the title first, carrying none — ${plain}`);
+  const HELD = /** @type {import('./article.js').Title} */ (cornerTitle({ held: true })), heldNamed = { id: 'sceneB-title', words: titleRuns(HELD) };
+  const held = LAYER.sceneCorner(d, { ...view, past: null, held: true }, true, { title: heldNamed });
+  assert.equal(held, titleHTML(HELD, LAYER.titleLines(HELD, cornerWidth(true)).lines, heldNamed), 'the held version beside its column, compact: its title alone, on the corner\'s lines, named');
+  const head = LAYER.sceneHead(d, view, { px, kept: null, open: false, title: named });
+  assert.ok(head.html.includes(mark) && count(head.html) === 1, `at the head: the title's line's own element named on its rows, once — ${head.html}`);
+  const opened = LAYER.sceneHead(d, view, { px, kept: null, open: true, title: named });
+  assert.equal(count(opened.html), 1, 'opened beneath its rows: the form restating the title carries no second id');
 });
 
 /**
