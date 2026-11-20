@@ -7,7 +7,8 @@
 // beside the articles and the labels held over them, the signs standing in
 // the columns' edges and the run each origin's statement stands beside
 // (`signed`, `anchors`), the margin's marks standing and the first held mark
-// in view (`margins`, `heldFirst`), which corners and cut
+// in view (`margins`, `heldFirst`), the lines each reading scene's pane's
+// article set, read for its margin (`paneGrids`), which corners and cut
 // labels a reader's act opened whole, each document's fold and its lines as
 // the platform set them, the passage being read while its document is set
 // again (`hold`), what each reading scene's pane's article was made from and
@@ -363,7 +364,14 @@
 // its head covers there. The word "held" stands once per view, at the top of
 // the first held mark in view, as a sign of its column's edge (`placeSigns`),
 // every other mark bare. Drawn and never announced, taking no press; a
-// stroke or a mark leaving a line starts past them (`signRects`).
+// stroke or a mark leaving a line starts past them (`signRects`). The rule
+// reads a text's lines as their positions and their columns alone
+// (`LineGrid`, `marginIn`), so a reading scene's pane's article is marked by
+// it too (`paneMargin`), over its lines as the platform set them in its one
+// column (`paneLines`) — a typed line's lines read where they begin as the
+// fold's are, the empty lines typed after it standing in none, so the lines
+// either side follow one another — read once per article and again after a
+// re-set (`refaced`); SC places those marks in the pane.
 // The press rule's text half (foundations §2.4): an article takes the
 // pointer at reading scale alone — its em at the readable threshold and
 // above, the `legible` class the style gives its columns' pointer
@@ -749,6 +757,22 @@ import { t, plural, facedHTML, lastRead, runsText, joinRuns, sentence, CLIENT_CL
  */
 
 /**
+ * @typedef {Object} LineGrid — a text's lines as the margin's rule reads them (`marginIn`): a fold's (`marginOf`), or a reading scene's pane's article's as the platform set them (`paneLines`)
+ * @property {ReadonlyArray<{pos: number | null, at: number | null}>} lines in the text's order: each the block it belongs to, by its first position, and the position it opens at — null on a line no position opens (P-LAY's `Line`)
+ * @property {ReadonlyArray<{first: number, n: number}>} columns in reading order: each its first line, an index into `lines`, and its count of lines
+ * @property {(pos: number) => (number | null)} lineAt the line holding a position, by its index; null where none stands for it
+ */
+
+/**
+ * @typedef {Object} PaneLines — a reading scene's pane's article's lines as the platform set them, for its margin (`paneLines`): a `LineGrid` of one column
+ * @property {Array<{pos: number, at: number | null, top: number, h: number}>} lines in the text's order: each its block, by its first position, the position it opens at — null on a line no position opens — and its top and its height, px below the article's top
+ * @property {Array<{first: number, n: number}>} columns its one column
+ * @property {(pos: number) => (number | null)} lineAt the line holding a position, by its index: the last opening at or before it; null where none does
+ */
+
+/** @typedef {MarginSegment & {top: number, foot: number}} PaneMarginSegment — a mark the margin stands beside a reading scene's pane's article (`paneMargin`): the top of its first line and the foot of its last, px below the article's top */
+
+/**
  * @typedef {Object} MarginMark — a mark of the margin standing on the corner layer (`placeMargin`): its element, kept across frames
  * @property {HTMLElement} el
  * @property {string} addr the document whose article it stands beside
@@ -899,6 +923,8 @@ const BARS_EM = 3;
 const mounted = new Map();
 /** @type {WeakMap<HTMLElement, {made: Made, where: Where}>} what each reading scene's pane's article was made from and where its words were read, by its element (`sceneArticle`), for as long as the element lives */
 const panes = new WeakMap();
+/** @type {WeakMap<HTMLElement, PaneLines>} the lines each reading scene's pane's article set, by its element, as its margin last read them (`paneLines`); a re-set reads them again (`refaced`) */
+let paneGrids = new WeakMap();
 /** @type {Map<string, Corner>} the corners on the plane, by document */
 const corners = new Map();
 /** @type {Map<string, EdgeSign>} the signs standing in the columns' edges (`placeSigns`), by key: a statement's `⟨document⟩ ⟨origin⟩`, a run's sign's `⟨document⟩ ⟨position⟩ ⟨kind⟩`, the held mark's word `⟨document⟩ held` */
@@ -1112,9 +1138,11 @@ function runHTML(/** @type {import('../plane/labels.js').Run} */ r, /** @type {n
  * Every face arrived since the articles were set, a re-set (FP-8, FP-12;
  * APP's, as a face loads late): the widths measured, the lines the platform
  * set and the folds made of them dropped, so every standing article goes
- * stale and is set again in its place, the passage being read held (`frame`).
+ * stale and is set again in its place, the passage being read held (`frame`);
+ * the lines each reading scene's pane's article set dropped too, so its
+ * margin reads them again (`paneLines`).
  */
-export function refaced() { widths.clear(); measured.clear(); folds.clear(); markDirty(); }
+export function refaced() { widths.clear(); measured.clear(); folds.clear(); paneGrids = new WeakMap(); markDirty(); }
 
 /**
  * The record the page shows of a document (see the head): the model's, or,
@@ -4178,37 +4206,38 @@ export function signsStanding() {
 // ---- the margin's marks -----------------------------------------------------------
 
 /**
- * The lines of a fold holding a stretch of its text (`foldBoxes`,
- * `marginOf`): each line naming a position — its positions from its first own
- * character to the next line's of its block, else to its block's end — that
- * the stretch meets, by its index and its column, with the stretch's first
- * position on it.
- * @param {Fold} f
+ * The lines of a text holding a stretch of it (`foldBoxes`, `marginIn`): a
+ * fold's, or a pane's article's (`LineGrid`) — each line naming a position,
+ * its positions from its first own character to the next line's of its block,
+ * else to its block's end, so a typed line's last line holds the empty lines
+ * typed after it — that the stretch meets, by its index and its column, with
+ * the stretch's first position on it.
+ * @param {Pick<LineGrid, 'lines' | 'columns'>} g
  * @param {Block[]} blocks the blocks its text was made from
  * @param {number} pos the stretch's first position
  * @param {number} width its positions
  * @returns {Array<{line: number, column: number, from: number}>}
  */
-function linesHolding(f, blocks, pos, width) {
+function linesHolding(g, blocks, pos, width) {
   const end = pos + Math.max(1, width);
   /** @type {Array<{line: number, column: number, from: number}>} */
   const out = [];
-  f.columns.forEach((c, ci) => {
+  g.columns.forEach((c, ci) => {
     for (let i = c.first; i < c.first + c.n; i++) {
-      const l = f.lines[i];
-      if (l.at == null) continue;
+      const l = g.lines[i], at = l.at;
+      if (at == null) continue;
       let next = Infinity;
-      for (let k = i + 1; k < f.lines.length && f.lines[k].pos === l.pos; k++) { const a = f.lines[k].at; if (a != null && a > l.at) { next = a; break; } }
+      for (let k = i + 1; k < g.lines.length && g.lines[k].pos === l.pos; k++) { const a = g.lines[k].at; if (a != null && a > at) { next = a; break; } }
       const b = next === Infinity ? blocks.find((x) => x.pos === l.pos) : null;
-      const to = next === Infinity ? (b ? b.pos + b.width : l.at + 1) : next;
-      if (l.at < end && pos < to) out.push({ line: i, column: ci, from: Math.max(pos, l.at) });
+      const to = next === Infinity ? (b ? b.pos + b.width : at + 1) : next;
+      if (at < end && pos < to) out.push({ line: i, column: ci, from: Math.max(pos, at) });
     }
   });
   return out;
 }
 
 /**
- * Where a removal point stands in a text, by its image (`marginOf`): just
+ * Where a removal point stands in a text, by its image (`marginIn`): just
  * after the byte before it, else just before the byte after it; the text's
  * first position where it names neither, nothing standing either side of it;
  * null where the image places neither byte it names.
@@ -4225,28 +4254,30 @@ function removalAt(image, p) {
 }
 
 /**
- * The marks the margin stands beside an article's lines (see the head; P-REG's
- * `MARGIN`; B3-S2): each mark's bytes found in the text the article was made
- * from by their identity (M-REC's `placedIn`), the lines of its fold holding
- * them (`linesHolding`), each removal point on the line holding it
- * (`removalAt`); a line any refused mark stands on bearing no held one; each
- * kind's lines that follow one another in a column one bar, and the points on
- * a line its kind's bar does not stand on that kind's zero-length form, one a
- * line. A position the fold sets no line for marks nothing.
- * @param {Fold} f
+ * The marks the margin stands beside a text's lines (see the head; P-REG's
+ * `MARGIN`; B3-S2), a fold's or a pane's article's alike (`LineGrid`): each
+ * mark's bytes found in the text the article was made from by their identity
+ * (M-REC's `placedIn`), the lines holding them (`linesHolding`), each removal
+ * point on the line holding it (`removalAt`, the grid's `lineAt`); a line any
+ * refused mark stands on bearing no held one; each kind's lines that follow
+ * one another in a column one bar, and the points on a line its kind's bar
+ * does not stand on that kind's zero-length form, one a line. A position the
+ * grid holds no line for marks nothing.
+ * @param {LineGrid} g
  * @param {Made} made what the article was made from
  * @param {import('../write/machine.js').Mark[]} marks
  * @returns {MarginSegment[]} in the order of their first lines
  */
-export function marginOf(f, made, marks) {
+export function marginIn(g, made, marks) {
   /** @type {Record<MarginSegment['kind'], Map<number, number>>} each kind's lines, each with the first position marked on it */
   const lines = { held: new Map(), refused: new Map() }, points = { held: new Map(), refused: new Map() };
   const take = (/** @type {Map<number, number>} */ m, /** @type {number} */ i, /** @type {number} */ pos) => { m.set(i, Math.min(m.get(i) ?? Infinity, pos)); };
+  const columnOf = (/** @type {number} */ i) => g.columns.findIndex((c) => i >= c.first && i < c.first + c.n);
   const end = made.blocks.reduce((n, b) => Math.max(n, b.pos + b.width), 0);
   for (const mk of marks) {
-    for (const s of mk.ids.length ? REC.placedIn(made.image, mk.ids) : []) for (const x of linesHolding(f, made.blocks, s.pos, s.width)) take(lines[mk.kind], x.line, x.from);
+    for (const s of mk.ids.length ? REC.placedIn(made.image, mk.ids) : []) for (const x of linesHolding(g, made.blocks, s.pos, s.width)) take(lines[mk.kind], x.line, x.from);
     for (const p of mk.points) {
-      const at = end > 1 ? removalAt(made.image, p) : null, i = at == null ? null : placeIn(f, Math.max(1, Math.min(at, end - 1))).line;
+      const at = end > 1 ? removalAt(made.image, p) : null, i = at == null ? null : g.lineAt(Math.max(1, Math.min(at, end - 1)));
       if (at != null && i != null) take(points[mk.kind], i, at);
     }
   }
@@ -4256,15 +4287,86 @@ export function marginOf(f, made, marks) {
   for (const kind of /** @type {const} */ (['held', 'refused'])) {
     const ls = [...lines[kind].keys()].sort((a, b) => a - b);
     for (let k = 0; k < ls.length;) {
-      const column = columnOfLine(f, ls[k]);
+      const column = columnOf(ls[k]);
       let j = k + 1;
-      while (j < ls.length && ls[j] === ls[j - 1] + 1 && columnOfLine(f, ls[j]) === column) j++;
+      while (j < ls.length && ls[j] === ls[j - 1] + 1 && columnOf(ls[j]) === column) j++;
       out.push({ kind, column, first: ls[k], end: ls[j - 1] + 1, point: false, pos: Math.min(...ls.slice(k, j).map((i) => /** @type {number} */ (lines[kind].get(i)))) });
       k = j;
     }
-    for (const [i, pos] of points[kind]) if (!lines[kind].has(i)) out.push({ kind, column: columnOfLine(f, i), first: i, end: i + 1, point: true, pos });
+    for (const [i, pos] of points[kind]) if (!lines[kind].has(i)) out.push({ kind, column: columnOf(i), first: i, end: i + 1, point: true, pos });
   }
   return out.filter((s) => s.column >= 0).sort((a, b) => a.first - b.first);
+}
+
+/**
+ * The marks the margin stands beside a fold's lines (`marginIn`): the
+ * mounted article's, each removal point on the line P-LAY places it on
+ * (`placeOf`).
+ * @param {Fold} f
+ * @param {Made} made what the article was made from
+ * @param {import('../write/machine.js').Mark[]} marks
+ * @returns {MarginSegment[]} in the order of their first lines
+ */
+export function marginOf(f, made, marks) {
+  return marginIn({ lines: f.lines, columns: f.columns, lineAt: (pos) => placeIn(f, pos).line }, made, marks);
+}
+
+/**
+ * A reading scene's pane's article's lines as the platform set them, for its
+ * margin (see the head; `paneMargin`): one column, each block's element read
+ * for its top and its height below the article's top — a typed line's lines
+ * as many as its height holds at its own pitch, each where it begins
+ * (`setIn`), as the fold reads a mounted article's (`measureLines`); any other
+ * block's element one line its whole height, opening at its block's first
+ * position, as is a typed line where the platform sets no pitch. The empty
+ * lines typed after a typed line stand in no line, its last line holding
+ * their positions (`linesHolding`). Read once per element (`paneGrids`), again
+ * after a re-set (`refaced`).
+ * @param {HTMLElement} el the pane's article
+ * @param {Made} made what it was made from
+ * @returns {PaneLines}
+ */
+function paneLines(el, made) {
+  const had = paneGrids.get(el);
+  if (had) return had;
+  const top0 = el.getBoundingClientRect().top, byPos = new Map(made.blocks.map((b) => [b.pos, b]));
+  /** @type {PaneLines['lines']} */
+  const lines = [];
+  for (const e of blockEls(el)) {
+    const b = byPos.get(Number(e.dataset.pos));
+    if (!b) continue;
+    const r = e.getBoundingClientRect(), top = r.top - top0;
+    const pitch = e.matches(TEXT_BLOCK) && typeof getComputedStyle === 'function' ? parseFloat(getComputedStyle(e).lineHeight) : NaN;
+    if (!(pitch > 0)) { lines.push({ pos: b.pos, at: b.pos, top, h: r.height }); continue; }
+    const m = Math.max(1, Math.floor(r.height / pitch + 1e-3)), set = setIn(e, b, m, r.top, pitch, r.left);
+    for (let k = 0; k < m; k++) lines.push({ pos: b.pos, at: set[k].at, top: top + k * pitch, h: pitch });
+  }
+  /** @type {PaneLines} */
+  const out = {
+    lines,
+    columns: [{ first: 0, n: lines.length }],
+    lineAt: (pos) => { let i = -1; lines.forEach((l, k) => { if (l.at != null && l.at <= pos) i = k; }); return i < 0 ? null : i; },
+  };
+  paneGrids.set(el, out);
+  return out;
+}
+
+/**
+ * The margin's marks beside a reading scene's pane's article (see the head;
+ * B3-S2): the marks W-MACHINE reads of the words its draft holds that the
+ * board has not kept (`marksOf`), set by the margin's one rule (`marginIn`)
+ * beside the article's lines as the platform set them (`paneLines`), each with
+ * the top of its first line and the foot of its last, px below the article's
+ * top — SC places them. None where the element is no pane's article made here
+ * (`sceneArticle`), or its draft holds no mark.
+ * @param {HTMLElement} el the pane's article
+ * @returns {PaneMarginSegment[]} in the order of their first lines
+ */
+export function paneMargin(el) {
+  const a = panes.get(el), marks = a ? MACHINE.marksOf(a.made.addr) : [];
+  if (!a || !marks.length) return [];
+  const g = paneLines(el, a.made);
+  return marginIn(g, a.made, marks).map((s) => ({ ...s, top: g.lines[s.first].top, foot: g.lines[s.end - 1].top + g.lines[s.end - 1].h }));
 }
 
 /**

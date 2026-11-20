@@ -25,7 +25,15 @@ document's carry the held bar; and after the machine's rows the page is
 opened again over an armed `held(session)` list, the line it names applied
 over the draft's text with the held bar from its first line to its last and
 "held" once in the edge beside it, lifted as a `held` event lands the line
-(`held-bars`, `reopen_rows`).
+(`held-bars`, `reopen_rows`). A reading scene's pane that is the draft's
+editor carries the same marks beside the same words, in the pane (skep-frontend
+#680), read from the same hook by the pane each stands in: a line merely held
+there unmarked, a refused run's bracket on the pane's facing side — carried by
+the pane's scroll, its top held at what the pane's held head covers and gone
+under it, a face leaving its line past it, and in pane B side by side open
+toward the text on its left — (`pane-refused`), and a moved line's held bar
+with "held" once in the pane's edge at its top, lifted as the line is
+discarded (`pane-held-bars`).
 Starting a document, select-all and the launch are driven there first (`start_rows`; B3-S1 THE START and THE LAUNCH,
 B3-S8): the LEAP box's creation row at its foot over a first line nothing matches (`start-row`); Tab and Enter there
 minting a draft and sending the line as its first burst, both kept by the test board, the one line saying the mint
@@ -70,7 +78,8 @@ goes into the edition's pane (`pane-forged-face`); and a removal of kept text ma
 skep-frontend #674): its mark in pane A level with the caret's line over the scene, pressed with the pointer opening its
 face whole in the pane, the focus and the live caret standing there, a wheel over it moving no camera, the pane's scroll
 carrying it and Mod+Z taking it down; a mark in pane B clear of its corner; and a removal made on the plane standing in
-pane A as the scene opens over its draft (`pane-removal`).
+pane A as the scene opens over its draft (`pane-removal`). The margin's marks follow in the pane (B3-S2; skep-frontend
+#680): a refused run typed at a word of pane A (`pane-refused`), and a line held moved there (`pane-held-bars`).
 The whole document's entry is a figure (`whole_entry`): the seeded staging draft selected whole and copied through the
 copy door, on the first page.
 Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
@@ -351,6 +360,12 @@ STATES = [
     dict(screen='B3-S4', state='pane-removal', walk='W-08', step=8, drawn=True,
          how="the scene beside the first edition (`scene.open(mine, DOC)`), a word of pane A's text clicked, then Backspace there over a kept character — the burst's commit composes the `delete` (D6 BM-51); the mark pressed with the pointer; then, from the first edition's entry, the same at a word of pane B; and a removal made on the plane before the scene opens over the draft (skep-frontend #674)",
          claim="the removal's mark stands in pane A level with the line the caret stands on, inside the pane's visible box below its held head and clear of its corner, over the scene — the element a pointer meets there — named \"removed here\" (B3.removed-here); a press on it opens its face whole beneath or beside its line inside the pane, \"still here — for as long as this board retains it; …\" (C-49) then \"you alone can still reach what you remove\" (B3.deletion.private), the pointer passing through the face, said in the status region, the platform's focus and the live caret standing in the pane; a wheel over the mark moves no camera; the pane's scroll carries it with its line; Mod+Z in the pane takes it down; a mark in pane B stands clear of pane B's corner; and a removal made on the plane stands in pane A over the scene as the scene opens over its draft"),
+    dict(screen='B3-S2', state='pane-refused', walk='W-08', step=7, drawn=True,
+         how="the scene beside the first edition (`scene.open(mine, DOC)`), a word of pane A's text brought below its head and clicked; a line held there (`op` armed `held`) and dropped; then a refused run typed there — a `held` answer and a `held` row carrying `refusal: out_of_bounds` (D6 BM-10; skep-frontend #680); and, from the first edition's entry, the same in pane B",
+         claim="a line merely held marks nothing in the pane (J5); the refused run's words carry the refused mark in pane A beside their lines, from the top of the first to the foot of the last, past the column's text on the pane's facing side, a bracket open toward the text, inside the pane's visible box below its held head — none in pane B — carried by the pane's scroll, its top held at what the pane's held head covers and gone once its lines pass under it, and a face raised at the words leaving their line past it; in pane B side by side the bracket stands left of the text, open toward it"),
+    dict(screen='B3-S2', state='pane-held-bars', walk='W-08', step=7, drawn=True,
+         how="the scene beside the first edition, a word of pane A's text clicked, then a line typed there held moved with `arrangement_moved` and its hands (D6 BM-13; the layout page's round-2 close D8; skep-frontend #680); then the line discarded",
+         claim='the held words carry one held bar in pane A from their first line to their last, past the column\'s text on the pane\'s facing side, and "held" (B3.held) once in the pane\'s edge at its top, hidden from assistive technology; the bar\'s top held at what the pane\'s held head covers and gone, with the word, once its lines pass under it; the line discarded, the bar and the word lifted'),
     dict(screen='B3-S8', state='select-all', walk='—', step=0, drawn=True,
          how="Mod+A at the live caret in the draft the case minted (K-93)",
          claim="the whole document is one selection, the caret live at its end, the selection's acts' row standing at it inside the window; the platform's copy then takes the document whole as plain text"),
@@ -1142,12 +1157,12 @@ def write_state(ctx, addr):
     return ctx.js('window.__skep.write.state(%s)' % json.dumps(addr))
 
 
-# the margin's marks beside some words of a document's text shown, as the last frame placed them (the gate's `margin`): every
-# mark standing for the document, the words' glyph boxes' top, foot and right edge, and the marks of a kind standing beside
-# them — spanning their lines from the top of the first to the foot of the last, at the right of their column's text — with
-# the word "held" standing in the document's edges
+# the margin's marks on the plane beside some words of a document's text shown, as the last frame placed them (the gate's
+# `margin`, its marks standing in no pane): every mark standing for the document there, the words' glyph boxes' top, foot and
+# right edge, and the marks of a kind standing beside them — spanning their lines from the top of the first to the foot of the
+# last, at the right of their column's text — with the word "held" standing in the document's edges
 MARGIN_BESIDE = '''((doc, pos, width, kind) => {
-  const words = (window.__skep.spanRects(doc, pos, width) || []).filter((q) => q.w > 0 && q.h > 0), marks = window.__skep.margin().filter((m) => m.addr === doc);
+  const words = (window.__skep.spanRects(doc, pos, width) || []).filter((q) => q.w > 0 && q.h > 0), marks = window.__skep.margin().filter((m) => m.addr === doc && m.side == null);
   const top = Math.min(...words.map((q) => q.y)), foot = Math.max(...words.map((q) => q.y + q.h)), right = Math.max(...words.map((q) => q.x + q.w));
   const by = marks.filter((m) => m.kind === kind && !m.point && m.placed.y <= top + 1 && m.placed.y + m.placed.h >= foot - 1 && m.placed.x >= right - 1);
   return {words: words.length, top, foot, right, marks: marks.map((m) => ({kind: m.kind, point: m.point, column: m.column, first: m.first, end: m.end, placed: m.placed})), beside: by.length,
@@ -1407,7 +1422,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     if not session or not board or not (boot and boot.get('machine')):
         for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
                       'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept',
-                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal'):
+                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal', 'pane-refused', 'pane-held-bars'):
             red(state, 'the machine\'s page did not open')
         return
     sid, account, board_id = session['session'], session['account'], board['board']
@@ -1522,7 +1537,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     if not stands:
         for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
                       'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'unkept',
-                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal'):
+                      'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal', 'pane-refused', 'pane-held-bars'):
             red(st, 'the case\'s own draft did not mount')
         return
     # ---- B3-S3: Mod+Z on an empty stack, before anything is typed in the draft (K-75; BM-42) ----------------------------------
@@ -3137,6 +3152,37 @@ REMOVAL_OVER = '''((x, y) => { const r = document.getElementById("removed"), s =
           parts: f ? [...f.querySelectorAll(".part")].map((p) => ({id: p.dataset.string, text: p.textContent})) : [], hit: !!e && !!e.closest("#removed button.mark")}; })(%s, %s)'''
 # the caret's mark in a reading scene's pane, by its side (`A`, `B`), on screen; null where none stands there
 CARET_IN_PANE = '''((side) => { const m = document.querySelector("#scene" + side + " .caret-mark"); if (!m) return null; const q = m.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; })(%s)'''
+# the margin's marks a reading scene's pane stands for its draft, by its side (`A`, `B`), beside some words of the draft's text
+# shown, as the last margin pass placed them (the gate's `margin`, by the pane each stands in): the words' glyph boxes in the
+# pane — read through the pane's article (T-LAYER's `rangeIn`) — their top and foot, the column's sides, whether the pane's
+# facing edge is its right; every mark of the draft in the pane, those of a kind standing beside the words — from the top of
+# their first line to the foot of their last, past the column's text on the facing side — and the draft's marks standing in
+# the other pane; each mark's drawn strokes on its left and its right; the word "held" standing in the pane's edge, its
+# string and whether it is hidden from assistive technology; and the top of the room the pane gives its signs — below what
+# its held head covers — with the one hold's gap below it; null where the pane holds no article
+PANE_MARKS = '''(async (side, doc, pos, width, kind) => {
+  const L = await import("./text/layer.js"), R = await import("./plane/register.js"), p = document.getElementById("scene" + side), art = p ? p.querySelector(":scope > article.dtext") : null;
+  if (!art) return null;
+  const range = width > 0 ? L.rangeIn(art, {addr: doc, pos, width}) : null, words = range ? [...range.getClientRects()].filter((q) => q.width > 0 && q.height > 0) : [];
+  const col = art.querySelector(":scope > .run").getBoundingClientRect(), s = side.toLowerCase(), facing = s === "a" || !!(window.__skep.scene.fit() || {}).stacked;
+  const all = window.__skep.margin().filter((m) => m.addr === doc), here = all.filter((m) => m.side === s);
+  const top = words.length ? Math.min(...words.map((q) => q.top)) : null, foot = words.length ? Math.max(...words.map((q) => q.bottom)) : null;
+  const by = top == null ? [] : here.filter((m) => m.kind === kind && !m.point && m.placed.y <= top + 1 && m.placed.y + m.placed.h >= foot - 1 && (facing ? m.placed.x >= col.right - 1 : m.placed.x + m.placed.w <= col.left + 1));
+  const strokes = [...p.querySelectorAll(":scope > .margin-mark")].filter((e) => e.style.display !== "none").map((e) => { const c = getComputedStyle(e); return {kind: e.dataset.kind, left: parseFloat(c.borderLeftWidth), right: parseFloat(c.borderRightWidth)}; });
+  const w = p.querySelector(':scope > .edge-sign[data-sign="held"]'), wr = w ? w.getBoundingClientRect() : null, wd = w ? w.querySelector("[data-string]") : null;
+  const h = p.querySelector(":scope > .corner.head"), o = h ? h.querySelector(":scope > .opened") : null, q = p.getBoundingClientRect();
+  const room = h ? h.getBoundingClientRect().bottom + (o ? o.offsetHeight : 0) : q.top + p.clientTop;
+  return {words: words.length, top, foot, col: {left: col.left, right: col.right}, facing, marks: here.map((m) => ({kind: m.kind, point: m.point, first: m.first, end: m.end, placed: m.placed, rect: m.rect})),
+          beside: by.length, other: all.filter((m) => m.side != null && m.side !== s).length, strokes, room, hold: room + R.HOLD.gap,
+          word: w ? {text: w.textContent, id: wd ? wd.dataset.string : null, hidden: w.getAttribute("aria-hidden"), x: wr.left, y: wr.top} : null}; })(%s, %s, %d, %d, %s)'''
+# where a face raised just after some words of the draft an editor pane holds leaves their line (SC's `editorLine`), by the
+# pane's side (`A`, `B`): the site named by the words' last byte's identity through the pane's article's image; null where
+# no line stands for it
+EDITOR_LINE_AT = '''(async (side, doc, pos, width) => {
+  const L = await import("./text/layer.js"), R = await import("./model/records.js"), S = await import("./scene/scene.js");
+  const art = document.querySelector("#scene" + side + " > article.dtext"), made = art ? L.madeOf(art) : null; if (!made) return null;
+  const line = S.editorLine(doc, {before: R.identityIn(made.image, pos + width - 1, 1), after: []});
+  return line && {side: line.side, from: line.from}; })(%s, %s, %d, %d)'''
 
 
 def pane_rows(ctx, r, shoot, red, ops_allowed, m):
@@ -3158,9 +3204,15 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
     `delete` — the removal's mark in pane A level with the caret's line, over the scene; pressed with the pointer, its face
     whole in the pane, the focus and the live caret standing there; a wheel over it moving no camera; the pane's scroll
     carrying it, the page's frames while the pane scrolls a figure; Mod+Z taking it back; then the same in pane B, the mark
-    clear of pane B's corner, and a removal made on the plane standing in pane A as the scene opens over the draft. Each row
-    is shot in the state its check ends in. The rows' writes are their own typing, its undo, the pastes and the removals,
-    each taken back; no `history.*` call is made."""
+    clear of pane B's corner, and a removal made on the plane standing in pane A as the scene opens over the draft.
+    `pane-refused`: a line held at a word of pane A marking nothing (J5), then a refused run typed there — its bracket in
+    pane A beside its words on the pane's facing side, a face raised at them leaving their line past it, carried by the
+    pane's scroll, its top held at what the pane's held head covers and gone under it, the page's frames while the pane
+    scrolls a figure; then, from the first edition's entry, the same in pane B side by side, the bracket left of the text.
+    `pane-held-bars`: a line held moved at a word of pane A — its held bar and "held" once in the pane's edge at its top,
+    held at the head and gone under it, both lifted as the line is discarded. Each row is shot in the state its check ends
+    in. The rows' writes are their own typing, its undo, the pastes, the removals and the held lines, each taken back or
+    dropped; no `history.*` call is made."""
     mine, sid, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'sid', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
     act_sel = m['corner'] + HISTORY_ACT
     text_of = lambda: ctx.js(SHOWN_TEXT % json.dumps(mine)) or ''
@@ -3675,6 +3727,144 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
             {'came': came_p, 'kept': kept_p, 'write': wrote_p and {k: wrote_p[k] for k in ('op', 'doc')}, 'on_plane': on_plane, 'opened': opened_p, 'mark': mk_p, 'room': room_p, 'over': over_p})
     take_back('in the scene over a removal made on the plane')
     close_scene(); drop_caret()
+
+    # ---- `pane-refused`, `pane-held-bars`: the margin's marks beside words the board has not kept, in the pane (#680) ------------
+    refusal = m['refusal']
+    hands = [{'key': 'other', 'fingerprint': 'aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899', 'label': 'desk'}]
+    marks_at = lambda side, pos, width, kind: ctx.js(PANE_MARKS % (json.dumps(side), json.dumps(mine), pos, width, json.dumps(kind))) or {}
+    pitch_of = lambda side: round(ctx.js('(() => { const a = document.querySelector("#scene%s > article.dtext"); return a ? parseFloat(getComputedStyle(a).lineHeight) : 0; })()' % side) or 0)
+    # the line the row held last, dropped before the next width's check and after the row (`drop_line`)
+    holding = {'k': None}
+
+    def drop_line():
+        if holding['k'] is not None:
+            k_, holding['k'] = holding['k'], None
+            drop_all(k_)
+
+    def bar_of(got, kind):
+        """the one bar of `kind` a pane stands beside the words `marks_at` read — None where not exactly one does"""
+        bars = [x for x in got.get('marks') or [] if x['kind'] == kind and not x['point']]
+        return bars[0] if got.get('beside') == 1 and len(bars) == 1 else None
+
+    def typed_below_head(text, cause, **more):
+        """a word of a paragraph a third of the way down pane A's text brought below its head and clicked, `text` typed at the
+        caret there with the burst held under `cause` (`hold_typed`; `more` on its row), the line kept to drop, then pane A
+        scrolled up two lines so the words' line stands whole below its head: the caret the words were typed at, whether the
+        arm answered their burst, and how"""
+        at = ctx.js(SCROLL_TO_WORD % (json.dumps('A'), json.dumps(0.3)))
+        wait_for(ctx, '!window.__skep.scene.updating()', 10); ctx.frames(2)
+        if at:
+            at = ctx.js(SCROLL_TO_WORD % (json.dumps('A'), json.dumps(0.3))) or at
+            ctx.drv.click(at['x'], at['y']); ctx.frames(3)
+        c = caret()
+        k, armed, how = hold_typed(text, cause, **more)
+        holding['k'] = k
+        ctx.js('document.getElementById("sceneA").scrollTop -= %d' % (2 * pitch_of('A'))); ctx.frames(3)
+        return c, armed, dict(how, at=at)
+
+    def under_head(side, pos, width, kind, word=False):
+        """the pane scrolled until the bar of `kind` beside the words at [pos, pos + width) passes half under the top of the room
+        its held head leaves, then wholly, then back where it stood: whether the bar's top stood at the room's top the first
+        time, shorter, and no mark of its kind stood the second — with `word`, the word "held" at the one hold below the room's
+        top the first time and gone the second. As a check's part, (ok, detail)"""
+        s0, got = scroll_of(side), marks_at(side, pos, width, kind)
+        b = bar_of(got, kind)
+        if not b:
+            return False, {'before': got}
+        p = b['placed']
+        ctx.js('document.getElementById("scene%s").scrollTop += %d' % (side, round(p['y'] - got['room'] + p['h'] / 2))); ctx.frames(3)
+        half = marks_at(side, pos, width, kind)
+        hb = [x for x in half.get('marks') or [] if x['kind'] == kind and not x['point']]
+        ctx.js('document.getElementById("scene%s").scrollTop += %d' % (side, round(p['h'] / 2) + 4)); ctx.frames(3)
+        gone = marks_at(side, pos, width, kind)
+        ctx.js('document.getElementById("scene%s").scrollTop = %s' % (side, json.dumps(s0))); ctx.frames(3)
+        ok = (len(hb) == 1 and abs(hb[0]['placed']['y'] - half['room']) <= 1 and hb[0]['placed']['h'] < p['h'] and not [x for x in gone.get('marks') or [] if x['kind'] == kind]
+              and (not word or (bool(half.get('word')) and abs(half['word']['y'] - half['hold']) <= 1.5 and gone.get('word') is None)))
+        return ok, {'bar': p, 'room': got['room'], 'half': [x['placed'] for x in hb], 'word': half.get('word'), 'hold': half.get('hold'), 'gone': {'marks': gone.get('marks'), 'word': gone.get('word')}, 'scroll': s0}
+
+    def refused_check(w):
+        opened = beside()
+        # a line merely held: no mark in the pane (J5)
+        c0, held_ok, how0 = typed_below_head(' Holdy', 'unreachable')
+        merely = marks_at('A', (c0 or {}).get('pos') or 0, nb(' Holdy'), 'held')
+        drop_line()
+        # a refused run: its bracket in pane A
+        c1, armed, how = typed_below_head(' Refused.', 'out_of_bounds', sent=True, refusal=refusal('out_of_bounds'))
+        pos, n = (c1 or {}).get('pos') or 0, nb(' Refused.')
+        got, room = marks_at('A', pos, n, 'refused'), ctx.js(PANE_ROOM % json.dumps('A')) or {}
+        bar = bar_of(got, 'refused')
+        strokes = [x for x in got.get('strokes') or [] if x['kind'] == 'refused']
+        placed = (opened and bool(c1) and c1['live'] and c1['addr'] == mine and armed and got.get('words', 0) > 0 and bool(bar) and got.get('facing') is True
+                  and [x['kind'] for x in got['marks']] == ['refused'] and got.get('word') is None and got.get('other') == 0 and in_room(bar['placed'], room)
+                  and len(strokes) == 1 and strokes[0]['left'] == 0 and strokes[0]['right'] > 0)
+        # a face raised just after the words leaves their line past the bracket
+        line = ctx.js(EDITOR_LINE_AT % (json.dumps('A'), json.dumps(mine), pos, n))
+        past = bool(line) and bool(bar) and line['side'] == 'a' and line['from']['x'] >= bar['placed']['x'] + bar['placed']['w'] - 0.5
+        # pane A scrolled up a line: the bracket carried down with its line by as much
+        pitch = pitch_of('A')
+        s0, y0 = scroll_of('A'), (bar or {}).get('placed', {}).get('y')
+        ctx.js('document.getElementById("sceneA").scrollTop -= %d' % pitch); ctx.frames(3)
+        moved = bar_of(marks_at('A', pos, n, 'refused'), 'refused')
+        s1, y1 = scroll_of('A'), (moved or {}).get('placed', {}).get('y')
+        carried = pitch > 0 and s1 < s0 and y0 is not None and y1 is not None and abs((y1 - y0) - (s0 - s1)) <= 1.5
+        ctx.js('document.getElementById("sceneA").scrollTop = %s' % json.dumps(s0)); ctx.frames(3)
+        clipped = under_head('A', pos, n, 'refused')
+        # the page's frames while pane A scrolls with the bracket standing (FP-18), the pane then where it stood: the state the row is shot in
+        ms = ctx.js(SCROLL_FRAMES % (json.dumps('A'), 12, max(1, pitch))) or []
+        r.figures.setdefault('pane_margin_scroll', {})[str(w)] = {'frames': len(ms), 'max_ms': round(max(ms), 2) if ms else None, 'median_ms': round(sorted(ms)[len(ms) // 2], 2) if ms else None}
+        ctx.frames(2)
+        return {'a line merely held marks nothing (J5)': (held_ok and merely.get('words', 0) > 0 and merely.get('marks') == [] and merely.get('word') is None, {'held': held_ok, 'how': how0, 'got': merely}),
+                'the refused mark in pane A beside its words': (placed, {'opened': opened, 'caret': c1, 'armed': armed, 'how': how, 'got': got, 'room': room}),
+                'a face leaves its line past it': (past, {'line': line, 'bar': bar}),
+                'carried by the scroll': (carried, {'pitch': pitch, 'scroll': [s0, s1], 'y': [y0, y1]}),
+                "held at what the pane's held head covers, and gone under it": clipped}
+    again_margin = lambda: (drop_line(), again())
+    shoot('pane-refused', refused_check, again_margin)
+    drop_line(); close_scene(); drop_caret()
+    # in pane B side by side: the scene opened from the first edition's entry, the draft in pane B, a word there clicked and a
+    # refused run typed at it — the bracket left of the column's text, open toward it
+    ctx.resize(*WIDE)
+    ctx.leap(DOC, 1); ctx.frames(2)
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(mine)))
+    opened_b = wait_for(ctx, 'window.__skep.scene.isOpen() && (window.__skep.scene.pair() || {}).b === %s' % json.dumps(mine), 30)
+    ctx.settle(15); ctx.frames(3)
+    at_b = click_word('B')
+    c_b = caret()
+    k_b, armed_b, how_b = hold_typed(' Refused.', 'out_of_bounds', sent=True, refusal=refusal('out_of_bounds'))
+    holding['k'] = k_b
+    ctx.frames(3)
+    got_b, room_b = marks_at('B', (c_b or {}).get('pos') or 0, nb(' Refused.'), 'refused'), ctx.js(PANE_ROOM % json.dumps('B')) or {}
+    bar_b, strokes_b = bar_of(got_b, 'refused'), [x for x in got_b.get('strokes') or [] if x['kind'] == 'refused']
+    r.check(opened_b and bool(at_b) and bool(c_b) and c_b['live'] and armed_b and bool(bar_b) and got_b.get('facing') is False and in_room(bar_b['placed'], room_b)
+            and len(strokes_b) == 1 and strokes_b[0]['right'] == 0 and strokes_b[0]['left'] > 0,
+            "B3-S2 · pane-refused at %d px: a refused run typed in pane B, the draft's editor beside the first edition side by side, carries the refused mark there — left of the column's text and open toward it, inside the pane's visible box (skep-frontend #680)" % WIDE[0],
+            {'opened': opened_b, 'at': at_b, 'caret': c_b, 'armed': armed_b, 'how': how_b, 'got': got_b, 'room': room_b, 'fit': ctx.js('window.__skep.scene.fit()')})
+    drop_line(); close_scene(); drop_caret()
+
+    def held_bars_check(w):
+        opened = beside()
+        c0, armed, how = typed_below_head(' Moved.', 'moved', sent=True, refusal=refusal('arrangement_moved', as_of=1, current=2), sendable=False, hands=hands)
+        pos, n = (c0 or {}).get('pos') or 0, nb(' Moved.')
+        got, room = marks_at('A', pos, n, 'held'), ctx.js(PANE_ROOM % json.dumps('A')) or {}
+        bar, word = bar_of(got, 'held'), got.get('word') or {}
+        placed = (opened and bool(c0) and c0['live'] and armed and got.get('words', 0) > 0 and bool(bar) and got.get('facing') is True and [x['kind'] for x in got['marks']] == ['held']
+                  and got.get('other') == 0 and in_room(bar['placed'], room))
+        said = (bool(bar) and word.get('text') == t(ctx, 'B3.held') and word.get('id') == 'B3.held' and word.get('hidden') == 'true'
+                and abs(word.get('y', -99) - max(bar['placed']['y'], got['hold'])) <= 1.5 and word.get('x', -99) >= bar['placed']['x'] + bar['placed']['w'] - 1)
+        return {'the held bar in pane A beside its words': (placed, {'opened': opened, 'caret': c0, 'armed': armed, 'how': how, 'got': got, 'room': room}),
+                '"held" once in the pane\'s edge at its top': (said, {'word': word, 'bar': bar, 'hold': got.get('hold')}),
+                "held at what the pane's held head covers, and gone under it": under_head('A', pos, n, 'held', word=True)}
+    # the window at the narrow width as the row begins, so the shoot leaves it there and the scene as its last check left it
+    ctx.resize(*NARROW)
+    shoot('pane-held-bars', held_bars_check, again_margin)
+    before = marks_at('A', 0, 0, 'held')
+    drop_line(); ctx.frames(3)
+    after = marks_at('A', 0, 0, 'held')
+    r.check(len(before.get('marks') or []) == 1 and bool(before.get('word')) and after.get('marks') == [] and after.get('word') is None and ctx.js('window.__skep.scene.isOpen()'),
+            "B3-S2 · pane-held-bars: the moved line discarded lifts its held bar and the word \"held\" from pane A, the scene standing (D6 BM-16; skep-frontend #680)",
+            {'before': {'marks': before.get('marks'), 'word': before.get('word')}, 'after': {'marks': after.get('marks'), 'word': after.get('word')}})
+    close_scene(); drop_caret()
+    ctx.resize(*WIDE)
     # the rows called no history op of the shell's
     calls = [c['name'] for c in page_calls(ctx)[calls0:]]
     r.check(not any(c.startswith('history.') for c in calls), "the editor pane's rows call no `history.*`: reads, their typing, its undo, the paste and the removals", dict(Counter(calls)))

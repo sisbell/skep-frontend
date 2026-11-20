@@ -40,8 +40,9 @@
 // below the one line (`heldLabel`), the signs standing in the columns'
 // edges — a withheld origin's statement among them — as the frame placed
 // them (`edgeSigns`), the margin's marks beside words the board has not kept
-// as the frame placed them (`margin`), its first line and the lead its label
-// sets (`firstLine`), its kind as its corner's first slot states it by the one
+// as the frame placed them, on the plane and in a reading scene's editor
+// panes, each by the pane it stands in (`margin`), its first line and the
+// lead its label sets (`firstLine`), its kind as its corner's first slot states it by the one
 // test (`kind`) — what a check with no person present reads a document's kind
 // by, never a label — the size an address is set at in a label (`address`),
 // the places the line names (`named`) and
@@ -894,8 +895,8 @@ export function install(deps) {
     heldLabel: (/** @type {string} */ addr) => LAYER.heldOf(addr),
     /** the signs standing in the columns' edges on the corner layer as the last frame placed them (FP-31): each its kind — a withheld origin's statement, a run's key, its others' count — its document, its run, its origin, its column, its words and its rect on screen (T-LAYER's `signsStanding`) */
     edgeSigns: () => LAYER.signsStanding(),
-    /** the margin's marks beside words the board has not kept as the last frame placed them (B3-S2): each its kind — held or refused — its document, its column, its fold's lines [first, end), whether it is its kind's zero-length form at a point, the first position it stands beside, and its rect on screen (T-LAYER's `marksStanding`) */
-    margin: () => LAYER.marksStanding(),
+    /** the margin's marks beside words the board has not kept as the last frame placed them (B3-S2): the plane's, then each reading scene's editor pane's — each its kind — held or refused — its document, the pane it stands in (`side`: null on the plane), its column, its lines [first, end) — its fold's, or its pane's article's — whether it is its kind's zero-length form at a point, the first position it stands beside, where it was placed and its rect on screen (T-LAYER's and SC's `marksStanding`) */
+    margin: () => [...LAYER.marksStanding().map((m) => ({ ...m, side: /** @type {'a' | 'b' | null} */ (null) })), ...SCENE.marksStanding()],
     /** the places the one line names (L-LINE's `named`; FP-26): its board, its account and its document by its box */
     named: () => LINE.named(),
     /** a document's first line as every surface naming it reads it (T-LAYER's `firstOf`, by T-ARTICLE's one rule), the client's words in its place bracketed, and the lead its label sets before its address (T-LAYER's `firstLine`): its first line, which carries no kind; '' where none is known */

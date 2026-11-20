@@ -101,8 +101,10 @@
 // `markKept`), then P-RENDER, BM, the mirror placed by the walk's element's
 // box on screen (N-WALK's `place`, P-RENDER's `focusBox`), O-HOST's place and
 // the find's (N-FIND's `place`), the landing's line
-// (O-LAND's `render`), the hint (O-HINT's `render`), the scene's ties and its
-// panes' kept clauses where the
+// (O-LAND's `render`), the editor panes' margin's marks where the scene is
+// open (SC's `placeMargin`), the removals' marks and faces and a paste's face
+// (O-DELETION's `render`), which read those panes' lines, the hint (O-HINT's
+// `render`), the scene's ties and its panes' kept clauses where the
 // scene is open (SC's `draw`, `markKept`), the one line where what M-PUMP
 // holds as it stands while it reads it again moved (`keptRevision`), so a
 // kept clause appears and lifts on every surface in one frame (FP-23), then the press
@@ -274,6 +276,8 @@ function loop(/** @type {number} */ now) {
     HOST.place();
     FIND.place();
     LANDING.render();
+    // the editor panes' margins placed before a face reads their lines, so it leaves its line past them in this frame
+    if (SCENE.isOpen()) SCENE.placeMargin();
     DELETION.render();
     HINT.render();
     if (SCENE.isOpen()) { SCENE.draw(); SCENE.markKept(); }

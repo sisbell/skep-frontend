@@ -381,7 +381,7 @@ export const STRINGS = {
   'B3.kept': { text: 'kept', cls: 'DRAFT', kind: 'K11', source: 'designs/B3-editor.md', screen: 'B3-S1, B3-S2: the corner (D6 BM-1, BM-6)' },
   'B3.not-yet-kept': { text: 'not yet kept', cls: 'DRAFT', kind: 'K11', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner (D6 BM-8)' },
   'B3.not-kept': { text: 'not kept', cls: 'DRAFT', kind: 'K11', source: 'designs/B3-editor.md', screen: 'B3-S2: the corner; the head of the refused run\'s face and of the loss faces (D6 BM-10)', cid: 'C-312' },
-  'B3.held': { text: 'held', cls: 'DRAFT', kind: 'K11', source: 'designs/B3-editor.md', screen: 'B3-S2 AT REOPEN: the word at the top of the first held mark in view, once per view (D6 BM-29)' },
+  'B3.held': { text: 'held', cls: 'DRAFT', kind: 'K11', source: 'designs/B3-editor.md', screen: 'B3-S2 AT REOPEN: the word at the top of the first held mark in view, once per view — in a reading scene, once per editor pane (D6 BM-29)' },
   'B3.save.kept': { text: 'nothing to save — everything here is kept', cls: 'DRAFT', kind: 'K18', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S at the corner (D6 BM-3)' },
   'B3.save.before': { text: 'nothing to save', cls: 'DRAFT', kind: 'K18', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S, before the corner\'s other two words (D6 BM-3)' },
   'B3.save.held': { text: 'nothing to save\u00a0— held on this device and sent when your notebook answers', cls: 'DRAFT', kind: 'K18', source: 'designs/B3-editor.md', screen: 'B3-S1: Mod+S at the corner while a burst is held and the notebook is not answering (D6 BM-3)', cid: 'C-271' },

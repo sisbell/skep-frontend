@@ -51,7 +51,8 @@
 // bar from its first line to its last until it lands, its removal's zero-length
 // form on its line, "held" once per view at the first, a line awaiting the
 // person's act refused, a line merely held bare, and a stroke leaving past
-// them; C-67's clause from the model; what an article was
+// them, the same rule marking a pane's one column of lines by their
+// positions alone; C-67's clause from the model; what an article was
 // made from; a copy named where
 // its words were read — a box's at its version, the head its corner names at
 // a plain address, and a pane's alike — by every position's identity part by
@@ -1394,6 +1395,28 @@ test('the margin\'s marks: a line a refused mark stands on bears no held one, a 
   assert.deepEqual(segs.map((x) => [x.kind, x.first, x.end, x.point]), [['refused', at(1), at(1) + 1, false], ['held', at(p2), at(p2) + 1, false], ['held', at(p3), at(p3) + 1, true]],
     'the first line refused alone, the second held, the third the held point: the points on the refused line and on the held bar add nothing');
   assert.deepEqual(LAYER.marginOf(f, made, [{ kind: 'held', ids: ids(1, n1 + n2 + 3), points: [] }]).map((x) => [x.first, x.end]), [[at(1), at(p3) + 1]], 'held across all three lines: one bar');
+});
+
+test('the margin\'s rule reads a text\'s lines by their positions and their columns alone (`marginIn`), so a reading scene\'s pane\'s one column of lines is marked as a fold is: a line a refused mark stands on bears no held one, a kind\'s lines that follow one another one bar, a point on its kind\'s bar adding nothing and one on a bare line its kind\'s zero-length form; a paragraph\'s trailing newlines marking no further line, and two paragraphs across the empty line between them one bar', () => {
+  const [n1, n2, n3] = [M1, M2, M3].map((x) => new TextEncoder().encode(x).length), n = n1 + n2 + n3;
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text: M1 + M2 + M3, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }]);
+  const d = REC.doc(D), made = { addr: D, blocks: d.blocks, runs: d.runs, image: d.image };
+  const p2 = n1 + 1, p3 = n1 + n2 + 1, wrap = p2 + 20;
+  // one column: the head's line, which opens no position, the first paragraph's line, the second paragraph wrapped onto two, the last paragraph's line
+  const lines = [{ pos: null, at: null }, { pos: 1, at: 1 }, { pos: p2, at: p2 }, { pos: p2, at: wrap }, { pos: p3, at: p3 }];
+  const grid = { lines, columns: [{ first: 0, n: lines.length }], lineAt: (/** @type {number} */ pos) => { let i = -1; lines.forEach((l, k) => { if (l.at != null && l.at <= pos) i = k; }); return i < 0 ? null : i; } };
+  const ids = (/** @type {number} */ pos, /** @type {number} */ width) => REC.identityIn(d.image, pos, width), gap = (/** @type {number} */ pos) => ({ before: ids(pos - 1, 1), after: ids(pos, 1) });
+  const segs = (/** @type {import('../write/machine.js').Mark[]} */ marks) => LAYER.marginIn(grid, made, marks).map((x) => [x.kind, x.column, x.first, x.end, x.point]);
+  assert.deepEqual(segs([
+    { kind: 'held', ids: ids(1, n1 + n2), points: [gap(p2 + 3), gap(p3 + 4), gap(5)] },
+    { kind: 'refused', ids: ids(2, 3), points: [] },
+  ]), [['refused', 0, 1, 2, false], ['held', 0, 2, 4, false], ['held', 0, 4, 5, true]], 'the first paragraph refused alone, the second\'s two lines one held bar, the last paragraph\'s line the held point: the points on the refused line and on the held bar add nothing');
+  assert.deepEqual(segs([{ kind: 'held', ids: ids(1, n1), points: [] }]), [['held', 0, 1, 2, false]], 'the first paragraph with its trailing newlines: its one line, never the next paragraph\'s');
+  assert.deepEqual(segs([{ kind: 'held', ids: ids(wrap, p3 - wrap), points: [] }]), [['held', 0, 3, 4, false]], 'the second paragraph\'s wrapped line with its trailing newlines: that line alone');
+  assert.deepEqual(segs([{ kind: 'held', ids: ids(3, p2 - 1), points: [] }]), [['held', 0, 1, 3, false]], 'from inside the first paragraph across the empty line into the second: one bar over both lines');
+  assert.deepEqual(segs([{ kind: 'held', ids: [{ prefix: '1.0.9.0.1.0.1', ordinal: 1, width: 4 }], points: [] }]), [], 'bytes the text\'s image does not place mark nothing');
 });
 
 test('a stroke or a removal\'s mark leaving a line beside a margin\'s mark starts past it: the mark is among the signs its block\'s line stands beside (`signRects`), and `pastSigns` steps past it', () => onMargin(({ p2, marks }) => {

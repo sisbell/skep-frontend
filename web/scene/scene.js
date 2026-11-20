@@ -6,6 +6,8 @@
 // stroke whose list stands, the stop's next passage, the passage its act last
 // went to and whether its appearance was said, a stop the reader returned to
 // with what its answer told and an act waiting on it, the panes' scrolls,
+// the margin's marks each editor pane stands and the first held mark in each
+// pane's view (`drawnMarks`, `heldAt`),
 // each pane's span focus, each pane's text — the record it was made from, the version it reads and
 // the address it names, the links and far ends and its owner's byline facts
 // it was set with — and its corner — opened whole or not, its head's rows —
@@ -327,15 +329,26 @@
 // pane's corner among it, by the pane's own test, never the address its
 // corner names (`siteOf`, `paneHolding`; N-KEYS' `paneSays`); the way back
 // the line's ending offers moves the focus into the editor pane holding the
-// kept caret, onto its span (`toCaret`). A face the person's act at the
+// kept caret, onto its span (`toCaret`). An editor pane carries the
+// margin's marks beside the words its draft holds that the board has not
+// kept (B3-S2; FP-31, FP-38), as T-LAYER reads them beside the pane's
+// article's lines (`paneMargin`), by the plane's one rule: each in the room
+// between its column's text and its edge's signs on the pane's facing side
+// at the pane's em, in the pane's content so its scroll carries them, a
+// bar's top clipped below what its held head covers; and the word "held"
+// once per pane, at the top of the first held mark in its view, a sign of
+// that edge (`placeMargin`, `placeStatements`) — drawn and never announced.
+// The marks are placed each frame before a face reads the pane's lines, and
+// again as the scene draws. A face the person's act at the
 // caret raises — O-DELETION's: a removal's mark and its face, a paste's
 // face — stands at the line of the editor pane holding its draft that its
 // site stands on, the site placed by its bytes in the image the pane's
 // article was made from, leaving the line past the signs its column's edge
-// holds level with it, inside the room the pane gives a face: its visible
-// box below what its held head covers, clear of its corner beside its column
-// and of its corner's foot (`editorLine`); a pane's scroll marks the frame,
-// so the face is placed again as the pane moves (FP-9). The scene's close
+// holds and the margin's marks level with it, inside the room the pane gives
+// a face: its visible box below what its held head covers, clear of its
+// corner beside its column and of its corner's foot (`editorLine`); a pane's
+// scroll marks the frame, so the face is placed again as the pane moves
+// (FP-9). The scene's close
 // re-takes an editor pane's caret and the span its view was anchored at — the
 // first span in view, of two editors the one whose caret was last held — into
 // the entry it lands on (`editorAnchor`; N-GO's; B3-S1).
@@ -497,7 +510,9 @@
 // statements of the origins its runs of other documents' material are of,
 // withheld and transcluded alike, each once per origin in the pane by the
 // plane's one rule, held inside its text as the pane scrolls
-// (`placeStatements`; FP-31) — the bands leaving the pane beyond them
+// (`placeStatements`; FP-31), an editor pane's margin's marks between that
+// edge and its column's text and the word "held" among its signs (above) —
+// the bands leaving the pane beyond them
 // (foundations §3.1; FP-26): a window wider than the measure needs widens the outer
 // margins, never the line. Nothing in a pane's article is a control
 // (T-ARTICLE's scene-mode variant; B1-S9): the keys a pane takes where no
@@ -545,7 +560,10 @@
 // column at most — a band's two bars joined by a hairline HAIRLINE_W px wide
 // at their cut, and the one tie drawn whole along the column half an em
 // inside its outer side, a band's body there a strip a quarter of an em
-// wide; the pointer stands on an end within HIT_PX of its line.
+// wide; the pointer stands on an end within HIT_PX of its line. A margin's
+// mark stands P-REG's MARGIN in the pane's em: `inset` past the column's
+// text, a bar `width` across, a zero-length form a `point` square, the
+// bracket's `stroke`, each 2 px across at the least and the stroke 1 px.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-21, FP-22, FP-23,
 // FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36,
 // FP-38, FP-39, FP-40, FP-41.
@@ -563,7 +581,7 @@ import { drawChord, keyShortcut } from '../nav/keys.js';
 import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLeadRuns, kindWord, statedChain } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn, pastSigns } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingLineOf } from '../beams/held.js';
-import { SAMENESS, HOLD, LABEL_MIN_PX, cornerWidth } from '../plane/register.js';
+import { SAMENESS, HOLD, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { LINE_H, MEASURE, MEASURE_CPL, HEAD_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '../plane/layout.js';
 import { holdStack, LINE_BOX } from '../plane/labels.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
@@ -743,6 +761,15 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {number} bottom the pane's visible bottom, where it ends
  * @property {string} hue its ink's hue: the mark its links merge into
  * @property {boolean} dashed its ink is dashed — every one of its links another's there
+ */
+
+/**
+ * @typedef {Object} MarkDrawn — a margin's mark the last margin pass stood in an editor pane (`placeMargin`), on screen
+ * @property {HTMLElement} el its element, in the pane's content
+ * @property {'a' | 'b'} side the pane
+ * @property {string} addr its draft: the address the pane's acts name
+ * @property {import('../text/layer.js').PaneMarginSegment} seg its kind, its lines among the article's, its form and the first position it stands beside (T-LAYER's `paneMargin`)
+ * @property {Rect} placed where the pass placed it
  */
 
 /**
@@ -999,8 +1026,14 @@ let acted = () => {};
 const stood = { a: new Map(), b: new Map() };
 /** the room between two signs stacked in a pane's column's edge, px: the plane's (T-LAYER's) */
 const SIGN_GAP = 2;
-/** the order signs standing for one run stack in: its origin's statement, its key, its others' count */
-const SIGN_ORDER = Object.freeze({ statement: 0, key: 1, count: 2 });
+/** the order signs stack in at one line: each run's its origin's statement, its key, its others' count; the held mark's word after them all */
+const SIGN_ORDER = Object.freeze({ statement: 0, key: 1, count: 2, held: 3 });
+/** @type {MarkDrawn[]} the margin's marks the last margin pass stood in the editor panes (`placeMargin`) */
+let drawnMarks = [];
+/** @type {Record<'a' | 'b', {y: number, pos: number} | null>} the first held mark in each pane's view as the last margin pass placed it — its top on screen and the first position it stands beside — where the word "held" stands in that pane (`placeStatements`); null where none stands */
+const heldAt = { a: null, b: null };
+/** @type {WeakMap<HTMLElement, string>} each margin mark's place, size and stroke as last written (`placeMargin`): an element is written again only where they changed */
+const markStyles = new WeakMap();
 
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
@@ -2265,13 +2298,16 @@ function sayFace(E, face) {
  * T-LAYER's mount at the fit's measure, its corner in the fit's form on the
  * pane's outer side — pane A's before the article, pane B's after — or at its
  * document's head, and the fit set on the panes (`applyFit`); at a draft's
- * history, the list of its past states stood beside pane B (`standList`).
+ * history, the list of its past states stood beside pane B (`standList`); no
+ * margin's mark standing until the next margin pass places them
+ * (`placeMargin`).
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {string | null} face the refusal the `compare` met, by its name
  */
 function stand(E, S, face) {
   scene = S;
+  drawnMarks = []; heldAt.a = null; heldAt.b = null;
   S.a.placed = placedInto(S.a, [...S.b.view.marks, ...S.a.view.marks]);
   S.b.placed = placedInto(S.b, [...S.a.view.marks, ...S.b.view.marks]);
   coverPlane(true);
@@ -3371,6 +3407,99 @@ function headInView(E, side, target) {
 }
 
 /**
+ * The margin's marks placed in the editor panes (see the head; B3-S2;
+ * P-REG's `MARGIN`; FP-31, FP-37): in each pane that is its draft's editor
+ * (`editor`), the marks T-LAYER reads beside its article's lines
+ * (`paneMargin`) — each in the room between its column's text and its edge's
+ * signs on the pane's facing side, MARGIN.inset past the text at the pane's
+ * em, a bar along its lines from the top of the first to the foot of the
+ * last, a zero-length form a square on its line's middle, the refused
+ * bracket's stroke on its three sides away from the text — in the pane's
+ * content, so its scroll carries them; a bar's top clipped below what the
+ * pane's held head covers (`clearOf`), and a bar left none tall there, a
+ * zero-length form under it and a mark below the pane's visible bottom
+ * hidden; the first held mark in each pane's view kept for the word "held"
+ * (`heldAt`, `placeStatements`). An element is written only where its place,
+ * its size or its stroke changed; the marks of a pane that is no editor, or
+ * whose draft holds none, removed. Nothing where the platform lays out no
+ * pane. The loop runs it before O-DELETION reads a pane's lines, and the
+ * scene's draw again before the edge's signs are placed.
+ */
+export function placeMargin() {
+  const S = scene, E = els;
+  drawnMarks = [];
+  if (!S || !E) return;
+  for (const side of SIDES) paneMarks(E, S, side);
+}
+
+/**
+ * One pane's margin's marks placed (`placeMargin`).
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {'a' | 'b'} side
+ */
+function paneMarks(E, S, side) {
+  const P = S[side], pane = paneEl(E, side);
+  heldAt[side] = null;
+  /** @type {Map<string, HTMLElement>} */
+  const standing = new Map([...pane.querySelectorAll(':scope > .margin-mark')].map((e) => [/** @type {HTMLElement} */ (e).dataset.key || '', /** @type {HTMLElement} */ (e)]));
+  const art = P.el && editor(P) && typeof pane.getBoundingClientRect === 'function' && pane.clientHeight > 0 ? articleIn(pane) : null;
+  const segs = art ? LAYER.paneMargin(art.el) : [];
+  if (art && segs.length) {
+    const pr = pane.getBoundingClientRect(), origin = pr.top + pane.clientTop, top = origin + clearOf(pane), bottom = origin + pane.clientHeight;
+    const left = pr.left + pane.clientLeft - pane.scrollLeft, at = art.el.getBoundingClientRect().top;
+    const body = /** @type {HTMLElement | null} */ (art.el.querySelector(':scope > .run')), col = (body || art.el).getBoundingClientRect();
+    const em = S.fit.px, inset = MARGIN.inset * em, w = Math.max(2, MARGIN.width * em), sq = Math.max(2, MARGIN.point * em), stroke = Math.max(1, MARGIN.stroke * em);
+    // the pane's facing edge: pane A's right side by side, both panes' right stacked, pane B's left side by side
+    const right = side === 'a' || S.fit.stacked, xOf = (/** @type {number} */ width) => Math.round(right ? col.right + inset : col.left - inset - width);
+    const border = right ? `${stroke}px ${stroke}px ${stroke}px 0` : `${stroke}px 0 ${stroke}px ${stroke}px`;
+    for (const seg of segs) {
+      const y0 = at + seg.top, y1 = at + seg.foot, from = Math.max(y0, top);
+      /** @type {Rect} */
+      const r = seg.point ? { x: xOf(sq), y: Math.round((y0 + y1 - sq) / 2), w: Math.round(sq), h: Math.round(sq) } : { x: xOf(w), y: Math.round(from), w: Math.round(w), h: Math.round(y1 - from) };
+      const hidden = r.h < 1 || r.y < top - 0.5 || r.y >= bottom;
+      const key = `${seg.kind} ${seg.first} ${seg.point ? 'point' : 'bar'}`;
+      let el = standing.get(key);
+      standing.delete(key);
+      if (!el) {
+        el = /** @type {HTMLElement} */ (document.createElement('div'));
+        el.className = 'margin-mark';
+        Object.assign(el.dataset, { key, kind: seg.kind, form: seg.point ? 'point' : 'bar' });
+        el.setAttribute('aria-hidden', 'true');
+        pane.appendChild(el);
+      }
+      const tx = Math.round(r.x - left), ty = Math.round(r.y - origin + pane.scrollTop), edge = seg.kind === 'refused' ? border : '';
+      const style = hidden ? 'hidden' : `${tx}|${ty}|${r.w}|${r.h}|${edge}`;
+      if (markStyles.get(el) !== style) {
+        if (hidden) el.style.display = 'none';
+        else Object.assign(el.style, { display: '', transform: `translate(${tx}px, ${ty}px)`, width: r.w + 'px', height: r.h + 'px', borderWidth: edge });
+        markStyles.set(el, style);
+      }
+      if (hidden) continue;
+      drawnMarks.push({ el, side, addr: P.names, seg, placed: r });
+      if (seg.kind === 'held' && !heldAt[side]) heldAt[side] = { y: r.y, pos: seg.pos };
+    }
+  }
+  for (const e of standing.values()) e.remove();
+}
+
+/**
+ * The margin's marks standing in the editor panes as the last margin pass
+ * placed them (the gate's; `placeMargin`): each its kind, its draft, the pane
+ * it stands in, its column — the pane's one — its lines [first, end) among
+ * the article's, its form — a bar, or the zero-length form at a point — the
+ * first position it stands beside, where the pass placed it and its rect on
+ * screen as the platform lays it out; none where no scene stands.
+ * @returns {Array<{kind: 'held' | 'refused', addr: string, side: 'a' | 'b', column: number, first: number, end: number, point: boolean, pos: number, placed: Rect, rect: Rect}>}
+ */
+export function marksStanding() {
+  return drawnMarks.map((m) => {
+    const r = m.el.getBoundingClientRect();
+    return { kind: m.seg.kind, addr: m.addr, side: m.side, column: m.seg.column, first: m.seg.first, end: m.seg.end, point: m.seg.point, pos: m.seg.pos, placed: { ...m.placed }, rect: { x: r.left, y: r.top, w: r.width, h: r.height } };
+  });
+}
+
+/**
  * Each pane's origins stated in its column's edge (see the head; FP-31): the
  * signs T-ARTICLE's one rule stands for the runs of other documents'
  * material in its article (`originRunsOf`) a line of which meets the pane's
@@ -3381,7 +3510,9 @@ function headInView(E, side, target) {
  * a withheld origin's (`edgeStatementHTML`), a transcluded origin's
  * (`sourceStatementHTML`), its C-33's words read as it is placed (T-LAYER's
  * `carriesC33`, `originKind`); a key no gap holds; a withheld
- * run's others' count, as the pane was set with it — each in the column's
+ * run's others' count, as the pane was set with it; and the word "held" at
+ * the top of the first held mark in the pane's view (`placeMargin`; B3-S2),
+ * after the other signs at its line — each in the column's
  * edge on the pane's facing side — its inner side by side, its right
  * stacked — beside its run's first line in view — a
  * transcluded run's the first line in view a character of it stands on, read
@@ -3394,7 +3525,8 @@ function headInView(E, side, target) {
  * and are placed again as it scrolls (`draw`) and as the claims' kept clause
  * moves (`markKept`); written only where their words or size changed; read in
  * the pane's own reading order after its text, for a pane's text is read
- * where it stands. Nothing where the platform lays out no pane.
+ * where it stands — the word "held" apart, drawn and never announced as the
+ * margin's marks are. Nothing where the platform lays out no pane.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  */
@@ -3431,31 +3563,39 @@ function placeStatements(E, S) {
     const chosen = edgeSignsFor([...at.keys()], stood[side]);
     stood[side] = chosen.beside;
     const size = Math.max(MEASURE.count * px, LABEL_MIN_PX), width = (EDGE - EDGE_GAP) * px;
-    /** @type {Array<{el: HTMLElement, kind: 'statement' | 'key' | 'count', pos: number, rect: DOMRect, y: number}>} */
+    /** @type {Array<{el: HTMLElement, kind: 'statement' | 'key' | 'count' | 'held', pos: number, rect: DOMRect, y: number}>} */
     const placing = [];
+    /** a sign's element standing under `key`, else made in the pane's content — the held mark's word hidden from assistive technology, drawn and never announced — written where its words changed and set at the edge's size */
+    const signEl = (/** @type {string} */ key, /** @type {'statement' | 'key' | 'count' | 'held'} */ kind, /** @type {string} */ origin, /** @type {string} */ html, /** @type {number} */ pos) => {
+      let el = standing.get(key);
+      standing.delete(key);
+      if (!el) {
+        el = /** @type {HTMLElement} */ (document.createElement('div'));
+        el.className = 'edge-sign';
+        Object.assign(el.dataset, { key, sign: kind, origin });
+        if (kind === 'held') el.setAttribute('aria-hidden', 'true');
+        pane.appendChild(el);
+      }
+      if (el.innerHTML !== html) el.innerHTML = html;
+      Object.assign(el.style, { fontSize: size + 'px', lineHeight: Math.max(lh, size * LINE_BOX) + 'px', width: width + 'px' });
+      el.dataset.pos = String(pos);
+      return el;
+    };
     for (const sign of chosen.signs) {
       const x = /** @type {{rect: DOMRect, y: number}} */ (at.get(sign.run)), run = sign.run.run, o = run.origin, b = gaps.get(sign.run);
       const html = sign.kind === 'statement'
         ? (b ? edgeStatementHTML(placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), LAYER.claimsKeptIn(o), true) : sourceStatementHTML(o, LAYER.carriesC33(P.d, LAYER.originKind(o)), true))
         : sign.kind === 'key' ? edgeKeyHTML(run, true) : edgeCountHTML(sign.run.count);
       if (!html) continue;
-      const key = sign.kind === 'statement' ? `${o} statement` : `${run.pos} ${sign.kind}`;
-      let el = standing.get(key);
-      standing.delete(key);
-      if (!el) {
-        el = /** @type {HTMLElement} */ (document.createElement('div'));
-        el.className = 'edge-sign';
-        Object.assign(el.dataset, { key, sign: sign.kind, origin: o });
-        pane.appendChild(el);
-      }
-      if (el.innerHTML !== html) el.innerHTML = html;
-      Object.assign(el.style, { fontSize: size + 'px', lineHeight: Math.max(lh, size * LINE_BOX) + 'px', width: width + 'px' });
-      el.dataset.pos = String(run.pos);
+      const el = signEl(sign.kind === 'statement' ? `${o} statement` : `${run.pos} ${sign.kind}`, sign.kind, o, html, run.pos);
       placing.push({ el, kind: sign.kind, pos: run.pos, rect: x.rect, y: x.y });
     }
+    // the word "held" once in the pane, at the top of the first held mark in its view (`placeMargin`; B3-S2)
+    const h = heldAt[side], body = /** @type {HTMLElement | null} */ (art.el.querySelector(':scope > .run'));
+    if (h && body) placing.push({ el: signEl('held', 'held', '', `<span class="held-word" data-string="B3.held">${esc(t('B3.held'))}</span>`, h.pos), kind: 'held', pos: h.pos, rect: body.getBoundingClientRect(), y: h.y });
     for (const e of standing.values()) e.remove();
     if (!placing.length) continue;
-    placing.sort((p, q) => p.y - q.y || p.pos - q.pos || SIGN_ORDER[p.kind] - SIGN_ORDER[q.kind]);
+    placing.sort((p, q) => p.y - q.y || Number(p.kind === 'held') - Number(q.kind === 'held') || p.pos - q.pos || SIGN_ORDER[p.kind] - SIGN_ORDER[q.kind]);
     const heights = placing.map((p) => p.el.offsetHeight);
     const rows = /** @type {HTMLElement[]} */ ([...art.el.querySelectorAll('.run > *')]), first = rows[0], last = rows[rows.length - 1];
     const fixed = /** @type {HTMLElement[]} */ ([...art.el.querySelectorAll('.edge')]).map((e) => { const q = e.getBoundingClientRect(); return { y: q.top, h: q.height }; });
@@ -4197,8 +4337,9 @@ function level() {
  * (`placeStrokes`, `placeStop`) — a stop the reader returned to standing
  * until it is answered and they have moved on from it, then under the
  * scene's own rules — the heads' later rows placed at the panes' scrolls
- * (`placeHeads`), each pane's withheld origins stated in its column's edge
- * (`placeStatements`), and the list of a draft's past states placed
+ * (`placeHeads`), each editor pane's margin's marks (`placeMargin`), each
+ * pane's origins stated in its column's edge with the word at its first held
+ * mark (`placeStatements`), and the list of a draft's past states placed
  * (`placeList`).
  */
 export function draw() {
@@ -4321,6 +4462,7 @@ export function draw() {
   placeStrokes(E, S);
   placeStop(E, S);
   placeHeads(E, S);
+  placeMargin();
   placeStatements(E, S);
   placeList(E, S);
 }
@@ -5304,7 +5446,8 @@ export function close() {
   drawnStrokes = [];
   drawnCrossing = null;
   drawnHits = [];
-  for (const side of SIDES) stood[side].clear();
+  drawnMarks = [];
+  for (const side of SIDES) { stood[side].clear(); heldAt[side] = null; }
   coverPlane(false);
   if (pastEl) { pastEl.remove(); els.paneB.classList.toggle('past-after', false); }
   setRoom(els);
@@ -5405,7 +5548,7 @@ function intoPane(E, side, r) {
  * @typedef {Object} EditorLine — the line of an editor pane's text a face raised at its draft, or a removal's mark, stands at, on screen (`editorLine`)
  * @property {'a' | 'b'} side the pane
  * @property {Rect} line the box of the glyph at the face's site, else of the last before it that sets one
- * @property {{x: number, y: number}} from where a face beside the line leaves it: past its block's right edge and any sign the column's edge holds level with it (BM's `pastSigns`), level with the line's middle
+ * @property {{x: number, y: number}} from where a face beside the line leaves it: past its block's right edge and any sign the column's edge holds or margin's mark that stands level with it (BM's `pastSigns`), level with the line's middle
  * @property {Rect} room the box a face stands inside: the pane's visible box below what its held head covers (`clearOf`), clear of its corner beside its column, and of its corner's foot on the side of the foot the line stands
  */
 
@@ -5459,7 +5602,7 @@ export function editorLine(addr, site) {
   if (c) { const k = c.getBoundingClientRect(), a = art.getBoundingClientRect(); if (k.left + k.right > a.left + a.right) right = Math.min(right, k.left); else left = Math.max(left, k.right); }
   if (foot) { const f = foot.getBoundingClientRect(); if (mid < f.top) bottom = Math.min(bottom, f.top); else top = Math.max(top, f.bottom); }
   if (mid < top || mid > bottom) return null;
-  const signs = [...blockEl.querySelectorAll(':scope > .edge'), ...pane.querySelectorAll(':scope > .edge-sign')].map(rectOf);
+  const signs = [...blockEl.querySelectorAll(':scope > .edge'), ...pane.querySelectorAll(':scope > .edge-sign, :scope > .margin-mark')].map(rectOf);
   return { side, line, from: { x: pastSigns({ line, block: rectOf(blockEl), signs }), y: mid }, room: { x: left, y: top, w: Math.max(0, right - left), h: bottom - top } };
 }
 

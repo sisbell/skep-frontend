@@ -423,16 +423,19 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 :is(#corners, .pane) .edge-sign .src-key { display:block; color:var(--same-boundary); }
 :is(#corners, .pane) .edge-sign .id { white-space:nowrap; }
 #corners .edge-sign .wh-mark, #corners .edge-sign .wh-key, #corners .edge-sign .clause[data-home], #corners .edge-sign .src-key { cursor:pointer; text-decoration:underline dotted; }
-/* the word at the first held mark in view, in the held mark's hue (B3-S2) */
-#corners .edge-sign .held-word { display:block; color:var(--margin-held); }
+/* the word at the first held mark in view, in the held mark's hue (B3-S2): once per view on the plane, once per editor
+   pane in a reading scene */
+:is(#corners, .pane) .edge-sign .held-word { display:block; color:var(--margin-held); }
 
 /* THE MARGIN's MARKS (B3-S2; P-REG's MARGIN; FP-31): beside words the board has not kept, in the room between a column's
-   text and its edge's signs, placed by T-LAYER on the corner layer by translate alone at the size it sets — the held mark
-   a solid bar along its lines, its zero-length form a filled square; the refused mark a bracket along them open toward the
-   text, the stroke T-LAYER sets on its three other sides — drawn and never announced, taking no press */
-#corners .margin-mark { position:absolute; top:0; left:0; box-sizing:border-box; pointer-events:none; will-change:transform; }
-#corners .margin-mark[data-kind="held"] { background:var(--margin-held); }
-#corners .margin-mark[data-kind="refused"] { border-style:solid; border-color:var(--margin-refused); border-left-width:0; }
+   text and its edge's signs, placed by translate alone at the size their placer sets — T-LAYER's on the corner layer, SC's
+   in an editor pane's content, which its scroll carries — the held mark a solid bar along its lines, its zero-length form a
+   filled square; the refused mark a bracket along them open toward the text, the stroke its placer sets on its three
+   other sides — drawn and never announced, taking no press */
+:is(#corners, .pane) .margin-mark { position:absolute; top:0; left:0; box-sizing:border-box; pointer-events:none; }
+#corners .margin-mark { will-change:transform; }
+:is(#corners, .pane) .margin-mark[data-kind="held"] { background:var(--margin-held); }
+:is(#corners, .pane) .margin-mark[data-kind="refused"] { border-style:solid; border-color:var(--margin-refused); border-left-width:0; }
 
 /* A LANDING'S LINE (issue #153's design decision): at the text's edge beside the landing (O-LAND places it), over the
    beams and the corners, under the reading scene, the LEAP box and the overlay; opaque, as all chrome over the plane is,
