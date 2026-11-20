@@ -332,23 +332,33 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #corners .corner button.version { text-decoration:underline dotted; }
 .corner .chip { display:inline-block; border:1px solid #4a5260; border-radius:3px; padding:0 .4em; color:#e8e6e1; margin-top:.3em; }
 .corner .chip.glyph { border:0; padding:0; }
-/* A DRAFT'S KEPT LINE (B3-S2; FP-34): the kept word in a slot of fixed width — the longest of the three words', which
-   T-ARTICLE sets on it in em — one line box tall whatever word stands, an empty box on a faint ground while no state is
-   set; its act a button on the plane's corner and on a pane's alike, its words alone where a head's opened form restates
-   them; the statement it opens whole on a line of its own below it, wrapped and never cut */
+/* A DRAFT'S KEPT LINE (B3-S2; FP-34): the kept word one line box tall in a slot of fixed width — the longest of the three
+   words', which T-ARTICLE sets on it in em — save beside its column with its second act beneath it (below), an empty box of
+   that width on a faint ground while no state is set; its act a button on the plane's corner and on a pane's alike, its
+   words alone where a head's opened form restates them; the statement it opens whole on a line of its own below the line,
+   wrapped and never cut */
 .corner .kept-line { display:block; margin-top:.3em; }
 .corner .kept-word { display:inline-block; height:1lh; white-space:pre; overflow:hidden; vertical-align:top; color:#cfd6df; }
 .corner .kept-word.pending { background:rgba(139,143,150,.12); border-radius:2px; }
 .corner button.kept-word { text-decoration:underline dotted; }
 .corner .kept-statement { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
-/* the kept line's second act, "show its history" (B3-S7; D5 K-57; P67): the kept word's slot then holds the word with the
-   joiner flush after it, the slot's width T-ARTICLE's, so the act after it stands at one place whichever word stands; the
-   line kept on one line; the act's click cue its own, an inert one dim, still focusable and pressed for its reason */
+/* the kept line's second act, "show its history" (B3-S7; D5 K-57; P67), at one place whichever word stands. At its
+   document's head the kept word's slot holds the word with the joiner flush after it, the slot's width T-ARTICLE's, the act
+   after it, the line on one line. Beside its column the act starts a row of its own at the corner's left content edge,
+   spaced from the word's row as the corner spaces its items, its words wrapped between words inside the corner and never
+   cut, its row held while no state is set by a reserve setting the act's words unseen as generated content, so they wrap as
+   the act's do and no word of them stands in the corner's text; the word alone on its row, wrapped between its words where
+   its row is narrower than it (FP-26, FP-34). The act's click cue its own, an inert one dim, still focusable and pressed for
+   its reason */
 .corner .kept-line:has(.kept-slot) { white-space:nowrap; }
 .corner .kept-slot { display:inline-block; white-space:pre; vertical-align:top; }
 .corner .kept-slot > .kept-word { overflow:visible; }
 .corner .kept-sep { white-space:pre; }
-.corner .history { color:#cfd6df; white-space:nowrap; }
+.corner .kept-act { display:block; margin-top:.3em; }
+.corner .kept-line:has(> .kept-act) > .kept-word:not(.pending) { height:auto; white-space:normal; overflow:visible; }
+.corner .history { color:#cfd6df; }
+.corner .history.pending { display:inline-block; visibility:hidden; }
+.corner .history.pending::before { content:attr(data-reserve); }
 .corner button.history { text-decoration:underline dotted; cursor:pointer; }
 .corner button.history.inert { color:#8b8f96; text-decoration:none; }
 /* a past state's corner (B3-S7): its line in the kept word's place, and the line saying why it shows that state, each on a
@@ -356,13 +366,14 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .past { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
 .corner .why { display:block; margin-top:.3em; white-space:normal; }
 /* THE FACE BENEATH THE KEPT WORD (B3-S2; P48; P67): a moved document's, never yielding — whole, its sentence and its hands
-   on lines of their own, its acts a line of slots, each its label's width and never broken inside, its click cue its act's,
-   an inert one dim, and the discard's statement below them; compact, its compact form wrapped and never cut — on one line
-   in a head's row its words fit, wrapped across the rows of one they do not — its act opening the corner whole */
+   on lines of their own, its acts a line of slots, each its label's width where its line holds it, else its words wrapped
+   between them inside the corner and never cut (FP-26), its click cue its act's, an inert one dim, and the discard's
+   statement below them; compact, its compact form wrapped and never cut — on one line in a head's row its words fit,
+   wrapped across the rows of one they do not — its act opening the corner whole */
 .corner .face { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
 .corner .face > .face-text, .corner .face > .hands, .corner .face > .face-acts { display:block; }
 .corner .face > .face-acts { margin-top:.3em; }
-.corner .face .face-act { display:inline-block; margin-right:.6em; white-space:nowrap; text-decoration:underline dotted; }
+.corner .face .face-act { display:inline-block; margin-right:.6em; text-decoration:underline dotted; }
 .corner .face .face-act.inert { color:#8b8f96; text-decoration:none; }
 .corner .face > .said { margin-top:.3em; }
 .corner button.face.compact { text-align:left; text-decoration:underline dotted; }
@@ -391,11 +402,12 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* a past state's or the held version's title in a reading scene's pane, at every fit (SC's; FP-26): the corner's first item
    beside its column, as at its document's head, where it is held at the pane's top; its line and a substitution's words each
    beginning a line of its own, the line's lines as T-LAYER breaks it at the corner's width — each whole on one line, one wider
-   than the corner wrapped between its words — never cut, folded or hidden */
+   than the corner wrapped between its words, and beside its column one the reader's spacing makes wider wrapped so too —
+   never cut, folded or hidden */
 .pane .corner .title { display:block; white-space:normal; }
 .pane .corner .title > .past, .pane .corner .title > .held, .pane .corner .title > .why { display:block; margin:0; }
 .pane .corner .title .tl { display:block; white-space:nowrap; }
-.pane .corner .title .tl.wraps { white-space:normal; }
+.pane .corner .title .tl.wraps, .pane .corner:not(.head) .title .tl { white-space:normal; }
 #corners .corner.head .name { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
 #corners .corner.head .name > span { position:absolute; top:0; white-space:pre; }
 :is(#corners, .pane) .corner.head .hslot { position:absolute; top:0; display:flex; align-items:center; white-space:nowrap; }

@@ -128,14 +128,28 @@ SELECTED_WHOLE = '''((sel) => { const e = document.querySelector(sel), s = windo
   return nodes.length > 0 && nodes.every((n) => r.comparePoint(n, 0) === 0 && r.comparePoint(n, n.data.length) === 0); })(%s)'''
 
 
+# the reader's text spacing (WCAG 2.2 SC 1.4.12): what a reader's own style sets on every word of a corner beside its column
+# for `CORNER_FIT`'s second read — letter spacing, word spacing and line height at the criterion's values
+READER_SPACING = 'letter-spacing:.12em !important; word-spacing:.16em !important; line-height:1.5 !important;'
+# the lines of a corner beside its column whose own rule fits them whole or breaks them onto further rows — the kept line, its
+# second act, a face's acts and a title's lines — which `CORNER_FIT` reads again at the reader's spacing (issue #694)
+SPACED = '.kept-line, .history, .face-act, .title .tl'
+
 # every corner the selectors match, its words read against the boxes they stand in, each text node's line boxes by a Range in
 # fractional px: each slot of a head's rows — every line box inside the slot's right edge and its foot, and in a slot of one
 # row every line box's top within half a line of the first's — and each box of fixed width showing a value, the kind's, the
 # kept slot's and a kept word's, and each line of a title as the page breaks it at its corner's width — every line box inside
-# its right edge; each corner read and its form, each slot and box read with how far its words run past its right edge and
-# its foot, those that run past by more than `tol` px or break a one-row slot's line, and the worst excess past an edge
-# (`corner_fit`)
-CORNER_FIT = '''((sels, tol) => { const where = [], read = []; let worst = null;
+# its right edge; and each corner beside its column — none at its head — read against its content box, its box less its
+# border and its padding: every line box of its words and every button's box inside that box's left and right edges — and,
+# save an editor pane's foot, whose width its holder sets, its box no wider than its form's room, the style's `--corner-w`,
+# or `--corner-compact-w` where it stands compact and not opened, at its own size, so a corner a line will not break in
+# cannot hold its words by growing past its room (a pane's corner, a flex item, otherwise would) — at the page's own spacing,
+# then the lines `SPACED` names and the room again at the reader's (`READER_SPACING`), set by a style the read adds and
+# removes before it returns, so it never paints; each corner read and its form, each slot, box, content box and room read
+# with how far its words run past its right edge — a content box's either edge, at the spacing read, naming what ran
+# furthest; a room's, how far the corner's box runs past it — and a head slot's foot, those that run past by more than
+# `tol` px or break a one-row slot's line, and the worst excess past an edge (`corner_fit`)
+CORNER_FIT = '''((sels, tol, spaced, spacing) => { const where = [], read = []; let worst = null;
   const rectsIn = (e) => { const rs = [], w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) if (n.data.trim()) { const g = document.createRange(); g.selectNodeContents(n); rs.push(...[...g.getClientRects()].filter((k) => k.width > 0)); }
     return rs; };
@@ -145,20 +159,44 @@ CORNER_FIT = '''((sels, tol) => { const where = [], read = []; let worst = null;
     worst = Math.max(worst ?? -Infinity, right, foot ?? -Infinity);
     read.push({corner: c.dataset.corner || null, in: c.parentElement ? c.parentElement.id : null, kind, cls: e.className || null, words: e.textContent,
                right: +right.toFixed(2), foot: foot == null ? null : +foot.toFixed(2), spread: +spread.toFixed(2), oneRow, broken: oneRow && spread > rs[0].height / 2}); };
+  const content = (c) => { const q = c.getBoundingClientRect(), s = getComputedStyle(c), px = (v) => parseFloat(v) || 0;
+    return {left: q.left + px(s.borderLeftWidth) + px(s.paddingLeft), right: q.right - px(s.borderRightWidth) - px(s.paddingRight)}; };
+  const roomOf = (c) => { if (c.classList.contains("foot")) return null; const s = getComputedStyle(c);
+    const em = parseFloat(s.getPropertyValue(c.classList.contains("compact") && !c.classList.contains("open") ? "--corner-compact-w" : "--corner-w"));
+    return em > 0 ? em * parseFloat(s.fontSize) : null; };
+  const spill = (c, at) => { const box = content(c), room = roomOf(c), els = at === "page" ? [c] : [...c.querySelectorAll(spaced)]; let most = null, by = null;
+    if (room != null) { const wide = c.getBoundingClientRect().width - room; worst = Math.max(worst ?? -Infinity, wide);
+      read.push({corner: c.dataset.corner || null, in: c.parentElement ? c.parentElement.id : null, kind: "room", spacing: at, cls: c.className || null, at: null, words: null,
+                 right: +wide.toFixed(2), foot: null, spread: 0, oneRow: false, broken: false}); }
+    for (const e of els) {
+      const buttons = [...(e.tagName === "BUTTON" ? [e] : []), ...e.querySelectorAll("button")].map((b) => [b.getBoundingClientRect(), b]).filter(([k]) => k.width > 0);
+      for (const [k, x] of [...rectsIn(e).map((k) => [k, e]), ...buttons]) { const over = Math.max(k.right - box.right, box.left - k.left); if (most == null || over > most) { most = over; by = x; } } }
+    if (most == null) return;
+    worst = Math.max(worst ?? -Infinity, most);
+    read.push({corner: c.dataset.corner || null, in: c.parentElement ? c.parentElement.id : null, kind: "content", spacing: at, cls: null, at: by && typeof by.className === "string" ? by.className : null,
+               words: by ? by.textContent : null, right: +most.toFixed(2), foot: null, spread: 0, oneRow: false, broken: false}); };
+  const beside = [];
   for (const s of sels) for (const c of document.querySelectorAll(s)) {
     where.push({corner: c.dataset.corner || null, in: c.parentElement ? c.parentElement.id : null, form: c.className});
     if (c.classList.contains("head")) for (const h of c.querySelectorAll(".hslot")) fits(c, h, "slot", !h.classList.contains("wraps"));
     for (const b of c.querySelectorAll(".kind:not(.pending), .kept-slot, .kept-word:not(.pending), .title .tl")) fits(c, b, "box", false);
+    if (!c.classList.contains("head") && !beside.includes(c) && c.getBoundingClientRect().width > 0) beside.push(c);
   }
-  return {corners: where, read, over: read.filter((x) => x.right > tol || (x.foot ?? 0) > tol || x.broken), worst: worst == null ? null : +worst.toFixed(2)}; })(%s, %s)'''
+  for (const c of beside) spill(c, "page");
+  if (beside.length) { const st = document.createElement("style"); st.textContent = "#corners .corner:not(.head) *, .pane .corner:not(.head) * { " + spacing + " }";
+    document.head.append(st);
+    try { for (const c of beside) spill(c, "reader"); } finally { st.remove(); } }
+  return {corners: where, read, over: read.filter((x) => x.right > tol || (x.foot ?? 0) > tol || x.broken), worst: worst == null ? null : +worst.toFixed(2)}; })(%s, %s, %s, %s)'''
 
 
 def corner_fit(ctx, *selectors, tol=1):
-    """every corner the selectors match, as a person meets its words in the boxes they stand in (`CORNER_FIT`; issue #678;
-    FP-26, FP-34): the corners read and their forms, each slot and box that held words with how far they run past its right
-    edge and a head slot's foot, those that run past by more than `tol` px or break a one-row slot's line, and the worst
-    excess past an edge, px — a figure (FP-18)"""
-    return ctx.js(CORNER_FIT % (json.dumps(list(selectors)), json.dumps(tol))) or {}
+    """every corner the selectors match, as a person meets its words in the boxes they stand in (`CORNER_FIT`; issues #678,
+    #694; FP-26, FP-31, FP-34): the corners read and their forms; each slot and box that held words with how far they run past
+    its right edge and a head slot's foot; each corner beside its column with how far its words and its buttons run past its
+    content box, and its box past its form's room, at the page's spacing and at the reader's (WCAG 2.2 SC 1.4.12) for the
+    lines `SPACED` names; those that run past by more than `tol` px or break a one-row slot's line, and the worst excess past
+    an edge, px — a figure (FP-18)"""
+    return ctx.js(CORNER_FIT % (json.dumps(list(selectors)), json.dumps(tol), json.dumps(SPACED), json.dumps(READER_SPACING))) or {}
 
 
 # an element's name and description as its `aria-labelledby` and `aria-description` state them in the DOM, where the

@@ -60,13 +60,16 @@ made as a script makes one, left standing, and the paste door answered by C-45 n
 naming the own draft beneath it and the staging act standing inert, its press saying its reason — nothing placed and
 nothing sent, the test board's position unmoved (`published-target`).
 A draft's history follows them on the same page (`past_rows`; B3-S7, skep-frontend #661, #662, #585, #617): the kept
-line's second act, "show its history", at one place whichever kept word stands, reached by Tab, → and Enter
-(`corner-act`); two lines typed a minute apart and kept, then the act — the scene on the draft beside its state before its
+line's second act, "show its history", at one place whichever kept word stands, every word of the corner inside the box it
+stands in, reached by Tab, → and Enter (`corner-act`; issue #694); two lines typed a minute apart and kept, then the act —
+the scene on the draft beside its state before its
 newest change, that state the test board's text at the position the row below the top row ends at, the history read a
 figure — then `changes` armed once the page is quiet with the draft's own rows and three of the harness's, the list's days
 and rows in the strings table's words, the past pane's corner, the bands, side by side and stacked, the current pane's
 corner split at the narrow width (`read`), then stacked between those widths with the past pane's corner beside its column,
-led by its title, the pane's name the AX tree computes the same at all three (issue #687); `changes` armed with the
+led by its title, the pane's name the AX tree computes the same at all three (issue #687), and the current pane's corner
+beside its column too, its kept line's act on a row of its own, every word of it inside its content box (issue #694);
+`changes` armed with the
 draft's newest row alone, the act opening on that row's state, pane B's corner saying it is how the draft stands now on one
 line inside its slot, that line the pane's description (`now`); `changes` armed with a row of the draft's in another minute
 than its newest change alone, the act opening on that row's state as how the draft stands now, then the newest change handed
@@ -117,9 +120,12 @@ proved on the page's own port: a canned `publication.open` answer reaches
 the page as armed, and a `publication` event fired by hand reaches its
 subscriber. At each of the three kept words the own draft's corner's every
 word stands inside the box it is set in — beside its column at the desktop
-width, its kind's slot and its kept slot, and at its head at the narrow
-one, each slot of its rows too — 1 px either way, the worst excess a figure
-(`fit_part`; issue #678). At the narrow width, where the own draft's corner
+width, its kind's slot, its kept word's box and the corner's content box,
+at the page's spacing and again at the reader's (WCAG 2.2 SC 1.4.12), and at
+its head at the narrow one, each slot of its rows too — 1 px either way, the
+worst excess a figure (`fit_part`; issues #678, #694); and its kept line's
+second act stands at one place in the corner whichever of the three words
+stands, half a px either way (issue #694). At the narrow width, where the own draft's corner
 stands at its head, the live caret moved up under the head's held row brings
 the camera down alone, the caret's mark at the row's bottom
 (`caret_under_head`; issue #436). A person's click in another paragraph of the own draft places the
@@ -210,7 +216,7 @@ STATES = [
     # B3-S1 — a new document of the person's own: the kept state at the corner, the kept caret (W-08 steps 2–3)
     dict(screen='B3-S1', state='kept', walk='W-08', step=2, drawn=True,
          how="`write.setKept(own, {word: 'kept'})` — D6's machine's word, set by the gate's hook",
-         claim='the corner shows "kept" in its fixed-width slot (B3.kept)'),
+         claim='the corner shows "kept" (B3.kept) — beside its column alone on its row, the kept line\'s second act "show its history" (B3.past-states) starting the row beneath it, every word of the corner inside its content box at the page\'s spacing and the reader\'s; at its head in its fixed-width slot, the act after it — the act at one place in the corner whichever of the three words stands'),
     dict(screen='B3-S1', state='save-answered', walk='W-08', step=2, drawn=True,
          how='Mod+S at the corner while the word is kept (K-74)',
          claim='the statement opens whole on its own line, a sentence: "Nothing to save — everything here is kept." (B3.save.kept)'),
@@ -238,10 +244,10 @@ STATES = [
     # B3-S2 — the kept state and the held text (W-08 step 7 and its failure arms)
     dict(screen='B3-S2', state='not-yet-kept', walk='W-08', step=7, drawn=True,
          how="`write.setKept(own, {word: 'not yet kept'})` (D6 BM-8)",
-         claim='the corner shows "not yet kept" in its slot (B3.not-yet-kept)'),
+         claim='the corner shows "not yet kept" (B3.not-yet-kept), its kept line as at "kept", every word inside its box and the act where it stands at "kept"'),
     dict(screen='B3-S2', state='not-kept', walk='W-08', step=7, drawn=True,
          how="`write.setKept(own, {word: 'not kept', reason})`, the reason the refused run's own-bug words (D6 BM-10)",
-         claim='the corner shows "not kept" in its slot (B3.not-kept); Mod+S would answer with the reason'),
+         claim='the corner shows "not kept" (B3.not-kept), its kept line as at "kept", every word inside its box and the act where it stands at "kept"; Mod+S would answer with the reason'),
     dict(screen='B3-S1', state='kept-on-board', walk='W-08', step=2, drawn=True,
          how="the machine handed in (`machine=1`): keys typed at a caret in the case's own minted draft, committed at their punctuation (D6 BM-1, BM-2, BM-6)",
          claim='the typed words reach the test board as one composed `insert`, acked, and the corner reads "kept" (B3.kept); the read that follows holds them and the page\'s edits are gone, the text shown the same'),
@@ -259,7 +265,7 @@ STATES = [
          claim='the run\'s words carry the refused mark; the face names the board and the time elapsed (B3.answers_lost), its discard\'s statement its own (B3.answers_lost.discard); the read unanswered, "did not answer — nothing was discarded" (B3.answers_lost.unanswered) and the face stands'),
     dict(screen='B3-S2', state='moved-face', walk='W-08', step=7, drawn=True,
          how='a `held` row held moved with `arrangement_moved` and its hands (D6 BM-13, BM-16, BM-17, BM-18)',
-         claim='the corner reads "not yet kept" and carries the face beneath it, before the chip, no overlay showing it, the corner reaching into no other document\'s box and clipped by nothing — compact where the corner stands at its head, "changed while this text was held — not placed · by desk" (B3.moved.compact) standing inside its row, named and described as a screen reader hears them, the device\'s label as written (style S22), whole on its act — the face saying the document changed (B3.moved) and naming the hand in its slot (B3.hand.device), each a sentence, with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard); the kept word\'s act opens its statement; the held words carry the held bar while the face asks about them (D8)'),
+         claim='the corner reads "not yet kept" and carries the face beneath it, before the chip, no overlay showing it, the corner reaching into no other document\'s box and clipped by nothing, every word of it inside the box it stands in — beside its column the face\'s acts inside its content box at the page\'s spacing and the reader\'s, an act\'s words wrapped between them and never cut — compact where the corner stands at its head, "changed while this text was held — not placed · by desk" (B3.moved.compact) standing inside its row, named and described as a screen reader hears them, the device\'s label as written (style S22), whole on its act — the face saying the document changed (B3.moved) and naming the hand in its slot (B3.hand.device), each a sentence, with "see the held text", "send again" inert (B3.moved.send-again.inert) and the discard, its statement ending on its exit (B3.moved.discard); the kept word\'s act opens its statement; the held words carry the held bar while the face asks about them (D8)'),
     dict(screen='B3-S2', state='moved-scene', walk='W-08', step=7, drawn=True,
          how='`scene.openHeld(own, [an insert row])`: the current text beside the held version re-derived (D6 BM-14; #411)',
          claim="a scene stands with the own draft in pane A and the derived record in pane B, derived, no compare asked; both panes' "
@@ -342,7 +348,7 @@ STATES = [
          how='the type picker over two held passages', claim='', why="the picker module; a pane's selection (#29, #94)"),
     dict(screen='B3-S7', state='corner-act', walk='W-08', step=8, drawn=True,
          how="the case's own draft at its corner, its kept word set to each of its three words by the gate's hook; then Tab from the plane's stop, → and Enter (D5 K-57; skep-frontend #585)",
-         claim='the kept line carries its second act after the kept word, "show its history" (B3.past-states), standing at one place whichever word stands; Tab stands on the kept word, → on the act, and Enter there opens the draft\'s history'),
+         claim='the kept line carries its second act, "show its history" (B3.past-states), standing at one place whichever word stands — beside its column on a row of its own beneath the kept word, at its head after it — every word of the corner inside the box it stands in; Tab stands on the kept word, → on the act, and Enter there opens the draft\'s history'),
     dict(screen='B3-S7', state='read', walk='W-08', step=8, drawn=True,
          how="two lines typed into the case's own draft a minute apart, kept by the test board, then the act clicked; then `changes` armed with the draft's own rows and synthetic ones — a signed row, a publication, a row of lost testimony — and the act clicked again, one day's head clicked folded (skep-frontend #661, #662, #617)",
          claim='the scene stands on the draft beside its state before its newest change — the text the board held at the position the row below the top row ends at — pane B named "as it stood ⟨time⟩ · ⟨hand⟩" (B3.history.row) with the chip, the bar and the one line naming it "as it stood ⟨time⟩" (B3.history.as-of), the shared runs banded; beside it the list, newest first, each day\'s head its date or "time not recorded" (L.history.time-unrecorded), a folded day\'s head naming its hands, each row its time of day and what it did in the strings table\'s words, the shown row marked, no word of it drawn across two lines and every timed row\'s time in one slot; side by side both corners at their documents\' heads, both texts at one depth, and the list in a column of its own at pane B\'s outer side, from the panes\' top to the scene\'s foot, as wide as its head needs to hold its stop and both step acts on one line, the two panes one width either side of the whole gutter, each keeping forty characters a line or more; one px either side of the window at which beside the list the panes keep forty characters, the list in its column, then after pane B\'s text, the panes side by side; stacked at the narrow width the list after pane B\'s text and the current pane\'s kept line at its head, the rest of its corner at its foot (skep-frontend #668)'),
@@ -361,7 +367,7 @@ STATES = [
     # B3-S1's scene rule (skep-frontend #556): a reading scene's pane holding the person's own draft is its editor
     dict(screen='B3-S1', state='pane-typed', walk='W-08', step=3, drawn=True,
          how="`window.__skep.scene.open(mine, DOC)`, a click on a word of pane A's text, then keys typed there; Mod+Z; a line held there (`op` armed `held`) (D5 K-70, K-72, K-75)",
-         claim="the caret live at the character clicked, its mark in pane A alone; the typed words standing in the pane's text as typed and kept by the test board, sent as the plane's typing is — one `insert` frame of the same shape, through the page's own port to the harness's provider; the pane's corner's kept word moving as the draft's state moves, \"not yet kept\" while the line is held; Mod+Z taking the run back out of the pane's text; stacked, the pane's held head its kept line alone, the rest of its corner at its foot (D2)"),
+         claim="the caret live at the character clicked, its mark in pane A alone; the typed words standing in the pane's text as typed and kept by the test board, sent as the plane's typing is — one `insert` frame of the same shape, through the page's own port to the harness's provider; the pane's corner's kept word moving as the draft's state moves, \"not yet kept\" while the line is held; Mod+Z taking the run back out of the pane's text; stacked, the pane's held head its kept line alone, the rest of its corner at its foot (D2); every word of the pane's corner inside the box it stands in — side by side beside its column, its kept line's act on a row of its own, inside its content box at the page's spacing and the reader's"),
     dict(screen='B3-S13', state='pane-lines', walk='W-08', step=4, drawn=True,
          how="the draft's history opened over its kept caret, then a printable key in the past pane, at a span of the current pane its caret is not in, Space there, at each pane's corner; and beside the first edition, a key in its pane (the decision's third block; D5 K-9, K-72)",
          claim="each key answered by its pane's own line, never K-9's: the past state's C-337 (B3.history.read-only) ending with where the person was last writing; the current pane's \"Enter places a caret here\" (B3.caret.enter); Space's own K-9 line (F.swallow.space); the current pane's corner the way back to its text (B3.caret.back); the past pane's corner its pane's C-337; an edition of the person's own C-45 — nothing typed"),
@@ -443,8 +449,9 @@ def shown(ctx, selector):
 
 def fit_part(ctx, figures, state, w, *selectors):
     """a check's part holding every word of the corners the selectors match inside the box it stands in, 1 px either way
-    (`corner_fit`; issue #678; FP-26, FP-34): some slot or box read, and none run past or broken — the worst excess past an
-    edge a figure, by state and width (FP-18)"""
+    (`corner_fit`; issues #678, #694; FP-26, FP-31, FP-34): some slot, box or content box read, and none run past or broken —
+    a corner beside its column read against its content box at the page's spacing and the reader's — the worst excess past
+    an edge a figure, by state and width (FP-18)"""
     fit = corner_fit(ctx, *selectors)
     figures.setdefault('corner_fit', {})['%s at %d px' % (state, w)] = {'worst_px': fit.get('worst'), 'read': len(fit.get('read') or []), 'corners': fit.get('corners')}
     return bool(fit.get('read')) and fit.get('over') == [], fit
@@ -1702,6 +1709,9 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
 
     def moved_check(w):
         got, st, at = corner_word(), state(), corner_face()
+        # every word of the corner inside the box it stands in — beside its column the face's acts among them, each wrapped
+        # between its words where its line is narrower than its label (issue #694)
+        fit = fit_part(ctx, figures, 'moved-face', w, corner)
         # the corner, taller by the face, reaches into no other document's box and nothing clips it (the gate's `overlapCheck`)
         ov = ctx.js('window.__skep.overlapCheck()') or {}
         room = {'into': [x for x in ov.get('corners_into', []) if x['addr'] == mine], 'clipped': [x for x in ov.get('corners_clipped', []) if x['addr'] == mine]}
@@ -1730,6 +1740,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         m = margin_beside(ctx, mine, len(line1.encode('utf8')) + 1, len(' Moved.'), 'held')
         return {'the corner and the face': (ok, {'corner': got, 'kept': st['kept'], 'shown': at, 'face': f, 'overlay': overlay, 'heard': {'name': named, 'whole': whole}}),
                 'the corner in its own room': (not room['into'] and not room['clipped'], room),
+                "the corner's words in their boxes": fit,
                 'the kept word\'s act (K-57)': (word_ok, {'statement': said}),
                 'the held bar (D8)': (m['words'] > 0 and m['beside'] == 1 and [x['kind'] for x in m['marks']] == ['held'] and len(m['held']) == 1 and m['held'][0]['text'] == t(ctx, 'B3.held'), m)}
     shoot('moved-face', moved_check, recentre)
@@ -2773,6 +2784,10 @@ def published_rows(ctx, r, shoot, red, ops_allowed, m):
 
 # the kept line's second act at a corner, by the selector a person's eye would find it (T-ARTICLE's `historyHTML`)
 HISTORY_ACT = ' button[data-history]'
+# where the kept line's second act stands in the corner a selector names (formatted with it, as JSON): its box's offset from the
+# corner's own, px, and its words — what stands at one place whichever kept word stands (issue #694); null where no act stands
+ACT_IN_CORNER = '''((sel) => { const c = document.querySelector(sel), b = c && c.querySelector("button[data-history]"); if (!b) return null;
+  const q = c.getBoundingClientRect(), k = b.getBoundingClientRect(); return {dx: +(k.left - q.left).toFixed(2), dy: +(k.top - q.top).toFixed(2), text: b.textContent}; })(%s)'''
 # where the platform's focus stands in a corner: the corner's document and the act it stands on — the kept word, the kept line's
 # second act — or null where it stands in none
 ACT_AT = '''(() => { const e = document.activeElement, c = e && e.closest ? e.closest("[data-corner]") : null;
@@ -2875,8 +2890,9 @@ MOVED_IN = '''((row) => { window.__skep.model.feed(row); const pane = document.g
 def past_rows(ctx, r, shoot, red, ops_allowed, m):
     """A DRAFT's HISTORY (B3-S7; skep-frontend #661, #662, #585, #617), on the machine's page at the case's own draft
     (`mine`), each state checked against `strings.js` and shot at both widths. `corner-act`: the kept line's second act at
-    each of the three kept words at one place, Tab from the plane's stop standing on the kept word, → on the act and Enter
-    opening the draft's history. `read`: two lines typed a minute apart and kept by the test board, then the act clicked —
+    each of the three kept words at one place, every word of the corner inside the box it stands in (`fit_part`; issue
+    #694), Tab from the plane's stop standing on the kept word, → on the act and Enter opening the draft's history. `read`:
+    two lines typed a minute apart and kept by the test board, then the act clicked —
     the scene on the draft beside its state before its newest change, that state's text the board's at the position the row
     below the top row ends at, the history read's pages and rows and the state read's time a figure (FP-18); then
     `changes` armed, once the page is quiet, with the draft's own rows read through the page's port and three synthetic
@@ -2894,7 +2910,9 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     by side (skep-frontend #668); stacked at the narrow width after pane B's text, the current pane's kept line at its head
     and the rest of its corner at its foot (D2); stacked at STACKED_BESIDE, between them, the past pane's corner beside its
     column led by its title, no kind's slot, each of its lines inside the corner, and the pane's name the one the AX tree
-    computed at both widths (issue #687).
+    computed at both widths (issue #687); and there the current pane's corner beside its column too, its kept line's second
+    act on a row of its own beneath the kept word, every word of the corner inside its content box at the page's spacing and
+    the reader's (`corner_fit`; issue #694).
     `reclaimed`: `op` armed, once the page is quiet, to refuse the state before the newest change as `history_reclaimed`,
     naming no floor, then the act — the arm taken by that read, the page's own state reads in order read off its call
     record with each answer's refusal and the committed position it names, the position refused never asked again; where
@@ -2953,6 +2971,9 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
             places[word] = ctx.js('''((s) => { const b = document.querySelector(s); if (!b) return null; const q = b.getBoundingClientRect();
               return {x: q.left, y: q.top, text: b.textContent, id: b.dataset.string || null, inert: b.getAttribute("aria-disabled")}; })(%s)''' % json.dumps(act_sel))
         ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(mine), json.dumps({'word': 'kept', 'reason': None}))); ctx.frames(3)
+        # beside its column at the desktop width, at its head at the narrow one: every word of the corner inside the box it
+        # stands in, its kept line's act among them (issue #694)
+        fit = fit_part(ctx, figures, 'corner-act', w, corner)
         k = places['kept']
         act_ok = bool(k) and k['text'] == t(ctx, 'B3.past-states') and k['id'] == 'B3.past-states' and k['inert'] is None and len(shown(ctx, act_sel)) == 1
         unmoved = all(places[x] and k and abs(places[x]['x'] - k['x']) < 0.5 and abs(places[x]['y'] - k['y']) < 0.5 for x in places)
@@ -2969,7 +2990,8 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         close_scene(); recentre(); ctx.settle(10); ctx.frames(3)
         keys_ok = tabbed == {'corner': mine, 'act': 'kept'} and arrowed == {'corner': mine, 'act': 'history'} and opened
         return {'the act': (act_ok, {'act': k, 'shown': len(shown(ctx, act_sel))}), 'its place': (unmoved, places),
-                'the keys': (keys_ok, {'tab': tabbed, 'arrow': arrowed, 'enter_opened': opened})}
+                'the keys': (keys_ok, {'tab': tabbed, 'arrow': arrowed, 'enter_opened': opened}),
+                "the corner's words in their boxes": fit}
     shoot('corner-act', corner_act_check, recentre)
 
     # ---- `read`: two lines a minute apart, kept by the board; the act; the state before the newest change -----------------------
@@ -3132,6 +3154,9 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         ctx.settle(10); ctx.frames(3)
         fit3, lead3 = ctx.js('window.__skep.scene.fit()') or {}, ctx.js(PAST_LEAD) or {}
         boxes3, as3 = corner_fit(ctx, '#sceneB > .corner'), named_as(ctx, '#sceneB') or {}
+        boxes_a3 = corner_fit(ctx, '#sceneA > .corner')
+        kept_a3 = ctx.js('''(() => { const c = document.querySelector("#sceneA > .corner"), l = c && c.querySelector(".kept-line"), w = l && l.querySelector(".kept-word"), a = l && l.querySelector("button[data-history]");
+          if (!w || !a) return null; const q = w.getBoundingClientRect(), k = a.getBoundingClientRect(); return {head: c.classList.contains("head"), below: k.top >= q.bottom - 0.5}; })()''')
     finally:
         ctx.resize(*was); ctx.settle(10); ctx.frames(3)
     named3 = heard(ctx, (lists or {}).get('corner') or '')
@@ -3140,6 +3165,10 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
             and bool(boxes3.get('read')) and not boxes3.get('over'),
             "B3-S7 · read at %d px: the panes stacked, both corners beside their columns — pane B's led by its title, the past line, no kind's slot, every word inside its box (issue #687; FP-26, FP-39)" % STACKED_BESIDE[0],
             {'fit': fit3, 'lead': lead3, 'boxes': boxes3, 'want': named3})
+    figures.setdefault('corner_fit', {})["read, pane A, at %d px" % STACKED_BESIDE[0]] = {'worst_px': boxes_a3.get('worst'), 'read': len(boxes_a3.get('read') or []), 'corners': boxes_a3.get('corners')}
+    r.check(fit3.get('corner') in ('whole', 'compact') and bool(kept_a3) and not kept_a3['head'] and kept_a3['below'] and bool(boxes_a3.get('read')) and not boxes_a3.get('over'),
+            "B3-S7 · read at %d px: the panes stacked, pane A's corner — the current text, the draft's editor — beside its column, its kept line's second act on a row of its own beneath the kept word, every word of the corner inside its content box at the page's spacing and the reader's (issue #694; FP-26, FP-31)" % STACKED_BESIDE[0],
+            {'fit': fit3, 'kept': kept_a3, 'boxes': boxes_a3})
     same = [(pane_names.get(w) or {}).get('name') for w in (WIDE[0], NARROW[0])] + [as3.get('name')]
     # pane B's name and description as the AX tree computed them at each width read, keyed by the width as words
     names = {str(w): got for w, got in list(pane_names.items()) + [(STACKED_BESIDE[0], as3)]}
@@ -3476,7 +3505,8 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
     its pane scrolls. `pane-typed`: the scene beside the first edition, a word of pane A clicked and keys typed there — the
     caret live in the pane, the words shown as typed and kept by the test board, one `insert` of the shape the plane's typing
     sends, through the page's own port; Mod+Z taking the run back out; a line held there, the pane's corner "not yet kept",
-    dropped; the word typed again at a click. `pane-lines`: an edition of the person's own beside, then the draft's history
+    dropped; the word typed again at a click, every word of the pane's corner then inside the box it stands in (`fit_part`;
+    issue #694). `pane-lines`: an edition of the person's own beside, then the draft's history
     opened over its kept caret, each key answered by its pane's own line, the past pane's last. `pane-way-back`: the line's
     ending's act moving the focus onto the kept caret's span, the next key typing there. `pane-close`: Esc, then Esc, the
     close re-taking the pane's caret and the span its view was anchored at, a key typing at it. `pane-source-face`: the
@@ -3498,6 +3528,7 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
     in. The rows' writes are their own typing, its undo, the pastes, the removals and the held lines, each taken back or
     dropped; no `history.*` call is made."""
     mine, sid, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'sid', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
+    figures = m['figures']
     act_sel = m['corner'] + HISTORY_ACT
     text_of = lambda: ctx.js(SHOWN_TEXT % json.dumps(mine)) or ''
     pane = lambda side: ctx.js(PANE_STATE % json.dumps(side)) or {}
@@ -3613,7 +3644,11 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
         click_word('A'); press(word + '.'); kept_now(20); quiet()
         a4 = pane('A')
         shown_again = count(a4['text']) == n0 + 1 and a4['marks'] == ['live'] and (caret() or {}).get('live') is True
+        # every word of the pane's corner inside the box it stands in — beside its column side by side, its kept line's act on a
+        # row of its own; stacked, its head's slots and its foot (issue #694)
+        fit = fit_part(ctx, figures, 'pane-typed', w, '#sceneA > .corner')
         return {"the head its kept line alone": (w == WIDE[0] or (bool(head) and head['kept'] and head['foot_items'] == 0 and head['foot']), head),
+                "the pane's corner's words in their boxes": fit,
                 'the caret placed': (placed, {'opened': opened, 'at': at, 'caret': c0, 'pane': {x: a1[x] for x in ('marks', 'focus', 'active', 'editor')}}),
                 'the words shown as typed': (shown_now and shown_again, {'text': (a2['text'] or '')[:200], 'word': word, 'before': n0, 'again': {'text': (a4['text'] or '')[:200], 'marks': a4['marks']}}),
                 "sent as the plane's typing is": (sent, {'kept': kept, 'write': wrote and {x: wrote[x] for x in ('op', 'doc', 'values')}, 'plane': plane and sorted(plane), 'typed': [sorted(f) for f in typed], 'logged': len(on_board), 'corner': pane('A')['kept']}),
@@ -4262,20 +4297,32 @@ def run(ctx):
             "the own draft stands at reading scale as text the person may edit (issue #411), its corner's kept slot an empty box while no state is set",
             {'corner': before, 'editable': editable, 'extent': doc and doc['extent'], 'from': doc and doc['from']})
 
-    def kept_check(word, state):
+    def kept_check(word, state, reason):
         def check(w):
+            # the kept line's second act where it stands in the corner at each of the three words, set in turn, then the row's
+            # own word set again (issue #694)
+            places = {}
+            for each in KEPT_IDS:
+                ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(OWN), json.dumps({'word': each, 'reason': None})))
+                ctx.frames(2)
+                places[each] = ctx.js(ACT_IN_CORNER % json.dumps(CORNER))
+            ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(OWN), json.dumps({'word': word, 'reason': reason})))
+            ctx.frames(2)
+            act, first = t(ctx, 'B3.past-states'), places.get('kept')
+            one = bool(first) and all(p and p['text'] == act and abs(p['dx'] - first['dx']) <= 0.5 and abs(p['dy'] - first['dy']) <= 0.5 for p in places.values())
             got, want = corner_kept(ctx), t(ctx, KEPT_IDS[word])
             vis = shown(ctx, CORNER + ' .kept-word')
             ok = bool(got) and got['word'] == want and got['id'] == KEPT_IDS[word] and not got['pending'] and len(vis) == 1
             # beside its column at the desktop width, at its head at the narrow one: every word inside the box it stands in
             return {'the word': (ok, {'corner': got, 'want': want, 'shown': len(vis)}),
-                    "the corner's words in their boxes": fit_part(ctx, figures, state, w, CORNER)}
+                    "the corner's words in their boxes": fit_part(ctx, figures, state, w, CORNER),
+                    'the act at one place whichever word stands': (one, places)}
         return check
     for word, state in (('kept', 'kept'), ('not yet kept', 'not-yet-kept'), ('not kept', 'not-kept')):
         reason = t(ctx, 'B3.own-bug') if word == 'not kept' else None
         ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(OWN), json.dumps({'word': word, 'reason': reason})))
         ctx.frames(2)
-        shoot(state, kept_check(word, state))
+        shoot(state, kept_check(word, state, reason))
     # the save chord answered at the corner (K-74): the statement whole, once in a session
     ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(OWN), json.dumps({'word': 'kept', 'reason': None}))); ctx.frames(2)
     ctx.drv.key('s', mods=('Meta',)); ctx.frames(2)

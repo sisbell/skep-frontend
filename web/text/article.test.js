@@ -584,28 +584,58 @@ test('the moved scene\'s held version\'s corner is its line alone, its title —
   assert.ok(plain.startsWith(kind) && plain.includes('kept-word pending') && plain.includes('class="chip"') && !plain.includes('B3.history.held'), `a draft not marked so: its kind, its kept slot and its chip — ${plain}`);
 });
 
-test('where its holder offers it, a draft\'s kept line carries its second act, "show its history" — the strings table\'s words — after the kept word at each of the three words, none where no state is set: the word\'s slot then holds the joiner flush after its word, its width the longest word\'s with the joiner\'s, so the act stands at one place whichever word stands; a native button out of the Tab order as made, keyed on the line; inert while it cannot act, standing in its place, focusable, marked so and described by its reason; its words alone where the view asks no act; the line\'s width its slot and the act\'s words (B3-S7; D5 K-57; skep-frontend #585, #661; FP-41)', () => {
-  const draft = doc({ kind: 'draft', meta: null }), kind = kindSlot('draft');
-  const em = Math.max(...['B3.kept', 'B3.not-yet-kept', 'B3.not-kept'].map((id) => advances(t(id)))), slotEm = em + advances(FIELD);
-  const act = `<button type="button" class="history" data-history data-string="B3.past-states" tabindex="-1">${esc(t('B3.past-states'))}</button>`;
-  /** @type {Array<[import('../write/write.js').KeptState['word'], string]>} */
-  const WORDS = [['kept', 'B3.kept'], ['not yet kept', 'B3.not-yet-kept'], ['not kept', 'B3.not-kept']];
-  for (const [word, id] of WORDS) {
-    const c = cornerHTML(draft, draftView({ kept: { word, reason: null }, history: { inert: null } }));
-    const line = `<span class="kept-line"><span class="kept-slot" style="width:${slotEm}em"><button type="button" class="kept-word" data-kept="${word}" data-string="${id}" aria-expanded="false" tabindex="-1">${esc(t(id))}</button><span class="kept-sep" aria-hidden="true">${esc(FIELD)}</span></span>${act}</span>`;
-    assert.ok(c.startsWith(kind + line), `${word}: the word in its slot, the joiner flush after it, the act after the slot — ${c}`);
-    assert.equal((c.match(/<button /g) || []).length, 2, `${word}: two acts, the word and its second act`);
+/** each kept word and its string (T-ARTICLE's KEPT_WORDS) */
+const KEPT_WORDS = /** @type {Array<[import('../write/write.js').KeptState['word'], string]>} */ ([['kept', 'B3.kept'], ['not yet kept', 'B3.not-yet-kept'], ['not kept', 'B3.not-kept']]);
+/** the kept slot's width, in em: the longest of the three words, at the advance */
+const KEPT_EM = Math.max(...KEPT_WORDS.map(([, id]) => advances(t(id))));
+/** the kept line's second act as the corner sets it, acting */
+const HISTORY = `<button type="button" class="history" data-history data-string="B3.past-states" tabindex="-1">${esc(t('B3.past-states'))}</button>`;
+
+test('beside its column, where its holder offers it, a draft\'s kept line is one item on two rows: the kept word alone on the first — no slot, no joiner — and its second act, "show its history" in the strings table\'s words, starting the second, the same act after each of the three words; while no state is set both rows held — the word\'s empty box of the slot\'s width, and beneath it a reserve the style sets the act\'s words in unseen, no word of the corner\'s text, hidden from assistive technology and no act; whole and compact alike; the line\'s width its widest row\'s, never yielding; a native button out of the Tab order as made, keyed on the line; inert while it cannot act, standing in its place, focusable, marked so and described by its reason; its words alone on their two rows where the view asks no act; the statement the word opens after both rows (B3-S7; D5 K-57; skep-frontend #585, #661, #694; FP-26, FP-34, FP-41)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), kind = kindSlot('draft'), act = advances(t('B3.past-states'));
+  for (const [word, id] of KEPT_WORDS) {
+    for (const compact of [false, true]) {
+      const c = cornerHTML(draft, draftView({ kept: { word, reason: null }, history: { inert: null } }), compact);
+      const line = `<span class="kept-line"><button type="button" class="kept-word" data-kept="${word}" data-string="${id}" aria-expanded="false" tabindex="-1">${esc(t(id))}</button><span class="kept-act">${HISTORY}</span></span>`;
+      assert.ok(c.startsWith(kind + line), `${word}, ${compact ? 'compact' : 'whole'}: the word alone on its row, the act starting the row beneath it — ${c}`);
+      const own = cornerItems(draft, draftView({ kept: { word, reason: null }, history: { inert: null } }), compact).find((i) => i.cls === 'kept')?.html ?? '';
+      assert.ok(own === line && !own.includes('kept-slot') && !own.includes('kept-sep') && !own.includes(FIELD) && !own.includes('style='), `${word}, ${compact ? 'compact' : 'whole'}: no slot reserved for the word and no joiner — ${own}`);
+    }
+    assert.equal((cornerHTML(draft, draftView({ kept: { word, reason: null }, history: { inert: null } })).match(/<button /g) || []).length, 2, `${word}: two acts, the word and its second act`);
     const item = cornerItems(draft, draftView({ kept: { word, reason: null }, history: { inert: null } })).find((i) => i.cls === 'kept');
-    assert.deepEqual([item?.em, item?.words], [slotEm + advances(t('B3.past-states')), `${t(id)}${FIELD}${t('B3.past-states')}`], `${word}: the line's width its slot's and the act's words, whichever word stands`);
+    assert.deepEqual([item?.em, item?.words, item?.yields], [Math.max(advances(t(id)), act), `${t(id)}${FIELD}${t('B3.past-states')}`, false], `${word}: the line's width its widest row's, never yielding`);
   }
-  const none = cornerHTML(draft, draftView({ history: { inert: null } }));
-  assert.ok(!none.includes('data-history') && none.includes('kept-word pending'), `no state set: no act, the slot an empty box — ${none}`);
+  for (const compact of [false, true]) {
+    const none = cornerHTML(draft, draftView({ history: { inert: null } }), compact);
+    const held = `<span class="kept-line"><span class="kept-word pending" aria-hidden="true" style="width:${KEPT_EM}em"></span><span class="kept-act"><span class="history pending" aria-hidden="true" data-reserve="${esc(t('B3.past-states'))}"></span></span></span>`;
+    assert.ok(none.startsWith(kind + held) && !none.includes('data-history') && !/<button[^>]*class="history/.test(none), `no state set, ${compact ? 'compact' : 'whole'}: both rows held — the word's empty box, beneath it a reserve for the act's words, no act — ${none}`);
+    assert.ok(!none.replace(/<[^>]*>/g, '').includes(t('B3.past-states')), `no state set, ${compact ? 'compact' : 'whole'}: no word of the act in the corner's text — ${none}`);
+  }
+  const pending = cornerItems(draft, draftView({ history: { inert: null } })).find((i) => i.cls === 'kept');
+  assert.deepEqual([pending?.em, pending?.words], [Math.max(KEPT_EM, act), ''], 'no state set: the width of its widest held row, no words');
   const reason = { id: 'L.history.unanswered', text: 'Board 1, origin is not answering — its past states can be read once it answers.' };
   const inert = cornerHTML(draft, draftView({ kept: { word: 'kept', reason: null }, history: { inert: reason } }));
-  assert.ok(inert.includes(`<button type="button" class="history inert" data-history data-string="B3.past-states" aria-disabled="true" data-inert="L.history.unanswered" title="${esc(reason.text)}" aria-description="${esc(heard(reason.text))}" tabindex="-1">${esc(t('B3.past-states'))}</button>`), `inert: in its place, focusable, marked inert, titled and described by its reason — ${inert}`);
+  assert.ok(inert.includes(`<span class="kept-act"><button type="button" class="history inert" data-history data-string="B3.past-states" aria-disabled="true" data-inert="L.history.unanswered" title="${esc(reason.text)}" aria-description="${esc(heard(reason.text))}" tabindex="-1">${esc(t('B3.past-states'))}</button></span>`), `inert: on its row, in its place, focusable, marked inert, titled and described by its reason — ${inert}`);
   const words = cornerHTML(draft, draftView({ kept: { word: 'kept', reason: null }, history: { inert: null }, acts: false }));
-  assert.ok(words.includes(`<span class="history" data-string="B3.past-states">${esc(t('B3.past-states'))}</span>`) && !words.includes('<button'), `its words alone where the view asks no act — ${words}`);
+  assert.ok(words.includes(`<span class="kept-line"><span class="kept-word" data-string="B3.kept">${esc(t('B3.kept'))}</span><span class="kept-act"><span class="history" data-string="B3.past-states">${esc(t('B3.past-states'))}</span></span></span>`) && !words.includes('<button'), `its words alone on their two rows where the view asks no act — ${words}`);
+  const open = cornerHTML(draft, draftView({ kept: { word: 'kept', reason: null }, history: { inert: null }, keptOpen: true }));
+  assert.ok(open.includes(`<span class="kept-act">${HISTORY}</span></span><span class="kept-statement" data-string="B3.save.kept">`) && open.includes('aria-expanded="true"'), `the statement the word opens after both rows, so nothing moves the act — ${open}`);
   assert.ok(!cornerHTML(doc(), view({ kept: { word: 'kept', reason: null }, history: { inert: null } })).includes('data-history'), 'an edition\'s corner carries no kept line, nor its act');
+});
+
+test('at its document\'s head, where its holder offers it, a draft\'s kept line stands on one row: the word in its slot, the joiner flush after it, the act after the slot, the slot\'s width the longest word\'s with the joiner\'s, so the act stands at one place whichever word stands; no act while no state is set; its words alone where the view asks no act; the line\'s width its slot\'s and the act\'s words (B3-S7; D5 K-57; skep-frontend #436, #694; FP-26)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), kind = kindSlot('draft'), slotEm = KEPT_EM + advances(FIELD);
+  for (const [word, id] of KEPT_WORDS) {
+    const c = cornerHTML(draft, draftView({ kept: { word, reason: null }, history: { inert: null }, head: true }), true);
+    const line = `<span class="kept-line"><span class="kept-slot" style="width:${slotEm}em"><button type="button" class="kept-word" data-kept="${word}" data-string="${id}" aria-expanded="false" tabindex="-1">${esc(t(id))}</button><span class="kept-sep" aria-hidden="true">${esc(FIELD)}</span></span>${HISTORY}</span>`;
+    assert.ok(c.startsWith(kind + line) && !c.includes('kept-act'), `${word}: the word in its slot, the joiner flush after it, the act after the slot — ${c}`);
+    const item = cornerItems(draft, draftView({ kept: { word, reason: null }, history: { inert: null }, head: true }), true).find((i) => i.cls === 'kept');
+    assert.deepEqual([item?.em, item?.words], [slotEm + advances(t('B3.past-states')), `${t(id)}${FIELD}${t('B3.past-states')}`], `${word}: the line's width its slot's and the act's words, whichever word stands`);
+  }
+  const none = cornerHTML(draft, draftView({ history: { inert: null }, head: true }), true);
+  assert.ok(none.startsWith(`${kind}<span class="kept-line"><span class="kept-word pending" aria-hidden="true" style="width:${KEPT_EM}em"></span></span>`) && !none.includes('history'), `no state set: no act, the slot an empty box — ${none}`);
+  const words = cornerHTML(draft, draftView({ kept: { word: 'kept', reason: null }, history: { inert: null }, head: true, acts: false }));
+  assert.ok(words.includes(`<span class="kept-sep" aria-hidden="true">${esc(FIELD)}</span></span><span class="history" data-string="B3.past-states">${esc(t('B3.past-states'))}</span>`) && !words.includes('<button'), `its words alone after the slot where the view asks no act — ${words}`);
 });
 
 /** a past state's hand as SC hands its fields to the corner: a device's label, the person's own words, then its fingerprint's cue */

@@ -164,18 +164,27 @@
 // their words alone (`ArticleView.acts`). A draft's
 // kept state (B3-S2; D5 K-57, K-74) is its word in a slot of fixed width —
 // the longest of the three words', as the view measures them — in both
-// forms, an empty box while no state is set (FP-34), the word's own act
+// forms, save beside its column with its second act beneath it (below), an
+// empty box of that width while no state is set (FP-34), the word's own act
 // opening its statement whole on a line of its own below it — beneath a
 // head's rows, where its holder sets it there (`statementHTML`) —
 // (`keptStatement`; P41), in sentences at every state (ST's `sentence`,
 // `sentences`): at "kept" the save chord's answer, at the other two
 // "nothing to save" before the word and the reason on the act; the
-// statement is Mod+S's answer too (N-KEYS). Where its holder offers it and a
-// state is set, the kept line carries a second act after the word, "show its
-// history" (`historyHTML`; B3-S7; D5 K-57): the word's slot then holds the
-// joiner flush after its word, so the act stands in a slot of its own whose
-// place no word moves (P67); where the act cannot act it stands in its place,
-// focusable, marked inert and described by its reason (FP-41). A past state's
+// statement is Mod+S's answer too (N-KEYS). Where its holder offers it, the
+// kept line carries a second act, "show its history" (`historyHTML`; B3-S7;
+// D5 K-57), drawn while a state is set, at one place whichever word stands
+// (P67): at its document's head (`ArticleView.head`) after the word on its
+// one row, the word's slot holding the joiner flush after its word, so the
+// act stands in a slot of its own; beside its column on a row of its own
+// beneath the word's, where it wraps between its words and is never cut, the
+// word alone on its row with no slot and no joiner, and both rows held while
+// no state is set — the word's empty box, and beneath it a reserve the style
+// sets the act's words in unseen, no word of the corner's text, hidden from
+// assistive technology and no act — so the statement and a face stand
+// beneath both rows and setting a state moves nothing (FP-26, FP-34); where
+// the act cannot act it stands in its place, focusable, marked
+// inert and described by its reason (FP-41). A past state's
 // corner and the held version's (`ArticleView.past`, `ArticleView.held`;
 // B3-S7, B3-S2) are titled at every fit (FP-26, FP-39): the line naming what
 // the pane shows is the corner's title, first, in the kind's place, no kind's
@@ -292,7 +301,8 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; FP-23); absent or null, none
  * @property {boolean} [lags] the board lags past a second (M-PUMP's `boardKept`; FP-23): the corner names neither the latest version nor the chain's count; absent, false
  * @property {KeptState | null} [kept] a draft's kept state (W-WRITE's `keptOf`): the word its corner's slot shows; absent or null, no state is set and the slot stands empty
- * @property {HistoryAct | null} [history] the kept line's second act, "show its history" (B3-S7; D5 K-57), where its holder offers it: drawn after the kept word while a state is set; absent or null, the line carries the word alone
+ * @property {HistoryAct | null} [history] the kept line's second act, "show its history" (B3-S7; D5 K-57), where its holder offers it: drawn while a state is set — after the kept word at its document's head, on a row of its own beneath it beside its column, where that row stands held while no state is set (`keptLineHTML`); absent or null, the line carries the word alone
+ * @property {boolean} [head] the corner stands at its document's head (T-LAYER's `headView`): its kept line on one row, the word's slot, the joiner and the act after it; absent, false — the corner beside its column, the kept line on two rows (`keptLineHTML`)
  * @property {PastLine | null} [past] the corner is a past state's (SC; B3-S7): its line, "as it stood ⟨time⟩ · ⟨hand⟩", the corner's title in the kind's place (`cornerTitle`), the chip after it; absent or null, none
  * @property {boolean} [keptOpen] the kept word's statement stands open in the corner, on its act (T-LAYER's `openStatement`, SC's); absent, closed
  * @property {boolean} [held] the corner is the moved scene's held version's (SC; B3-S2; D6 BM-14): no document, with no chip, its line the corner's title, standing in the place of the kind, a draft's kept word and its chip (`cornerTitle`); absent, false
@@ -1359,20 +1369,34 @@ const actHTML = (cls, attrs, inner) => `<button type="button" class="${cls}"${at
 const HISTORY_ID = 'B3.past-states';
 
 /**
- * The kept line's slot with its second act standing, in em of the corner's
- * size (P67): the kept word's slot and the joiner flush after its word
- * (ST's `FIELD`), so the act after it holds its place whichever word stands.
+ * The kept line's slot with its second act standing at its document's head,
+ * in em of the corner's size (P67; `ArticleView.head`): the kept word's slot
+ * and the joiner flush after its word (ST's `FIELD`), so the act after it
+ * holds its place whichever word stands.
  * @param {Measure} measure
  */
 const historySlotEm = (measure) => keptSlotEm(measure) + measure(FIELD, 'client');
 
 /**
- * The kept line's width, in em of the corner's size: the kept word's slot
- * alone, or, where its second act stands, that slot with its joiner and the
- * act's own words (`historySlotEm`).
+ * Does the kept line stand on two rows (`keptLineHTML`): its second act
+ * offered, beside its column — the word's row, then the act's.
  * @param {ArticleView} v
  */
-const keptLineEm = (v) => (v.kept && v.history ? historySlotEm(v.measure) + v.measure(t(HISTORY_ID), 'client') : keptSlotEm(v.measure));
+const twoRows = (v) => !!v.history && !v.head;
+
+/**
+ * The kept line's width, in em of the corner's size: beside its column with
+ * its second act offered, its widest row's — the word's, or its empty box's
+ * while no state is set, and the act's words (`twoRows`); at its document's
+ * head with a state set and the act offered, the slot with its joiner and the
+ * act's words (`historySlotEm`); else the kept word's slot alone.
+ * @param {ArticleView} v
+ */
+function keptLineEm(v) {
+  const act = v.measure(t(HISTORY_ID), 'client');
+  if (twoRows(v)) return Math.max(v.kept ? v.measure(t(KEPT_WORDS[v.kept.word]), 'client') : keptSlotEm(v.measure), act);
+  return v.kept && v.history ? historySlotEm(v.measure) + act : keptSlotEm(v.measure);
+}
 
 /**
  * The kept line's second act (B3-S7; D5 K-57; FP-41): a
@@ -1391,27 +1415,35 @@ function historyHTML(h, v) {
 }
 
 /**
- * A draft's kept line (see the head; B3-S2; FP-34): the kept word in its
- * slot of fixed width (`keptSlotEm`), carrying the state's word and its
- * string — an empty box of the same width, hidden from assistive technology,
- * while no state is set — and, where its act opened it and `statement` asks,
- * the statement whole on a line of its own after it (`statementHTML`). The
- * word is an act (`actHTML`), the disclosure of its statement, saying whether
- * it stands open (D5 K-57, K-74); its words alone where the view asks no act
- * (`ArticleView.acts`). Where its holder offers the line's second act and a
- * state is set, the slot holds the word with the joiner flush after it
- * (`historySlotEm`), and the act stands after the slot (`historyHTML`; B3-S7).
+ * A draft's kept line (see the head; B3-S2; FP-34): the kept word, carrying
+ * the state's word and its string — an empty box the width of the kept slot
+ * (`keptSlotEm`), hidden from assistive technology, while no state is set —
+ * and, where its act opened it and `statement` asks, the statement whole on a
+ * line of its own after the line (`statementHTML`). The word is an act
+ * (`actHTML`), the disclosure of its statement, saying whether it stands open
+ * (D5 K-57, K-74); its words alone where the view asks no act
+ * (`ArticleView.acts`). Where its holder offers the line's second act
+ * (`historyHTML`; B3-S7): beside its column (`twoRows`) the word alone on its
+ * row, no slot and no joiner, and the act on a row of its own beneath it —
+ * while no state is set, a reserve holding that row, the act's words set in
+ * it unseen by the style (`data-reserve`), so they wrap as the act's do and no
+ * word of them stands in the corner's text, hidden from assistive technology
+ * and no act; at its document's head, with a state set, the word's slot
+ * holding it with the joiner flush after it (`historySlotEm`) and the act
+ * after the slot. Where no act stands after it on its row, the word stands in
+ * its slot of fixed width (`keptSlotEm`).
  * @param {ArticleView} v
- * @param {boolean} [statement] the statement opened stands after the slot; false where its holder opens it elsewhere — beneath a head's rows (T-LAYER)
+ * @param {boolean} [statement] the statement opened stands after the line; false where its holder opens it elsewhere — beneath a head's rows (T-LAYER)
  */
 function keptLineHTML(v, statement = true) {
-  const em = keptSlotEm(v.measure), k = v.kept ?? null, h = k ? v.history ?? null : null;
-  const own = k ? ` data-string="${esc(KEPT_WORDS[k.word])}"${h ? '' : ` style="width:${em}em"`}` : '';
+  const em = keptSlotEm(v.measure), k = v.kept ?? null, h = k ? v.history ?? null : null, rows = twoRows(v);
+  const own = k ? ` data-string="${esc(KEPT_WORDS[k.word])}"${h || rows ? '' : ` style="width:${em}em"`}` : '';
   const word = !k ? `<span class="kept-word pending" aria-hidden="true" style="width:${em}em"></span>`
     : v.acts === false ? `<span class="kept-word"${own}>${esc(t(KEPT_WORDS[k.word]))}</span>`
       : actHTML('kept-word', ` data-kept="${esc(k.word)}"${own} aria-expanded="${!!v.keptOpen}"`, esc(t(KEPT_WORDS[k.word])));
-  const slot = h ? `<span class="kept-slot" style="width:${historySlotEm(v.measure)}em">${word}<span class="kept-sep" aria-hidden="true">${FIELD}</span></span>${historyHTML(h, v)}` : word;
-  return `<span class="kept-line">${slot}</span>` + (k && v.keptOpen && statement ? statementHTML(k, v.keptSaid) : '');
+  const line = rows ? `${word}<span class="kept-act">${h ? historyHTML(h, v) : `<span class="history pending" aria-hidden="true" data-reserve="${esc(t(HISTORY_ID))}"></span>`}</span>`
+    : h ? `<span class="kept-slot" style="width:${historySlotEm(v.measure)}em">${word}<span class="kept-sep" aria-hidden="true">${FIELD}</span></span>${historyHTML(h, v)}` : word;
+  return `<span class="kept-line">${line}</span>` + (k && v.keptOpen && statement ? statementHTML(k, v.keptSaid) : '');
 }
 
 /**
@@ -1762,7 +1794,7 @@ function filledEm(id, vals, faces, measure) {
  * @property {string} cls its class
  * @property {string} html its markup
  * @property {string} words its words as a person reads them
- * @property {number} em its width in em of the corner's size, as the view measures its words (`Measure`): its slot's, where it has one of fixed width — the kind's, a kept word's
+ * @property {number} em its width in em of the corner's size, as the view measures its words (`Measure`): its slot's, where it has one of fixed width — the kind's, a kept word's — and a kept line's on two rows its widest row's (`keptLineEm`)
  * @property {boolean} yields it may fold into the corner's count where a row cannot hold it: the offered read alone; every other item never yields (foundations §3.1)
  * @property {boolean} holds it holds at the top of a reading scene's pane where the corner stands at its document's head, whole (SC's; FP-26): which state the corner names — the kind, the version statement, the state, a draft's kept word — the face, which never yields, a past state's line and a substitution of its state, the held version's line; the chip, the words saying a past state is how the draft stands now, the offered read, the lacking line and the whole-document count scroll with the text
  * @property {Title} [title] the title a past state's corner's or the held version's first item is (`cornerTitle`), which its holder lays out on the lines its width gives it (`titleHTML`)
@@ -1831,8 +1863,8 @@ export const whyRoom = (w) => w.text + (w.running ? t('L.running') : '');
  * pinned version (foundations §3.1) — and a draft's chip a glyph, each named
  * by its whole words, the act that opens the corner whole (`stateHTML`); the
  * face its compact form (`faceHTML`); the kind in its slot, "version ⟨k⟩ of
- * ⟨n⟩", the whole-document count, the kept word in its slot, a title and the
- * state of a document a read refused keep their words. Each with its words
+ * ⟨n⟩", the whole-document count, the kept line (`keptLineHTML`), a title and
+ * the state of a document a read refused keep their words. Each with its words
  * and its width (`CornerItem`): the kind, its version statement, the state, a
  * draft's kept word, the face, its chip, a title and the whole-document count
  * never yield; the offered read does. Each says whether it holds at a pane's
@@ -1842,7 +1874,7 @@ export const whyRoom = (w) => w.text + (w.running ? t('L.running') : '');
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {boolean} [compact] the compact form
- * @param {boolean} [statement] a draft's kept statement, opened, stands after its word; false where its holder opens it elsewhere (`keptLineHTML`)
+ * @param {boolean} [statement] a draft's kept statement, opened, stands after its kept line; false where its holder opens it elsewhere (`keptLineHTML`)
  * @returns {CornerItem[]}
  */
 export function cornerItems(d, v, compact = false, statement = true) {

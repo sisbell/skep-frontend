@@ -2614,6 +2614,31 @@ test('at its document\'s head the face stands compact in the rows — its compac
   assert.deepEqual([FACES.answerAtFace(D), LAYER.cornerAt(D)?.opened], [true, true], 'pressed again: it stays opened');
 }));
 
+test('a draft\'s kept line, its second act offered, stands on two rows in a corner beside its column — the word alone, the act on a row of its own beneath it — and on one row at its document\'s head — the word\'s slot, the joiner, the act — the plane\'s corner and a reading scene\'s pane\'s alike (issue #694; FP-26)', () => onHead(() => {
+  const was = { session: REC.session(), kept: WRITE.keptOf(D) };
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  try {
+    WRITE.setKept(D, { word: 'kept', reason: null });
+    assert.ok(LAYER.historyAct(D), 'a draft the person may edit: its kept line offers its second act');
+    landAt(null);
+    LAYER.frame();
+    const beside = String(/** @type {any} */ (LAYER.cornerOf(D)).innerHTML);
+    assert.ok(LAYER.cornerAt(D)?.head === false && beside.includes('<span class="kept-act"><button type="button" class="history" data-history') && !beside.includes('kept-slot'), `1440 px, the plane's corner beside its column: the act on a row of its own, no slot — ${beside}`);
+    CAM.setViewport(390, 900);
+    landAt(null);
+    LAYER.frame();
+    const head = String(/** @type {any} */ (LAYER.cornerOf(D)).innerHTML);
+    assert.ok(LAYER.cornerAt(D)?.head && head.includes('class="kept-slot"') && head.includes('data-history') && !head.includes('kept-act'), `390 px, at its document's head: the word's slot, the joiner and the act on one row — ${head}`);
+    const d = REC.doc(D), view = { ...LAYER.sceneView(d), kept: /** @type {const} */ ({ word: 'kept', reason: null }), history: { inert: null } };
+    for (const compact of [false, true]) {
+      const pane = LAYER.sceneCorner(d, view, compact);
+      assert.ok(pane.includes('<span class="kept-act"><button type="button" class="history" data-history') && !pane.includes('kept-slot'), `a pane's corner beside its column, ${compact ? 'compact' : 'whole'}: the act on a row of its own, no slot — ${pane}`);
+    }
+    const paneHead = LAYER.sceneHead(d, view, { px: 17, kept: null, open: false }).html;
+    assert.ok(paneHead.includes('class="kept-slot"') && paneHead.includes('data-history') && !paneHead.includes('kept-act'), `a pane's corner at its document's head: the word's slot, the joiner and the act on one row — ${paneHead}`);
+  } finally { WRITE.setKept(D, was.kept); REC.setSession(was.session); }
+}));
+
 test('a change of the head\'s rows changes the band its fold reserves, and the article set again re-anchors the camera on the passage being read: its line at its height and its size (issue #436; FP-8)', () => onLayer(() => {
   deliver();
   REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: EXTENT, placed: null, baseExtent: null, source: null, asOf: 1 });
