@@ -1504,7 +1504,7 @@ async function undoChord(e, ctx, redo) {
     if (out.how === 'empty') { if (!redo) HINT.show('B3.undo.empty', null, { ...hinted(e, ctx), ending: UNDO_CONSTANT }); return; }
     // a pointer's or the camera's act made while the step's text was read is kept: the step taken where it stands, and said
     if (!(mine && mine.kept)) {
-      if (SEL.selected()) SEL.clear();
+      if (SEL.selected('plane')) SEL.clear();
       if (out.at != null) { LAYER.placeCaret(addr, out.at); await follow(); }
     }
     undoSaid(addr, out, redo);
@@ -1827,7 +1827,7 @@ const actKey = () => ({ 'act key': drawChord('Enter') });
  */
 export function copyAsDrawn(e, ctx, at = e.target) {
   if (ctx.where === 'field' || LAYER.platformSelects()) return false;
-  const drawn = SEL.selected();
+  const drawn = SEL.selected('plane');
   if (drawn) { LAYER.placeSelection(drawn); return false; }
   e.preventDefault();
   HINT.show('L.copy.nothing', null, { ...hinted(e, ctx, at), ending: selectsHere(ctx) });
@@ -2086,7 +2086,7 @@ function selectedAtCaret() {
   const c = LAYER.caret(), pane = LAYER.caretPane();
   // in a reading scene's editor pane, the platform's selection standing in the pane's text
   if (pane) { const p = LAYER.selectionIn(pane.article); return p && c && p.span.addr === c.addr ? p.span : null; }
-  const s = SEL.selected();
+  const s = SEL.selected('plane');
   return s && c && s.addr === c.addr && !SEL.reachesPast() ? s : null;
 }
 
@@ -2139,7 +2139,7 @@ export function esc(landed = false, pointer = false) {
   if (GO.abandon()) return;
   if (FIND.isOpen() && !landed) { void FIND.close(); return; }
   if (SCENE.isOpen()) { if (!paneEsc()) GO.closeScene(!pointer); return; }
-  if (SEL.selected()) { SEL.clear(); return; }
+  if (SEL.selected('plane')) { SEL.clear(); return; }
   if (WALK.leaveText() || pointer) return;
   GO.endArrival();
 }

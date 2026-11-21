@@ -234,9 +234,14 @@ remount takes a selection the person holds outside the plane's text: a drag
 over the provenance card's caption, and a drag over a phrase of a pane with
 the scene standing over the page's selection, each stand through the first
 edition's article taken down and mounted again — by the camera, or by the
-same door — the copy naming the pane's phrase and no highlight standing over
-the plane, while a caret alone in a pane gives the page's selection its
-highlight back. Mod+[ to the entry the reader left at an edition's plain
+same door — the copy naming the pane's phrase, the pane's own selection that
+phrase and no highlight standing over the plane, while a click in a pane ends
+that pane's selection and a caret alone there gives the page's selection its
+highlight back. Each pane a site of its own (issue #94): a drag in each pane
+leaves both panes' selections standing, the platform's range the focused
+pane's and the other's the page's custom highlight in its inactive look, the
+live one following the focus to a pane's text and to its corner, and no acts
+row standing at a pane. Mod+[ to the entry the reader left at an edition's plain
 address, after a `publish` row naming the member past its newest is handed to
 the page through the gate's feed door — reads alone — shows the member read
 there: the entry and the trail list's row name it, the paragraph read
@@ -339,7 +344,7 @@ REGISTRY = ('1.1.0.1.0.1', 28)
 
 
 def state(ctx):
-    return ctx.js('({cam: window.__skep.view.camera(), focus: window.__skep.view.focus(), line: window.__skep.line().text, hint: window.__skep.hint(), overlay: window.__skep.overlay().kind, leap: window.__skep.leap.isOpen(), trail: window.__skep.trail().cursor, scene: window.__skep.scene.isOpen(), sel: window.__skep.selection()})')
+    return ctx.js('({cam: window.__skep.view.camera(), focus: window.__skep.view.focus(), line: window.__skep.line().text, hint: window.__skep.hint(), overlay: window.__skep.overlay().kind, leap: window.__skep.leap.isOpen(), trail: window.__skep.trail().cursor, scene: window.__skep.scene.isOpen(), sel: window.__skep.selection("plane")})')
 
 
 def trail(ctx):
@@ -361,7 +366,7 @@ def covered(ctx):
     """what a key could move under a standing scene — the camera, the walk's focus, the trail, the selection, the overlay —
     whether the scene stands, and the element the platform's focus is on"""
     return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), e = document.activeElement;
-      return {cam: S.view.camera(), focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, trail: S.trail(), sel: S.selection(), overlay: S.overlay().id,
+      return {cam: S.view.camera(), focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, trail: S.trail(), sel: S.selection('plane'), overlay: S.overlay().id,
               scene: S.scene.isOpen(), at: !e || e === document.body ? 'the body' : e.id || e.tagName.toLowerCase()}; })()''')
 
 
@@ -1661,7 +1666,7 @@ def scene_copy(ctx, r):
     (a) a drag over a phrase of pane A: the copy's flavor names the passage as FP-27 names a copy — the board, the bare
         address it was read at, marked so, that member with the dragged bytes' positions in it, three positions either
         way, and those bytes by identity; its plain text is the document's own bytes over them, no label of the page among
-        them; and the drag makes no selection of the page's, a pane's own selection being D1's second stage (#94);
+        them; and the drag makes pane A's own selection, the platform's range standing there, none of it the plane's (#94);
     (b) pane A at its top, a drag from the head's address into the first block: the copy starts at the first block, the
         head's words never in it;
     (c) a drag over a phrase of pane B, then a feed row naming the draft, sent to the page's session, through the gate's
@@ -1703,11 +1708,14 @@ def scene_copy(ctx, r):
         ctx.frames(2)
         c = copied(ctx)
         mine = own(ctx, c['span'], DOC)
-        page = ctx.js('({sel: window.__skep.selection(), platform: window.__skep.platformSelection().span})')
+        page = ctx.js('({sel: window.__skep.selection("a"), plane: window.__skep.selection("plane"), platform: window.__skep.platformSelection()})')
         r.check(names(ctx, c, DOC, M, True, ph['p0'], ph['p1']), '(a) a drag over a phrase in pane A: the copy\'s flavor names the passage as FP-27 names a copy — the board, the bare address it was read at, the member the pane\'s text is with the dragged bytes\' positions in it, and those bytes by identity (§2.4; §2.5; issues #160, #244)',
                 dict(c, phrase=[ph['p0'], ph['p1'], ph['text']], member=M))
         r.check(bare(c, mine), '(a) its plain text is the document\'s own bytes over them, no label of the page among them', {'plain': c['plain'], 'own': mine})
-        r.check(page['sel'] is None and page['platform'] is None, '(a) the drag in the pane makes no selection of the page\'s: a pane\'s own selection is D1\'s second stage (#94)', page)
+        dragged = {'addr': ph['addr'], 'pos': ph['p0'], 'width': ph['p1'] - ph['p0']}
+        r.check(page['sel'] == dragged and page['plane'] is None and page['platform']['site'] == 'a' and page['platform']['span'] is None,
+                '(a) the drag in pane A makes pane A\'s own selection, the phrase\'s bytes: the platform\'s range standing in pane A, none of it the plane\'s, no highlight over the plane (#94)',
+                dict(page, dragged=dragged))
         figures['a'] = {'phrase': [ph['p0'], ph['p1'], ph['text']], 'span': c['span'], 'plain': c['plain'], 'flavor': c['flavor']}
     # (b) pane A at its top, a drag from the head's address into the first block
     ctx.js('document.getElementById("sceneA").scrollTop = 0')
@@ -1830,7 +1838,8 @@ def scene_versions(ctx, r):
         names version 1 and the same bytes;
     (c) the corner's act pressed as a person presses it: version 2 read back in its place, the selection on the same
         words still, the corner offering version 1;
-    (d) nothing selected, the paragraph that opens with the stretch version 1 lacks — by the harness's own `compare` of
+    (d) nothing selected — pane A's selection ended by Esc at its text — the paragraph that opens with the stretch
+        version 1 lacks — by the harness's own `compare` of
         the two — first in view, version 1 read: the corner says the passage is not in version 1, and the line of the
         position the two share nearest it stands where the paragraph's first line stood on screen.
     The scene is ended and the edition left at its plain address"""
@@ -1892,8 +1901,11 @@ def scene_versions(ctx, r):
             r.check(bool(sc) and sc['held'] and bool(sb) and sc['text'] == sb['text'] and back['plain'] == pre['plain'] and bool(back['flavor']) and back['whole'] and [back['flavor'].get(k) for k in ('doc', 'member', 'plain')] == [newest, newest, False],
                     '(c) the press leaves the selection standing, and the act carries it: on the same words still, the copy naming the version read', {'selection': sc, 'copy': back})
             figures['c'] = {'pressed': at, 'span': back['span']}
-        # (d) nothing selected, the paragraph that opens with the stretch version 1 lacks first in view; version 1 read
-        ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); })()')
+        # (d) nothing selected — pane A's selection ended as the person ends it, Esc at its text (#94) — the paragraph that
+        # opens with the stretch version 1 lacks first in view; version 1 read
+        ctx.js('document.getElementById("sceneA").focus({preventScroll: true})')
+        chord(ctx, 'Escape')
+        r.check(ctx.js('window.__skep.scene.isOpen()') and ctx.js('window.__skep.selection("a")') is None, '(d) Esc at pane A\'s text ends its selection, the scene standing', {'selection': ctx.js('window.__skep.selection("a")')})
         b0 = next((b['pos'] for b in blocks if b['pos'] <= gap['lo'] < b['pos'] + b['width']), None)
         ctx.js('''((pos) => { const p = document.getElementById('sceneA'), e = p.querySelector(`article.dtext .run > [data-pos="${pos}"]`); if (!e) return;
           p.scrollTop += e.getBoundingClientRect().top - (p.getBoundingClientRect().top + p.clientTop) + 2; })(%d)''' % (b0 or 0))
@@ -1923,7 +1935,7 @@ HELD = '''(() => { const s = window.getSelection(), S = window.__skep, none = !s
   const at = (n) => { const e = !n ? null : n.nodeType === 1 ? n : n.parentElement;
     return !e ? null : e.closest("#overlay") ? "the overlay" : e.closest("#sceneA") ? "pane A" : e.closest("#sceneB") ? "pane B" : e.closest("#domlayer") ? "the layer" : "elsewhere"; };
   return {collapsed: none || s.isCollapsed, anchor: none ? null : at(s.anchorNode), focus: none ? null : at(s.focusNode), text: none ? "" : String(s),
-          span: S.platformSelection().span, sel: S.selection()}; })()'''
+          span: S.platformSelection().span, sel: S.selection('plane')}; })()'''
 
 
 def line_says(ctx, words, wait=True):
@@ -2017,8 +2029,9 @@ def selection_held_elsewhere(ctx, r):
     their place: S ends as the scene shows, no highlight on the plane under it (issue #264; FP-36):
     (a) a drag over a phrase of pane B, the camera at em 5 under the scene, below the mount, then back, the article in the
         band again: the copy names the draft and the phrase's own bytes, by identity and never by a draft's positions,
-        no highlight stands over the plane, and the page holds no selection;
-    (b) a click in pane B, a caret alone, then such a row, the article set again: nothing is put on the plane;
+        no highlight stands over the plane, the plane holds no selection, and pane B's own selection is the phrase (#94);
+    (b) a click in pane B, a caret alone, which ends pane B's selection (#94), then such a row, the article set again:
+        nothing is put on the plane;
     (c) a drag over the phrase of pane B, then such a row, the article set again: as after (a).
     The first edition is read whole again, then the scene's close, a Back, brings S back with the card over it; the camera
     at em 5, below the mount, the lines holding S stand, its highlight on them (issue #122); and the two are ended after
@@ -2056,9 +2069,10 @@ def selection_held_elsewhere(ctx, r):
 
     def stood(pb, c, after, rebuilt, what):
         """the check that a drag over the phrase `pb` of pane B stood through the remount `what`: `c` the copy after it"""
-        r.check(rebuilt and names(ctx, c, WINDOW[2], None, False, pb['p0'], pb['p1']) and bare(c, own(ctx, c['span'])) and after['span'] is None and after['sel'] is None,
-                '%s: the copy names the draft and the phrase\'s own bytes the person dragged, by identity and never by a draft\'s positions, no highlight stands over the plane, and the page holds no selection' % what,
-                dict(c, held=after, rebuilt=rebuilt, phrase=[pb['p0'], pb['p1'], pb['text']]))
+        pane, dragged = ctx.js('window.__skep.selection("b")'), {'addr': pb['addr'], 'pos': pb['p0'], 'width': pb['p1'] - pb['p0']}
+        r.check(rebuilt and names(ctx, c, WINDOW[2], None, False, pb['p0'], pb['p1']) and bare(c, own(ctx, c['span'])) and after['span'] is None and after['sel'] is None and pane == dragged,
+                '%s: the copy names the draft and the phrase\'s own bytes the person dragged, by identity and never by a draft\'s positions, no highlight stands over the plane, the plane holds no selection, and pane B\'s own selection is the phrase (#94)' % what,
+                dict(c, held=after, rebuilt=rebuilt, pane=pane, dragged=dragged, phrase=[pb['p0'], pb['p1'], pb['text']]))
 
     if span:
         # (o) a drag over the provenance card's caption, the article rebuilt under it
@@ -2107,14 +2121,14 @@ def selection_held_elsewhere(ctx, r):
             # it leaves none, a caret is placed by script where the click fell, as a platform that leaves one there does
             ctx.drv.mouse(*pb['start'])
             ctx.frames(2)
-            left = held()
+            left, clicked = held(), ctx.js('window.__skep.selection("b")')
             if left['anchor'] is None:
                 ctx.js('(([x, y]) => { const c = document.caretRangeFromPoint(x, y), s = window.getSelection(); if (c && s) s.collapse(c.startContainer, c.startOffset); })(%s)' % json.dumps(pb['start']))
             caret = held()
             rebuilt = fed()
             after = held()
-            r.check(left['collapsed'] and left['anchor'] in (None, 'pane B') and caret['collapsed'] and caret['anchor'] == 'pane B',
-                    '(b) a click in pane B selects nothing: a caret alone there, at most', {'click': left, 'caret': caret})
+            r.check(left['collapsed'] and left['anchor'] in (None, 'pane B') and caret['collapsed'] and caret['anchor'] == 'pane B' and clicked is None,
+                    '(b) a click in pane B selects nothing: a caret alone there, at most, and pane B\'s selection ended (#94)', {'click': left, 'caret': caret, 'pane': clicked})
             r.check(rebuilt and after['span'] is None and after['sel'] is None and after['anchor'] in (None, 'pane B'),
                     '(b) a feed row naming the first edition, its article rebuilt over a caret: nothing is put on the plane, the page holding no selection', dict(after, rebuilt=rebuilt))
             figures['b'] = {'click_left_a_range': left['anchor'] is not None, 'caret': caret, 'after': after}
@@ -2150,6 +2164,90 @@ def selection_held_elsewhere(ctx, r):
     chord(ctx, 'Escape')
     r.figures['selection_elsewhere'] = figures
 
+
+# the page's style sheets read for the rule the page draws a pane's selection the platform does not hold with (Q3): each
+# rule naming its highlight, its text, and the media condition it stands under, '' where none
+INACTIVE_RULES = """(() => { const out = [];
+  const walk = (rules, media) => { for (const x of rules) {
+    if (x.cssRules && x.media) walk(x.cssRules, x.media.mediaText);
+    else if (x.selectorText && x.selectorText.includes('::highlight(skep-inactive)')) out.push({media, text: x.cssText}); } };
+  for (const sh of document.styleSheets) { try { walk(sh.cssRules, ''); } catch (e) {} }
+  return out; })()"""
+# every site's selection as the gate's door reads it, where the platform's range stands, and the overlay standing
+SITES = '({sites: window.__skep.selections(), platform: window.__skep.platformSelection().site, overlay: window.__skep.overlay().id})'
+# the focus put on the first stop of pane B's corner — the corner itself where it holds no act — and whether it took it
+CORNER_B = """(() => { const c = document.querySelector('#sceneB > .corner'); if (!c) return false;
+  const t = c.matches('[tabindex="0"]') ? c : c.querySelector('[tabindex="0"]'); if (!t) return false;
+  t.focus({preventScroll: true}); return c.contains(document.activeElement); })()"""
+
+
+def pane_selections(ctx, r):
+    """EACH PANE A SITE OF ITS OWN (issue #94's design decision of 2026-10-23 and its Q3, Q4): the scene on the first
+    edition and the draft it windows, opened over no selection of the page's:
+    (a) both stand: a drag over a phrase of pane A, then one over a phrase of pane B — each pane's own selection, the
+        gate's `selections` holding both, pane B's the platform's range and pane A's drawn by the page (`inactive`);
+    (b) the inactive one is drawn: the page's custom highlight holds pane A's phrase's words, and the style sheet holds
+        its `::highlight()` rule in `color-mix(in srgb, GrayText 30%, Canvas)` and, under forced colours, `Highlight` —
+        compared without regard to case, which the platform serializes in lower case, the mix's implied second share
+        written out or not;
+    (c) the focus moves the live one: pane A's text given the focus, its selection the platform's range and pane B's
+        drawn by the page;
+    (d) a corner counts (Q4): pane B's corner given the focus, pane B's the platform's range again and pane A's drawn;
+    (e) no acts row stands at either pane, the row at a pane being #734's.
+    The scene is closed and the selection cleared after"""
+    figures = {}
+    ctx.leap(DOC, WINDOW[0])
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    open_scene(ctx)
+    r.check(ctx.js('window.__skep.scene.isOpen()') and ctx.js('window.__skep.selection("plane")') is None, 'the scene stands on the first edition and the draft it windows, over no selection of the page\'s')
+    pa, pb = pane_phrase(ctx, 'a'), pane_phrase(ctx, 'b')
+    r.check(pa is not None and pb is not None, 'each pane shows a phrase of its own text on one line, for a drag', {'a': pa, 'b': pb})
+    if pa and pb:
+        # (a) a drag in pane A, then one in pane B
+        ctx.drv.drag(*pa['start'], *pa['end'])
+        ctx.frames(2)
+        ctx.drv.drag(*pb['start'], *pb['end'])
+        ctx.frames(2)
+        want = {'a': {'addr': pa['addr'], 'pos': pa['p0'], 'width': pa['p1'] - pa['p0']}, 'b': {'addr': pb['addr'], 'pos': pb['p0'], 'width': pb['p1'] - pb['p0']}}
+        site = lambda now, side: next(({k: x[k] for k in ('addr', 'pos', 'width', 'inactive')} for x in now['sites'] if x['site'] == side), None)
+        both = ctx.js(SITES)
+        r.check(site(both, 'a') == dict(want['a'], inactive=True) and site(both, 'b') == dict(want['b'], inactive=False) and both['platform'] == 'b',
+                '(a) a drag in pane A, then one in pane B: both stand, each its own pane\'s — pane B\'s the platform\'s range, pane A\'s drawn by the page (#94)', dict(both, want=want))
+        figures['a'] = both
+        # (b) the inactive one drawn: the highlight over pane A's phrase, and its rule in the style sheet
+        drawn = ctx.js('(() => { const h = window.CSS && CSS.highlights && CSS.highlights.get("skep-inactive"); return h ? [...h].map((x) => String(x)).join("") : null; })()')
+        rules = ctx.js(INACTIVE_RULES)
+        flat = lambda t: ' '.join((t or '').lower().split())
+        plain = [x for x in rules if not x['media'] and re.search(r'color-mix\(in srgb, graytext 30%, canvas( 70%)?\)', flat(x['text']))]
+        forced = [x for x in rules if 'forced-colors: active' in flat(x['media']) and 'background-color: highlight' in flat(x['text'])]
+        r.check(drawn == pa['text'] and bool(plain) and bool(forced),
+                '(b) pane A\'s drawn by the page: the custom highlight over its phrase\'s words, its rule in `color-mix(in srgb, GrayText 30%, Canvas)`, and `Highlight` under forced colours (Q3)',
+                {'drawn': drawn, 'phrase': pa['text'], 'rules': rules})
+        figures['b'] = {'drawn': drawn, 'rules': rules}
+        # (c) the focus moves the live one: pane A's text given the focus
+        ctx.js('document.getElementById("sceneA").focus({preventScroll: true})')
+        ctx.frames(2)
+        moved = ctx.js(SITES)
+        r.check(site(moved, 'a') == dict(want['a'], inactive=False) and site(moved, 'b') == dict(want['b'], inactive=True) and moved['platform'] == 'a',
+                '(c) the focus put on pane A\'s text: pane A\'s the platform\'s range, pane B\'s drawn by the page (Q4)', moved)
+        figures['c'] = moved
+        # (d) a corner counts: pane B's corner given the focus
+        on = ctx.js(CORNER_B)
+        ctx.frames(2)
+        corner = ctx.js(SITES)
+        r.check(on and site(corner, 'b') == dict(want['b'], inactive=False) and site(corner, 'a') == dict(want['a'], inactive=True) and corner['platform'] == 'b',
+                '(d) the focus put on pane B\'s corner: pane B\'s the platform\'s range again, pane A\'s drawn by the page (Q4)', dict(corner, focused=on))
+        figures['d'] = corner
+        # (e) no acts row at either pane
+        r.check(corner['overlay'] != 'selection' and ctx.js('document.querySelector(".selection-card") === null'),
+                '(e) no acts row stands at either pane: the row at a pane is #734\'s', {'overlay': corner['overlay']})
+    ctx.js('window.__skep.scene.close()')
+    ctx.settle()
+    ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    r.figures['pane_selections'] = figures
 
 def ax_expanded(ctx, name):
     """the `expanded` state the AX tree gives the treeitem of an accessible name — where CDP answers the tree, else its
@@ -3258,8 +3356,9 @@ def typed_copy(ctx, r):
         ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(doc), json.dumps(DOC)))
         opened = ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.scene.isOpen() || performance.now() - t0 > 10000 ? res(window.__skep.scene.isOpen()) : setTimeout(tick, 50)); tick(); })') and scene_set(ctx)
         if opened:
-            in_pane = ctx.js('''(async (span) => { const L = await import("./text/layer.js"), el = document.querySelector("#sceneA article.dtext");
-              return !!el && L.selectIn(el, span, false); })(%s)''' % json.dumps(span))
+            in_pane = ctx.js('''((span) => { const a = document.getElementById("sceneA"); if (!a) return false; a.focus({preventScroll: true});
+              window.__skep.select(span.addr, span.pos, span.width, "a"); const s = window.__skep.selection("a");
+              return !!s && s.addr === span.addr && s.pos === span.pos && s.width === span.width; })(%s)''' % json.dumps(span))
             ctx.frames(2)
             pane = copied(ctx)
     finally:
@@ -4843,6 +4942,8 @@ def run(ctx):
     scene_versions(ctx, r)
     # ---- no remount takes a selection the person holds outside the plane's text: a card's caption, a pane ----------
     selection_held_elsewhere(ctx, r)
+    # ---- each pane a site of its own: both panes' selections, the live one following the focus (issue #94) ---------
+    pane_selections(ctx, r)
     # ---- the focus and keyboard rules the one-owner lane added (FP-20) --------------------------------------------
     focus_rules(ctx, r)
     # ---- a copy with nothing selected, and one selection: what looks selected is what is copied (K-92) -------------

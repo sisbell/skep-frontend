@@ -6,20 +6,27 @@
 // platform's selection to the pointer (`carrying`), whether the press found
 // the platform holding a selection with extent (`rangeAtPress`), the span a
 // click on a block placed the platform's range over, until the next press
-// lets it go (`clickPlaced`), and the wheel series' clock (`wheelAt`,
-// `seriesFrom`). Every press and every wheel, wherever it falls, is told to
+// lets it go (`clickPlaced`), a press standing on a reading scene's pane's
+// text with where it went down and its click count (`panePress`), and the
+// wheel series' clock (`wheelAt`, `seriesFrom`). Every press and every wheel, wherever it falls, is told to
 // N-KEYS as the pointer's or the camera's act it is, so an undo reading the
 // text its step stands in is kept (N-KEYS' `pointed`).
 // The press rule (foundations §2.4): a pointer's drag never pans. At the
 // readable threshold and above it selects the text it crosses — the
 // platform's selection on the mounted layer — and that selection is the
-// page's (R11): as the drag ends, and whenever the platform's selection
+// page's, the plane's (R11): as the drag ends, and whenever the platform's selection
 // changes outside a drag, the span it covers is read through T-LAYER's
 // mapping and handed to O-SELECTION, its focus point the end the act moved,
 // which T-LAYER keeps clear of its document's head. The drag is T-LAYER's
 // press, from the button going down on an article to its release, the
 // platform's cancel or a context menu; this module reports its start and its
-// end. Below the readable threshold every press is the canvas's, over bars or
+// end. A reading scene's pane is a site of its own (O-SELECTION's): a drag,
+// a click or the platform's own keys in a pane's text make or end that
+// pane's selection and no other — a press on a pane's text holds every take
+// until its release, which takes it once, a click's release — within 4 px,
+// one click, no Shift — ending it (O-SELECTION's `pressPane`, `takePane`), a
+// cancel or a context menu taking nothing — so a drag in one pane leaves the
+// other's standing. Below the readable threshold every press is the canvas's, over bars or
 // mounted text alike, so a drag there selects nothing and a click is the
 // place's — keyed on the document's own em at the readable threshold
 // (T-LAYER's `atReadingScale`), never on whether text is mounted. At the
@@ -245,6 +252,8 @@ let carrying = false;
 let rangeAtPress = false;
 /** @type {import('../text/span.js').Span | null} the span a click on a block placed the platform's range over (`clickText`), as that range reads back: the next press lets it go, one on the text layer once it has read it, and the second press of a double-click collapses that range at the point pressed (see the head); null where no such click came last */
 let clickPlaced = null;
+/** @type {{x: number, y: number, clicks: number, shift: boolean} | null} a press standing on a reading scene's pane's text: where it went down, and the click count and Shift its mouse event carried — released within 4 px, one click and no Shift, it is a click (O-SELECTION's `takePane`); null where none stands */
+let panePress = null;
 
 /**
  * One selection (see the head): where the current press found the platform
@@ -256,7 +265,7 @@ let clickPlaced = null;
 function oneSelection() {
   const found = rangeAtPress;
   rangeAtPress = false;
-  if (found && SEL.selected() && !LAYER.platformSelects()) SEL.clear();
+  if (found && SEL.selected('plane') && !LAYER.platformSelects()) SEL.clear();
 }
 /** the pause that ends a wheel series, in ms: the re-take's own pause (unmeasured) */
 export const SERIES_MS = 220;
@@ -287,8 +296,15 @@ export function attach(els) {
     drag = { px: e.clientX, py: e.clientY, moved: 0, cameraKey: true };
     els.plane.setPointerCapture(e.pointerId); els.plane.classList.add('dragging');
   };
-  // every pointer press is an act that is no walk key's: the walk's panel hidden, wherever it falls, and an undo reading kept (N-KEYS' `pointed`)
-  window.addEventListener('pointerdown', () => { WALK.hidePanel(); KEYS.pointed(); }, true);
+  // every pointer press is an act that is no walk key's: the walk's panel hidden, wherever it falls, and an undo reading kept
+  // (N-KEYS' `pointed`); one on a reading scene's pane's text holds every take of the selection until its release (O-SELECTION's `pressPane`)
+  window.addEventListener('pointerdown', (e) => {
+    WALK.hidePanel(); KEYS.pointed();
+    panePress = LAYER.inPaneText(e.target) ? { x: e.clientX, y: e.clientY, clicks: 1, shift: e.shiftKey } : null;
+    SEL.pressPane(panePress ? /** @type {Node} */ (e.target) : null);
+  }, true);
+  // a press on a pane's text: its click count and Shift as its mouse event carries them
+  window.addEventListener('mousedown', (e) => { if (panePress) { panePress.clicks = e.detail || 1; panePress.shift = e.shiftKey; } }, true);
   els.plane.addEventListener('pointerdown', (e) => {
     held = null;
     clickPlaced = null;
@@ -342,14 +358,19 @@ export function attach(els) {
     if (carrying) LAYER.extendTo(e.clientX, e.clientY);
   });
   window.addEventListener('pointerup', (e) => {
+    // a press on a pane's text released: the press ended and the pane's selection taken once — a click's ending it
+    // (O-SELECTION's `takePane`)
+    const pp = panePress;
+    panePress = null;
+    if (SEL.pressingPane()) SEL.takePane(!!pp && Math.abs(e.clientX - pp.x) + Math.abs(e.clientY - pp.y) <= 4 && pp.clicks <= 1 && !pp.shift);
     if (held) { held.released = true; held.at = { x: e.clientX, y: e.clientY }; CAM.markDirty(); }
     carrying = false;
     if (!LAYER.pressing()) return;
     LAYER.press(false); takeSelection(true, Math.abs(e.clientX - lastDown.x) + Math.abs(e.clientY - lastDown.y) > 4);
   });
-  window.addEventListener('pointercancel', () => { held = null; carrying = false; LAYER.press(false); });
-  window.addEventListener('contextmenu', () => { held = null; carrying = false; LAYER.press(false); });
-  document.addEventListener('selectionchange', () => { if (!LAYER.pressing()) takeSelection(false); });
+  window.addEventListener('pointercancel', () => { held = null; carrying = false; LAYER.press(false); panePress = null; SEL.pressPane(null); });
+  window.addEventListener('contextmenu', () => { held = null; carrying = false; LAYER.press(false); panePress = null; SEL.pressPane(null); });
+  document.addEventListener('selectionchange', () => { if (!LAYER.pressing() && !SEL.pressingPane()) takeSelection(false); });
   // the layer: a click on a symbol, the ⟡, the scene-offer, a withheld run; the click ending a double- or triple-click or a Shift+click, the selection the platform made under it; a click on a marked span or a block; one on none of them, its document's ground
   els.layer.addEventListener('click', (e) => {
     acted();
@@ -378,8 +399,8 @@ export function attach(els) {
     // a corner stands on the corner the walk's document holds, its click naming no point
     if (holder && !byKey && !target.closest('[data-read]') && leftCaret(addr)) walkOn(addr, nearestStop(addr, at));
     const face = /** @type {HTMLElement | null} */ (holder ? target.closest('[data-face]:not([data-whole])') : null);
-    if (holder && target.closest('[data-read]')) { e.stopPropagation(); VERSIONS.readFromCorner(holder, SEL.selected(), byKey); }
-    else if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected(), byKey); }
+    if (holder && target.closest('[data-read]')) { e.stopPropagation(); VERSIONS.readFromCorner(holder, SEL.selected('plane'), byKey); }
+    else if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected('plane'), byKey); }
     else if (holder && face) { e.stopPropagation(); FACES.faceAct(addr, face.dataset.face || ''); }
     else if (holder && target.closest('.kept-word[data-kept]')) { e.stopPropagation(); if (!FACES.unkept(addr, /** @type {HTMLElement} */ (target.closest('.kept-word')), byKey)) LAYER.openStatement(addr); }
     else if (holder && target.closest('[data-history]')) { e.stopPropagation(); void GO.history(addr); }
@@ -730,8 +751,10 @@ export function afterFrame() {
 }
 
 /**
- * The platform's selection, where it stands in a mounted article, becomes the
- * page's (R11): view state alone changes, its focus point the end the press
+ * The platform's selection becomes the page's (R11) — where it stands in a
+ * reading scene's pane's text, that pane's (O-SELECTION's `takePane`), never
+ * the plane's, its walk or its caret; where it stands in a mounted article,
+ * the plane's: view state alone changes, its focus point the end the press
  * or the platform's own keys moved (T-LAYER's `keepClear`); one the page
  * already holds, or placed itself, is left as it is — so the page's own
  * placement is never taken as a new selection, whose card would end a card's
@@ -751,9 +774,10 @@ export function afterFrame() {
  * @param {boolean} [anew] the gesture moved the pointer, or ended a double- or triple-click or a Shift+click: its selection is the person's though it names the span the page holds
  */
 function takeSelection(dragged, anew = false) {
+  if (SEL.takePane()) return;
   const span = LAYER.spanOfSelection();
   if (!span) { if (dragged && anew) oneSelection(); return; }
-  const part = LAYER.movingPart(), holds = sameSpan(span, SEL.selected()) || sameSpan(span, LAYER.placedSpan());
+  const part = LAYER.movingPart(), holds = sameSpan(span, SEL.selected('plane')) || sameSpan(span, LAYER.placedSpan());
   if (dragged && part && part.whole && LAYER.editable(part.span.addr)) {
     const end = part.backward ? part.span.pos : part.span.pos + part.span.width, c = LAYER.caret();
     if (holds && (!anew || (!!c && c.live && c.addr === part.span.addr && c.pos === end))) return;

@@ -136,7 +136,10 @@
 // element bearing its id does (the same control, redrawn from state by its
 // owner, FP-13); else the place named beside it, a span's bytes or a world
 // point, which still stands once T-LAYER has rebuilt or taken down the
-// article the element stood in, or rewritten its corner. An overlay stands
+// article the element stood in, or rewritten its corner — a span at its site,
+// the plane or a reading scene's pane by its side, never an element, a pane's
+// article being made anew at each setting, so it is read through the pane as
+// it stands each time the overlay is placed (`readers`). An overlay stands
 // at the viewport's corner only where its anchor names nothing that stands
 // (`place`). Wherever it stands its top is held below the one line's bottom
 // edge, however many rows the line takes (L-LINE's `bottom`; FP-26), and its
@@ -182,7 +185,7 @@ import { esc } from '../util.js';
 /**
  * @typedef {Object} Anchor — where an overlay stands: at its element while that stands (`standing`), else at its span, else at its world point, else at its screen point (`place`)
  * @property {HTMLElement} [el] the element the act was made at: the overlay stands beneath it while it is in the page, or while an element bearing its id is
- * @property {{addr: string, pos: number, width?: number}} [span] a span of a document — a block by its first position, or the bytes named by a width: beneath its first line in the mounted article, else at the document's box
+ * @property {{addr: string, pos: number, width?: number, site?: 'plane' | 'a' | 'b'}} [span] a span of a document — a block by its first position, or the bytes named by a width — at its site (O-SELECTION's `Site`; the plane's where none is named): on the plane beneath its first line in the mounted article, else at the document's box; at a reading scene's pane, beneath its first line in the article the pane shows as the overlay is placed, else at the pane's box — never the plane's
  * @property {{x: number, y: number}} [world] a world point (follows the camera)
  * @property {{x: number, y: number}} [screen] a screen point
  * @property {string} [sign] the document a jump's face stands at (FP-25): hidden on the plane while that document is out of the visible view, the one line carrying its words (`aside`)
@@ -276,6 +279,18 @@ export function attach(e, below = null) {
   stackEl = below;
   if (below) wire(below, () => stacked, dismissStacked);
 }
+
+/** @typedef {(side: 'a' | 'b') => ({el: HTMLElement, article: HTMLElement | null} | null)} PaneReader a reading scene's pane as it stands — its element and the article it shows — null where no scene stands (SC's `siteOf`) */
+
+/** @type {PaneReader} what an anchor at a pane's site is placed by (`place`); no pane where none is handed in */
+let paneOf = () => null;
+
+/**
+ * The scene's panes handed in (the app's): what an anchor naming a pane's
+ * site is placed by (`place`).
+ * @param {{pane?: PaneReader}} r
+ */
+export function readers(r) { paneOf = r.pane ?? (() => null); }
 
 /**
  * An element of the host's wired: a press on a control bearing `data-run`
@@ -586,8 +601,11 @@ const away = (/** @type {Overlay | null} */ o) => !!o && !!o.anchor && !!o.ancho
  * below the line (`fit`), and the control the focus stands on brought into
  * view where it moved or its caps changed (`reveal`; see the head): beneath
  * the element it was conjured at while that stands (`standing`); else
- * beneath its span's first line in the mounted article, or at the document's
- * box where none is mounted; else at its world point, else at its screen
+ * beneath its span's first line in its site's article — the plane's mounted
+ * one, or a reading scene's pane's, read through the reader handed in
+ * (`readers`) — at the document's box where the plane mounts none, at the
+ * pane's box where the pane's article holds none of it (T-LAYER's
+ * `spanRects`); else at its world point, else at its screen
  * point; else, its anchor naming nothing that stands, at the viewport's
  * corner. A notice below it stands under its box, at its left, the two held
  * there together. A jump's face whose document stands out of the visible
@@ -603,8 +621,10 @@ export function place() {
   const at = a ? standing(a.el) : null;
   if (at) { const r = at.getBoundingClientRect(); x = r.left; y = r.bottom + 4; }
   else if (a && a.span) {
-    const rs = LAYER.spanRects(a.span.addr, a.span.pos, a.span.width ?? null);
+    const site = a.span.site && a.span.site !== 'plane' ? a.span.site : null, pane = site ? paneOf(site) : null;
+    const rs = site ? (pane && pane.article ? LAYER.spanRects(a.span.addr, a.span.pos, a.span.width ?? null, pane.article) : null) : LAYER.spanRects(a.span.addr, a.span.pos, a.span.width ?? null);
     if (rs) { x = rs[0].x; y = rs[0].y + rs[0].h + 4; }
+    else if (site) { if (pane) { const q = pane.el.getBoundingClientRect(); x = q.left; y = q.top; } }
     else { const b = docBox(a.span.addr); x = sx(b.x + b.w); y = sy(b.y); }
   } else if (a && a.world) { x = sx(a.world.x); y = sy(a.world.y); }
   else if (a && a.screen) { x = a.screen.x; y = a.screen.y; }
@@ -621,7 +641,8 @@ export function place() {
 
 /**
  * The overlay standing moved with its subject (FP-36): its anchor's span set
- * to where its subject's bytes stand now, and what it is about with it, in
+ * to where its subject's bytes stand now, at the site it stood at (`Anchor`),
+ * and what it is about with it, in
  * place — nothing drawn again, no act made on the chrome, its focus where it
  * is; `place` stands it there on the next frame, and what it is left by
  * (`asLeft`) names that span. Nothing where none stands at a span.

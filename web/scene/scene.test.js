@@ -171,7 +171,16 @@
 // held and never folded, its title's rows never deepening, given by a row of
 // the shown minute with the description and said once, its count an empty
 // box until the rows below are read — read again once the board answers, to
-// the feed's first position or its floor (FP-26, FP-34).
+// the feed's first position or its floor (FP-26, FP-34). And each pane a
+// site of its own (issue #94): its selection beside the other's, read by
+// naming its pane, the focused pane's — its text, its corner, the list of
+// past states beside pane B — read from the platform's first and the live
+// one, following the focus both ways, the other drawn by the page, as boxes
+// where the platform draws no custom highlight; carried by its bytes through
+// a setting of its pane without moving the live range, owed while a field
+// holds the focus, carried into a version read in its place, an overlay at
+// it standing in its pane, and ended as the scene closes (FP-10, FP-20,
+// FP-23, FP-24).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -841,7 +850,7 @@ function page(as = {}) {
     let html = '';
     const e = {
       id, isConnected: true, dataset: /** @type {Record<string, string>} */ ({}), style: /** @type {any} */ ({ setProperty() {}, removeProperty() {} }), inert: false, hidden: false, tabIndex: -1,
-      scrollTop: 0, scrollHeight: 0, clientTop: 0, clientLeft: 0, clientWidth: 600, clientHeight: 400, placed, attrs,
+      scrollTop: 0, scrollLeft: 0, scrollHeight: 0, clientTop: 0, clientLeft: 0, clientWidth: 600, clientHeight: 400, placed, attrs,
       /** @type {any} the layer holding it, where one does */ parent: null,
       get innerHTML() { return html; }, set innerHTML(/** @type {string} */ v) { html = String(v); },
       get textContent() { return html.replace(/<[^>]*>/g, ''); }, set textContent(/** @type {string} */ v) { html = esc(String(v)); },
@@ -1001,6 +1010,9 @@ function page(as = {}) {
     end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, a, told) => FACES.floating(far, a, null, told), held: FACES.held, words: (r, ctx) => FACES.wordsFor(r, ctx), withheldOf: FACES.withheldWords },
     history: (addr) => { void GO.history(addr); },
   });
+  // each pane a site of its own, as the app hands the scene's panes to the overlays
+  SEL.readers({ pane: SCENE.siteOf, focused: SCENE.focusedPane });
+  HOST.readers({ pane: SCENE.siteOf });
   /** @type {any[]} what stands after pane B in the scene: the list of a draft's past states, beside pane B's corner */
   const afterB = [];
   Object.assign(paneB, { after: (/** @type {any} */ x) => { if (!afterB.includes(x)) afterB.push(x); x.remove = () => { const i = afterB.indexOf(x); if (i >= 0) afterB.splice(i, 1); }; } });
@@ -2762,7 +2774,9 @@ test('at a selection in the moved scene\'s held version, while the focus stands 
     assert.deepEqual([space.took, space.hint, space.said.length], [true, 'F.swallow.space', 1], `"${words}", Space: K-9's own line`);
   }
   assert.deepEqual([HOST.currentState(), SCENE.isOpen()], [null, true], 'no overlay opened, the scene standing');
-  dom.document.selection.removeAllRanges();
+  // a click in the held version's text: the platform's selection collapsed there, which ends the pane's
+  const sel = dom.document.selection;
+  sel.collapse(sel.anchorNode, sel.anchorOffset);
   HINT.act();
   assert.deepEqual([SCENE.heldVersionReason(), (await press('k', { mod: true })).hint, (await press('q')).hint], [null, 'L.seam.link-to', IN], 'no selection in the held version: the slot\'s own reason; a printable key the reason its span focus keys — its first span, the current text holding its words too — never K-9\'s line');
   selectWords(dom, article, 'Held words');
@@ -4634,6 +4648,256 @@ test('where both panes hold drafts of the person\'s own, a click in the other pa
     pressText(p, 'b', b);
     assert.deepEqual([LAYER.caret(), LAYER.caretIn(E1)], [{ addr: E2, pos: 9, live: true }, { addr: E1, pos: 4, live: false }], 'a click in pane B\'s text: the caret live in its draft, pane A\'s kept where it stood');
   } finally { LAYER.dropCaret(); LAYER.readers({}); }
+}));
+
+// ---- each pane a site of its own, its selection O-SELECTION's (issue #94) --------------------------------------------------
+
+/** each pane's selection as O-SELECTION holds it: its site, its first position and its width, and whether the page draws it */
+const sitesNow = () => SEL.selections().filter((x) => x.site !== 'plane').map((x) => [x.site, x.pos, x.width, x.inactive]);
+/** the span the platform's selection covers in a pane's article, where it stands there */
+const liveIn = (/** @type {any} */ art) => LAYER.selectionIn(art)?.span ?? null;
+
+test('each reading scene\'s pane holds a selection of its own beside the other\'s: one made in pane B leaves pane A\'s standing, each read by naming its pane, the one the platform does not hold drawn by the page; a read naming none reads the focused pane\'s — the pane whose text holds the focus, else the last that held it as the focus stands at the scene\'s acts — never the plane\'s; clearing one leaves the other, a scene opened over a standing one starts with none, and the scene\'s close ends both, the plane\'s standing (issue #94\'s design decision: Q4; "a read naming no site gets the focused site\'s")', () => onPageWithText(async (p, dom) => {
+  await SCENE.open(A, B);
+  const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b'), names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+  const inA = { addr: names.a, pos: 5, width: 6 }, inB = { addr: names.b, pos: 5, width: 6 };
+  p.paneA.focus();
+  selectWords(dom, a, 'window');
+  assert.deepEqual(SEL.selected('a'), inA, 'a drag over "window" in pane A: pane A\'s selection');
+  p.paneB.focus();
+  selectWords(dom, b, 'origin');
+  assert.deepEqual([SEL.selected('b'), SEL.selected('a')], [inB, inA], 'one over "origin" in pane B: pane B\'s, pane A\'s standing beside it');
+  assert.deepEqual(sitesNow(), [['a', 5, 6, true], ['b', 5, 6, false]], 'both stand, pane A\'s the one the platform does not hold, which the page draws');
+  assert.deepEqual([SEL.focusedSite(), SEL.selected()], ['b', inB], 'a read naming no pane, the focus in pane B: pane B\'s');
+  p.bar.focus();
+  assert.deepEqual([SEL.focusedSite(), SEL.selected()], ['b', inB], 'the focus at the scene\'s acts: the last pane it stood in, B');
+  p.paneA.focus();
+  assert.deepEqual([SEL.focusedSite(), SEL.selected(), SEL.selected('plane')], ['a', inA, null], 'the focus in pane A, the platform\'s range in pane B still: pane A\'s, standing; the plane holding none');
+  SEL.clear('a');
+  assert.deepEqual([SEL.selected('a'), SEL.selected('b')], [null, inB], 'clearing pane A\'s leaves pane B\'s');
+  await SCENE.open(B, A);
+  assert.deepEqual([SEL.selected('a'), SEL.selected('b'), SEL.focusedSite()], [null, null, 'b'], 'a scene opened over the standing one: neither pane holds a selection of the one it stood over');
+  p.paneB.focus();
+  selectWords(dom, shownIn(p.paneB, 'b'), 'window');
+  assert.ok(SEL.selected('b'), 'pane B\'s selection in the scene standing now');
+  SEL.restore({ addr: A, pos: 1, width: 3 }, null, false);
+  SCENE.close();
+  assert.deepEqual([SEL.selected('a'), SEL.selected('b'), SEL.selected(), SEL.selections().map((x) => x.site)], [null, null, { addr: A, pos: 1, width: 3 }, ['plane']], 'the scene\'s close ends both panes\', the plane\'s standing — the focused site\'s, no scene standing');
+  SEL.clear();
+}));
+
+test('the focused pane\'s selection is the platform\'s, read first wherever it is read: a range set over its words, no change told, is its selection at once; one taken away, as an engine moving the focus takes it, ends nothing; one collapsed in its text — a click there — ends it; and its corner holding the focus makes it the focused pane, its selection placed there as the scene draws (issue #94\'s design decision: "The focused site has the platform\'s live selection"; Q4)', () => onPageWithText(async (p, dom) => {
+  await SCENE.open(A, B);
+  const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b'), s = dom.document.selection;
+  p.paneA.focus();
+  selectWords(dom, a, 'passage');
+  const want = liveIn(a);
+  assert.ok(want, 'the platform\'s range over "passage" in pane A');
+  assert.deepEqual(SEL.selected('a'), want, 'read at once as pane A\'s');
+  s.removeAllRanges();
+  assert.deepEqual(SEL.selected('a'), want, 'the range taken away: pane A\'s stands');
+  selectWords(dom, a, 'passage');
+  s.collapse(s.anchorNode, s.anchorOffset);
+  assert.equal(SEL.selected('a'), null, 'collapsed in its text: pane A\'s ended');
+  // pane B's made, then pane A's after it: the focus, not the newest, decides which is live
+  p.paneB.focus();
+  selectWords(dom, b, 'passage');
+  const inB = SEL.selected('b');
+  p.paneA.focus();
+  selectWords(dom, a, 'window');
+  const inA = SEL.selected('a');
+  assert.deepEqual([SEL.focusedSite(), liveIn(a), liveIn(b)], ['a', inA, null], 'the focus in pane A\'s text: pane A\'s live');
+  p.cornerB.focus();
+  SCENE.draw();
+  assert.deepEqual([SEL.focusedSite(), liveIn(b), liveIn(a), sitesNow()], ['b', inB, null, [['a', 5, 6, true], ['b', inB?.pos, inB?.width, false]]],
+    'the focus on pane B\'s corner: pane B the focused pane, its selection placed as the scene draws, pane A\'s drawn by the page');
+  p.paneA.focus();
+  SCENE.draw();
+  assert.deepEqual([SEL.focusedSite(), liveIn(a), sitesNow()], ['a', inA, [['a', 5, 6, false], ['b', inB?.pos, inB?.width, true]]], 'the focus back in pane A\'s text: pane A\'s live again');
+}));
+
+test('a click on a pane\'s text ends that pane\'s selection however the platform leaves it — collapsed there, or no range at all, as an engine empties a selection clicked inside as the button comes up — the other pane\'s standing; a click ending a drag there takes the drag\'s (issue #94\'s design decision; FP-24\'s one selection)', () => onPageWithText(async (p, dom) => {
+  await SCENE.open(A, B);
+  const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b'), s = dom.document.selection;
+  const click = (/** @type {'a' | 'b'} */ side, /** @type {any} */ art) => p.paneOn[side].click({ type: 'click', detail: 1, target: art.querySelector('.run'), currentTarget: side === 'a' ? p.paneA : p.paneB });
+  p.paneA.focus();
+  selectWords(dom, a, 'window');
+  const inA = SEL.selected('a');
+  p.paneB.focus();
+  selectWords(dom, b, 'origin');
+  click('b', b);
+  const inB = SEL.selected('b');
+  assert.deepEqual([inB?.pos, inB?.width, SEL.selected('a')], [5, 6, inA], 'a click ending a drag over "origin" in pane B: its selection pane B\'s, pane A\'s standing');
+  s.removeAllRanges();
+  click('b', b);
+  assert.deepEqual([SEL.selected('b'), SEL.selected('a')], [null, inA], 'a click in pane B\'s selection leaving no range at all: pane B\'s ended, pane A\'s standing');
+  selectWords(dom, b, 'origin');
+  click('b', b);
+  s.collapse(s.anchorNode, s.anchorOffset);
+  click('b', b);
+  assert.deepEqual([SEL.selected('b'), SEL.selected('a')], [null, inA], 'one leaving the range collapsed there: pane B\'s ended');
+}));
+
+test('the list of a draft\'s past states counts as pane B\'s wherever it stands: the focus on it, beside pane B and outside its element, makes pane B the focused pane, and the focus at the scene\'s acts after it keeps B (issue #94\'s design decision: Q4)', () => onPage(async (p) => {
+  await onTrail(p);
+  try {
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    p.paneA.focus();
+    assert.deepEqual([SCENE.focusedPane(), SEL.focusedSite()], ['a', 'a'], 'the focus in pane A: pane A');
+    // the list made once for every scene the module stands, so the platform's focus set on it as the platform sets it
+    const list = p.afterB[0];
+    p.doc.activeElement = list;
+    assert.deepEqual([list.id, SCENE.focusedPane(), SEL.focusedSite()], ['scenepast', 'b', 'b'], 'the focus on the list beside pane B: pane B');
+    p.bar.focus();
+    assert.deepEqual([SCENE.focusedPane(), SEL.focusedSite()], [null, 'b'], 'the focus at the scene\'s acts: the last pane, B');
+  } finally { WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+// a draft of another account's, read again whole as a row names it, its second text minting words before its old ones
+const SD = '1.0.2.0.171', SD_HEAD = 'A scene draft.\n\n', SD_OLD = 'Its first words.', SD_NEW = 'Words set before them.\n\n';
+const SD_V1 = SD_HEAD + SD_OLD, SD_V2 = SD_HEAD + SD_NEW + SD_OLD;
+const SD_V2_IMAGE = [
+  { i_start: SD + '.0.1.1', width: String(SD_HEAD.length) },
+  { i_start: `${SD}.0.1.${SD_V1.length + 1}`, width: String(SD_NEW.length) },
+  { i_start: `${SD}.0.1.${SD_HEAD.length + 1}`, width: String(SD_OLD.length) },
+];
+
+test('a setting a row asks of the pane the focus is not in carries that pane\'s selection by its bytes into the text it takes, drawn by the page, and never moves the platform\'s live range off the focused pane\'s words; a pane\'s selection set while a field holds the focus is placed only once the field lets it go (issue #94; FP-20, FP-23)', () => onPageWithText(async (p, dom) => {
+  Object.assign(script, reads(SD, SD_V1, { published: false, owner: '1.0.2' }), compared(A, A_TEXT, SD, SD_V1), unsignedAt('1.0.2'));
+  await SCENE.open(A, SD);
+  const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b'), names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+  p.paneB.focus();
+  selectWords(dom, b, 'first words');
+  const at = SD_HEAD.length + 5;
+  assert.deepEqual(SEL.selected('b'), { addr: SD, pos: at, width: 11 }, 'pane B\'s selection over "first words"');
+  p.paneA.focus();
+  selectWords(dom, a, 'window');
+  const inA = { addr: names.a, pos: 5, width: 6 };
+  assert.deepEqual([SEL.selected('a'), liveIn(a)], [inA, inA], 'pane A\'s, the live one');
+  Object.assign(script, reads(SD, SD_V2, { published: false, owner: '1.0.2', image: SD_V2_IMAGE }), compared(A, A_TEXT, SD, SD_V2));
+  fake.fire('feed', row(10, 'insert', [SD], 'drafts'));
+  await landed();
+  assert.notEqual(shownIn(p.paneB, 'b'), b, 'pane B set again');
+  assert.deepEqual([SEL.selected('b'), liveIn(a), sitesNow()], [{ addr: SD, pos: at + SD_NEW.length, width: 11 }, inA, [['a', 5, 6, false], ['b', at + SD_NEW.length, 11, true]]],
+    'pane B\'s carried by its bytes past the words minted before them, drawn by the page; the platform\'s range still over pane A\'s words');
+  SEL.setPane('b', { addr: SD, pos: 1, width: 6 });
+  assert.deepEqual([liveIn(a), liveIn(shownIn(p.paneB, 'b')), SEL.selected('b')], [inA, null, { addr: SD, pos: 1, width: 6 }], 'pane B\'s set by the scene\'s own act while the focus stands in pane A: set, and nothing placed');
+  const field = dom.element('input'), s = dom.document.selection;
+  p.doc.activeElement = /** @type {any} */ (field);
+  SCENE.selectAll('a');
+  assert.deepEqual(liveIn(a), inA, 'pane A\'s selection set while a field holds the focus: the platform\'s range untouched');
+  p.paneA.focus();
+  SCENE.draw();
+  assert.deepEqual([liveIn(a)?.pos, liveIn(a)?.width, s.rangeCount], [1, A_TEXT.length, 1], 'the field let go: pane A\'s placed as the scene draws');
+}));
+
+test('the live range follows the focus both ways, as an engine that takes the platform\'s selection away as the focus moves does: the focus come to pane A\'s corner, its range gone, places pane A\'s again; the focus come into pane B, which holds none, takes pane A\'s range off, pane A\'s standing, drawn by the page (issue #94\'s design decision: Q4)', () => onPageWithText(async (p, dom) => {
+  await SCENE.open(A, B);
+  const a = shownIn(p.paneA, 'a'), s = dom.document.selection, names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+  const inA = { addr: names.a, pos: 5, width: 6 };
+  p.paneA.focus();
+  selectWords(dom, a, 'window');
+  assert.deepEqual(SEL.selected('a'), inA, 'pane A\'s');
+  // the engine takes the selection away as the focus moves to the corner
+  p.cornerA.focus(); s.removeAllRanges();
+  SCENE.draw();
+  assert.deepEqual([SEL.focusedSite(), liveIn(a), SEL.backward('a')], ['a', inA, false], 'the focus on pane A\'s corner: pane A\'s placed again, its anchor at its start');
+  p.paneB.focus(); s.removeAllRanges();
+  SCENE.draw();
+  p.paneB.focus();
+  SCENE.draw();
+  assert.deepEqual([SEL.focusedSite(), s.rangeCount, sitesNow()], ['b', 0, [['a', 5, 6, true]]], 'the focus in pane B, which holds none: no range, pane A\'s standing, drawn by the page');
+  p.paneA.focus();
+  selectWords(dom, a, 'window');
+  p.paneB.focus();
+  SCENE.draw();
+  assert.deepEqual([s.rangeCount, sitesNow()], [0, [['a', 5, 6, true]]], 'where the engine keeps it, pane A\'s range taken off all the same');
+}));
+
+test('where the platform draws no custom highlight, a pane\'s selection it does not hold stands as boxes behind the pane\'s text, one a line of the ranges its own characters stand in, in the pane\'s content, the pane holding the live one carrying none; drawn again only where what it stands for changed (issue #94\'s design decision: Q3)', () => onPageWithText(async (p, dom) => {
+  await SCENE.open(A, B);
+  const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b'), make = p.doc.createRange;
+  // every range laid out as one line box, 30 px in and 50 px down the pane's content
+  p.doc.createRange = () => { const r = make(); /** @type {any} */ (r).getClientRects = () => [{ left: 30, top: 50, width: 40, height: 14 }]; return r; };
+  const boxes = (/** @type {any} */ pane) => pane.placed.filter((x) => x.el.className === 'sel-box').map((x) => [x.how, x.el.style.transform, x.el.style.width, x.el.style.height, x.el.attrs['aria-hidden']]);
+  p.paneA.focus();
+  selectWords(dom, a, 'window');
+  SEL.selected('a');
+  p.paneB.focus();
+  selectWords(dom, b, 'origin');
+  SCENE.draw();
+  assert.deepEqual([SEL.drawsHighlights(), boxes(p.paneA), boxes(p.paneB)], [false, [['prepend', 'translate(30px, 50px)', '40px', '14px', 'true']], []], 'pane A\'s, which the platform does not hold, stands as a box in pane A, before its own children; pane B, live, carries none');
+  SCENE.draw();
+  assert.equal(boxes(p.paneA).length, 1, 'drawn again with nothing changed: no box added');
+}));
+
+test('where the platform draws custom highlights, a pane\'s selection it does not hold is the page\'s one highlight, over the ranges its own characters stand in — no box drawn — drawn anew as it changes, and taken down as no pane holds one the platform does not, and as the scene closes (issue #94\'s design decision: Q3)', () => onPageWithText(async (p, dom) => {
+  const g = /** @type {any} */ (globalThis), stood = { CSS: g.CSS, Highlight: g.Highlight };
+  /** @type {Map<string, {ranges: any[]}>} */
+  const highlights = new Map();
+  g.CSS = { highlights }; g.Highlight = class { constructor(/** @type {any[]} */ ...ranges) { this.ranges = ranges; } };
+  try {
+    await SCENE.open(A, B);
+    const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b');
+    /** the words the page's highlight stands over, its ranges' joined — one a text node, a mark in the words splitting them */
+    const drawn = () => { const h = highlights.get(SEL.INACTIVE); return h ? h.ranges.map((r) => String(r)).join('') : null; };
+    p.paneA.focus();
+    selectWords(dom, a, 'window');
+    SCENE.draw();
+    assert.deepEqual([SEL.drawsHighlights(), drawn()], [true, null], 'pane A\'s the live one: nothing drawn by the page');
+    p.paneB.focus();
+    selectWords(dom, b, 'origin');
+    SCENE.draw();
+    assert.deepEqual([drawn(), p.paneA.placed.some((x) => /** @type {any} */ (x.el).className === 'sel-box')], ['window', false], 'pane B\'s the live one: pane A\'s the page\'s highlight over its words, no box');
+    selectWords(dom, a, 'passage');
+    p.paneA.focus();
+    SCENE.draw();
+    assert.equal(drawn(), 'origin', 'pane A\'s live again, made anew over "passage": pane B\'s drawn in its place');
+    SEL.clear('b');
+    SCENE.draw();
+    assert.equal(drawn(), null, 'pane B\'s ended: taken down');
+    p.paneB.focus();
+    SCENE.draw();
+    assert.equal(drawn(), 'passage', 'the focus in pane B, which holds none: pane A\'s drawn by the page');
+    SCENE.close();
+    assert.equal(drawn(), null, 'the scene\'s close takes it down');
+  } finally { Object.assign(g, stood); }
+}));
+
+test('an overlay anchored at a pane\'s span stands below that span\'s first line in the pane\'s article, never where the plane would place the same span, and at the pane\'s box where the article holds none of it (issue #94)', () => onPageWithText(async (p) => {
+  CAM.setViewport(1440, 900);
+  await SCENE.open(A, B);
+  const make = p.doc.createRange, names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+  // every range laid out as one line box at (140, 120); pane A's box at (300, 200)
+  p.doc.createRange = () => { const r = make(); /** @type {any} */ (r).getClientRects = () => [{ left: 140, top: 120, width: 40, height: 14 }]; return r; };
+  p.paneA.getBoundingClientRect = () => ({ top: 200, left: 300, right: 900, bottom: 600, width: 600, height: 400 });
+  /** a card anchored at a span, placed as a frame places it: where it stands on screen */
+  const card = (/** @type {any} */ span) => { HOST.show({ kind: 'card', id: 'pane-card', anchor: { span }, html: '<span class="label">x</span>', acts: {} }); HOST.place(); const st = /** @type {any} */ (HOST.element()).style; return [parseFloat(st.left), parseFloat(st.top)]; };
+  try {
+    assert.deepEqual(card({ addr: names.a, pos: 5, width: 6, site: 'a' }), [140, 138], 'below its first line in pane A\'s article');
+    assert.notDeepEqual(card({ addr: names.a, pos: 5, width: 6 }), [140, 138], 'the same span at the plane: not there');
+    assert.deepEqual(card({ addr: '1.0.1.0.99', pos: 5, width: 6, site: 'a' }), [300, 200], 'none of it in pane A\'s article: at the pane\'s box');
+  } finally { HOST.dismiss(); }
+}));
+
+// an edition of two members read at its bare address beside pane A, its first member lacking its second's last paragraph
+const RE = '1.0.1.0.172', RE1 = RE + '.1', RE2 = RE + '.2';
+const RE_TEXT = 'A read edition.\n\nIts second version holds this.', RE1_TEXT = 'A read edition.\n\nIts first version held this.';
+
+test('a version read in a pane\'s place carries that pane\'s own selection, never the platform\'s range standing in the other pane: the version lacking its words says so (issue #94\'s design decision: "Every reader asks the overlay for the focused site\'s selection, or for a named site\'s"; FP-22)', () => onPageWithText(async (p, dom) => {
+  Object.assign(script, reads(RE, RE_TEXT, { members: 2 }), reads(RE1, RE1_TEXT), compared(A, A_TEXT, RE, RE_TEXT), compared(RE2, RE_TEXT, RE1, RE1_TEXT, [[1, 1, 'A read edition.\n\n'.length]]), compared(A, A_TEXT, RE1, RE1_TEXT));
+  await SCENE.open(A, RE);
+  const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b');
+  assert.deepEqual(paneState('b'), { kind: 'bare', src: RE, names: RE2, shows: RE, k: 2, n: 2, read: null, lacks: null }, 'pane B the edition at its bare address, naming its second member');
+  p.paneB.focus();
+  selectWords(dom, b, 'second version');
+  const inB = SEL.selected('b');
+  p.paneA.focus();
+  selectWords(dom, a, 'window');
+  assert.deepEqual([SEL.selected('b'), liveIn(b), !!liveIn(a)], [inB, null, true], 'pane B\'s selection standing, the platform\'s range in pane A');
+  SCENE.readIn('b', 1);
+  await landed();
+  assert.deepEqual(paneState('b'), { kind: 'pinned', src: RE1, names: RE1, shows: RE1, k: 1, n: 2, read: 2, lacks: 1 }, 'version 1 read in pane B\'s place carrying pane B\'s selection, whose words it lacks, said so');
 }));
 
 // ---- an editor pane through the board's events (FP-23, FP-38) -----------------------------------------------------------

@@ -627,6 +627,16 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #sceneA .dtext { padding-right:var(--edge); }
 #sceneB .dtext { padding-left:var(--edge); }
 #sceneB .dtext .edge { left:auto; right:calc(100% + var(--edge-in)); text-align:right; }
+/* a pane's selection the platform does not hold — the other pane's is its live one — drawn as the platform draws an inactive
+   selection (Q3; O-SELECTION's `drawPanes`): a custom highlight over its own characters, else boxes behind its text in the
+   pane's content (SC's `placeSelBoxes`); under forced colours the system's Highlight, the live one told apart by its row and
+   ring */
+::highlight(skep-inactive) { background-color:color-mix(in srgb, GrayText 30%, Canvas); }
+.pane > .sel-box { position:absolute; top:0; left:0; z-index:-1; pointer-events:none; background:color-mix(in srgb, GrayText 30%, Canvas); forced-color-adjust:none; }
+@media (forced-colors: active) {
+  ::highlight(skep-inactive) { background-color:Highlight; }
+  .pane > .sel-box { background:Highlight; }
+}
 .pane .corner { position:sticky; top:0; flex:0 0 var(--corner-w); }
 #sceneA > .corner { margin-left:auto; }
 /* a pane's corner compact (FP-26): its compact width, its usual states glyphs whose act opens it whole where it stands —

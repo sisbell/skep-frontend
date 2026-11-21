@@ -63,8 +63,12 @@
 // with the notice standing below it (`overlay`), the in-document find as it
 // stands and the stretches of a text the model lacks (`find`), a
 // walk's moment raised and the folded moments (`moments`), the board's
-// writes halted and the halt lifted (`halt`); the selection
-// beside the platform's own (`platformSelection`), the copy door (`copy`), and
+// writes halted and the halt lifted (`halt`); a site's selection — the
+// plane's, a reading scene's pane's by its side, the focused site's where none
+// is named — made at a site (`selection`, `select`), every site's with
+// whether the page draws it as the platform draws an inactive one
+// (`selections`), beside the platform's own with the site it stands in
+// (`platformSelection`), the copy door (`copy`), and
 // the paste and the cut doors (`paste`, `cut`) — each an event the door makes
 // over a clipboard of its own and dispatches at the element holding the
 // focus, so the document's listener takes it as it takes one with no
@@ -765,14 +769,19 @@ export function install(deps) {
     moments: { raise: (/** @type {import('../bridge/shapes').MomentEvent} */ m) => { FACES.moment(m); return true; }, folded: () => FACES.folded() },
     /** the board's writes halted, or the halt lifted, as the board's `/health` answers it (M-REC's `setHealth`), the rest of its health and its mode kept: the one line's daemon segment stands or goes */
     halt: (/** @type {boolean} */ on) => { const h = REC.health(); REC.setHealth({ ...h, writes: { ...(h && h.writes), halted: on } }, REC.mode()); CAM.markDirty(); return true; },
-    selection: () => SEL.selected(),
-    /** the platform's own selection: whether it is collapsed, whether it runs backward (its focus point before its anchor, read from the platform, never from the page), and the span it covers in a mounted article (null outside one) */
+    /** a site's selection (O-SELECTION's `selected`) — the plane's, or a reading scene's pane's by its side — as `{addr, pos, width}`; naming none, the focused site's: the plane's where no scene stands */
+    selection: (/** @type {'plane' | 'a' | 'b' | undefined} */ site) => SEL.selected(site),
+    /** every site's selection (O-SELECTION's `selections`): each its site, its span, and whether the page draws it as the platform draws an inactive one — a pane's the platform does not hold, through the registered highlight, or the boxes where there is none */
+    selections: () => SEL.selections(),
+    /** the platform's own selection: whether it is collapsed, whether it runs backward (its focus point before its anchor, read from the platform, never from the page), the span it covers in a mounted article (null outside one), and the site its range stands in — the plane, a reading scene's pane by its side, else null */
     platformSelection: () => {
       const s = window.getSelection();
       const collapsed = !s || s.rangeCount === 0 || s.isCollapsed;
       let backward = false;
       if (s && !collapsed && s.anchorNode && s.focusNode) { const at = document.createRange(); at.setStart(s.anchorNode, s.anchorOffset); backward = at.comparePoint(s.focusNode, s.focusOffset) < 0; }
-      return { collapsed, backward, span: LAYER.spanOfSelection() };
+      const sited = LAYER.siteOfSelection(), pane = (/** @type {'a' | 'b'} */ side) => { const p = SCENE.siteOf(side); return !!sited && !!p && p.article === sited.site; };
+      const site = !sited ? null : sited.site === 'plane' ? 'plane' : pane('a') ? 'a' : pane('b') ? 'b' : null;
+      return { collapsed, backward, span: LAYER.spanOfSelection(), site };
     },
     /** the copy door: the copy event run against a stub clipboard; the flavors set, by name */
     copy: () => {
@@ -879,7 +888,8 @@ export function install(deps) {
       /** a version of a pane's document read in its place, as its corner's act reads the one it offers (SC's `readIn`) — reads alone */
       read: (/** @type {'a' | 'b'} */ side, /** @type {number} */ k) => { SCENE.readIn(side, k); return true; },
     },
-    select: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => SEL.select(addr, pos, width),
+    /** a span selected as the page selects it (O-SELECTION's `select`), at a site: the plane's where none is named, else a reading scene's pane's by its side */
+    select: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null, /** @type {'plane' | 'a' | 'b'} */ site = 'plane') => SEL.select(addr, pos, width, null, site),
     strings: { pinned: () => pinned(), lacking: () => lacking() },
     thresholds: THRESHOLDS,
     /** the scale at which a document's em — the size the page sets it at (T-LAYER's fold) — is `em` px, or its box `docPx` px */

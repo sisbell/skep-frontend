@@ -445,7 +445,17 @@
 // (FP-20; N-FOCUS's `isField`). Whether the platform holds a selection with
 // extent anywhere in the page — an article's, a pane's, an overlay's text —
 // is read here (`platformSelects`): what a copy takes, and what a press ends
-// (FP-24).
+// (FP-24). A reading scene's pane is a site of its own, its selection
+// O-SELECTION's: the span a range covers is read with the site it stands in —
+// the plane, where a mounted article holds it (`spanOfRange`), else the
+// pane's article holding it whole (`siteOfRange`, `siteOfSelection`) — and a
+// pane's selection is placed in that pane's article alone, never by its
+// address, a range already reading the span there left as it stands, its
+// anchor where it was set (`placeSelection`); its rects are read there
+// (`spanRects`), its blocks are marked by that pane's selection alone, never
+// the plane's (`viewFor`, `markPaneSelection`), and where the platform does
+// not hold it the ranges its own characters stand in, the chrome skipped, are
+// what the page draws it over (`textRangesIn`; FP-24).
 // The reading scene's panes borrow the mount (`sceneArticle`; FP-12; the
 // structure record §3.4 (vii)): each pane's article is made here,
 // T-ARTICLE's scene-mode variant laid out by the pane's own style — one
@@ -631,7 +641,7 @@ import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop, stretchIn } from '../model/derive.js';
 import { iRuns } from '../model/frames.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
-import { posOfChar, charOfPos, sameSpan, elementIn, CHROME } from './span.js';
+import { posOfChar, charOfPos, sameSpan, touches, elementIn, CHROME } from './span.js';
 import { esc, byteLength, numeral } from '../util.js';
 import { t, plural, facedHTML, lastRead, runsText, joinRuns, sentence, CLIENT_CLOSE } from '../strings.js';
 
@@ -1546,12 +1556,14 @@ export function putBack(addr, ids) {
  * `symbols`, `countAt`), so a derived record draws them on the bytes its image
  * holds — a byte the page made among them once the board has minted it — and
  * none on a byte it has not. The walk's focus and the selection are spans of
- * the text shown (N-WALK's, O-SELECTION's).
+ * the text shown (N-WALK's, O-SELECTION's) — the plane's selection on the
+ * plane alone: a pane's article is marked by its own pane's selection once it
+ * stands (`markPaneSelection`).
  */
 export function viewFor(/** @type {Doc} */ d, scene = false) {
   /** @type {ArticleView} */
   const v = {
-    selected: read.selection(), focus: litFocus(scene),
+    selected: scene ? null : read.selection(), focus: litFocus(scene),
     marks: LK.shown(d.addr, d), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr, d), says: farShort, countAt: (b) => LK.countAt(d.addr, b, d),
     wholeLinks: LK.wholeLinks(d.addr).length,
     reader: REC.reader(),
@@ -3448,6 +3460,45 @@ export function unselectIn(el) {
 }
 
 /**
+ * The platform's selection with extent standing over an article's text — a
+ * reading scene's pane's (`selectionIn`) — taken away whole, no caret left
+ * there: what O-SELECTION does where another pane's selection is the focused
+ * one and that pane holds none (Q4). False where none stands there.
+ * @param {HTMLElement} el the article's element
+ * @returns {boolean}
+ */
+export function dropIn(el) {
+  const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  if (!s || !selectionIn(el)) return false;
+  s.removeAllRanges();
+  return true;
+}
+
+/**
+ * Is the platform's selection collapsed at a point inside an article — a
+ * caret alone, as a click in its text leaves it — rather than absent,
+ * holding extent, or standing elsewhere?
+ * @param {HTMLElement} el the article's element
+ * @returns {boolean}
+ */
+export function collapsedIn(el) {
+  const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  return !!s && s.rangeCount > 0 && s.isCollapsed && !!s.anchorNode && el.contains(s.anchorNode);
+}
+
+/**
+ * Does a node stand in a reading scene's pane's article (`sceneArticle`):
+ * where a press is a press on a pane's text (APP-INPUT's)?
+ * @param {EventTarget | Node | null} node
+ * @returns {boolean}
+ */
+export function inPaneText(node) {
+  const n = /** @type {Node | null} */ (node), e = n && typeof n.nodeType === 'number' ? elementOf(n) : null;
+  const art = e && typeof e.closest === 'function' ? /** @type {HTMLElement | null} */ (e.closest('article.dtext')) : null;
+  return !!art && panes.has(art);
+}
+
+/**
  * A reading scene's pane's article marked for its span focus by T-ARTICLE's
  * rule, as a mounted article's blocks are for the walk's focus (`markBlocks`;
  * `blockMarks`): the span standing at `pos` lit, every other not — a class set
@@ -3459,6 +3510,27 @@ export function unselectIn(el) {
 export function markPaneFocus(el, pos) {
   if (!panes.has(el) || typeof el.querySelectorAll !== 'function') return;
   for (const part of blockEls(el)) { const on = pos != null && Number(part.dataset.pos) === pos; if (part.classList.contains('lit') !== on) part.classList.toggle('lit', on); }
+}
+
+/**
+ * A reading scene's pane's article marked for that pane's own selection
+ * (O-SELECTION's), as a mounted article's blocks are for the plane's
+ * (`markBlocks`): each block the span touches marked selected, every other
+ * not, by the positions of the blocks the article was made from — never an
+ * address, so a pane naming a member while it shows its bare address is
+ * marked alike — a class set or taken off where it differs, nothing rebuilt,
+ * so the platform's selection in the pane stands. Nothing where the element
+ * is no pane's article.
+ * @param {HTMLElement} el the article's element
+ * @param {{pos: number, width: number} | null} span the pane's selection, in its article's positions; null where none stands
+ */
+export function markPaneSelection(el, span) {
+  const pane = panes.get(el);
+  if (!pane || typeof el.querySelectorAll !== 'function') return;
+  for (const part of blockEls(el)) {
+    const pos = Number(part.dataset.pos), b = pane.made.blocks.find((x) => x.pos === pos), on = !!span && !!b && touches(b, span);
+    if (part.classList.contains('sel') !== on) part.classList.toggle('sel', on);
+  }
 }
 
 /** what a mounted article's blocks are marked for: the selection and the walk's focus where they stand in its document */
@@ -5175,7 +5247,9 @@ function dropCorner(/** @type {string} */ addr) {
 }
 
 /**
- * The client rects of a span in a mounted article: without a width, those
+ * The client rects of a span in its site's article — the plane's mounted
+ * one, or the reading scene's pane's article handed in, never found by the
+ * address (see the head): without a width, those
  * of the block keyed by its first position — its box, one for each part of
  * it standing (the edge a beam leaves from, the arrival at a document named
  * whole); with one, those of the bytes named, line by line, where the parts
@@ -5185,15 +5259,18 @@ function dropCorner(/** @type {string} */ addr) {
  * name, the run's own boxes, one for each part of its gap standing, never a
  * line at an offset inside the gap (see the head).
  * @param {string} addr
- * @param {number} pos the block's first position, or the span's, in the text shown (`shownOf`)
+ * @param {number} pos the block's first position, or the span's, in the text shown (`shownOf`) — a pane's in its article's positions
  * @param {number | null} [width] the span's positions
+ * @param {HTMLElement | null} [site] a pane's article, where the span is that pane's (`sceneArticle`); none for the plane's
  * @returns {Array<{x: number, y: number, w: number, h: number}> | null}
  */
-export function spanRects(addr, pos, width = null) {
-  const rec = mounted.get(addr); if (!rec) return null;
+export function spanRects(addr, pos, width = null, site = null) {
+  const at = site ? panes.get(site) : null;
+  const rec = site ? (at && at.made.addr === addr ? { el: site, made: at.made } : null) : mounted.get(addr);
+  if (!rec) return null;
   const run = width != null ? rec.made.blocks.find((b) => b.kind === 'withheld' && b.pos <= pos && pos + width <= b.pos + b.width) : null;
   if (width != null && !run) {
-    const r = rangeOf({ addr, pos, width });
+    const r = rangeIn(rec.el, { addr, pos, width });
     const rs = r ? [...r.getClientRects()].map((q) => ({ x: q.left, y: q.top, w: q.width, h: q.height })) : [];
     return rs.length ? rs : null;
   }
@@ -5424,8 +5501,9 @@ function spanIn(el, made, range) {
 /**
  * The span a platform range covers in a mounted article (`spanIn`): the
  * article the range starts in, else ends in; null where that is no mounted
- * article — a reading scene's pane's among them, whose selection is never the
- * page's — or the range covers no span of it.
+ * article — a reading scene's pane's among them, whose selection is its
+ * pane's, read with its site (`siteOfRange`) — or the range covers no span of
+ * it.
  * @param {Range} range
  * @returns {Span | null}
  */
@@ -5440,6 +5518,31 @@ export function spanOfSelection() {
   const s = window.getSelection();
   if (!s || s.rangeCount === 0 || s.isCollapsed) return null;
   return spanOfRange(s.getRangeAt(0));
+}
+
+/**
+ * The span a platform range covers with the site it stands in (see the
+ * head): the plane, where a mounted article holds it (`spanOfRange`); else a
+ * reading scene's pane's article holding it whole — that article the site,
+ * its span in the positions the article was made from (`spanIn`). Null where
+ * it lies in neither, reaches past a pane's article, or covers no span.
+ * @param {Range} range
+ * @returns {{site: 'plane' | HTMLElement, span: Span} | null}
+ */
+export function siteOfRange(range) {
+  const plane = spanOfRange(range);
+  if (plane) return { site: 'plane', span: plane };
+  const art = articleOfRange(range), pane = art ? panes.get(art) : null;
+  if (!art || !pane || !art.contains(range.commonAncestorContainer)) return null;
+  const span = spanIn(art, pane.made, range);
+  return span ? { site: art, span } : null;
+}
+
+/** the platform's selection as a span with the site it stands in (`siteOfRange`), or null where none with extent stands in a site */
+export function siteOfSelection() {
+  const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  if (!s || s.rangeCount === 0 || s.isCollapsed) return null;
+  return siteOfRange(s.getRangeAt(0));
 }
 
 /**
@@ -5505,6 +5608,34 @@ export function rangeIn(el, span) {
   if (!s || !t) return null;
   const r = document.createRange(); r.setStart(s.node, s.offset); r.setEnd(t.node, t.offset);
   return r.collapsed ? null : r;
+}
+
+/**
+ * The ranges a span's own characters stand in, in an article — a mounted
+ * one, or a reading scene's pane's: the range over the span (`rangeIn`) cut
+ * into one range a text node, every text node of the chrome (T-SPAN's
+ * `CHROME`) left out, as the platform's selection leaves it out — what the
+ * page draws a selection the platform does not hold over (O-SELECTION's, SC's;
+ * see the head), so what looks selected is what a copy takes (FP-24). None
+ * where `rangeIn` places none.
+ * @param {HTMLElement} el the article's element
+ * @param {Span} span
+ * @returns {Range[]}
+ */
+export function textRangesIn(el, span) {
+  const r = rangeIn(el, span);
+  if (!r) return [];
+  /** @type {Range[]} */
+  const out = [];
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    const p = n.parentElement, tn = /** @type {Text} */ (n);
+    if ((p && p.closest(CHROME)) || !r.intersectsNode(tn)) continue;
+    const q = document.createRange();
+    q.setStart(tn, tn === r.startContainer ? r.startOffset : 0); q.setEnd(tn, tn === r.endContainer ? r.endOffset : tn.length);
+    if (!q.collapsed) out.push(q);
+  }
+  return out;
 }
 
 /** @type {Span | null} the span the platform's selection was last placed over, as its range reads back */
@@ -5649,10 +5780,15 @@ const typing = () => typeof document !== 'undefined' && FOCUS.isField(document.a
  * is owed its range and nothing is placed, the caret being the reader's
  * (`typing`; FP-20). Where the act that made it moved one of its ends, the
  * next frame keeps that end clear of its document's head (`keepClear`).
+ * A reading scene's pane's selection is placed in that pane's article alone,
+ * handed in, never found by its address (`placePane`), the plane's left as it
+ * is held.
  * @param {Span | null} span
  * @param {SelectionEnd | null} [moved] the end of the span the act moved — K-8's extended end, or the platform's focus point after a press or the platform's own keys; null where the act moved none it could leave under the head
+ * @param {{el: HTMLElement, backward: boolean} | null} [pane] the pane's article the span is that pane's selection in (O-SELECTION's), and whether its anchor stands at its end; none for the plane's
  */
-export function placeSelection(span, moved = null) {
+export function placeSelection(span, moved = null, pane = null) {
+  if (pane) { if (span) placePane(pane.el, span, pane.backward); return; }
   kept = null;
   owed = null;
   clearing = span && moved ? { span, end: moved } : null;
@@ -5666,6 +5802,26 @@ export function placeSelection(span, moved = null) {
   if (!r) { if (mounted.has(span.addr)) owed = span; return; }
   s.removeAllRanges(); s.addRange(r);
   placed = spanOfRange(r);
+}
+
+/**
+ * A reading scene's pane's selection placed in its article (`placeSelection`;
+ * see the head): where the platform's selection already reads the span there
+ * (`selectionIn`) it stands as it is, its anchor where the person or the page
+ * set it; else it is placed over the span (`selectIn`), its anchor at the
+ * span's end where `backward`, else at its start, so Shift with an arrow goes
+ * on extending its moving end (D5 K-71). Nothing while a field the reader
+ * types in holds the focus (`typing`; FP-20): O-SELECTION places it once the
+ * field lets go.
+ * @param {HTMLElement} el the pane's article
+ * @param {Span} span
+ * @param {boolean} backward
+ */
+function placePane(el, span, backward) {
+  if (typing()) return;
+  const have = selectionIn(el);
+  if (have && sameSpan(have.span, span)) return;
+  selectIn(el, span, backward);
 }
 
 /**

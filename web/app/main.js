@@ -45,7 +45,7 @@
 // The reader's preference for reduced motion, the platform's, is handed to
 // P-CAM as the page boots and again as it changes (`setReducedMotion`).
 // What a module reads of an owner above it is handed in once as the page
-// boots (FP-10, FP-11): T-LAYER's readers (the selection, the walk's focus,
+// boots (FP-10, FP-11): T-LAYER's readers (the plane's selection, the walk's focus,
 // the line's bottom, the trail's current entry, the version each box shows
 // — N-GO's `shownIn`, FP-22 — the document the line names — L-LINE's
 // `named`, FP-26 — whether an account is named in view: the line names
@@ -62,7 +62,10 @@
 // `addressDisplay` names at its reading scale, as the version its box shows,
 // N-GO's `shownIn`, FP-22 — beside which a row opens its place, `reading`
 // — its foot, where the creation row stands, and the one line's transient
-// segment, which says a mint);
+// segment, which says a mint); O-SELECTION's and O-HOST's (each reading
+// scene's pane as it stands, SC's `siteOf` — a site whose selection the
+// overlay owns and an overlay may stand at — and, O-SELECTION's alone, the
+// pane holding the platform's focus, SC's `focusedPane`, Q4);
 // LK's (the links lit, P-RENDER's `drawsDoc`, T-LAYER's
 // owner rule, `shownIn`, and a far document's first line, T-LAYER's
 // `firstOfFar` by T-ARTICLE's one rule); N-WALK's (Back's light, what a landing says,
@@ -376,7 +379,10 @@ async function boot() {
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote'), foot: el('leapfoot') }, () => LINE.currentAddress(), reading, (words, id) => LINE.transient(words, id));
   FIND.attach({ box: el('find'), input: /** @type {HTMLInputElement} */ (el('findq')), count: el('findcount'), prev: /** @type {HTMLButtonElement} */ (el('findprev')), next: /** @type {HTMLButtonElement} */ (el('findnext')), note: el('findnote') });
   LINE.attach(el('line'), { open: (byKey, at) => LEAP.open(at), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift, asOf: SCENE.pastAsOf, hint: (id, at) => HINT.show(id, null, { at }), acted: () => HINT.act() });
-  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt, face: FACES.cornerFace, panes: SCENE.editorPanes, covered: (words, id) => LINE.transient(words, id) });
+  LAYER.readers({ selection: () => SEL.selected('plane'), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt, face: FACES.cornerFace, panes: SCENE.editorPanes, covered: (words, id) => LINE.transient(words, id) });
+  // each reading scene's pane a site of its own: its selection O-SELECTION's, an overlay at it O-HOST's
+  SEL.readers({ pane: SCENE.siteOf, focused: SCENE.focusedPane });
+  HOST.readers({ pane: SCENE.siteOf });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null), first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords(), enter: () => { LINE.act(); HINT.act(); return KEYS.activate(); } });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });

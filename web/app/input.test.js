@@ -70,8 +70,11 @@
 // moves gets the drag's selection back, its direction kept, once the walk's
 // item has taken the focus; and a pointer's press and a wheel, wherever they
 // fall, are acts an undo reading where its step stands keeps, the step taken
-// where it stands and the caret left where it stood (FP-12, FP-20, FP-21,
-// FP-24, FP-25, FP-30, FP-34, FP-35, FP-36, FP-40).
+// where it stands and the caret left where it stood; and a press on a
+// reading scene's pane's text taking nothing until its release, which takes
+// that pane's selection once, a drag in each of two panes leaving both
+// standing and a click in one ending its own (FP-9, FP-10, FP-12, FP-20,
+// FP-21, FP-24, FP-25, FP-30, FP-34, FP-35, FP-36, FP-40).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -1892,4 +1895,85 @@ test('a pointer\'s press and a wheel, wherever they fall — a wheel over the ov
       assert.deepEqual([shown(), caretNow(), WRITE.undoOf(addr).length], [LINES.slice(7), [addr, 33, true], 0], `${what}: the step taken where it stands, the caret where it stood, by its bytes — never placed where the step began`);
     }
   } finally { MACHINE.takeOut(); PORT.boot(null); KEYS._reset(); }
+}));
+
+/**
+ * Two reading scene's panes on the page `onGestures` lays out: pane A's article of one document and pane B's of
+ * another, each T-LAYER's mount (`sceneArticle`) standing in the page, handed to O-SELECTION as the app hands SC's
+ * panes, the pane the platform's focus stands in the test's to say; what the status region was told, in order; a
+ * range over a span of a pane's text; and a pointer's press on a pane's text and its release, and a change of the
+ * platform's selection, as the platform delivers them.
+ * @param {ReturnType<typeof page>} dom
+ * @param {string} a pane A's document
+ * @param {string} b pane B's document
+ */
+function scenePanes(dom, a, b) {
+  const scene = dom.element('div');
+  scene.id = 'scene'; dom.document.body.appendChild(scene);
+  const arts = { a: LAYER.sceneArticle(REC.doc(a)), b: LAYER.sceneArticle(REC.doc(b)) }, addrs = { a, b };
+  scene.appendChild(/** @type {any} */ (arts.a)); scene.appendChild(/** @type {any} */ (arts.b));
+  /** @type {'a' | 'b'} */
+  let focused = 'b';
+  SEL.readers({ pane: (side) => ({ article: arts[side] }), focused: () => focused });
+  /** @type {string[]} */
+  const said = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); }, get textContent() { return said[said.length - 1] ?? ''; } }) });
+  const ev = (/** @type {unknown} */ target, /** @type {number} */ x) => ({ target, clientX: x, clientY: 0, pointerId: 1, button: 0, detail: 1, metaKey: false, ctrlKey: false, shiftKey: false, preventDefault() {}, stopPropagation() {} });
+  const range = (/** @type {'a' | 'b'} */ side, /** @type {number} */ pos, /** @type {number} */ width) => /** @type {Range} */ (LAYER.rangeIn(arts[side], { addr: addrs[side], pos, width }));
+  return {
+    arts, said, range,
+    focus: (/** @type {'a' | 'b'} */ side) => { focused = side; },
+    /** the platform's selection set over a span of a pane's text, as a drag leaves it */
+    over: (/** @type {'a' | 'b'} */ side, /** @type {number} */ pos, /** @type {number} */ width) => { const r = range(side, pos, width); dom.document.selection.set(/** @type {any} */ (r.startContainer), r.startOffset, /** @type {any} */ (r.endContainer), r.endOffset); },
+    /** a press on a pane's text at a screen x: its pointer event, then its mouse event */
+    press: (/** @type {'a' | 'b'} */ side, x = 0) => { const t = range(side, 1, 1).startContainer; dom.fire('window', 'pointerdown', ev(t, x)); dom.fire('window', 'mousedown', ev(t, x)); },
+    /** its release at a screen x: where it went down, a click's; 50 px on, a drag's */
+    release: (/** @type {'a' | 'b'} */ side, x = 0) => dom.fire('window', 'pointerup', ev(range(side, 1, 1).startContainer, x)),
+    changed: () => dom.fire('document', 'selectionchange', {}),
+    end: () => { SEL.endPanes(); SEL.readers({}); },
+  };
+}
+
+test('a press on a reading scene\'s pane\'s text takes nothing while it stands — the platform\'s selection growing under the drag taken as no selection and said nowhere — and its release takes the selection once, as that pane\'s, said once; the change the release leaves takes nothing again, and none of it is the plane\'s selection, its walk or its caret (issue #94; FP-9, FP-10)', () => onGestures(async ({ D, O, dom }) => {
+  const P = scenePanes(dom, O, D);
+  try {
+    P.focus('a');
+    const walk = walkAt(), caret = caretNow();
+    P.press('a');
+    for (const width of [3, 7, 11]) { P.over('a', 9, width); P.changed(); }
+    assert.deepEqual([SEL.selected('a'), P.said], [null, []], 'under the drag: nothing taken, nothing said');
+    P.release('a', 50);
+    assert.deepEqual([SEL.selected('a'), P.said.length], [{ addr: O, pos: 9, width: 11 }, 1], 'its release: the final span pane A\'s, said once');
+    P.changed();
+    assert.deepEqual([SEL.selected('a'), P.said.length], [{ addr: O, pos: 9, width: 11 }, 1], 'the change the release leaves: taken again as nothing new, said nowhere');
+    assert.deepEqual([SEL.selected('plane'), caretNow(), walkAt()], [null, caret, walk], 'never the plane\'s selection, the caret or the walk');
+  } finally { P.end(); }
+}));
+
+test('a drag in one pane\'s text, then one in the other\'s, leaves both panes\' selections standing, each its own; a click in pane B — the platform\'s selection collapsed in its text, none left at all, or still standing as the button comes up — ends pane B\'s alone; and the platform\'s own keys in a pane\'s text, outside a press, make that pane\'s (issue #94\'s design decision: "A selection at any other site stays"; FP-36)', () => onGestures(async ({ D, O, dom }) => {
+  const P = scenePanes(dom, O, D), s = dom.document.selection;
+  try {
+    P.focus('a'); P.press('a'); P.over('a', 9, 5); P.release('a', 50);
+    P.focus('b'); P.press('b'); P.over('b', 15, 5); P.release('b', 50);
+    assert.deepEqual([SEL.selected('a'), SEL.selected('b')], [{ addr: O, pos: 9, width: 5 }, { addr: D, pos: 15, width: 5 }], 'a drag in pane A, then one in pane B: both stand');
+    P.press('b');
+    const r = P.range('b', 3, 1);
+    s.collapse(/** @type {any} */ (r.startContainer), r.startOffset);
+    P.release('b');
+    assert.deepEqual([SEL.selected('a'), SEL.selected('b')], [{ addr: O, pos: 9, width: 5 }, null], 'a click in pane B: pane B\'s ended, pane A\'s standing');
+    P.press('b'); P.over('b', 15, 5); P.release('b', 50);
+    P.press('b'); s.removeAllRanges(); P.release('b');
+    assert.deepEqual([SEL.selected('a'), SEL.selected('b')], [{ addr: O, pos: 9, width: 5 }, null], 'a click in pane B leaving the platform no range at all, as an engine may: pane B\'s ended all the same, pane A\'s standing');
+    P.press('b'); P.over('b', 15, 5); P.release('b', 50);
+    P.press('b'); P.release('b');
+    assert.deepEqual(SEL.selected('b'), null, 'a click inside pane B\'s selection, the platform holding it yet as the button comes up: ended at the release');
+    SEL.drawPanes();
+    assert.deepEqual(SEL.selected('b'), null, 'a frame before the platform empties that range: no reader takes it');
+    s.removeAllRanges(); P.changed();
+    assert.deepEqual(SEL.selected('b'), null, 'the platform empties it as the button comes up: pane B\'s none still');
+    P.focus('a');
+    P.over('a', 9, 8);
+    P.changed();
+    assert.deepEqual(SEL.selected('a'), { addr: O, pos: 9, width: 8 }, 'the platform\'s own keys extending it in pane A, a change outside a press: pane A\'s');
+  } finally { P.end(); }
 }));

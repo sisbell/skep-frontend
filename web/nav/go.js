@@ -2736,7 +2736,7 @@ export function arrived(member, at = null, newest = null) {
   const d = !pins.has(doc) && REC.has(doc) ? REC.doc(doc) : null;
   if (!d || d.from < 0 || !TRAIL.readBefore(d.readAt, at)) return;
   const reading = !SCENE.isOpen() && LAYER.inView(doc) && LAYER.atReadingScale(doc);
-  const s = SEL.selected();
+  const s = SEL.selected('plane');
   if (s && s.addr === doc) across.bytes = { span: s, ids: LAYER.shownIdentity(doc, s.pos, s.width) };
   LAYER.holdAcross(doc, read);
   pinTo(read);
@@ -3036,7 +3036,7 @@ export async function history(addr, opts = {}) {
   const got = await SCENE.pastState(addr, rows, asked, read.head);
   if (!stands()) return false;
   if ('refused' in got) { FOCUS.say(historyRefused(got.refused, addr), false, true); return false; }
-  const sel = SEL.selected(), caret = LAYER.caretIn(addr), f = WALK.focusedSpan();
+  const sel = SEL.selected('plane'), caret = LAYER.caretIn(addr), f = WALK.focusedSpan();
   const near = caret ? caret.pos : f && f.addr === addr ? f.pos : null;
   const change = sel && sel.addr === addr ? null : changeNear(got.state.image, LAYER.shownOf(addr).image, near);
   /** @type {import('../scene/scene.js').Held} */
@@ -4183,7 +4183,7 @@ async function restore(e, act) {
       if (act !== made || owed !== o) return;
       o.selection = null;
       if (mine) o.overlay = null;
-      if (!SEL.selected()) {
+      if (!SEL.selected('plane')) {
         if (!at.span) heldNone(sel);
         else { SEL.restore(at.span, mine); if (at.holds === 'part') heldPart(at, sel, 'selected'); }
       }
@@ -4424,7 +4424,7 @@ function selectionsOwn() {
  * as it is where its bytes are not named.
  */
 function acrossSelection() {
-  const s = SEL.selected();
+  const s = SEL.selected('plane');
   if (across.bytes && !sameSpan(across.bytes.span, s)) across.bytes = null;
   const shown = s ? shownIn(s.addr) : '';
   const key = s && shown !== s.addr ? acrossKey(s, shown) : null;
@@ -4506,7 +4506,7 @@ function acrossOverlay() {
  * @param {{runs: Run[] | null, none?: boolean}} placed
  */
 function carrySelection(c, addr, placed) {
-  const s = SEL.selected();
+  const s = SEL.selected('plane');
   if (!s || !sameSpan(s, c)) return;
   if (placed.none) { across.sel = { span: s, key: acrossKey(s, addr) }; return; }
   const mine = selectionsOwn();

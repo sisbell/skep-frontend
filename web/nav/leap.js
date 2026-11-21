@@ -701,7 +701,7 @@ export function beside(i, o = {}) {
     return;
   }
   close();
-  const s = SEL.selected(), held = s && s.addr === at ? s : null;
+  const s = SEL.selected('plane'), held = s && s.addr === at ? s : null;
   void GO.toScene(LAYER.paneSource(at), to, held ? { posA: held.pos, widthA: held.width, posB: null } : {}, { from: held ? { passage: { addr: held.addr, pos: held.pos, width: held.width } } : null, site: null });
 }
 

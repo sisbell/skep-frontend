@@ -105,9 +105,13 @@
 // by skep's own entry — the same words placed by identity where they match its
 // plain text, at hand or read by identity, else the plain text, told — the
 // caret after the draft's own words placed again held by no byte the text
-// holds twice, so their source refused leaves it where the paste was made (FP-8,
-// FP-12, FP-20, FP-22, FP-23, FP-24, FP-26, FP-27, FP-30, FP-31, FP-33, FP-34,
-// FP-36, FP-37, FP-38, FP-39).
+// holds twice, so their source refused leaves it where the paste was made; and
+// a reading scene's pane a site of its own — its selection placed in its
+// article alone though the plane mounts the same document, its rects read
+// there, a range read with its site, and its blocks marked by its own
+// selection, never the plane's (FP-8,
+// FP-10, FP-12, FP-20, FP-22, FP-23, FP-24, FP-26, FP-27, FP-30, FP-31, FP-33,
+// FP-34, FP-36, FP-37, FP-38, FP-39).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -3319,4 +3323,62 @@ test('words still in their open burst carry no face when cut: typed and cut befo
   WRITE.commit(P);
   await flush();
   assert.deepEqual([frames, WRITE.removalsOf(P), WRITE.inFlight(P), WRITE.keptOf(P)?.word], [[], [], false, 'kept'], 'the commit sends nothing for them and makes no removal: the burst changes nothing on the board, and the corner reads "kept"');
+}));
+
+/** a reading scene's pane's article of `onDraft`'s draft, T-LAYER's mount (`sceneArticle`), standing in the page beside the plane's, which mounts the same draft */
+function paneArticle(/** @type {ReturnType<typeof page>} */ dom, /** @type {string} */ P, /** @type {{names?: string, shows?: string}} */ as = {}) {
+  const el = LAYER.sceneArticle(REC.doc(P), as);
+  dom.document.body.appendChild(/** @type {any} */ (el));
+  return el;
+}
+
+test('a reading scene\'s pane\'s selection is placed in that pane\'s article, though the plane mounts the same document: its anchor at its end where asked, one already reading the span there left as it stands, its anchor where it was set, and nothing placed while a field holds the focus — the plane\'s article holding none of it (issue #94; FP-10, FP-20)', () => onDraft(async ({ P, dom }) => {
+  const pane = paneArticle(dom, P), s = dom.document.selection, plane = /** @type {any} */ (LAYER.mountedSet().get(P)).el;
+  const span = { addr: P, pos: 9, width: 5 }, back = { addr: P, pos: 15, width: 5 };
+  LAYER.placeSelection(span, null, { el: pane, backward: false });
+  assert.deepEqual([LAYER.selectionIn(pane), LAYER.selectionIn(plane), LAYER.spanOfSelection()], [{ span, backward: false }, null, null], 'placed in the pane\'s article, none of it in the plane\'s');
+  LAYER.placeSelection(back, null, { el: pane, backward: true });
+  assert.deepEqual(LAYER.selectionIn(pane), { span: back, backward: true }, 'its anchor at its end where asked');
+  LAYER.placeSelection(back, null, { el: pane, backward: false });
+  assert.deepEqual(LAYER.selectionIn(pane), { span: back, backward: true }, 'one reading the span there stands as it is, its anchor where it was set');
+  s.removeAllRanges();
+  dom.document.activeElement = dom.element('input');
+  LAYER.placeSelection(span, null, { el: pane, backward: false });
+  assert.equal(s.rangeCount, 0, 'nothing placed while a field holds the focus');
+  dom.document.activeElement = null;
+}));
+
+test('a span\'s rects at a reading scene\'s pane are read from that pane\'s article, never the plane\'s that mounts the same document, and at the plane from the plane\'s; none where the pane\'s article is made as another address (issue #94)', () => onDraft(async ({ P, dom }) => {
+  const pane = paneArticle(dom, P), make = dom.document.createRange.bind(dom.document);
+  // each range laid out where the article holding it stands: the pane's at x 500, the plane's at x 100
+  dom.document.createRange = () => { const r = make(); /** @type {any} */ (r).getClientRects = () => [{ left: pane.contains(/** @type {any} */ (r.startContainer)) ? 500 : 100, top: 40, width: 30, height: 12 }]; return r; };
+  assert.deepEqual(LAYER.spanRects(P, 9, 5, pane), [{ x: 500, y: 40, w: 30, h: 12 }], 'at the pane: the pane\'s article\'s');
+  assert.deepEqual(LAYER.spanRects(P, 9, 5), [{ x: 100, y: 40, w: 30, h: 12 }], 'at the plane: the plane\'s');
+  assert.equal(LAYER.spanRects('1.0.1.0.99', 9, 5, pane), null, 'another address than the pane\'s article is made as: none');
+}));
+
+test('the span a range covers is read with its site — the plane where the plane\'s mounted article holds it, else the reading scene\'s pane\'s article holding it whole — and `spanOfRange`, the plane\'s alone, answers none of a pane\'s (issue #94)', () => onDraft(async ({ P, dom }) => {
+  const pane = paneArticle(dom, P), span = { addr: P, pos: 9, width: 5 };
+  const inPane = /** @type {Range} */ (LAYER.rangeIn(pane, span)), onPlane = /** @type {Range} */ (LAYER.rangeOf(span));
+  const pSited = LAYER.siteOfRange(inPane), qSited = LAYER.siteOfRange(onPlane);
+  assert.deepEqual([pSited?.site === pane, pSited?.span, LAYER.spanOfRange(inPane)], [true, span, null], 'in the pane: its site the pane\'s article, its span there; the plane\'s none');
+  assert.deepEqual(qSited, { site: 'plane', span }, 'on the plane: the plane\'s');
+  dom.document.selection.addRange(/** @type {any} */ (inPane));
+  const sited = LAYER.siteOfSelection();
+  assert.deepEqual([sited?.site === pane, sited?.span, LAYER.spanOfSelection()], [true, span, null], 'the platform\'s selection read so');
+  dom.document.selection.removeAllRanges();
+}));
+
+test('a reading scene\'s pane\'s article is marked by its own pane\'s selection alone, never the plane\'s: made with nothing marked while the plane\'s stands over the same words, then each block its pane\'s selection touches marked in place by position — whatever address its head shows — and unmarked as it ends (issue #94; Q6)', () => onDraft(async ({ P, dom }) => {
+  readers({ addr: P, pos: 1, width: 30 });
+  const pane = paneArticle(dom, P, { names: P + '.7', shows: P });
+  const marked = () => [.../** @type {any} */ (pane).querySelectorAll('.run > .sp.sel')].map((e) => Number(e.dataset.pos));
+  const blocks = REC.doc(P).blocks, touched = (/** @type {{pos: number, width: number}} */ s) => blocks.filter((b) => b.pos < s.pos + s.width && s.pos < b.pos + b.width).map((b) => b.pos);
+  assert.deepEqual(marked(), [], 'the plane\'s selection over the same words marks nothing in the pane');
+  LAYER.markPaneSelection(pane, { pos: 9, width: 5 });
+  assert.deepEqual(marked(), [1], 'the pane\'s own selection marks the block it touches, though the pane names a member its head does not show');
+  LAYER.markPaneSelection(pane, { pos: 20, width: 15 });
+  assert.deepEqual(marked(), touched({ pos: 20, width: 15 }).filter((p) => pane.querySelector(`.run > .sp[data-pos="${p}"]`)), 'each block it touches, in place');
+  LAYER.markPaneSelection(pane, null);
+  assert.deepEqual(marked(), [], 'its end unmarks them');
 }));

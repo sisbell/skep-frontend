@@ -1,9 +1,53 @@
 // O-SELECTION — the selection and its acts in fixed slots (the structure
 // record §3.2; foundations §3.1; D5 §1.6). Layer 2. ENGINE-BOUND. State
-// (FP-10): the selection, how Shift with ← or → moves its ends (`ends`), its
-// bytes as it was set, which the person's edits elsewhere carry it by
-// (`stood`, `carry`), and the latest act of a slot that sends (`sending`);
-// T-LAYER reads the selection through the reader handed in.
+// (FP-10): the plane's selection, how Shift with ← or → moves its ends
+// (`ends`), its bytes as it was set, which the person's edits elsewhere carry
+// it by (`stood`, `carry`), and the latest act of a slot that sends
+// (`sending`); each reading scene's pane's selection (`paneSel`), the last
+// pane the platform's focus stood in (`lastPane`), whether a press stands on
+// a pane's text and on which (`pressed`), the pane a click on whose text was
+// just released (`clicked`), the pane whose range is owed while a field
+// holds the focus (`owed`), and what the page last drew the selections the
+// platform does not hold from (`drawnKey`); T-LAYER reads the plane's
+// selection through the reader handed in, and the scene's panes are read
+// through the readers the app hands in (SC's: `readers`).
+// Every selection belongs to one SITE (`Site`): a place showing one
+// arrangement of a document's words — the plane, or a reading scene's pane,
+// by its side, showing a document, a draft's past state or held text — and
+// each site holds a selection of its own, in the positions of the text it
+// shows, read by naming its site (`selected`, `backward`); a read naming none
+// gets the focused site's (`focusedSite`): the pane whose text, corner or
+// list of past states holds the platform's focus, else, while the focus
+// stands at the scene's acts, the one line or an overlay, the last such pane
+// — pane B until one has held it, where a scene puts the focus — and the
+// plane where no scene stands or the focus stands on the plane's acts row.
+// The focused site's selection is the platform's live one; every other
+// stands, the page drawing it as the platform draws an inactive selection
+// (`drawPanes`, `selections`): a custom highlight over the ranges its own
+// characters stand in, the chrome left out as the platform's selection
+// leaves it (T-LAYER's `textRangesIn`; FP-24), else, where the platform has
+// none, SC's boxes. As the focus moves the live one follows it, both ways
+// (`focusIn`, `drawPanes`): the focused pane's selection placed in its
+// article wherever the platform holds none, or holds one in another site —
+// never over a selection the person holds outside the sites, an overlay's
+// text or a field's, nor while a press stands on a pane's text or a field
+// holds the focus (FP-20), owed until then — and, where the focused pane
+// holds none, a range standing in the other pane's text taken off. The
+// focused pane's selection is the platform's range: read first wherever it
+// is read (`paneNow`) — with extent in its text it is that pane's selection,
+// collapsed there it ends, standing anywhere else, or nowhere, the pane's
+// stands, as no move of the focus or a selection made in another pane ends
+// it. A drag or the platform's own keys in a pane's text make that pane's
+// selection (`takePane`, APP-INPUT's): a press on a pane's text holds every
+// take until its release (`pressPane`), which takes the pane's selection
+// once, its blocks marked in place (T-LAYER's `markPaneSelection`) and where
+// it stands said once — a release leaving the platform no selection with
+// extent ending the pressed pane's, as a click there does, and the click on
+// its text read again once the platform has settled it (`clickedIn`; FP-24)
+// — never the plane's acts, its walk or its caret. SC
+// sets a pane's selection by its own acts (`setPane`, `clear`), and as a
+// pane closes, stands anew, or is taken down to its cover its selection ends
+// with it (`endPanes`). The rest of this head is the plane's selection.
 // The selection is the span (R11; foundations §3.1): a byte range of one
 // document, `{addr, pos, width}` in V-positions of the text the page shows of
 // it (T-LAYER's `shownOf`) — a draft's with its page-local edits applied —
@@ -138,8 +182,8 @@
 // re-check carries it — its card or its list drawn again with it — over the
 // bytes that version holds of it (`restore`), saying nothing where the move's
 // own landing says it (N-GO's `surfacesAcross`; FP-22).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-21, FP-22, FP-34, FP-36,
-// FP-37, FP-40, FP-41.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-12, FP-13, FP-20, FP-21, FP-22,
+// FP-24, FP-34, FP-36, FP-37, FP-40, FP-41.
 
 import * as HOST from './host.js';
 import * as REC from '../model/records.js';
@@ -224,8 +268,381 @@ function carry() {
   if (own) render();
 }
 
-/** the selection, read-only (T-LAYER's reader): the one the screen draws, never a span a card or a list holds (see the head), where its bytes stand in the text shown now (`carry`) */
-export function selected() { carry(); return sel; }
+/** @typedef {'plane' | 'a' | 'b'} Site a place showing one arrangement of a document's words, which holds a selection of its own (see the head): the plane, or a reading scene's pane by its side */
+/** @typedef {'a' | 'b'} Side a reading scene's pane, by its side */
+
+/**
+ * @typedef {Object} PaneSel — a reading scene's pane's selection (see the head)
+ * @property {Span} span its bytes, in the positions the pane's article was made from, its address the one the pane's acts name (T-LAYER's `Made.addr`)
+ * @property {'start' | 'end'} moves the end its focus point stands at: the end Shift with an arrow moves
+ * @property {boolean} told where it stands was said through the status region, or the page's own act set it
+ */
+
+/**
+ * @typedef {Object} Readers — what O-SELECTION reads of the reading scene, the app's to hand in (SC's)
+ * @property {(side: Side) => ({article: HTMLElement | null} | null)} pane a pane as it stands, its article the one it shows; null where no scene stands (SC's `siteOf`)
+ * @property {() => Side | null} focused the pane whose text, corner or list of past states holds the platform's focus; null anywhere else (SC's `focusedPane`)
+ */
+
+/** @type {Readers} */
+const NO_READERS = { pane: () => null, focused: () => null };
+/** @type {Readers} */
+let read = NO_READERS;
+
+/**
+ * The scene's readers handed in (the app's; see the head): what the panes
+ * are read through, the readers not given reading no scene.
+ * @param {Partial<Readers>} r
+ */
+export function readers(r) { read = { ...NO_READERS, ...r }; }
+
+/** @type {Side[]} */
+const SIDES = ['a', 'b'];
+/** @type {Record<Side, PaneSel | null>} each reading scene's pane's selection, by its side; none where no scene stands */
+const paneSel = { a: null, b: null };
+/** @type {Side} the last pane the platform's focus stood in — its text, its corner or its list of past states: the focused site while the focus stands at the scene's acts, the one line or an overlay (`focusedSite`); pane B, where a scene puts the focus, until one has held it */
+let lastPane = 'b';
+/** @type {Side | null} the pane whose text a press stands on, from the button going down to its release, the platform's cancel or a context menu (APP-INPUT's `pressPane`): no selection is taken or placed meanwhile, its release taking the pane's selection once (`takePane`); null where none stands */
+let pressed = null;
+/** @type {Side | null} the pane whose selection the page set while a field held the focus, its range owed until the field lets go (`placePane`): the platform's range there is older than it, so no reader takes that range in its place (`fromPlatform`); null where none is owed */
+let owed = null;
+/** @type {Side | null} the pane a click on whose text was just released, its selection ended (`takePane`): until the platform's selection next changes or a press begins, a range the platform holds there is the one it empties as the button comes up, which no reader takes (`fromPlatform`, `clickedIn`); null where none is */
+let clicked = null;
+/** what the page last drew the selections the platform does not hold from (`drawPanes`), each pane's by its article and its span: drawn again only where it reads other */
+let drawnKey = '';
+/** the custom highlight the page draws the selections the platform does not hold with, as the style names it (`::highlight()`) */
+export const INACTIVE = 'skep-inactive';
+/** @type {WeakMap<HTMLElement, number>} each pane's article by a number of its own, for `drawnKey`: an article set again is drawn anew */
+const articleIds = new WeakMap();
+let articleSerial = 0;
+
+/** a pane's article as the scene shows it now; null where no scene stands or the pane shows none */
+const articleOf = (/** @type {Side} */ side) => { const p = read.pane(side); return p ? p.article : null; };
+/** does a reading scene stand */
+const sceneStands = () => !!read.pane('a');
+/** does a field the reader types in hold the platform's focus (N-FOCUS's `isField`): no range is placed while it does (FP-20) */
+const typing = () => typeof document !== 'undefined' && FOCUS.isField(document.activeElement);
+
+/**
+ * The site whose selection the platform's live one is (see the head; Q4):
+ * the plane where no reading scene stands; while one stands, the pane whose
+ * text, corner or list of past states holds the platform's focus — kept as
+ * the last such pane — else the plane where the focus stands on the plane's
+ * acts row, else the last such pane.
+ * @returns {Site}
+ */
+export function focusedSite() {
+  if (!sceneStands()) return 'plane';
+  const side = read.focused();
+  if (side) { lastPane = side; return side; }
+  const host = HOST.element(), at = typeof document !== 'undefined' ? document.activeElement : null;
+  if (HOST.currentIs('selection') && host && at && host.contains(at)) return 'plane';
+  return lastPane;
+}
+
+/**
+ * A site's selection, read-only, by value: the plane's where its bytes stand
+ * in the text shown now (`carry`) — the one the screen draws, never a span a
+ * card or a list holds (see the head); a pane's in its article's positions,
+ * the focused pane's read from the platform's first (`paneNow`). Naming no
+ * site reads the focused site's (`focusedSite`). Null where none stands.
+ * @param {Site} [site]
+ * @returns {Span | null}
+ */
+export function selected(site = focusedSite()) {
+  if (site === 'plane') { carry(); return sel; }
+  const e = paneNow(site);
+  return e ? { ...e.span } : null;
+}
+
+/**
+ * Does a site's selection run backward, its focus point before its anchor,
+ * so the end Shift with an arrow moves is its start (`Ends.moves`,
+ * `PaneSel.moves`)? Naming no site reads the focused site's; false where none
+ * stands.
+ * @param {Site} [site]
+ * @returns {boolean}
+ */
+export function backward(site = focusedSite()) {
+  if (site === 'plane') return !!sel && ends.moves === 'start';
+  const e = paneNow(site);
+  return !!e && e.moves === 'start';
+}
+
+/**
+ * Every site's selection standing, by value, with whether the page draws it
+ * — a pane's the platform does not hold (`drawPanes`) — rather than the
+ * platform, or nothing, as the plane's under a scene.
+ * @returns {Array<{site: Site, addr: string, pos: number, width: number, inactive: boolean}>}
+ */
+export function selections() {
+  /** @type {Array<{site: Site, addr: string, pos: number, width: number, inactive: boolean}>} */
+  const out = [];
+  const p = selected('plane');
+  if (p) out.push({ site: 'plane', addr: p.addr, pos: p.pos, width: p.width, inactive: false });
+  for (const side of SIDES) {
+    const e = paneNow(side);
+    if (e) out.push({ site: side, addr: e.span.addr, pos: e.span.pos, width: e.span.width, inactive: !holds(side) });
+  }
+  return out;
+}
+
+/** does the platform draw the custom highlights the page draws a selection the platform does not hold with (see the head)? Where it does not, SC draws them as boxes */
+export const drawsHighlights = () => typeof CSS !== 'undefined' && !!(/** @type {any} */ (CSS)).highlights && typeof (/** @type {any} */ (globalThis)).Highlight === 'function';
+
+/**
+ * A pane's selection now: the focused pane's read from the platform's first
+ * (`fromPlatform`) — save while a press stands on a pane's text — every
+ * other's as it stands.
+ * @param {Side} side
+ * @returns {PaneSel | null}
+ */
+function paneNow(side) {
+  if (!pressed && sceneStands() && side === focusedSite()) fromPlatform(side, 'later');
+  return paneSel[side];
+}
+
+/** does the platform's selection stand over a pane's selection, its live one: false where it stands elsewhere, or the pane holds none */
+function holds(/** @type {Side} */ side) {
+  const e = paneSel[side], art = articleOf(side), have = e && art ? LAYER.selectionIn(art) : null;
+  return !!e && !!have && sameSpan(have.span, e.span);
+}
+
+/**
+ * The platform's selection read where it stands in a pane's text (see the
+ * head): with extent there, that pane's selection made of it (`holdPane`);
+ * collapsed there, a caret alone, the pane's selection ended where that pane
+ * is the focused site — a click in its text; anywhere else, nothing. A
+ * reader's read leaves as it stands a pane whose range is owed (`owed`) — the
+ * range there is older than its selection — or whose click's release just
+ * ended it (`clicked`) — the range there is the one the platform empties; a
+ * gesture's take is the person's and owes nothing after it. True where the
+ * platform's selection stands in the pane's text.
+ * @param {Side} side
+ * @param {'say' | 'later'} how a gesture's take, said now; else a reader's, said by the take that follows
+ * @returns {boolean}
+ */
+function fromPlatform(side, how) {
+  const art = articleOf(side);
+  if (!art) return false;
+  if (clicked === side && how === 'later') return false;
+  if (owed === side) { if (how === 'later') return false; owed = null; }
+  const have = LAYER.selectionIn(art);
+  if (have) { holdPane(side, have.span, have.backward ? 'start' : 'end', how); return true; }
+  if (!LAYER.collapsedIn(art)) return false;
+  if (side === focusedSite()) endPane(side);
+  return true;
+}
+
+/**
+ * A pane's selection set, its blocks marked in place (`markPane`): where it
+ * already reads so, said where a gesture's take finds it unsaid — a reader
+ * read it from the platform first — else nothing.
+ * @param {Side} side
+ * @param {Span} span
+ * @param {'start' | 'end'} moves
+ * @param {'say' | 'later' | 'page'} how `say` a gesture's take, said now; `later` read from the platform as a reader asked, said by the take that follows; `page` the page's own act, which says what it says itself
+ */
+function holdPane(side, span, moves, how) {
+  const e = paneSel[side];
+  if (e && sameSpan(e.span, span) && e.moves === moves) { if (how === 'say' && !e.told) { e.told = true; tell(span); } return; }
+  paneSel[side] = { span: { addr: span.addr, pos: span.pos, width: span.width }, moves, told: how !== 'later' };
+  markPane(side);
+  markDirty();
+  if (how === 'say') tell(span);
+}
+
+/** a pane's selection ended, its blocks unmarked, its range owed no more */
+function endPane(/** @type {Side} */ side) {
+  if (owed === side) owed = null;
+  if (!paneSel[side]) return;
+  paneSel[side] = null;
+  markPane(side);
+  markDirty();
+}
+
+/** a pane's article marked for its selection (T-LAYER's `markPaneSelection`): its blocks the selection touches, by position */
+function markPane(/** @type {Side} */ side) {
+  const art = articleOf(side), e = paneSel[side];
+  if (art) LAYER.markPaneSelection(art, e ? e.span : null);
+}
+
+/** where a selection made stands, said through the status region (D4) */
+const tell = (/** @type {Span} */ span) => FOCUS.say(`${span.addr} · ${t('F.position', { p: span.pos })}`);
+
+/**
+ * A pane's selection placed as the platform's live one, in the pane's
+ * article (T-LAYER's `placeSelection` with the pane): only where the
+ * platform holds no selection with extent, or holds one in a site — never
+ * over one the person holds over an overlay's text or a field's — and never
+ * while a press stands on a pane's text, whose release takes the person's,
+ * or a field holds the focus (FP-20), its range owed then until the field
+ * lets go (`owed`), the next `drawPanes` placing it.
+ * @param {Side} side
+ */
+function placePane(side) {
+  const e = paneSel[side], art = articleOf(side);
+  if (!e || !art || pressed) return;
+  if (typing()) { owed = side; return; }
+  if (LAYER.platformSelects() && !LAYER.siteOfSelection()) return;
+  LAYER.placeSelection(e.span, null, { el: art, backward: e.moves === 'start' });
+  if (owed === side) owed = null;
+}
+
+/**
+ * A press on a reading scene's pane's text begun at a node of it, or, with
+ * none, ended with nothing taken — the platform's cancel, a context menu
+ * (APP-INPUT's; see the head): no selection is taken or placed while it
+ * stands, its release taking the pressed pane's once (`takePane`).
+ * @param {Node | null} at where the button went down; null ends the press
+ */
+export function pressPane(at) {
+  pressed = at ? SIDES.find((side) => { const art = articleOf(side); return !!art && art.contains(at); }) ?? null : null;
+  clicked = null;
+}
+
+/** does a press stand on a reading scene's pane's text (`pressPane`) */
+export const pressingPane = () => pressed !== null;
+
+/**
+ * The platform's selection taken as a reading scene's pane's (APP-INPUT's;
+ * see the head) — at the release of a press on a pane's text, the press
+ * ended first, and as it changes while no press stands. A click's release —
+ * the press a click, by APP-INPUT's reading — ends the pressed pane's
+ * selection whatever the platform holds yet: a click never selects, and the
+ * platform empties a selection clicked inside only as the button comes up,
+ * so until its selection next changes no reader takes the range it holds
+ * there (`clicked`; FP-24's one selection). Else: with extent in a pane's
+ * text, that pane's selection made of it, its blocks marked and where it
+ * stands said once; collapsed in the text of the pane whose selection is the
+ * live one (`focusedSite`) — a click there — that selection ended, and so is
+ * the pressed pane's where the release leaves the platform no selection with
+ * extent at all; anywhere else nothing, so a selection made in the other pane
+ * ends none here. Never the plane's acts, its walk or its caret.
+ * @param {boolean} [click] the press released is a click: it moved the pointer no further than a click's, counted one click and held no Shift
+ * @returns {boolean} the platform's selection stands in a pane's text, or a press there was released: none of it is the plane's
+ */
+export function takePane(click = false) {
+  const was = pressed;
+  pressed = null;
+  if (!was) clicked = null;
+  if (!sceneStands()) return false;
+  if (was && click) { clicked = was; endPane(was); return true; }
+  if (SIDES.some((side) => fromPlatform(side, 'say'))) return true;
+  if (was && !LAYER.platformSelects()) { endPane(was); return true; }
+  return !!was;
+}
+
+/**
+ * A pane's selection as a click on its text, or a drag's release there, has
+ * left it (SC's, at that click — the platform's selection settled by then,
+ * which a click inside a selection empties only as the button comes up, after
+ * the release's take): with extent in its text, that pane's selection made
+ * of it; with none there — collapsed, or none at all — the pane's selection
+ * ended, as the click ends it (FP-24's one selection). Read then as
+ * `selected` reads it; nothing taken while a press stands, nor where a
+ * click's release has decided it already (`clicked`).
+ * @param {Side} side
+ * @returns {Span | null}
+ */
+export function clickedIn(side) {
+  const art = articleOf(side);
+  if (art && !pressed && clicked !== side) {
+    const have = LAYER.selectionIn(art);
+    if (owed === side) owed = null;
+    if (have) holdPane(side, have.span, have.backward ? 'start' : 'end', 'say'); else endPane(side);
+  }
+  return selected(side);
+}
+
+/**
+ * A pane's selection set by the scene's own act (SC's: a setting carrying it
+ * by its bytes, a return putting it back, a step at a pane's caret,
+ * select-all): its blocks marked, and placed as the platform's live one where
+ * that pane is the focused site (`placePane`), nothing said; null ends it
+ * (`clear`).
+ * @param {Side} side
+ * @param {Span | null} span in the positions of the article the pane shows now
+ * @param {boolean} [back] its anchor stands at its end: Shift with an arrow moves its start
+ */
+export function setPane(side, span, back = false) {
+  if (!span) { clear(side); return; }
+  holdPane(side, span, back ? 'start' : 'end', 'page');
+  if (side === focusedSite()) placePane(side);
+}
+
+/**
+ * The focus come into a pane — its text, its corner or its list of past
+ * states (SC's): that pane the last the focus stood in (`focusedSite`), and
+ * the selections set right with it (`drawPanes`).
+ * @param {Side} side
+ */
+export function focusIn(side) {
+  lastPane = side;
+  drawPanes();
+}
+
+/**
+ * The reading scene's selections set right with the platform's focus and
+ * drawn (see the head; Q3, Q4) — SC's, each frame it draws and as the focus
+ * comes into a pane: the focused pane's read from the platform's first
+ * (`fromPlatform`); then, while no press stands on a pane's text and no
+ * field holds the focus, that pane's placed as the live one where the
+ * platform does not hold it (`placePane`), or, where it holds none, a range
+ * standing in the other pane's text taken off (T-LAYER's `dropIn`); each
+ * pane's blocks marked for its own (`markPane`); and every pane's selection
+ * the platform does not hold drawn by the page as the platform draws an
+ * inactive one — the custom highlight over the ranges its own characters
+ * stand in (T-LAYER's `textRangesIn`), drawn anew only where what it is drawn
+ * from changed (`drawnKey`); SC's boxes where the platform has none
+ * (`drawsHighlights`). Where no scene stands, the drawing taken down.
+ */
+export function drawPanes() {
+  if (!sceneStands()) { undraw(); return; }
+  const site = focusedSite();
+  if (site !== 'plane' && !pressed && !typing()) {
+    fromPlatform(site, 'later');
+    if (paneSel[site]) placePane(site);
+    else for (const side of SIDES) { const art = articleOf(side); if (side !== site && art) LAYER.dropIn(art); }
+  }
+  for (const side of SIDES) markPane(side);
+  const inactive = SIDES.filter((side) => !!paneSel[side] && !!articleOf(side) && !holds(side));
+  const key = inactive.map((side) => { const e = /** @type {PaneSel} */ (paneSel[side]); return `${side}:${idOf(/** @type {HTMLElement} */ (articleOf(side)))}:${e.span.pos}+${e.span.width}`; }).join(' ');
+  if (key === drawnKey) return;
+  drawnKey = key;
+  if (!drawsHighlights()) return;
+  const ranges = inactive.flatMap((side) => LAYER.textRangesIn(/** @type {HTMLElement} */ (articleOf(side)), /** @type {PaneSel} */ (paneSel[side]).span));
+  const reg = (/** @type {any} */ (CSS)).highlights;
+  if (ranges.length) reg.set(INACTIVE, new (/** @type {any} */ (globalThis)).Highlight(...ranges)); else reg.delete(INACTIVE);
+}
+
+/** an article's number (`articleIds`) */
+function idOf(/** @type {HTMLElement} */ el) {
+  let id = articleIds.get(el);
+  if (id == null) { id = ++articleSerial; articleIds.set(el, id); }
+  return id;
+}
+
+/** the page's drawing of the selections the platform does not hold taken down */
+function undraw() {
+  drawnKey = '';
+  if (drawsHighlights()) (/** @type {any} */ (CSS)).highlights.delete(INACTIVE);
+}
+
+/**
+ * Every reading scene's pane's selection ended, with what the page drew of
+ * them — as a scene closes, and as one stands anew over a standing one (SC's;
+ * see the head) — the last pane the focus stood in pane B again, and no press
+ * standing.
+ */
+export function endPanes() {
+  paneSel.a = null; paneSel.b = null;
+  lastPane = 'b';
+  pressed = null;
+  owed = null;
+  clicked = null;
+  undraw();
+}
 
 /** does the selection standing reach past its document into another document's text (`Ends.across`): N-KEYS' reading, no key at a caret replacing it */
 export const reachesPast = () => !!sel && ends.across;
@@ -233,8 +650,8 @@ export const reachesPast = () => !!sel && ends.across;
 /** a span by its bytes as the page shows them now (`Left`): every byte named, one the page made by the page's own identity until the board mints it */
 const bytesOf = (/** @type {Span} */ s) => ({ addr: s.addr, pos: s.pos, width: s.width, ids: LAYER.shownIdentity(s.addr, s.pos, s.width) });
 
-/** the selection as the reader leaves its place (see the head): by its bytes' identity; null where none stands */
-export const asLeft = () => (selected() ? bytesOf(/** @type {Span} */ (sel)) : null);
+/** the plane's selection as the reader leaves its place (see the head): by its bytes' identity; null where none stands */
+export const asLeft = () => (selected('plane') ? bytesOf(/** @type {Span} */ (sel)) : null);
 
 /**
  * The selection put back over the span its bytes hold in the text now — on
@@ -295,15 +712,40 @@ function wholeShown(/** @type {string} */ addr, /** @type {number} */ pos) {
  * `selectionBackward`), and whether its range reaches past the article its
  * moving end stands in (T-LAYER's `movingPart`); where the act moved none,
  * its end.
+ * A reading scene's pane's selection is selected in the text its article
+ * shows — a block whole of the blocks it was made from — as a pane's take
+ * makes one (`holdPane`): said, and placed as the live one where that pane
+ * is the focused site, never the plane's acts, walk or caret.
  * @param {string} addr
  * @param {number} pos the span's first position
  * @param {number | null} [width] positions; null selects the block at `pos` whole
  * @param {SelectionEnd | null} [moved] the end the act moved — K-8's extended end, the platform's focus point after a press; null for an act that moves none
+ * @param {Site} [site] the site whose selection it is: the plane's where none is named
  */
-export function select(addr, pos, width = null, moved = null) {
+export function select(addr, pos, width = null, moved = null, site = 'plane') {
+  if (site !== 'plane') { selectIn(site, addr, pos, width, moved); return; }
   const span = width != null && width > 0 ? { addr, pos, width } : wholeShown(addr, pos);
   const platform = moved === 'focus', part = platform ? LAYER.movingPart() : null;
   take(span, moved, { moves: moved === 'start' || (platform && LAYER.selectionBackward()) ? 'start' : 'end', platform, across: platform && !(part && part.whole) });
+}
+
+/**
+ * A pane's selection selected (`select`): the bytes named, else the block of
+ * the pane's article holding `pos` whole; nothing where the pane shows no
+ * article made as `addr`.
+ * @param {Side} side
+ * @param {string} addr
+ * @param {number} pos
+ * @param {number | null} width
+ * @param {SelectionEnd | null} moved
+ */
+function selectIn(side, addr, pos, width, moved) {
+  const art = articleOf(side), made = art ? LAYER.madeOf(art) : null;
+  if (!made || made.addr !== addr) return;
+  const b = width != null && width > 0 ? null : made.blocks.find((x) => pos >= x.pos && pos < x.pos + x.width);
+  const span = width != null && width > 0 ? { addr, pos, width } : b ? spanOfBlock(addr, b) : { addr, pos, width: 1 };
+  holdPane(side, span, moved === 'start' ? 'start' : 'end', 'say');
+  if (side === focusedSite()) placePane(side);
 }
 
 /**
@@ -428,7 +870,7 @@ function anchorAt(/** @type {import('../text/layer.js').Caret} */ c) {
  * @returns {boolean} false where the walk stands on no span the person may edit: nothing changes
  */
 export function extendFromSpan(dir) {
-  const f = WALK.current(), s = selected();
+  const f = WALK.current(), s = selected('plane');
   if (!f || f.kind !== 'block' || f.pos == null) return false;
   const here = s && s.addr === f.addr ? s : null, b = here ? null : LAYER.blockByPos(f.addr, f.pos);
   const from = here ? (ends.moves === 'end' ? here.pos + here.width : here.pos) : b ? edgeOf(b, dir) : null;
@@ -506,8 +948,14 @@ function runTo(addr, anchor, to, platform) {
   return true;
 }
 
-/** clear the selection: the platform's highlight, its acts and its marks with it */
-export function clear() {
+/**
+ * Clear a site's selection: the plane's with the platform's highlight, its
+ * acts and its marks; a pane's with its marks, the platform's selection
+ * standing over its text collapsed where it stood (T-LAYER's `unselectIn`).
+ * @param {Site} [site] the plane's where none is named
+ */
+export function clear(site = 'plane') {
+  if (site !== 'plane') { const art = articleOf(site); if (art) LAYER.unselectIn(art); endPane(site); return; }
   if (!sel) return;
   hold(null);
   LAYER.placeSelection(null);

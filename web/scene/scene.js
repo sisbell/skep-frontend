@@ -134,8 +134,8 @@
 // kind is read by the one test (T-LAYER's `isDraft`; FP-39), as the plane
 // reads the same document's (`kindAt`). A draft — any text no publication
 // fixes, and any whose kind that test cannot tell — is read again whole and
-// set in its place, the first span in view holding still and the platform's
-// selection put back on the same words. An edition read at its bare address
+// set in its place, the first span in view holding still and the pane's
+// selection set again on the same words. An edition read at its bare address
 // keeps the version it opened on: its acts name the member its text is
 // (`D.k`, the chain probed as it opens), and a row naming a newer member —
 // by the documents it names or the home of the link it deposited
@@ -567,8 +567,17 @@
 // borrow T-LAYER's mount (FP-12; the structure record §3.4 (vii)):
 // `sceneArticle` makes each pane's article from the record and the view the
 // scene keeps, `madeOf` and `rangeIn` map a position through the blocks it
-// was made from, `selectionIn` and `selectIn` read and set the selection,
-// and T-LAYER's copy event serves the panes (FP-24), each article made with
+// was made from, and T-LAYER's copy event serves the panes (FP-24). Each
+// pane is a site of its own whose selection is O-SELECTION's (FP-10): read
+// there by its side wherever the scene reads it — the focused pane's the
+// platform's live one, read first — set there by the scene's own acts
+// (`setPane`, `clear`), placed in its article alone and drawn inactive there
+// while the other pane's is the live one (its `drawPanes`, run as the scene
+// draws, the boxes it draws where the platform draws no custom highlight
+// being the scene's: `placeSelBoxes`), the focus come into a pane — its
+// text, its corner, its list of past states (`focusedPane`) — making its
+// selection the live one (its `focusIn`; Q4), and ended as the scene stands
+// anew or closes (its `endPanes`); each article made with
 // where its pane's words are read (`whereIn`), so a copy from a pane names
 // its words as one from the plane's box names the same words (FP-27); the
 // scene keeps no DOM text of its own. Each pane carries its own document's
@@ -580,7 +589,7 @@
 // itself in either form — a line of its acts holding one stop, or the corner
 // itself where it holds none (T-LAYER's `setStops`) — and an act's click,
 // the pointer's or the one the platform makes from its Enter or Space, takes
-// it — a press on the act leaving the selection standing in the pane, the
+// it — a press on the act leaving the pane's selection standing, the
 // passage the act carries. The scene fits both panes once (`fitOf`,
 // `paneFit`; FP-12, FP-26) from its own width, never the panes' as they
 // stand, so the form a fit sets never moves the next fit: by P-LAY's fit
@@ -711,6 +720,7 @@ import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
 import * as HOST from '../overlays/host.js';
+import * as SEL from '../overlays/selection.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord, keyShortcut } from '../nav/keys.js';
@@ -1209,6 +1219,8 @@ let drawnMarks = [];
 const heldAt = { a: null, b: null };
 /** @type {WeakMap<HTMLElement, string>} each margin mark's place, size and stroke as last written (`placeMargin`): an element is written again only where they changed */
 const markStyles = new WeakMap();
+/** @type {WeakMap<HTMLElement, string>} what each pane's article's boxes of a selection the platform does not hold were last drawn from (`placeSelBoxes`): drawn anew only where it reads other */
+const boxedFor = new WeakMap();
 
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
@@ -1337,12 +1349,14 @@ export function attach(e, acts = {}) {
     });
     // a corner's stop follows the focus along its line of acts, and stands on its first act again as the focus leaves it; a
     // head's row that scrolls is brought below the held rows as the focus comes to stand in it (`headInView`); the focus come
-    // into the pane's text from outside it stands its span focus on the span in view (`entered`)
+    // into the pane's text from outside it stands its span focus on the span in view (`entered`); the focus anywhere in the
+    // pane makes its selection the platform's live one (O-SELECTION's `focusIn`; Q4)
     p.addEventListener('focusin', (ev) => {
       rove(ev.target, ev.target);
       const side = p === e.paneB ? 'b' : 'a';
       headInView(e, side, ev.target);
       if (textHolds(e, side, /** @type {Element | null} */ (ev.target)) && !textHolds(e, side, /** @type {Element | null} */ (ev.relatedTarget))) entered(e, side);
+      if (scene) SEL.focusIn(side);
       markDirty();
     });
     p.addEventListener('focusout', (ev) => { rove(ev.target, ev.relatedTarget); markDirty(); });
@@ -1448,9 +1462,9 @@ export function heldVersionReasonOf(current, held, span) {
  * The reason the acts that send — and a printable key — give at the
  * selection standing in the moved scene's held version (see the head; D6
  * BM-14): where pane B shows the held version (`Pane.heldVersion`), the
- * platform's focus stands in it and its selection stands in its text, the
- * reason that selection keys (`heldVersionReasonOf`) over the images the two
- * panes' articles were made from; null anywhere else.
+ * platform's focus stands in it and pane B holds a selection (O-SELECTION's),
+ * the reason that selection keys (`heldVersionReasonOf`) over the images the
+ * two panes' articles were made from; null anywhere else.
  * @returns {HeldReason | null}
  */
 export function heldVersionReason() {
@@ -1458,8 +1472,8 @@ export function heldVersionReason() {
   if (!S || !E || !S.b.heldVersion || !S.a.el || !S.b.el) return null;
   const at = typeof document !== 'undefined' ? document.activeElement : null;
   if (!at || !E.paneB.contains(at)) return null;
-  const sel = LAYER.selectionIn(S.b.el), a = LAYER.madeOf(S.a.el), b = LAYER.madeOf(S.b.el);
-  return sel && a && b ? heldVersionReasonOf(a.image, b.image, sel.span) : null;
+  const sel = SEL.selected('b'), a = LAYER.madeOf(S.a.el), b = LAYER.madeOf(S.b.el);
+  return sel && a && b ? heldVersionReasonOf(a.image, b.image, sel) : null;
 }
 
 /**
@@ -2675,8 +2689,10 @@ function sayFace(E, face) {
 }
 
 /**
- * The scene stood over the plane (`open`, `reopen`): the reissue a scene
- * standing before it waited to make let go unrun (`stopReissue`); the plane
+ * The scene stood over the plane (`open`, `reopen`): the selections of the
+ * panes of a scene standing before it ended (O-SELECTION's `endPanes`); the
+ * reissue a scene standing before it waited to make let go unrun
+ * (`stopReissue`); the plane
  * under it out of the page's order; each titled pane's name set for the state it shows
  * (`nameTitle`); the bar naming each pane by the address it shows, and the
  * refusal the panes' `compare` met — and the hidden words each untitled
@@ -2695,6 +2711,7 @@ function sayFace(E, face) {
  * @param {string | null} face the refusal the `compare` met, by its name
  */
 function stand(E, S, face) {
+  SEL.endPanes();
   scene = S;
   stopReissue();
   drawnMarks = []; heldAt.a = null; heldAt.b = null;
@@ -2878,8 +2895,9 @@ async function pastAgain(v, h, stands) {
  * derived record the entry kept, whose text is the one left — at the height
  * it stood below the pane's visible top, a line that stood in view kept below
  * what a held head covers (`clearOf`) — any other pane left where the
- * re-level set it — and its selection put back on the same bytes; then the
- * ties drawn at the panes' scrolls.
+ * re-level set it — and its selection set again on the same bytes
+ * (O-SELECTION's `setPane`), the live one once the focus lands in its pane;
+ * then the ties drawn at the panes' scrolls.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {{a: Spot, b: Spot}} spots
@@ -2891,7 +2909,7 @@ function placeAgain(E, S, spots) {
     const pos = at.length ? at[0].pos : s.place && P.d.derived ? s.place.pos : null;
     if (s.place && pos != null) { const line = lineAt(pane, P.names, pos); if (line) pane.scrollTop = line.top - (s.place.at >= 0 ? Math.max(s.place.at, clearOf(pane)) : s.place.at); }
     const sel = s.sel ? REC.placedIn(image, s.sel.ids) : [], z = sel[sel.length - 1];
-    if (s.sel && z && P.el) LAYER.selectIn(P.el, { addr: P.names, pos: sel[0].pos, width: z.pos + z.width - sel[0].pos }, s.sel.backward);
+    if (s.sel && z && P.el) SEL.setPane(side, { addr: P.names, pos: sel[0].pos, width: z.pos + z.width - sel[0].pos }, s.sel.backward);
   }
   draw();
 }
@@ -2916,10 +2934,10 @@ export function asLeft() {
   const version = (P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, derived: P.d.derived && !(S.past && P.side === 'b') ? P.d : null });
   /** @type {(P: Pane) => Spot} */
   const spot = (P) => {
-    const made = P.el ? LAYER.madeOf(P.el) : null, image = made ? made.image : [], sel = P.el ? LAYER.selectionIn(P.el) : null, lv = S.level[P.side];
+    const made = P.el ? LAYER.madeOf(P.el) : null, image = made ? made.image : [], sel = P.el ? SEL.selected(P.side) : null, lv = S.level[P.side];
     return {
       place: P.place || placeAt(P, firstInView(paneEl(E, P.side))),
-      sel: sel ? { ids: REC.identityIn(image, sel.span.pos, sel.span.width), backward: sel.backward } : null,
+      sel: sel ? { ids: REC.identityIn(image, sel.pos, sel.width), backward: SEL.backward(P.side) } : null,
       level: lv != null ? { pos: lv, ids: REC.identityIn(image, lv, 1) } : null,
       lacks: P.lacks,
     };
@@ -4253,13 +4271,14 @@ function measure() {
 
 /**
  * Panes set again in one step (see the head) — every read made before it,
- * nothing awaited in it: each one's reader's place, the platform's selection
- * there and the end set level in it read from the article it shows; its new
+ * nothing awaited in it: each one's reader's place, its selection
+ * (O-SELECTION's) and the end set level in it read from the article it shows; its new
  * article made and swapped in, its corner and the bar naming what it shows
  * now; then each one's place, its selection and its end set level carried to
  * where their bytes stand in the text it takes — by identity through the
  * images the two articles were made from, else by position, a corner's act's
- * passage by the position that act names — the runs of shared identity
+ * passage by the position that act names; a selection none of whose bytes
+ * that text holds ending there, unsaid (O-SELECTION's `setPane`) — the runs of shared identity
  * between the panes taken, the far ends crossing into each kept, and the ties
  * measured anew and drawn, so no tie is drawn over text it was not measured
  * on; a stroke's list standing checked again (`recheckList`). Every article
@@ -4267,8 +4286,8 @@ function measure() {
  * the panes (`applyFit`) before anything is carried, a place's line that
  * stood in view carried below what a held head covers (`clearOf`). A pane
  * taken down to its cover at a change of the page's class carries nothing
- * into the text it takes: its reader's place is kept for the read at the new
- * class that sets it again. A pane set again at a new fit alone (`refit`)
+ * into the text it takes: its selection ends, and its reader's place is kept
+ * for the read at the new class that sets it again. A pane set again at a new fit alone (`refit`)
  * keeps its text, its lines broken anew: its place is its first line in view
  * (`firstLineIn`), no `compare` read against it is outdated by it, and a
  * place kept for such a read stays kept, as does its title's name. A pane set
@@ -4287,13 +4306,13 @@ function setPanes(S, sets, pairs) {
   const carried = sets.map(({ side, next, down, same }) => {
     const P = S[side], made = P.el ? LAYER.madeOf(P.el) : null, image = made ? made.image : [], pane = paneEl(E, side);
     const here = placeAt(P, next.hold ? next.hold.from : same ? firstLineIn(P, pane) : firstInView(pane));
-    if (down) { P.place = P.place || here; P.focus = null; return { side, next, same, place: null, sel: null, level: null, focus: null }; }
+    if (down) { P.place = P.place || here; P.focus = null; SEL.clear(side); return { side, next, same, place: null, sel: null, level: null, focus: null }; }
     const place = same ? here : P.place || here;
     if (!same) P.place = null;
-    const sel = P.el ? LAYER.selectionIn(P.el) : null, lv = S.level[side];
+    const sel = P.el ? SEL.selected(side) : null, lv = S.level[side];
     return {
       side, next, same, place,
-      sel: sel ? { ids: REC.identityIn(image, sel.span.pos, sel.span.width), backward: sel.backward } : null,
+      sel: sel ? { ids: REC.identityIn(image, sel.pos, sel.width), backward: SEL.backward(side) } : null,
       level: lv != null ? { pos: lv, ids: REC.identityIn(image, lv, 1) } : null,
       focus: P.focus != null ? { pos: P.focus, ids: REC.identityIn(image, P.focus, 1) } : null,
     };
@@ -4323,7 +4342,7 @@ function setPanes(S, sets, pairs) {
     if (place) { const line = lineAt(pane, P.names, there(place)); if (line) pane.scrollTop = line.top - (place.at >= 0 ? Math.max(place.at, clearOf(pane)) : place.at); }
     if (sel && P.el) {
       const at = REC.placedIn(image, sel.ids), z = at[at.length - 1];
-      if (z) LAYER.selectIn(P.el, { addr: P.names, pos: at[0].pos, width: z.pos + z.width - at[0].pos }, sel.backward);
+      SEL.setPane(side, z ? { addr: P.names, pos: at[0].pos, width: z.pos + z.width - at[0].pos } : null, sel.backward);
     }
     if (level) S.level[side] = there(level);
     // the span focus on the span holding its byte in the text taken, else where it stood (T-SPAN's `elementIn`)
@@ -4661,9 +4680,9 @@ export function readIn(side, k, passage = null) {
     if (!S || !E) return;
     const P = S[side];
     if (P.kind === 'draft' || P.k == null || k === P.k) return;
-    const sel = passage || !P.el ? null : LAYER.selectionIn(P.el);
-    const pos = passage ? passage.pos : sel ? sel.span.pos : firstInView(paneEl(E, side));
-    const width = passage ? passage.width : sel ? sel.span.width : 1;
+    const sel = passage || !P.el ? null : SEL.selected(side);
+    const pos = passage ? passage.pos : sel ? sel.pos : firstInView(paneEl(E, side));
+    const width = passage ? passage.width : sel ? sel.width : 1;
     void update(side, { src: versionAddress(boxOf(P.src), k), carry: pos != null ? { pos, width } : null, read: P.k });
   });
 }
@@ -4765,7 +4784,9 @@ function level() {
  * (`placeHeads`), each editor pane's margin's marks (`placeMargin`), each
  * pane's origins stated in its column's edge with the word at its first held
  * mark (`placeStatements`), and the list of a draft's past states placed
- * (`placeList`).
+ * (`placeList`); then the panes' selections set right with the focus and
+ * drawn (O-SELECTION's `drawPanes`), as boxes where the platform draws no
+ * custom highlight (`placeSelBoxes`).
  */
 export function draw() {
   const S = scene, E = els;
@@ -4890,6 +4911,49 @@ export function draw() {
   placeMargin();
   placeStatements(E, S);
   placeList(E, S);
+  SEL.drawPanes();
+  placeSelBoxes(E, S);
+}
+
+/**
+ * Each pane's selection the platform does not hold drawn as boxes behind its
+ * text, where the platform draws no custom highlight (O-SELECTION's
+ * `drawsHighlights`, `selections`; Q3): a box a line of the ranges its own
+ * characters stand in, the chrome left out (T-LAYER's `textRangesIn`), in the
+ * pane's content so its scroll carries them, as a margin's mark is placed
+ * (`paneMarks`), in the inactive selection's look the style gives
+ * `.sel-box`; none where the platform draws the highlight, or the pane holds
+ * no selection it does not hold. Drawn anew only where the article, the
+ * selection, the pane's width or where the article stands in the pane's
+ * content changed since (`boxedFor`), a scroll moving none. Drawn and never
+ * announced.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ */
+function placeSelBoxes(E, S) {
+  const drawn = SEL.drawsHighlights() ? [] : SEL.selections().filter((x) => x.inactive && x.site !== 'plane');
+  for (const side of SIDES) {
+    const P = S[side], pane = paneEl(E, side), x = drawn.find((y) => y.site === side);
+    if (!P.el || typeof pane.getBoundingClientRect !== 'function') continue;
+    // the pane's content's origin on screen, and where the article stands in that content
+    const pr = pane.getBoundingClientRect(), left = pr.left + pane.clientLeft - pane.scrollLeft, top = pr.top + pane.clientTop - pane.scrollTop, ar = P.el.getBoundingClientRect();
+    const key = x ? `${x.pos}+${x.width} ${pane.clientWidth} ${Math.round(ar.left - left)},${Math.round(ar.top - top)}` : '';
+    if (boxedFor.get(P.el) === key) continue;
+    boxedFor.set(P.el, key);
+    for (const e of typeof pane.querySelectorAll === 'function' ? [...pane.querySelectorAll(':scope > .sel-box')] : []) e.remove();
+    if (!x) continue;
+    for (const r of LAYER.textRangesIn(P.el, x)) {
+      for (const q of [...r.getClientRects()]) {
+        if (q.width <= 0 || q.height <= 0) continue;
+        const box = /** @type {HTMLElement} */ (document.createElement('div'));
+        box.className = 'sel-box';
+        box.setAttribute('aria-hidden', 'true');
+        Object.assign(box.style, { transform: `translate(${Math.round(q.left - left)}px, ${Math.round(q.top - top)}px)`, width: Math.round(q.width) + 'px', height: Math.round(q.height) + 'px' });
+        // before the pane's own children, so the list of past states after pane B's text stays its last
+        pane.prepend(box);
+      }
+    }
+  }
 }
 
 /** a band's key (`tieKey`): its runs' first positions in each pane */
@@ -6423,8 +6487,9 @@ function standList(E, S) {
       const tg = /** @type {HTMLElement} */ (ev.target), h = /** @type {HTMLElement | null} */ (tg.closest('button[data-day]')), r = /** @type {HTMLElement | null} */ (tg.closest('button.pl-row'));
       if (h && h.dataset.day) foldDay(h.dataset.day); else if (r && r.dataset.row) rowAct(Number(r.dataset.row));
     });
-    // the list one stop of the scene's ring: its stop the act the focus stands on (`standStops`)
-    el.addEventListener('focusin', (ev) => standStops(el, /** @type {Element | null} */ (ev.target)));
+    // the list one stop of the scene's ring: its stop the act the focus stands on (`standStops`); the focus in it pane B's,
+    // whose selection is then the platform's live one (O-SELECTION's `focusIn`; Q4)
+    el.addEventListener('focusin', (ev) => { standStops(el, /** @type {Element | null} */ (ev.target)); if (scene) SEL.focusIn('b'); });
     pastEl = el;
   }
   const el = pastEl, beside = listBeside(S.fit);
@@ -6650,8 +6715,9 @@ export function past() {
  * dismissed first, its focus handed back to the stroke, and the face a stop
  * the reader returned to shows at its site — an act waiting on its answer
  * abandoned with it; a pane being set
- * again sets nothing once it ends, an act waiting on it is dropped, and a past
- * state's reissue is made no more (`stopReissue`). The
+ * again sets nothing once it ends, an act waiting on it is dropped, a past
+ * state's reissue is made no more (`stopReissue`), and each pane's selection
+ * ends with what the page drew of it (O-SELECTION's `endPanes`). The
  * plane is put back in the page's order before the focus returns, for the
  * element the scene was opened from — the walk's item, a corner — takes no
  * focus while the scene covers it; the focus's owner takes a focus the scene
@@ -6662,6 +6728,7 @@ export function close() {
   if (scene.listing && HOST.currentIs('stroke:' + scene.listing.key)) HOST.dismiss();
   if (scene.returned && scene.returned.face && HOST.currentIs(scene.returned.face)) HOST.dismiss();
   scene = null;
+  SEL.endPanes();
   stopReissue();
   drawnTies = [];
   drawnEdges = [];
@@ -7020,11 +7087,13 @@ export function followCaret() {
  * reader's next act (`acted`, the app's): in an editor pane the caret placed
  * live at the character clicked (T-LAYER's `caretFromPlatform`,
  * `placeCaret`) — after a drag, or a double- or triple-click, at the moving
- * end of the selection standing in the pane's text, the selection standing
- * (`keep`) — its span focus following it (`followCaret`); in any other pane a
- * live caret kept where it stood (T-LAYER's `leaveCaret`), its view and the
- * platform's selection standing on what was clicked, and the pane's span
- * focus on the span clicked, so the next key starts there.
+ * end of the pane's selection as the click leaves it — the platform's with
+ * extent there, a click leaving none ending it (O-SELECTION's `clickedIn`) —
+ * the selection standing (`keep`) — its span focus following it
+ * (`followCaret`); in any other pane a live caret kept where it stood
+ * (T-LAYER's `leaveCaret`), its view and the pane's selection standing on
+ * what was clicked, and the pane's span focus on the span clicked, so the
+ * next key starts there.
  * @param {NonNullable<typeof els>} E
  * @param {'a' | 'b'} side
  */
@@ -7034,8 +7103,8 @@ function textAct(E, side) {
   acted();
   const P = S[side];
   if (!P.el) return;
-  const sel = LAYER.selectionIn(P.el);
-  const at = sel ? { addr: sel.span.addr, pos: sel.backward ? sel.span.pos : sel.span.pos + sel.span.width } : LAYER.caretFromPlatform();
+  const sel = SEL.clickedIn(side);
+  const at = sel ? { addr: sel.addr, pos: SEL.backward(side) ? sel.pos : sel.pos + sel.width } : LAYER.caretFromPlatform();
   if (!at || at.addr !== P.names) return;
   if (editor(P)) { if (LAYER.placeCaret(P.names, at.pos, !!sel)) followCaret(); return; }
   const c = LAYER.caret();
@@ -7087,34 +7156,34 @@ export function pageCaret(dir) {
 /**
  * Shift with an arrow, Home or End at the live caret of an editor pane (D5
  * K-71): the caret moved a step that way (T-LAYER's `caretMove`) and the
- * platform's selection in the pane's text made to run from its anchor — the
- * other end of a selection there ending at the caret, else the caret — to the
- * caret (T-LAYER's `selectIn`), the caret's span the focus; where the step
- * brings the caret back to its anchor, none standing there (T-LAYER's
- * `unselectIn`). False where no live caret stands in an editor pane, or it
- * cannot move that way.
+ * pane's selection (O-SELECTION's) made to run from its anchor — the other
+ * end of the pane's selection where it ends at the caret, else the caret — to
+ * the caret, the caret's span the focus; where the step brings the caret back
+ * to its anchor, none standing there (O-SELECTION's `clear`). False where no
+ * live caret stands in an editor pane, or it cannot move that way.
  * @param {import('../text/layer.js').CaretStep} dir
  * @returns {boolean}
  */
 export function extendFromCaret(dir) {
-  const pane = LAYER.caretPane(), c = LAYER.caret();
-  if (!pane || !c || !c.live) return false;
-  const s = LAYER.selectionIn(pane.article), span = s && s.span.addr === c.addr ? s.span : null;
+  const S = scene, pane = LAYER.caretPane(), c = LAYER.caret();
+  const side = S && pane ? SIDES.find((x) => S[x].el === pane.article) : null;
+  if (!pane || !side || !c || !c.live) return false;
+  const s = SEL.selected(side), span = s && s.addr === c.addr ? s : null;
   const anchor = !span ? c.pos : span.pos === c.pos ? span.pos + span.width : span.pos + span.width === c.pos ? span.pos : c.pos;
   if (!LAYER.caretMove(dir, anchor)) return false;
   const to = /** @type {import('../text/layer.js').Caret} */ (LAYER.caret()).pos;
-  if (to === anchor) LAYER.unselectIn(pane.article);
-  else LAYER.selectIn(pane.article, { addr: c.addr, pos: Math.min(anchor, to), width: Math.abs(to - anchor) }, to < anchor);
+  if (to === anchor) SEL.clear(side);
+  else SEL.setPane(side, { addr: c.addr, pos: Math.min(anchor, to), width: Math.abs(to - anchor) }, to < anchor);
   followCaret();
   return true;
 }
 
 /**
- * Select-all in a pane (D5 K-93; B3-S8): its text whole the platform's
- * selection there (T-LAYER's `selectIn`) — at an editor pane's live caret the
- * caret live at its end, the run of typing open there ended (T-LAYER's
- * `placeCaret`); at a past state's, read only, no caret (B3-S8). False where
- * its text holds none.
+ * Select-all in a pane (D5 K-93; B3-S8): its text whole the pane's selection
+ * (O-SELECTION's `setPane`) — at an editor pane's live caret the caret live
+ * at its end, the run of typing open there ended (T-LAYER's `placeCaret`); at
+ * a past state's, read only, no caret (B3-S8). False where its text holds
+ * none.
  * @param {'a' | 'b'} side
  * @returns {boolean}
  */
@@ -7125,24 +7194,24 @@ export function selectAll(side) {
   if (end <= 1) return false;
   const c = LAYER.caret();
   if (editor(P) && c && c.live && c.addr === P.names) LAYER.placeCaret(P.names, end, true);
-  return LAYER.selectIn(P.el, { addr: P.names, pos: 1, width: end - 1 }, false);
+  SEL.setPane(side, { addr: P.names, pos: 1, width: end - 1 }, false);
+  return true;
 }
 
 /**
- * The selection standing in a pane's text ended (D5 K-77; §4 rule 7): Esc's
- * first step there — at the live caret of an editor pane the caret standing
- * live where it stands, the platform's selection collapsed at it (T-LAYER's
- * `placeCaret`), else the platform's selection collapsed where it stands
- * (T-LAYER's `unselectIn`). False where none stands there.
+ * The pane's selection ended (D5 K-77; §4 rule 7; O-SELECTION's `clear`):
+ * Esc's first step there — the platform's selection collapsed where it
+ * stands, and at the live caret of an editor pane the caret standing live
+ * where it stands (T-LAYER's `placeCaret`). False where none stands there.
  * @param {'a' | 'b'} side
  * @returns {boolean}
  */
 export function unselect(side) {
   const S = scene, P = S ? S[side] : null;
-  if (!P || !P.el || !LAYER.selectionIn(P.el)) return false;
+  if (!P || !P.el || !SEL.selected(side)) return false;
   const c = LAYER.caret(), pane = LAYER.caretPane();
+  SEL.clear(side);
   if (c && c.live && pane && pane.article === P.el) LAYER.placeCaret(c.addr, c.pos);
-  else LAYER.unselectIn(P.el);
   return true;
 }
 
@@ -7178,6 +7247,7 @@ export function toCaret(addr) {
  * @property {Doc} d
  * @property {number | null} focus
  * @property {HTMLElement} el
+ * @property {HTMLElement | null} article the article it shows, T-LAYER's mount (`sceneArticle`): where its selection is read, placed and drawn (O-SELECTION's) and an overlay at it stands (O-HOST's); null where none stands yet
  */
 
 /**
@@ -7190,7 +7260,21 @@ export function siteOf(side) {
   if (!S || !E) return null;
   const P = S[side], d = P.d.derived;
   const kind = editor(P) ? 'editor' : d && d.at != null ? 'past' : P.heldVersion || (d && d.rows.length) ? 'held' : 'read';
-  return { side, kind, names: P.names, shows: P.shows, d: P.d, focus: P.focus, el: paneEl(E, side) };
+  return { side, kind, names: P.names, shows: P.shows, d: P.d, focus: P.focus, el: paneEl(E, side), article: P.el };
+}
+
+/**
+ * The pane whose text, corner or list of past states holds the platform's
+ * focus (see the head; Q4) — the list counted pane B's wherever it stands:
+ * the pane whose selection is the platform's live one (O-SELECTION's
+ * `focusedSite`); null at the scene's acts, outside the scene, and where no
+ * scene stands.
+ * @returns {'a' | 'b' | null}
+ */
+export function focusedPane() {
+  const E = els, at = typeof document !== 'undefined' ? document.activeElement : null;
+  if (!scene || !E || !at) return null;
+  return paneHolding(at) ?? (pastEl && pastEl.contains(at) ? 'b' : null);
 }
 
 /**
@@ -7208,9 +7292,9 @@ export function heldReasonAt(side) {
   if (!S || !E) return null;
   const P = S[side], Q = S[otherSide(side)];
   if (!P.el || !Q.el || !current(Q) || current(P) || (P.d.derived && P.d.derived.at != null)) return null;
-  const a = LAYER.madeOf(Q.el), b = LAYER.madeOf(P.el), sel = LAYER.selectionIn(P.el);
+  const a = LAYER.madeOf(Q.el), b = LAYER.madeOf(P.el), sel = SEL.selected(side);
   if (!a || !b) return null;
-  if (sel) return heldVersionReasonOf(a.image, b.image, sel.span);
+  if (sel) return heldVersionReasonOf(a.image, b.image, sel);
   const at = P.focus != null ? P.d.blocks.find((x) => x.pos === P.focus) : spanInView(E, P);
   return at ? heldVersionReasonOf(a.image, b.image, { pos: at.pos, width: at.width }) : null;
 }
