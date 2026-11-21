@@ -2258,6 +2258,42 @@ test('a past state\'s corner titled at a pane\'s head stands its title across th
   assert.ok(heldVersion.held >= 1 && heldVersion.rows === heldVersion.held && rowsOf(heldVersion.html)[0].html.includes('data-string="B3.history.held"') && !heldVersion.html.includes('class="kind'), `the held version: its words alone, held: ${heldVersion.html}`);
 });
 
+test('a past state\'s one-state steps stand at the two ends of its corner\'s first row — at its document\'s head the title\'s first row, the title laid out between them on every row it takes and so on rows never fewer than the floor, never a clause\'s row; beside its column their own line first, the title beneath it — each in a slot of its label\'s width, whatever stands between them, one line of acts of their own outside the title; the not-last and in-flight clauses held whole beside them, nothing folded (B3-S7; skep-frontend #677, #687, #696; D5 K-102)', () => {
+  deliver();
+  const d = { ...REC.doc(D), kind: /** @type {const} */ ('draft'), meta: null }, px = 17, pitch = LINE_H * px;
+  const viewAt = (/** @type {number} */ cpl, /** @type {Partial<import('./article.js').ArticleView>} */ o) => ({ ...LAYER.sceneView(d, cpl), kind: /** @type {const} */ ('draft'), ...o });
+  const steps = { earlier: { inert: null }, later: { inert: { id: 'B3.history.now', text: 'This is how the draft stands now.' } } };
+  const past = { time: 'at 00:35', hand: PAST_LINE, why: null, notLast: { n: 3 }, reading: 'at 00:36', steps };
+  const e = LAYER.cornerPx(t('B3.history.earlier')), l = LAYER.cornerPx(t('B3.history.later'));
+  const head = LAYER.sceneHead(d, viewAt(MEASURE_CPL, { past }), { px, kept: null, open: false });
+  const bar = /^<div class="hsteps" role="toolbar" style="top:0px;height:([\d.]+)px"><span class="hslot" style="left:0px;width:([\d.]+)px;[^"]*">(.*?)<\/span><\/span><span class="hslot" style="left:([\d.]+)px;width:([\d.]+)px;[^"]*">(.*?)<\/span><\/span><\/div>/.exec(head.html);
+  const width = (MEASURE_CPL * CHAR_W + EDGE) * px;
+  assert.ok(bar && Math.abs(Number(bar[1]) - pitch) < 1e-6 && Math.abs(Number(bar[2]) - e) < 1e-6 && Math.abs(Number(bar[4]) - (width - l)) < 1e-6 && Math.abs(Number(bar[5]) - l) < 1e-6,
+    `at the head: one line of acts of their own first, "‹ earlier" at the first row's start and "later ›" at its end, each in its label's slot: ${head.html.slice(0, 900)}`);
+  assert.ok(bar && bar[3].includes('data-step="earlier"') && bar[6].includes('data-step="later"') && bar[6].includes('aria-disabled="true" data-inert="B3.history.now"') && !bar[3].includes('aria-disabled'), 'the earlier live, the later inert with its reason');
+  const row0 = /<div class="hrow" data-row="0" data-held="1"[^>]*><span class="hslot" style="left:([\d.]+)px;width:([\d.]+)px;/.exec(head.html);
+  const room = width - e - l - 2 * CORNER.pad;
+  assert.ok(row0 && Math.abs(Number(row0[1]) - (e + CORNER.pad)) < 1e-6 && Math.abs(Number(row0[2]) - room) < 1e-6 && head.html.indexOf('data-string="B3.history.row"') > head.html.indexOf('data-string="B3.history.later"'),
+    `the title between them on its first row, in the room they leave: ${head.html.slice(0, 1200)}`);
+  const lines = LAYER.titleLines(PAST_TITLE, room), titled = Math.max(1, Math.ceil(lines.count * CORNER.px * 1.4 / pitch - 1e-9));
+  assert.equal(head.title, titled, 'the title\'s rows counted at the room the steps leave, the row they share among them');
+  assert.ok(!/data-row="0"[^>]*>(?:(?!<div).)*(not-last|inflight)/.test(head.html) && head.html.includes('class="not-last"') && head.html.includes('class="inflight"') && !head.html.includes('class="more'),
+    `the clauses on rows of their own after the title, held whole, nothing folded — never the steps' row: ${head.html}`);
+  const floored = LAYER.sceneHead(d, viewAt(MEASURE_CPL, { past }), { px, kept: null, open: false, floor: titled + 1 });
+  assert.equal(floored.title, titled + 1, 'never fewer rows than the floor handed in, the steps\' row among them');
+  for (const compact of [false, true]) {
+    const html = LAYER.sceneCorner(d, viewAt(MEASURE_CPL, { past }), compact);
+    assert.ok(html.startsWith('<span class="steps"><span class="step-slot earlier"') && html.indexOf('data-step="later"') < html.indexOf('<span class="title">'),
+      `${compact ? 'compact' : 'whole'}, beside its column: the steps' line first, "‹ earlier" then "later ›", the title beneath them — ${html}`);
+    const slots = [...html.matchAll(/<span class="step-slot (earlier|later)" style="min-width:([\d.]+)em">/g)].map((m) => [m[1], Number(m[2])]);
+    assert.deepEqual(slots.map(([w]) => w), ['earlier', 'later'], 'each its own slot');
+    assert.ok(slots.every(([w, em]) => Math.abs(/** @type {number} */ (em) * CORNER.px - (w === 'earlier' ? e : l)) < 1e-6), `each slot its label's width at the corner's size: ${JSON.stringify(slots)}`);
+    assert.ok(html.includes('class="not-last"') && html.includes('class="inflight"') && !html.includes('class="more'), 'the clauses whole beside them, nothing folded');
+  }
+  const changed = LAYER.sceneCorner(d, viewAt(MEASURE_CPL, { past: { ...past, notLast: null, reading: null, why: { id: 'B3.history.now', text: t('B3.history.now'), substituted: false } } }), true);
+  assert.equal(/<span class="steps">.*?<\/span><\/span><\/span>/.exec(changed)?.[0].replace(/ aria-disabled="true"[^>]*tabindex/, ' tabindex'), /<span class="steps">.*?<\/span><\/span><\/span>/.exec(LAYER.sceneCorner(d, viewAt(MEASURE_CPL, { past }), true))?.[0].replace(/ aria-disabled="true"[^>]*tabindex/, ' tabindex'), 'neither slot moves as the words between them change');
+});
+
 test('beside a pane\'s column, whole and compact, a past state\'s corner and the held version\'s lead with their title as at the head — no kind\'s slot, its line on the lines the corner\'s width takes in its own type, broken at its joiners first — its line\'s own element carrying the id and the words the scene hands in, heard; at the head that element on the title\'s rows once, the form opened beneath restating the title with neither; handed none, it carries neither (issue #687; FP-26, FP-39)', () => {
   deliver();
   const d = { ...REC.doc(D), kind: /** @type {const} */ ('draft'), meta: null }, px = 17;

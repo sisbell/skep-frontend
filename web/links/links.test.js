@@ -30,7 +30,7 @@ import * as LK from './links.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
 import { t, sentence } from '../strings.js';
 import { firstLineOf } from '../text/article.js';
-import { applyEdits } from '../model/derive.js';
+import { applyEdits, recordAt, withLinks } from '../model/derive.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13', ENROLL = '1.1.0.1.0.1.0.3.1', CLAIM = '1.1.0.1.0.1.0.3.3', ENDORSE = '1.1.0.1.0.1.0.3.42';
 const D = '1.0.1.0.3', OTHER_HOME = '1.0.2.0.5';
@@ -76,6 +76,17 @@ test('another\'s link is an overlay off by default — counted at its block, not
   assert.deepEqual(LK.countAt(D, b1), { n: 1, social: true });
   assert.ok(!LK.shown(D).some((s) => s.link.owner === '1.0.2'));
   assert.equal(LK.othersTouching(D).length, 1);
+});
+
+test('a past state\'s record — derived at a position of the board\'s history — draws the links that stood on its words alone: none while they are not read, every block\'s count place arriving, never a count of none; once read, its own link set\'s links where its text places their ends, never the links the model holds of the document now (B3-S7; skep-frontend #704)', () => {
+  const d = REC.doc(D), past = { ...recordAt(D, [{ pos: 1, width: 100, kind: 'content', text: d.runs.map((r) => r.text).join(''), ref: null, origin: null }], 40, { image: [{ pos: 1, width: 100, prefix: D + '.0.1', ordinal: 1 }] }), meta: d.meta };
+  const b1 = past.blocks[0], b2 = past.blocks[1];
+  assert.deepEqual([LK.shown(D, past), LK.countAt(D, b1, past), LK.countAt(D, b2, past)], [[], { n: 0, social: false, arriving: true }, { n: 0, social: false, arriving: true }], 'not read: no link drawn, every count place arriving');
+  assert.ok(LK.shown(D).length === 1 && LK.countAt(D, REC.doc(D).blocks[0]).n === 1, 'the model\'s record of the document draws its own as ever');
+  const read = withLinks(past, [OTHER_HOME + '.0.2.1']);
+  assert.deepEqual([LK.shown(D, read).length, LK.countAt(D, b1, read), LK.countAt(D, b2, read)], [0, { n: 1, social: false }, { n: 0, social: false }], 'read: the other\'s link that stood counted at its block, the owner\'s citation and the social link, not in the answer, nowhere');
+  const own = withLinks(past, [D + '.0.2.1']);
+  assert.deepEqual(LK.shown(D, own).map((s) => [s.link.addr, s.pos]), [[D + '.0.2.1', 50]], 'its own link that stood marked where its text places its end');
 });
 
 test('the toggle shows others\' links attributed; a lens by owner admits them too', () => {

@@ -99,7 +99,9 @@
 // document's text and its image as they stood at such a position, kept
 // nowhere (`stateAt`), and as the board holds them now — from the model's
 // record read whole, else, while the window writes the draft, off the board at
-// its head and kept nowhere (`stateNow`); the feed's row at a position
+// its head and kept nowhere (`stateNow`); the links that stood on a past
+// state's words, read at the position its text was read at and kept nowhere
+// (`linksAt`); the feed's row at a position
 // (`rowAt`); and the values bytes hold, read by their identity in parts of at
 // most MAX_DELIVERY_ITEMS positions (`readIdentity`; FP-21).
 // The orders every read keeps. A read goes at the page's class (`atClass`):
@@ -276,8 +278,9 @@
 // whole feed (`historyOf`); one of its past states, its text and its image
 // read at a position of the board's history (`stateAt`); its newest kept
 // state, the draft as the board holds it now, never read through a history
-// read (`stateNow`); and the feed's row at the floor a history refusal names
-// (`rowAt`) — each a read in flight.
+// read (`stateNow`); the links that stood on a past state's words, at its
+// position (`linksAt`); and the feed's row at the floor a history refusal
+// names (`rowAt`) — each a read in flight.
 // Rules: FP-1, FP-2, FP-6, FP-9, FP-11, FP-21, FP-22, FP-23, FP-27, FP-28,
 // FP-29, FP-34, FP-35.
 
@@ -1671,6 +1674,36 @@ async function headNow(addr) {
   const im = await imageParts(addr, 1, n);
   if (dropped()) return 'dropped';
   return 'refused' in im ? im : { runs: text.runs, image: placedRuns(im.runs), at: text.asOf ?? at };
+}
+
+/**
+ * The links that stood on a document's words at a position of the board's
+ * history, read for an act and kept nowhere (B3-S7, A-46; FP-6): one
+ * `find_links_v` over its first `extent` positions as of that position
+ * (wire.md §Reading history), asked again RETRY_MS after the board's
+ * reconstructions or its scans were busy, HISTORY_ATTEMPTS times in all — the
+ * busy refusal handed up past them; every other refusal handed up, the board
+ * not answering among them. Their addresses, none where the text held no
+ * position. The read counts as a read in flight.
+ * @param {string} addr
+ * @param {number} at the position the state's text was read at (`State.at`)
+ * @param {number} extent the positions its text held there
+ * @returns {Promise<{links: string[]} | {refused: Refusal}>}
+ */
+export async function linksAt(addr, at, extent) {
+  const n = Math.min(extent, WHOLE_CAP);
+  if (n <= 0) return { links: [] };
+  const key = 'links ' + addr;
+  inflight.add(key);
+  try {
+    const frame = F.opAt(at, F.findLinksV(addr, 1, n));
+    let out = await read(frame);
+    for (let asks = 1; asks < HISTORY_ATTEMPTS && 'refused' in out && (out.refused.name === 'history_busy' || out.refused.name === 'scan_busy'); asks++) {
+      await new Promise((r) => setTimeout(r, RETRY_MS));
+      out = await read(frame);
+    }
+    return 'refused' in out ? { refused: out.refused } : { links: F.decodeAddrs(out.answer) };
+  } finally { inflight.delete(key); dirty(); }
 }
 
 /**

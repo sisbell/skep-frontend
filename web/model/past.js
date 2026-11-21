@@ -34,9 +34,16 @@
 // list as it stands (`entriesOf`): each day's head, then — where it stands
 // open — each run of one hand's rows led by that hand once, where it differs
 // from the row above, and the rows; where it is folded, its landmarks alone,
-// the hands its head names standing for theirs. How long a row's state stood
-// (`stoodUntil`): to the position before the row after it, the newest row's
-// to the head the rows were read up to. Whether a row's state is not its
+// the hands its head names standing for theirs. A state is one commit of the
+// draft (`Row.positions`): one state back or forward is the commit before or
+// after another across the rows read, a commit inside a row among them
+// (`stepFrom`). How long a commit's state stood (`stoodUntilAt`): to the
+// position before the draft's next commit, the newest commit's to the head
+// the rows were read up to — a row's its last commit's (`stoodUntil`). The
+// floor's line (`floorLine`): beneath the newest commit at or before a
+// position whose state the board can no longer rebuild, every row wholly
+// older than that commit's row falling below it and that row standing above
+// it whole, no row spanning it. Whether a row's state is not its
 // minute's last (`notLastOf`): a newer row shares its recorded minute, the
 // rows of that minute counted once the rows read pass the minute or reach
 // their bottom, and never where its time is lost.
@@ -245,6 +252,85 @@ export function stoodUntil(rows, row, head) {
   if (i > 0) return Math.max(row.last, rows[i - 1].first - 1);
   return i === 0 && head != null && head > row.last ? head : row.last;
 }
+
+/**
+ * The last position a commit's state stood at (wire.md §Reading history): the
+ * position before the draft's next commit — inside its row, the next commit
+ * of that row less one; at its row's last commit, the row's (`stoodUntil`);
+ * the commit's own position where no row holds it.
+ * @param {readonly Row[]} rows newest first (`rowsOf`)
+ * @param {number} at the commit's position
+ * @param {number | null} head the position the rows were read up to
+ * @returns {number}
+ */
+export function stoodUntilAt(rows, at, head) {
+  const row = rowHolding(rows, at);
+  if (!row) return at;
+  const k = row.positions.indexOf(at);
+  return k < row.positions.length - 1 ? Math.max(at, row.positions[k + 1] - 1) : stoodUntil(rows, row, head);
+}
+
+/**
+ * Every commit of the rows, newest first: the list's order, a row's own
+ * commits newest first in its place (`Row.positions`).
+ * @param {readonly Row[]} rows newest first (`rowsOf`)
+ * @returns {number[]}
+ */
+export const commitsOf = (rows) => rows.flatMap((r) => [...r.positions].reverse());
+
+/**
+ * One state back or forward from a commit (B3-S7; D5 K-102): the commit
+ * before it (`dir` -1, older) or after it (`dir` 1, newer) across the rows
+ * read, a commit inside a row among them; null where the rows read hold none
+ * there — past the oldest commit read, or past the newest — or none holds
+ * `from`.
+ * @param {readonly Row[]} rows newest first (`rowsOf`)
+ * @param {number} from the commit counted from
+ * @param {-1 | 1} dir
+ * @returns {number | null}
+ */
+export function stepFrom(rows, from, dir) {
+  const all = commitsOf(rows), k = all.indexOf(from);
+  if (k < 0) return null;
+  const to = all[k - dir];
+  return to === undefined ? null : to;
+}
+
+/**
+ * @typedef {Object} FloorLine — where the list's floor line stands (`floorLine`; B3-S7)
+ * @property {number} cut the oldest commit whose state stands readable above the line: the newest commit at or before the floor, read at the floor — steps stop there
+ * @property {number | null} below the last position of the newest row beneath the line — every row whose last commit stands at or before it falls below; null where no row read does
+ */
+
+/**
+ * The list's floor line (B3-S7): beneath the newest commit at or before the
+ * floor, `at` — the state that stood at the floor, read there — every row
+ * wholly older than that commit's row falling below it, that row standing
+ * above it whole, so no row spans it; null where no commit read stands at or
+ * before the floor.
+ * @param {readonly Row[]} rows newest first (`rowsOf`)
+ * @param {number} at the floor: the oldest position whose state the board still rebuilds, or the first commit of the row above a state it refused
+ * @returns {FloorLine | null}
+ */
+export function floorLine(rows, at) {
+  const cut = commitsOf(rows).find((p) => p <= at);
+  if (cut === undefined) return null;
+  const i = rows.findIndex((r) => r.positions.includes(cut)), under = rows[i + 1];
+  return { cut, below: under ? under.last : null };
+}
+
+/**
+ * The floor a refusal leaves the list's line at (B3-S7): the one it names
+ * where that lies higher than the floor the line stood at, else the one it
+ * stood at — the line only rises, never lowered by a later refusal.
+ * @param {number | null} was the floor the line stood at; null where none stood
+ * @param {number} at the floor the refusal places it at
+ * @returns {number}
+ */
+export const risen = (was, at) => (was == null ? at : Math.max(was, at));
+
+/** does a row fall beneath the list's floor line (`floorLine`) */
+export const isBelow = (/** @type {FloorLine | null} */ line, /** @type {Row} */ row) => !!line && line.below != null && row.last <= line.below;
 
 /**
  * @typedef {Object} NotLast — a row's state is not its minute's last (`notLastOf`; B3-S7)

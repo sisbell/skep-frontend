@@ -5,7 +5,8 @@
 // `k` order (`applyHeld`), the delivered text with the page's own edits
 // applied (`applyEdits`), or a past state as an `/op-at` read delivered it
 // with the image read beside it (`recordAt`), which the held lines may be
-// applied over in turn. Each answers a new `Doc` marked `derived` — what it was
+// applied over in turn, its links those a read at its position answered
+// (`withLinks`), none until then. Each answers a new `Doc` marked `derived` — what it was
 // derived from and what was applied — and never writes into M-REC's
 // documents, composes nothing for the bridge and sends nothing (FP-14).
 // `applyHeld` switches on the VALUE of each row's frame's `op` — insert,
@@ -860,6 +861,18 @@ export function recordAt(addr, runs, at, { image = [] } = {}) {
   };
   return recordOver(base, t, { from: addr, rows: [], edits: 0, at });
 }
+
+/**
+ * A past state's record with the links that stood on its words, as a links
+ * read at its position answered them (B3-S7; M-PUMP's `linksAt`): its link
+ * set those addresses and its links read, as M-REC's `takeLinks` fills a
+ * document's — a record of its own, every other field as it stood; the
+ * model's record of the document untouched.
+ * @param {Doc} d a past state's record (`recordAt`)
+ * @param {readonly string[]} addrs the links' addresses
+ * @returns {Doc}
+ */
+export const withLinks = (d, addrs) => ({ ...d, links: new Set(addrs), linksRead: true });
 
 /**
  * The characters of a text about a position, for a caret's steps (K-71): the

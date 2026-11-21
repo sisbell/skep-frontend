@@ -4150,6 +4150,39 @@ test('a document\'s text and its image as they stood at a position of the board\
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('the links that stood on a document\'s words at a position of the board\'s history are read for an act and kept nowhere: one `find_links_v` over its first positions as of that position, the addresses answered; asked again after the board\'s reconstructions or its scans were busy, the busy refusal handed up past the bound; any other refusal handed up; nothing asked where the text held no position; counted in flight while out (B3-S7; A-46; skep-frontend #704)', async () => {
+  const X = '1.0.1.0.124', L1 = X + '.0.2.1', L2 = '1.0.1.0.5.0.2.3';
+  const K = (/** @type {number} */ at, /** @type {number} */ n) => FAKE.keyOf('op', { frame: F.opAt(at, F.findLinksV(X, 1, n)) });
+  let busy = 2;
+  /** @type {Record<string, unknown>} */
+  const script = {
+    [K(9, 12)]: { result: { resp: 'addrs', as_of: 9, addrs: [L1, L2] } },
+    [K(8, 12)]: { refused: { kind: 'refused', name: 'withheld' } },
+    [K(7, 12)]: { refused: { kind: 'refused', name: 'scan_busy', body: { error: 'scan_busy' } } },
+  };
+  Object.defineProperty(script, K(6, 12), { enumerable: true, get: () => (busy-- > 0 ? { refused: { kind: 'refused', name: 'history_busy' } } : { result: { resp: 'addrs', as_of: 6, addrs: [L1] } }) });
+  const fake = FAKE.create(script);
+  PORT.boot({ ...fake, subscribe() {}, onStream() {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1' }));
+  const was = PUMP.inflightCount(), release = fake.hold('op', { frame: F.opAt(9, F.findLinksV(X, 1, 12)) });
+  const out = PUMP.linksAt(X, 9, 12);
+  for (let i = 0; i < 50 && !fake.asked.includes(K(9, 12)); i++) await new Promise((r) => setImmediate(r));
+  assert.equal(PUMP.inflightCount(), was + 1, 'counted in flight while out');
+  release();
+  assert.deepEqual(await out, { links: [L1, L2] }, 'the addresses answered');
+  assert.deepEqual(fake.asked.filter((k) => k === K(9, 12)).length, 1, 'one read, `/op-at` around `find_links_v` at the position');
+  assert.deepEqual(await PUMP.linksAt(X, 6, 12), { links: [L1] }, 'the reconstructions busy: asked again after the pause');
+  assert.equal(fake.asked.filter((k) => k === K(6, 12)).length, 3, 'asked three times');
+  const scans = await PUMP.linksAt(X, 7, 12);
+  assert.deepEqual(['refused' in scans && scans.refused.name, fake.asked.filter((k) => k === K(7, 12)).length], ['scan_busy', 6], 'the scans busy past the bound: the busy refusal handed up');
+  const withheld = await PUMP.linksAt(X, 8, 12);
+  assert.deepEqual(['refused' in withheld && withheld.refused.name, fake.asked.filter((k) => k === K(8, 12)).length], ['withheld', 1], 'any other refusal handed up at once');
+  const n = fake.asked.length;
+  assert.deepEqual([await PUMP.linksAt(X, 9, 0), fake.asked.length - n], [{ links: [] }, 0], 'no position held: none, nothing asked');
+  assert.deepEqual([PUMP.inflightCount(), REC.has(X)], [was, false], 'none left in flight, and nothing kept');
+});
+
 test('a document\'s text and its image as the board holds them now are read as a whole read reads them, never as of a position of its history: held whole, an image placing every position, nothing read and the record\'s own answered, at the position its text was read at; an image leaving a position unplaced read over the text and taken; a text held in part read whole with its image; a draft the window writes — its burst open, or words of it dialed the board has not acked — read off the board at its head and kept nowhere; the refusal a read met handed up; counted in flight while out (B3-S7; issue #700)', async () => {
   const X = '1.0.1.0.122', Y = '1.0.1.0.123', TEXT = 'Words now.', n = TEXT.length;
   const run = { pos: 1, width: n, kind: /** @type {const} */ ('content'), text: TEXT, ref: null, origin: null };

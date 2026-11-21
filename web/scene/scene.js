@@ -405,8 +405,9 @@
 // `history`) on the draft's address, pane B is a state of the draft derived
 // at a position (M-DERIVE's `recordAt`): the state the act asked
 // (`PastHeld.asked`) — a past one read from the board's history at the
-// position its row ends at, refused there as reclaimed, at the last position
-// it stood, before the draft's next change (M-PAST's `stoodUntil`), or the
+// position its commit was made at, refused there as reclaimed, at the last
+// position it stood, before the draft's next commit (M-PAST's
+// `stoodUntilAt`), or the
 // committed one the board names below it, unless asked there already or the
 // refusal's floor lies past it (`askState`; M-PUMP's `stateAt`); the newest
 // row's the draft as the board holds it now, read as the plane's acts read a
@@ -445,15 +446,54 @@
 // press asking the state as a return asks it and saying its answer in the
 // status region, changed or not (`readAgain`; FP-41); and where the state
 // lands pane B set again to it in one step (`setPanes`; FP-23), the line and
-// the act gone. Between the title and the chip
+// the act gone. A state is one commit of the draft (M-PAST's `stepFrom`):
+// pane B's corner carries its two one-state steps, "‹ earlier" and "later ›",
+// at the ends of its first row — at its document's head the title's, the
+// title laid out between them; beside its column above it — one line of acts
+// of their own, outside the pane's name (T-ARTICLE's `stepsHTML`), each one
+// commit back or forward from where a step counts — the state last asked
+// while its read is out, where the person is going, else the state shown
+// (`stepBase`) — and a row's act its row's last state (`rowAct`); the keys
+// Alt+↓ and Alt+↑ anywhere in the scene with no caret holding the focus, and
+// the list's ↓, ↑ and Enter (N-KEYS'; D5 K-102). Each inert at the end it
+// cannot pass, its reason said at every press (FP-41; `stepsOf`): "‹ earlier"
+// at the floor's line, its words; at the draft's first state, once the rows
+// read reach the draft's first position; at the oldest row read where they end
+// at the feed's floor instead, the floor's words for it; "later ›" at the
+// newest kept state, "this is how the draft stands now", or that it is the
+// newest kept state and what was written since is not yet kept, where the
+// draft held such words as its history opened. Every state asked — a step's,
+// a row's, "read it again"'s — goes through one entry (`askPast`): asked
+// anew, any reissue of the state asked before it ends with the line that
+// answered it; one read at a time, of the latest state asked, a press while
+// one is out moving the request alone — a held key's repeats reading nothing
+// of their own — the read that answers meanwhile landed with no rest, then
+// the latest read; the newest kept state read plainly (`readPast`); a state
+// beneath the floor's line never read. Each lands in place with no flight,
+// pane B set again in one step, what stood at its place kept on screen by its
+// bytes (`landPast`; FP-23), its row's day opened and the row brought into
+// view in the list where it stands in its column (`showRow`), the landing
+// said once where it rests; a
+// refusal at the floor stands the floor's line, pane B, its line, its name and
+// its description as they stood, the state last asked the one shown again,
+// and its words said once (`refusedAtFloor`); any other refusal taken as every
+// one is. Once a state rests — nothing later asked while its text was read —
+// the links that stood on its words are read at its position and pane B set
+// again in place with them (`restLinks`), the newest kept state's the model's
+// record's (`newestLinks`): until they are, its corner says "links — arriving"
+// at a rest, "links not read" where it landed while the steps ran, and that
+// reading them failed past the bound, its count places hollow (LK's
+// `countAt`). Between the title and the chip
 // stand its line's clauses, each derived from the rows and the reads as they
 // stand (`pastLine`), held with the title at its document's head and none ever
-// folded (T-ARTICLE's `stateItems`): where a newer row of the list shares the
+// folded (T-ARTICLE's `stateItems`): the links' word, after the state's hand;
+// where a newer row of the list shares the
 // shown row's recorded minute, "one of ⟨n⟩ changes that minute, not the
 // last", in the place of the words saying the state is how the draft stands
 // now, its count an empty slot of its width until the rows read pass that
 // minute or reach their bottom (M-PAST's `notLastOf`; `readOlder`); and while
-// the scene reissues the state its act asked, "reading ⟨time⟩", that state's
+// the state last asked is read — its read out for an ask, or the scene
+// reissuing it (`reads`) — "reading ⟨time⟩", that state's
 // time in the title's form, carrying the one running mark, its own element
 // busy and never the pane (T-ARTICLE's `PastLine.reading`). The line is said
 // once in the status region as it first stands — while the scene reissues,
@@ -470,14 +510,21 @@
 // draft's feed rows, newest first, by day, the days open on opening those
 // M-PAST's `openOnOpening` names for the room the list is given, a day's head
 // folding or opening it on the reader's act alone (`foldDay`), each row its
-// time of day in a slot as wide as the widest and what it did beside it
-// (`rowHTML`), the row of the
+// time of day in a slot as wide as the widest and what it did beside it,
+// each row an act (`rowHTML`), the row of the
 // state shown marked, or its folded day's head; the asked row saying
-// "reading" after its words while the scene reissues its state, and "not
+// "reading" after its words while its state is read, and "not
 // read" there while the line says its read stopped, or its folded day's head
-// (`askedOf`); below the row of the state shown, or its folded day's head,
-// where the asked state was refused as reclaimed, the line's words — its
-// floor mark (`listHTML`); above them, where the draft
+// (`askedOf`); where a read was refused at the board's floor — the act's, a
+// step's, a row's — the floor's line, placed by the floor the refusal names,
+// else directly above the row asked, and rising only (`cutOf`, `placeCut`): a
+// hairline across the column labelled with the floor's words, beneath the row
+// whose state stood at the floor, or its folded day's head, every row below it
+// standing in its place, focusable, opening nothing and saying why at every
+// press (`floorWords`, `listHTML`, `rowAct`) — no date or log position, the
+// search index's floor never placing it; the list one stop of the scene's
+// ring, ↓ and ↑ along its acts (`standStops`, `listKey`), the focused row held
+// still as the list is written again (`writeList`); above them, where the draft
 // held words the board had not kept, "now — not yet kept". Rows arriving
 // after it stands — those below the history read's reach, read as it stands
 // down to the feed's first position, or the first one its files hold, and read
@@ -675,10 +722,10 @@ import { LINE_H, MEASURE, MEASURE_CPL, HEAD_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor 
 import { holdStack, LINE_BOX } from '../plane/labels.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
-import { applyHeld, recordAt } from '../model/derive.js';
+import { applyHeld, recordAt, withLinks } from '../model/derive.js';
 import { elementIn, isElement } from '../text/span.js';
 import * as PAST from '../model/past.js';
-import { t, tHTML, tRuns, plural, joinRuns, runsText, asRuns, heard, asHeard, sentence, sentences, fields, stoodAt, FIELD } from '../strings.js';
+import { t, tHTML, tRuns, plural, joinRuns, runsText, asRuns, heard, asHeard, sentence, sentences, asSentence, fields, stoodAt, FIELD } from '../strings.js';
 import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../model/frames.js').ComparePair} ComparePair */
@@ -727,7 +774,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {number} from the position its read reached down to: rows below it are read as the scene stands (`readOlder`); 0 where every row is read
  * @property {boolean} bottom its read reached the feed's first position, or the first one the feed's files hold (M-PUMP's `HistoryRead.floor`): no row below `from` is to be read
  * @property {number | null} head the position its read reached up to (M-PUMP's `HistoryRead.head`): a return reads the rows written past it (`pastSince`); null where none is known
- * @property {number} asked the last position of the row whose state the act asked: the row below the top row, else the top row
+ * @property {number} asked the commit whose state the act asked — the last of the row below the top row, else of the top row — or, where its entry was left after a step or a row's act, the one asked last (`Left.asked`)
  * @property {boolean} unkept the draft held words the board had not kept as the act was taken: the list's top line says so
  * @property {{pages: number, read: number, readMs: number}} figures the history read's pages and rows and its time (FP-18)
  */
@@ -736,9 +783,10 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @typedef {Object} PastGot — the state a draft's history shows in pane B, as its reads found it (`pastState`)
  * @property {Doc} record the state's record, derived at the position read (M-DERIVE's `recordAt`), its metadata the model's
  * @property {import('../model/pump.js').State} state the state as the board answered it: its text, its image and the position read
- * @property {number} shown the last position of the row whose state it is: the asked row's, else the newest row's in its place
+ * @property {number} shown the commit whose state it is: the commit asked, else the newest row's last in its place
  * @property {Refusal | null} met the latest refusal the asked state's reads met, where the newest kept state stands in its place; null where it is the state asked
  * @property {string | null} floor the date the board keeps states back to, where `met` is a reclaimed refusal naming its floor and the feed's row there was read (`floorOf`); null otherwise
+ * @property {string | null} [floorTime] that row's time of day, as its row in the list names it (`floorOf`); absent or null where `floor` is
  * @property {number} ms the reads' time by the platform's clock (FP-18)
  * @property {PastHeld} [held] what the history stands on as the state was read, where a return read the rows written past its entry's head (`pastSince`); absent where it stands on its opener's
  */
@@ -751,13 +799,16 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {import('../model/past.js').Day[]} days (M-PAST's `daysOf`)
  * @property {Set<string>} open the days that stand open: those M-PAST's `openOnOpening` opens as the list first stands, then as the reader folds and opens them
  * @property {boolean} opened the days open on opening are set: the list has stood once
- * @property {number} at the last position of the row whose state pane B shows
- * @property {number} asked the last position of the row whose state the act asked (`PastHeld.asked`)
+ * @property {number} at the commit whose state pane B shows: its row the one marked shown (M-PAST's `rowHolding`)
+ * @property {number} asked the commit whose state was asked last — by the act (`PastHeld.asked`), a step, a row's act, "read it again" (`askPast`) — the one pane B shows where none other is asked
+ * @property {number | null} out the commit whose state's read is out for an ask (`askPast`): one read at a time; null where none is
+ * @property {boolean} fell pane B shows the newest kept state in the place of the state the act or a return asked, which its reads refused (`pastState`): a reclaimed answer of the scene's reissue then words the line (`reissue`); false once pane B shows a state as asked, or another is asked
+ * @property {Cut | null} cut where the list's floor line stands (`placeFloor`): rising only; null where no read was refused at the floor
+ * @property {'unread' | 'arriving' | 'read' | 'failed'} links the links that stood on the state pane B shows (`restLinks`): not read, where it landed while a later state was asked; their read out at a rest; read; failed past the bound
  * @property {Refusal | null} met the latest refusal the asked state's reads met, where pane B shows another state in its place: why it does (`pastWhyOf`); null where it shows the one asked
  * @property {string | null} floor the date the board keeps states back to, where `met` is a reclaimed refusal naming its floor and the feed's row there was read (`floorOf`): the line's words then the floor's; null otherwise
  * @property {boolean} running the scene reissues the asked state (`reissue`): pane B's corner carries the in-flight clause, the running mark after it (`pastLine`), and the asked row says "reading"
  * @property {boolean} again "read it again" is drawn beneath pane B's line (`againOf`): set where the line first stands saying the asked state could not be read and is not read again (`metBy`), and held until pane B shows the asked state (`landPast`)
- * @property {boolean} asking a press of "read it again" has its read out (`readAgain`): one read at a time
  * @property {number | null} head the position the rows were first read up to (`PastHeld.head`): the act's, a return's past it (`pastSince`)
  * @property {boolean} unkept the list's top line says the draft holds words not yet kept
  * @property {string | null} said the line's words as the status region last said them (`sayLine`); null where it said none
@@ -766,6 +817,13 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {boolean} reading rows below `from` are being read
  * @property {PastHeld['figures'] & {stateMs: number, at: number, older: {pages: number, read: number, ms: number} | null}} figures the reads' figures — the state read's time and the position it read at, set again where a reissue lands, and the read of the older rows once it lands (FP-18)
  * @property {string} html the list's markup as last written
+ */
+
+/**
+ * @typedef {Object} Cut — where the list's floor line stands (`PastList.cut`; M-PAST's `floorLine`)
+ * @property {number} at the floor: the position a refusal named as the oldest the board rebuilds, else the first commit of the row above a state refused where it last stood
+ * @property {string | null} date the day of the feed's row at a floor a refusal named, where that row was read (`floorOf`); null otherwise
+ * @property {string | null} time that row's time of day; null where `date` is
  */
 
 /**
@@ -1077,6 +1135,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {{a: Spot, b: Spot} | null} spots where the reader stood in each pane; null where none is kept — a change of the page's class drops them (N-TRAIL's)
  * @property {Stop | null} stop the stop the platform's focus stood on — one the panes' `compare` draws by what it stood for, which a change of the page's class keeps (N-TRAIL's); null where it stood outside the scene, or on such a stop whose bytes its pane's image did not name
  * @property {Listed | null} [list] the stroke's list standing; null, or absent, where none stood
+ * @property {number} [asked] at a draft's history, the commit whose state was asked last (`PastList.asked`), which a return asks again; absent at every other scene
  */
 
 /** how far below the panes' tops the two ends are set level (px), where both can stand there */
@@ -1244,7 +1303,7 @@ export function attach(e, acts = {}) {
   e.root.addEventListener('pointermove', (ev) => hoverAt(ev));
   e.root.addEventListener('pointerleave', () => hoverAt(null));
   for (const x of [e.strokes, e.stop]) for (const type of ['focusin', 'focusout']) x.addEventListener(type, () => { if (scene && scene.fit.stacked) markDirty(); });
-  /** the event's target, where it stands in a pane's corner: on the read it offers (`act`), on a draft's kept word (`kept`), on its kept line's second act (`history`), on a past state's "read it again" (`again`), on what opens it whole or compacts it again — a glyph, a head's count, the words a glyph opened — or anywhere on the corner opened whole (`whole`); null elsewhere */
+  /** the event's target, where it stands in a pane's corner: on the read it offers (`act`), on a draft's kept word (`kept`), on its kept line's second act (`history`), on a past state's "read it again" (`again`), on one of its steps (`earlier`, `later`), on what opens it whole or compacts it again — a glyph, a head's count, the words a glyph opened — or anywhere on the corner opened whole (`whole`); null elsewhere */
   const onCorner = (/** @type {Event} */ ev) => {
     const tg = /** @type {HTMLElement | null} */ (ev.target), side = ev.currentTarget === e.paneB ? 'b' : 'a';
     if (!tg || !tg.closest || !tg.closest('.corner')) return null;
@@ -1252,6 +1311,8 @@ export function attach(e, acts = {}) {
     if (tg.closest('.kept-word[data-kept]')) return 'kept';
     if (tg.closest('[data-history]')) return 'history';
     if (tg.closest('[data-again]')) return 'again';
+    const st = /** @type {HTMLElement | null} */ (tg.closest('[data-step]'));
+    if (st) return st.dataset.step === 'later' ? 'later' : 'earlier';
     return tg.closest('.glyph, [data-more], [data-whole]') || (scene && scene[side].open) ? 'whole' : null;
   };
   /** the stops of the line of a pane's corner's acts an element stands in, stood on `at` (T-LAYER's `setStops`) */
@@ -1270,7 +1331,8 @@ export function attach(e, acts = {}) {
     // a click on a corner's act takes it; one on the pane's text, or a drag's release there, is the pointer's act on the text (`textAct`)
     p.addEventListener('click', (ev) => {
       const on = onCorner(ev), side = p === e.paneB ? 'b' : 'a';
-      if (on === 'act') act(side); else if (on === 'kept') keptAct(side); else if (on === 'history') historyAct(side, FOCUS.byKey(ev)); else if (on === 'again') void readAgain(side); else if (on === 'whole') openWhole(side);
+      if (on === 'act') act(side); else if (on === 'kept') keptAct(side); else if (on === 'history') historyAct(side, FOCUS.byKey(ev)); else if (on === 'again') void readAgain(side);
+      else if (on === 'earlier' || on === 'later') { if (side === 'b') void step(on === 'later' ? 1 : -1); } else if (on === 'whole') openWhole(side);
       else if (onText(ev.target)) textAct(e, side);
     });
     // a corner's stop follows the focus along its line of acts, and stands on its first act again as the focus leaves it; a
@@ -1838,27 +1900,28 @@ async function heldSource(addr, stands) {
 }
 
 /**
- * A row's state read for a draft's history (see the head; wire.md §Reading
- * history): at the position the row ends at; refused there as reclaimed, at
- * the last position it stood (M-PAST's `stoodUntil`) — the committed one the
- * board names below it where that lies inside a commit — save where that is
- * the position asked already, or the refusal's floor, the oldest position the
- * board still answers, lies past it, the reclaimed refusal then standing. The
- * state, or the latest refusal met.
+ * A commit's state read for a draft's history (see the head; wire.md §Reading
+ * history): at the commit's position; refused there as reclaimed, at the last
+ * position it stood, before the draft's next commit (M-PAST's
+ * `stoodUntilAt`) — the committed one the board names below it where that
+ * lies inside a commit — save where that is the position asked already, or
+ * the refusal's floor, the oldest position the board still answers, lies past
+ * it, the reclaimed refusal then standing. The state, or the latest refusal
+ * met.
  * @param {string} addr the draft
  * @param {readonly import('../model/past.js').Row[]} rows its rows, newest first (M-PAST's `rowsOf`)
- * @param {import('../model/past.js').Row} row the row whose state is read
+ * @param {number} pos the commit whose state is read
  * @param {number | null} head the position the rows were read up to
  * @param {number} [attempts] how many whole reads at most while the board's reconstructions are busy (M-PUMP's `stateAt`)
  * @returns {Promise<import('../model/pump.js').State | {refused: Refusal}>}
  */
-async function askState(addr, rows, row, head, attempts) {
-  const first = await PUMP.stateAt(addr, row.last, { attempts });
+async function askState(addr, rows, pos, head, attempts) {
+  const first = await PUMP.stateAt(addr, pos, { attempts });
   if (!('refused' in first) || first.refused.name !== 'history_reclaimed') return first;
   const floor = /** @type {{body?: {floor?: unknown}}} */ (first.refused).body?.floor;
   // no position at or below `done` is asked again: the one asked already, and every one below the floor the refusal names
-  const done = typeof floor === 'number' ? Math.max(row.last, floor - 1) : row.last;
-  const at = PAST.stoodUntil(rows, row, head);
+  const done = typeof floor === 'number' ? Math.max(pos, floor - 1) : pos;
+  const at = PAST.stoodUntilAt(rows, pos, head);
   if (at <= done) return first;
   const again = await PUMP.stateAt(addr, at, { attempts, above: done });
   // `at` inside a commit whose committed position below it the board names at or below `done`: the reclaimed refusal stands
@@ -1867,46 +1930,70 @@ async function askState(addr, rows, row, head, attempts) {
 
 /**
  * The state a draft's history shows in pane B (see the head): the asked
- * row's (`askState`), the newest row's the draft as the board holds it now
- * (M-PUMP's `stateNow`), never read as of a position of the board's history;
+ * commit's (`askState`) — a row's last, where a row is handed in — the newest
+ * row's last the draft as the board holds it now (M-PUMP's `stateNow`), never
+ * read as of a position of the board's history, its links the model's record's
+ * where they are read (`newestLinked`);
  * where the asked state is refused, the newest kept state in its place, the
  * asked one's refusal kept as why (`PastGot.met`) with the date its floor
- * names, where it names one (`floorOf`); the refusal met where the state to
- * show could not be read. Each derived at the position read (M-DERIVE's
- * `recordAt`).
+ * names and that row's time, where it names one (`floorOf`); the refusal met
+ * where the state to show could not be read. Each derived at the position
+ * read (M-DERIVE's `recordAt`).
  * @param {string} addr the draft
  * @param {readonly import('../model/past.js').Row[]} rows its rows, newest first (M-PAST's `rowsOf`)
- * @param {import('../model/past.js').Row} asked the row whose state the act asks
+ * @param {import('../model/past.js').Row | number} asked the row whose last state the act asks, or the commit a return asks
  * @param {number | null} head the position the rows were read up to (M-PUMP's `HistoryRead.head`)
  * @returns {Promise<PastGot | {refused: Refusal}>}
  */
 export async function pastState(addr, rows, asked, head) {
-  const t0 = performance.now(), top = rows[0] ?? asked;
-  /** @type {(s: import('../model/pump.js').State, shown: number, met: Refusal | null, floor: string | null) => PastGot} */
-  const got = (s, shown, met, floor) => ({ record: { ...recordAt(addr, s.runs, s.at, { image: s.image }), meta: REC.has(addr) ? REC.doc(addr).meta : null }, state: s, shown, met, floor, ms: performance.now() - t0 });
-  if (asked.last === top.last) { const s = await PUMP.stateNow(addr); return 'refused' in s ? s : got(s, top.last, null, null); }
-  const first = await askState(addr, rows, asked, head);
-  if (!('refused' in first)) return got(first, asked.last, null, null);
+  const at = typeof asked === 'number' ? asked : asked.last, t0 = performance.now(), top = rows[0];
+  /** @type {(s: import('../model/pump.js').State, shown: number, met: Refusal | null, floor: {date: string, time: string} | null) => PastGot} */
+  const got = (s, shown, met, floor) => {
+    const record = { ...recordAt(addr, s.runs, s.at, { image: s.image }), meta: REC.has(addr) ? REC.doc(addr).meta : null };
+    return { record: !top || shown === top.last ? newestLinked(addr, record) : record, state: s, shown, met, floor: floor ? floor.date : null, floorTime: floor ? floor.time : null, ms: performance.now() - t0 };
+  };
+  if (!top || at === top.last) { const s = await PUMP.stateNow(addr); return 'refused' in s ? s : got(s, top ? top.last : at, null, null); }
+  const first = await askState(addr, rows, at, head);
+  if (!('refused' in first)) return got(first, at, null, null);
   const [s, floor] = await Promise.all([PUMP.stateNow(addr), floorOf(first.refused)]);
   return 'refused' in s ? s : got(s, top.last, first.refused, floor);
 }
 
 /**
+ * The newest kept state's record with the links the model's record of the
+ * draft holds, where it holds them read — the draft as the board holds it now,
+ * read as the plane reads it and never through the board's history, so its
+ * links are the plane's (M-DERIVE's `withLinks`); as given where they are not
+ * read yet, its links' word standing until they are (`newestLinks`).
+ * @param {string} addr
+ * @param {Doc} record
+ * @returns {Doc}
+ */
+function newestLinked(addr, record) {
+  const d = REC.has(addr) ? REC.doc(addr) : null;
+  return d && d.linksRead ? withLinks(record, [...d.links]) : record;
+}
+
+/**
  * The date a reclaimed refusal's floor names (see the head; FP-34): the day
  * the feed's row at that position was written (M-PUMP's `rowAt`), "a time not
- * recorded" where the board lost that row's time; null where the refusal is
- * no reclaimed one or names no floor, or no row at the floor could be read —
- * the read refused, or the first row read standing past it.
+ * recorded" where the board lost that row's time, with that row's time of day
+ * as a row of the list names it; null where the refusal is no reclaimed one
+ * or names no floor, or no row at the floor could be read — the read refused,
+ * or the first row read standing past it.
  * @param {Refusal} r
- * @returns {Promise<string | null>}
+ * @returns {Promise<{date: string, time: string} | null>}
  */
 async function floorOf(r) {
-  const floor = r.name === 'history_reclaimed' ? /** @type {{body?: {floor?: unknown}}} */ (r).body?.floor : null;
-  if (typeof floor !== 'number') return null;
+  const floor = floorNamed(r);
+  if (floor == null) return null;
   const out = await PUMP.rowAt(floor);
   if ('refused' in out || !out.row) return null;
-  return out.row.time == null ? t('L.history.floor.untimed') : dayOf(out.row.time);
+  return out.row.time == null ? { date: t('L.history.floor.untimed'), time: t('L.history.floor.untimed') } : { date: dayOf(out.row.time), time: timeOf(out.row.time) };
 }
+
+/** the floor a reclaimed refusal names, the oldest position the board still rebuilds (wire.md §Reading history); null where it is no reclaimed one or names none */
+const floorNamed = (/** @type {Refusal} */ r) => { const f = r.name === 'history_reclaimed' ? /** @type {{body?: {floor?: unknown}}} */ (r).body?.floor : null; return typeof f === 'number' ? f : null; };
 
 /**
  * What a draft's history stands on as it reopens (see the head): the rows
@@ -1942,8 +2029,8 @@ async function pastSince(h, stands) {
 async function pastSource(h, got, stands) {
   const none = { d: null, n: null, whole: false, refused: null, unheard: null, past: null };
   const on = got ? h : await pastSince(h, stands);
-  const rows = PAST.rowsOf(on.entries), asked = PAST.rowHolding(rows, on.asked);
-  const out = got ?? (asked && stands() ? await pastState(on.draft, rows, asked, on.head) : null);
+  const rows = PAST.rowsOf(on.entries), asked = PAST.rowHolding(rows, on.asked) ? on.asked : null;
+  const out = got ?? (asked != null && stands() ? await pastState(on.draft, rows, asked, on.head) : null);
   if (!out) return none;
   if ('refused' in out) return { ...none, refused: out.refused, unheard: PUMP.unanswered(out.refused) ? out.refused : null };
   return { d: out.record, n: null, whole: true, refused: null, unheard: null, past: on === h ? out : { ...out, held: on } };
@@ -2274,6 +2361,7 @@ export function markKept() {
   }
   if (SIDES.some((side) => S[side].el && S[side].signs !== signs)) placeStatements(E, S);
   rebanded(E, S);
+  if (S.past) newestLinks(S);
 }
 
 /**
@@ -2670,8 +2758,10 @@ export async function reopen(o, as = {}) {
   /** @type {Opening} */
   const out = { shown: false, refused: null };
   if (!els) return out;
+  // a draft's history asks again the state asked last as the reader left it — a step's, a row's act's — else its act's
+  const held = o.held.past && was.asked != null ? { ...o.held, past: { ...o.held.past, asked: was.asked } } : o.held;
   await HOST.opening(async (stands) => {
-    const asked = o.held.past ?? null;
+    const asked = held.past ?? null;
     const [ra, rb] = await Promise.all([paneAgain('a', was.panes.a, stands), asked ? pastAgain(was.panes.b, asked, stands) : paneAgain('b', was.panes.b, stands)]);
     const pa = ra.pane, pb = rb.pane;
     if (!pa || !pb) { if (stands()) out.refused = ra.refused || rb.refused; return null; }
@@ -2684,7 +2774,7 @@ export async function reopen(o, as = {}) {
     if (as.leaving) as.leaving();
     const from = document.activeElement, spots = was.spots;
     for (const P of [pa, pb]) P.lacks = spots && P.src === was.panes[P.side].src ? spots[P.side].lacks : null;
-    const S = sceneOf(pa, pb, between.pairs, o.held, past);
+    const S = sceneOf(pa, pb, between.pairs, held, past);
     stand(E, S, between.refused ? between.refused.name : null);
     if (spots) {
       for (const side of SIDES) {
@@ -2809,7 +2899,8 @@ function placeAgain(E, S, spots) {
 /**
  * The scene as the reader leaves it (see the head), by value: each pane's
  * text — a past state's by none of its record, its entry keeping the state its
- * act asked (`Held.past`); where they stood in it, its selection and the end set level in it,
+ * act asked (`Held.past`), and the state asked last, a step's or a row's act's
+ * among them (`Left.asked`), which a return asks again; where they stood in it, its selection and the end set level in it,
  * each by its bytes' identity through the image its article was made from;
  * the stop the platform's focus stands on (`stopOf`) — a stop the panes'
  * `compare` draws by what it stood for; and the stroke's list standing, by
@@ -2835,7 +2926,7 @@ export function asLeft() {
   };
   const host = HOST.element(), at = document.activeElement;
   const list = S.listing && HOST.currentIs('stroke:' + S.listing.key) ? { key: S.listing.key, focus: !!host && !!at && host.contains(at) } : S.relist;
-  return { panes: { a: version(S.a), b: version(S.b) }, spots: { a: spot(S.a), b: spot(S.b) }, stop: stopOf(E, S), list };
+  return { panes: { a: version(S.a), b: version(S.b) }, spots: { a: spot(S.a), b: spot(S.b) }, stop: stopOf(E, S), list, ...(S.past ? { asked: S.past.asked } : {}) };
 }
 
 /**
@@ -5497,23 +5588,29 @@ export function whatOf(row) {
 }
 
 /**
- * A row of the list as markup (B3-S7): its time of day — the date its day's
- * head names (U's `timeOf`, the reader's own zone) — in its slot, and what it
- * did in a box of its own, parted by the field joiner, which keeps its spaces
- * in the row the style lays out; where the board lost both its time and its
- * op, "not recorded" said once for the two (FP-34); the row standing for the
- * state pane B shows marked so, its bar the style's; the asked row saying how
- * its state's read stands after its words, parted by the field joiner
- * (`AskedMark`; `askedHTML`).
+ * A row of the list as markup (B3-S7): a native button whose act reads its
+ * row's last state into pane B (`rowAct`; D5 K-102), out of the Tab order as
+ * made, the list standing its one stop (`standStops`) — its time of day, the
+ * date its day's head names (U's `timeOf`, the reader's own zone), in its
+ * slot, and what it did in a box of its own, parted by the field joiner,
+ * which keeps its spaces in the row the style lays out; where the board lost
+ * both its time and its op, "not recorded" said once for the two (FP-34); the
+ * row standing for the state pane B shows marked so, its bar the style's; the
+ * asked row saying how its state's read stands after its words, parted by the
+ * field joiner (`AskedMark`; `askedHTML`); a row beneath the floor's line
+ * opening nothing, standing in its place, focusable, marked inert and
+ * described by the floor's words (`floorWords`; FP-41).
  * @param {import('../model/past.js').Row} row
  * @param {boolean} shown
  * @param {AskedMark | null} [mark] the asked row's mark (`askedOf`); null on every other row
+ * @param {{id: string, text: string} | null} [below] the floor's words, where the row stands beneath its line; null on every other row
  */
-function rowHTML(row, shown, mark = null) {
+function rowHTML(row, shown, mark = null, below = null) {
   const what = whatOf(row), lost = row.time == null && row.kind === 'unknown' && !row.landmark;
   const time = `<span class="pl-time">${esc(row.time == null ? t('F.slot.not-recorded') : timeOf(row.time))}</span>`;
   const words = lost ? time : `${time}<span class="pl-join">${esc(FIELD)}</span><span class="pl-what" data-string="${esc(what.id)}">${esc(what.text)}</span>`;
-  return `<div class="pl-row${mark ? ' ' + mark : ''}" data-row="${row.last}"${shown ? ' data-shown="1" aria-current="true"' : ''}>${words}${mark ? askedHTML(mark) : ''}</div>`;
+  const inert = below ? ` aria-disabled="true" data-inert="${esc(below.id)}" aria-description="${esc(heard(below.text))}"` : '';
+  return `<button type="button" class="pl-row${mark ? ' ' + mark : ''}${below ? ' below' : ''}" data-row="${row.last}"${shown ? ' data-shown="1" aria-current="true"' : ''}${inert} tabindex="-1">${words}${mark ? askedHTML(mark) : ''}</button>`;
 }
 
 /** @typedef {'reading' | 'unread'} AskedMark how the asked state's read stands, as the list marks its row (`askedOf`): read again by the scene, or refused and not read again */
@@ -5526,14 +5623,17 @@ const askedHTML = (/** @type {AskedMark} */ m) => `<span class="pl-join">${esc(F
 
 /**
  * How the asked state's read stands, as the list marks the asked row (see
- * the head): "reading" while the scene reads it again (`PastList.running`);
- * "not read" where pane B's line says its read stopped (`stopped`); none
- * where pane B shows it, or where it was refused as reclaimed, which the
- * floor mark says.
+ * the head): "reading" while its read is out (`PastList.out`) or the scene
+ * reads it again (`PastList.running`); "not read" where pane B's line says
+ * its read stopped (`stopped`); none where pane B shows it, or where it was
+ * refused as reclaimed, which the floor's line says.
  * @param {PastList} L
  * @returns {AskedMark | null}
  */
-const askedOf = (L) => (L.running ? 'reading' : stopped(L) ? 'unread' : null);
+const askedOf = (L) => (reads(L) ? 'reading' : stopped(L) ? 'unread' : null);
+
+/** is the state last asked being read (see the head): its read out for an ask (`askPast`), or the scene reading it again (`reissue`) — a read in flight, faced at the place */
+const reads = (/** @type {PastList} */ L) => L.out != null || L.running;
 
 /**
  * The list as markup (see the head; B3-S7; FP-34), line
@@ -5545,18 +5645,21 @@ const askedOf = (L) => (L.running ? 'reading' : stopped(L) ? 'unread' : null);
  * naming the day's hands once each where they differ from the row above them,
  * and nothing else of it; each hand leading its run of rows; each row. The
  * state pane B shows is marked by its row, or by its folded day's head; the
- * asked row says how its state's read stands — "reading" while the scene
- * reissues it, "not read" where its read stopped (`askedOf`, `rowHTML`) — or
- * its folded day's head does; and where the asked state was refused as
- * reclaimed, the line's words stand below the row of the state shown, or
- * below its folded day's head — the list's floor mark (`pastWhyOf`).
+ * asked row says how its state's read stands — "reading" while it is read,
+ * "not read" where its read stopped (`askedOf`, `rowHTML`) — or its folded
+ * day's head does; and where a read was refused at the board's floor, the
+ * floor's line, a hairline across the column labelled with the floor's words
+ * (`floorWords`), beneath the row whose state stood at the floor, or its
+ * folded day's head (M-PAST's `floorLine`), each row below it standing in
+ * its place, opening nothing (`rowHTML`).
  * @param {PastList} L
  * @returns {string}
  */
 export function listHTML(L) {
   const marked = askedOf(L), shown = PAST.dayHolding(L.days, L.at), asking = marked ? PAST.dayHolding(L.days, L.asked) : null;
-  const why = L.met && L.met.name === 'history_reclaimed' ? pastWhyOf(L) : null;
-  const floor = why ? `<div class="pl-floor" data-string="${esc(why.id)}">${esc(why.text)}</div>` : '';
+  const line = L.cut ? PAST.floorLine(L.rows, L.cut.at) : null, words = line ? floorWords(L) : null;
+  const cutRow = line ? PAST.rowHolding(L.rows, line.cut) : null, cutDay = line ? PAST.dayHolding(L.days, line.cut) : null;
+  const floor = words ? `<div class="pl-floor" data-string="${esc(words.id)}">${esc(words.text)}</div>` : '';
   let html = L.unkept ? `<div class="pl-now" data-string="L.history.unkept">${esc(t('L.history.unkept'))}</div>` : '';
   let open = false;
   for (const e of PAST.entriesOf(L.days, L.open)) {
@@ -5570,10 +5673,10 @@ export function listHTML(L) {
       const read = marked && asking === e.day && hides(L.asked) ? askedHTML(marked) : '';
       const head = e.day.landmarks ? `<div class="pl-head"${mark}><span class="pl-date">${esc(date)}</span>${read}</div>`
         : `<button type="button" class="pl-head" data-day="${esc(e.day.key)}" aria-expanded="${!e.folded}"${mark}>${fold}<span class="pl-date">${esc(date)}</span>${read}${named}</button>`;
-      html += `<div class="pl-day" data-key="${esc(e.day.key)}">${head}${shown === e.day && hides(L.at) ? floor : ''}`;
+      html += `<div class="pl-day" data-key="${esc(e.day.key)}">${head}${line && cutDay === e.day && hides(line.cut) ? floor : ''}`;
       open = true;
     } else if (e.kind === 'who') html += `<div class="pl-who">${esc(handWords(e.hand))}</div>`;
-    else { const at = e.row.positions.includes(L.at); html += rowHTML(e.row, at, e.row.positions.includes(L.asked) ? marked : null) + (at ? floor : ''); }
+    else html += rowHTML(e.row, e.row.positions.includes(L.at), e.row.positions.includes(L.asked) ? marked : null, PAST.isBelow(line, e.row) ? words : null) + (e.row === cutRow ? floor : '');
   }
   return html + (open ? '</div>' : '');
 }
@@ -5585,19 +5688,94 @@ export function listHTML(L) {
  * made it, its fields in their faces (`handFields`), the line saying why the
  * pane shows it where one stands (`pastWhyOf`), whether it is not its
  * minute's last and how many changes that minute holds as the rows read tell
- * (M-PAST's `notLastOf`), and, while the scene reissues the state its act
- * asked (`PastList.running`), when that state stood, in the title's form — "a
- * time not recorded" where its row holds none. Derived, never kept.
+ * (M-PAST's `notLastOf`), and, while the state last asked is read (`reads`),
+ * when that state stood, in the title's form — "a time not recorded" where
+ * its row holds none; why the links that stood on its words are not shown
+ * where they are not (`PastList.links`); and its two one-state steps, each
+ * inert at the end it cannot pass with its reason (`stepsOf`). Derived, never
+ * kept.
  * @param {PastList} L
  * @returns {import('../text/article.js').PastLine}
  */
 function pastLine(L) {
-  const row = PAST.rowHolding(L.rows, L.at), asked = L.running ? PAST.rowHolding(L.rows, L.asked) : null;
+  const row = PAST.rowHolding(L.rows, L.at), asked = reads(L) ? PAST.rowHolding(L.rows, L.asked) : null;
   return {
     time: row && row.time != null ? stoodAt(row.time) : t('F.slot.not-recorded'), hand: row ? handFields(row.hand) : [{ text: t('F.slot.not-recorded'), face: 'client' }], why: pastWhyOf(L),
     notLast: PAST.notLastOf(L.rows, L.at, L.bottom),
-    reading: L.running ? (asked && asked.time != null ? stoodAt(asked.time) : t('L.history.floor.untimed')) : null,
+    reading: reads(L) ? (asked && asked.time != null ? stoodAt(asked.time) : t('L.history.floor.untimed')) : null,
+    links: L.links === 'read' ? null : L.links,
+    steps: stepsOf(L),
   };
+}
+
+/**
+ * The commit a one-state step counts from (see the head; B3-S7, P46, P73):
+ * the state last asked while its read is out — where the person is going —
+ * else the state pane B shows (FP-25, FP-23).
+ * @param {PastList} L
+ */
+const stepBase = (L) => (reads(L) ? L.asked : L.at);
+
+/**
+ * Pane B's one-state steps as they stand (see the head; B3-S7; D5 K-102;
+ * FP-41): "‹ earlier" inert at the floor's line, its reason the floor's words
+ * (`floorWords`); at the oldest commit read where the rows read reach the
+ * draft's first position, "this is the draft's first state"; where they end
+ * at the feed's floor instead, below the first position its files hold, the
+ * floor's words for that oldest state (`feedFloorWords`) — never the draft's
+ * first state, which no row read tells; live where rows below are still to be
+ * read, a press reading them first (`step`). "later ›" inert at the newest
+ * kept state: "this is how the draft stands now", or, where the draft held
+ * words the board had not kept as the history opened, that it is the newest
+ * kept state and what was written since is not yet kept. Each counted from
+ * where a step counts from (`stepBase`).
+ * @param {PastList} L
+ * @returns {{earlier: import('../text/article.js').StepAct, later: import('../text/article.js').StepAct}}
+ */
+function stepsOf(L) {
+  const from = stepBase(L), line = L.cut ? PAST.floorLine(L.rows, L.cut.at) : null;
+  /** @type {{id: string, text: string} | null} */
+  let earlier = null;
+  if (line && from <= line.cut) earlier = floorWords(L);
+  else if (PAST.stepFrom(L.rows, from, -1) == null && L.bottom) earlier = L.from <= 0 ? { id: 'B3.history.first', text: sentence('B3.history.first') } : feedFloorWords(L);
+  const later = PAST.stepFrom(L.rows, from, 1) == null ? (L.unkept ? { id: 'L.history.newest-kept', text: sentence('L.history.newest-kept') } : { id: 'B3.history.now', text: sentence('B3.history.now') }) : null;
+  return { earlier: { inert: earlier && { id: earlier.id, text: asSentence(earlier) } }, later: { inert: later } };
+}
+
+/**
+ * The floor's words (see the head; B3-S7; FP-34): where the floor's line
+ * falls directly beneath the top row — no state before the newest readable —
+ * and the feed's row at the floor a refusal named was read, that no earlier
+ * state is readable on the board, which keeps states back to that row's day
+ * (`L.history.floor`); everywhere else that the board keeps the draft's
+ * history back to a time, earlier states not readable — that row's time of
+ * day where it was read, else the time of the row whose state stood at the
+ * floor, the row above the line, "a time not recorded" where that row holds
+ * none (`B3.history.reclaimed`); none where no line stands.
+ * @param {PastList} L
+ * @returns {{id: string, text: string} | null}
+ */
+function floorWords(L) {
+  const line = L.cut ? PAST.floorLine(L.rows, L.cut.at) : null;
+  if (!L.cut || !line) return null;
+  const row = PAST.rowHolding(L.rows, line.cut);
+  if (row && row === L.rows[0] && L.cut.date != null) return { id: 'L.history.floor', text: t('L.history.floor', { board: boardName(), date: L.cut.date }) };
+  const time = L.cut.time ?? (row && row.time != null ? timeOf(row.time) : t('L.history.floor.untimed'));
+  return { id: 'B3.history.reclaimed', text: t('B3.history.reclaimed', { board: boardName(), time }) };
+}
+
+/**
+ * The floor's words where the rows read end at the feed's floor, the first
+ * position its files hold (see the head; M-PUMP's `HistoryRead.floor`): that
+ * the board keeps the draft's history back to the time of the oldest row
+ * read, earlier states not readable (`B3.history.reclaimed`) — never "this is
+ * the draft's first state", which no row read tells.
+ * @param {PastList} L
+ * @returns {{id: string, text: string}}
+ */
+function feedFloorWords(L) {
+  const oldest = L.rows[L.rows.length - 1];
+  return { id: 'B3.history.reclaimed', text: t('B3.history.reclaimed', { board: boardName(), time: oldest && oldest.time != null ? timeOf(oldest.time) : t('L.history.floor.untimed') }) };
 }
 
 /**
@@ -5746,11 +5924,45 @@ function pastListOf(h, got) {
   const on = got.held ?? h, rows = PAST.rowsOf(on.entries);
   /** @type {PastList} */
   const L = {
-    draft: on.draft, entries: [...on.entries], rows, days: PAST.daysOf(rows), open: new Set(), opened: false, at: got.shown, asked: on.asked, met: null, floor: null, running: false, again: false, asking: false,
+    draft: on.draft, entries: [...on.entries], rows, days: PAST.daysOf(rows), open: new Set(), opened: false, at: got.shown, asked: on.asked, out: null, fell: false, cut: null,
+    links: got.record.linksRead ? 'read' : 'arriving', met: null, floor: null, running: false, again: false,
     head: on.head, unkept: on.unkept, said: null, from: on.from, bottom: on.bottom, reading: false, figures: { ...on.figures, stateMs: got.ms, at: got.state.at, older: null }, html: '',
   };
-  if (got.met) metBy(L, got.met, got.floor);
+  if (got.met) {
+    metBy(L, got.met, got.floor);
+    L.fell = true;
+    if (got.met.name === 'history_reclaimed') placeCut(L, cutOf(L, got.met, on.asked, got.floor, got.floorTime ?? null));
+  }
   return L;
+}
+
+/**
+ * Where a refusal at the board's floor stands the list's floor line (see the
+ * head; B3-S7): the state asked refused where it last stood too, or never
+ * asked there for the floor lying past it, directly above the row asked at
+ * the least — that row and every older one below it, the top row standing
+ * above it whatever it holds — and at the floor the refusal names where that
+ * lies higher; with the day and the time of the feed's row at a floor named,
+ * where that row was read (`floorOf`).
+ * @param {PastList} L
+ * @param {Refusal} r a reclaimed refusal
+ * @param {number} asked the commit whose state was refused
+ * @param {string | null} date the day of the feed's row at the floor named, where read
+ * @param {string | null} time its time of day, where read
+ * @returns {Cut}
+ */
+function cutOf(L, r, asked, date, time) {
+  const named = floorNamed(r), row = PAST.rowHolding(L.rows, asked), i = row ? L.rows.indexOf(row) : -1;
+  const above = i > 0 ? L.rows[i - 1].first : row ? row.last : asked;
+  return named != null ? { at: Math.max(named, above), date, time } : { at: above, date: null, time: null };
+}
+
+/** the list's floor line moved to a cut where it rises — a later refusal never lowers it (see the head; B3-S7; M-PAST's `risen`): whether it moved */
+function placeCut(/** @type {PastList} */ L, /** @type {Cut} */ cut) {
+  const at = PAST.risen(L.cut ? L.cut.at : null, cut.at);
+  if (L.cut && at === L.cut.at) return false;
+  L.cut = at === cut.at ? cut : { ...cut, at };
+  return true;
 }
 
 /** the longest pause between two reissues of a past state the board was busy on, ms (`reissueGap`; unmeasured) */
@@ -5771,14 +5983,16 @@ function stopReissue() { if (reissuing) { clearTimeout(reissuing); reissuing = 0
 /**
  * A draft's history standing (`open`, `reopen`; see the head): its line said
  * in the status region — after `lead`, where the scene reopened says its pair,
- * in one message (`sayLine`) — and the asked state reissued where the board
- * was busy on it (`reissue`).
+ * in one message (`sayLine`) — the asked state reissued where the board
+ * was busy on it (`reissue`), and the links that stood on the state shown read,
+ * a rest (`restLinks`).
  * @param {Scene} S
  * @param {string | null} lead words said before the line; none where null
  */
 function pastStood(S, lead) {
   sayLine(S, lead);
   void reissue(S);
+  void restLinks(S);
 }
 
 /**
@@ -5811,49 +6025,284 @@ function sayLine(S, lead = null) {
 
 /**
  * The asked state reissued while the board classes its last answer as retry
- * (see the head; BM-HELD's `busy`): a whole read at a time (`askState`), after
+ * (see the head; BM-HELD's `busy`): a whole read at a time of the commit
+ * asked (`readPast`), after
  * a pause that doubles to PAST_RETRY_MAX_MS (`reissueGap`), until it lands —
  * pane B set again to it in one step (`landPast`) — or a refusal of another
  * class ends it, the line stating that answer alone, a reclaimed one with
  * the date its floor names once that is read (`floorOf`), each taken as every
- * refusal is (`metBy`); each answer's words written in its place
- * (`lineMoved`). It ends with nothing more where the scene closed or
- * reopened, or another state was asked, meanwhile.
+ * refusal is (`metBy`), a reclaimed one standing the floor's line too
+ * (`placeCut`) — save where the state asked was a step's or a row's, which
+ * pane B never stood in the place of: that answer stands the floor's line
+ * alone, pane B and its line as they stood (`refusedAtFloor`); each answer's
+ * words written in its place (`lineMoved`). It ends with nothing more where
+ * the scene closed or reopened, or another state was asked, meanwhile.
  * @param {Scene} S
  * @returns {Promise<void>}
  */
 async function reissue(S) {
   const L = S.past;
   if (!L || !busy(L.met)) return;
-  const asked = L.asked, row = PAST.rowHolding(L.rows, asked);
+  const asked = L.asked;
   const stands = () => scene === S && S.past === L && L.asked === asked;
-  if (!row) { L.running = false; lineMoved(S); return; }
+  if (!PAST.rowHolding(L.rows, asked)) { L.running = false; lineMoved(S); return; }
   for (let k = 0; stands() && busy(L.met); k++) {
     await new Promise((r) => { reissuing = Number(setTimeout(r, reissueGap(k))); });
     reissuing = 0;
     if (!stands()) return;
-    const t0 = performance.now(), got = await askState(L.draft, L.rows, row, L.head, 1);
+    const t0 = performance.now(), got = await readPast(L, asked, 1);
     if (!stands()) return;
     if ('refused' in got) {
       const floor = busy(got.refused) ? null : await floorOf(got.refused);
       if (!stands()) return;
-      metBy(L, got.refused, floor); lineMoved(S); continue;
+      if (got.refused.name === 'history_reclaimed' && !L.fell) { await refusedAtFloor(S, got.refused, asked, floor, false); return; }
+      if (got.refused.name === 'history_reclaimed') placeCut(L, cutOf(L, got.refused, asked, floor && floor.date, floor && floor.time));
+      metBy(L, got.refused, floor && floor.date); lineMoved(S); continue;
     }
     landPast(S, stateGot(L, got, asked, t0));
   }
 }
 
 /**
+ * A commit's state read for pane B (see the head): the newest kept state —
+ * the top row's last commit — read plainly, as the plane reads the draft and
+ * never through the board's history (M-PUMP's `stateNow`); any other read at
+ * its position, refused as reclaimed asked again where it last stood
+ * (`askState`).
+ * @param {PastList} L
+ * @param {number} at the commit
+ * @param {number} [attempts] how many whole reads at most while the board's reconstructions are busy (M-PUMP's `stateAt`)
+ * @returns {Promise<import('../model/pump.js').State | {refused: Refusal}>}
+ */
+const readPast = (L, at, attempts) => (L.rows[0] && at === L.rows[0].last ? PUMP.stateNow(L.draft) : askState(L.draft, L.rows, at, L.head, attempts));
+
+/**
+ * A state of the draft asked for pane B (see the head; B3-S7; D5 K-102; FP-23,
+ * FP-41) — a step's, a row's act's, "read it again"'s: the one entry each is
+ * asked, coalesced and landed by. The commit asked becomes the state last
+ * asked (`PastList.asked`): asked anew, any reissue of the state asked before
+ * it ends, with the line that answered that state. Where its read is out, the
+ * request moves alone — a held key's repeats reading nothing of their own —
+ * and that read, as it answers, is landed where it stands with no rest, then
+ * the state asked meanwhile read: one read at a time, of the latest state
+ * asked. A state beneath the floor's line is never read: refused there at
+ * once (`refusedAtFloor`) — save at "read it again", which asks it as a
+ * return does. The state shown asked again with no read out reads
+ * nothing and says nothing, save at "read it again". While the read is out
+ * the asked row says "reading" and pane B's corner the in-flight clause,
+ * pane B keeping the state it shows (`reads`; `lineMoved`). The state lands
+ * in place, with no flight, pane B set again in one step (`landPast`), a rest
+ * where nothing later was asked meanwhile. A refusal: at the floor, its line
+ * placed and pane B as it stood (`refusedAtFloor`) — save where pane B stands
+ * in the place of the state the act asked, whose line the reclaimed answer
+ * becomes as the scene's reissue's does (`PastList.fell`); else taken as every
+ * refusal is (`metBy`), the line written in its place (`lineMoved`) and the
+ * scene reissuing a retry-class answer (`reissue`) — "read it again"'s
+ * answer said in the status region whether or not it changed the line.
+ * Nothing is taken where the scene closed or reopened meanwhile. An act in the
+ * scene (`actedIn`).
+ * @param {Scene} S
+ * @param {number} at the commit asked
+ * @param {{again?: boolean}} [how] `again` the press of "read it again", whose answer is said whatever it is
+ * @returns {Promise<void>}
+ */
+async function askPast(S, at, how = {}) {
+  const L = S.past;
+  if (!L) return;
+  actedIn(S);
+  if (at !== L.asked) {
+    // a state asked anew: the reissue of the one asked before it, and the line that answered it, end
+    L.asked = at; L.fell = false; L.met = null; L.floor = null; L.running = false; L.again = false;
+    stopReissue();
+  } else if (L.out == null && !how.again && L.asked === L.at && !L.running) return;
+  const stands = () => scene === S && S.past === L;
+  if (L.out != null) { lineMoved(S); return; }
+  while (stands()) {
+    const want = L.asked, line = L.cut ? PAST.floorLine(L.rows, L.cut.at) : null;
+    if (line && want < line.cut && !how.again) { await refusedAtFloor(S, null, want, null, true); return; }
+    const t0 = performance.now();
+    L.out = want;
+    lineMoved(S);
+    /** @type {Awaited<ReturnType<typeof readPast>>} */
+    let got;
+    try { got = await readPast(L, want); } finally { if (stands() && L.out === want) L.out = null; }
+    if (!stands()) return;
+    if (L.asked !== want) {
+      // passed while its read was out: landed where it stands, no rest; a refusal at the floor stands the line still
+      if (!('refused' in got)) landPast(S, stateGot(L, got, want, t0), false);
+      else if (got.refused.name === 'history_reclaimed') { const f = await floorOf(got.refused); if (!stands()) return; if (placeCut(L, cutOf(L, got.refused, want, f && f.date, f && f.time))) lineMoved(S); }
+      continue;
+    }
+    if (!('refused' in got)) { landPast(S, stateGot(L, got, want, t0)); return; }
+    const floor = busy(got.refused) ? null : await floorOf(got.refused);
+    if (!stands() || L.asked !== want) continue;
+    if (got.refused.name === 'history_reclaimed' && !L.fell) { await refusedAtFloor(S, got.refused, want, floor, true); return; }
+    // pane B standing in the place of the act's state: a reclaimed answer its line, and the floor's line placed
+    if (got.refused.name === 'history_reclaimed') placeCut(L, cutOf(L, got.refused, want, floor && floor.date, floor && floor.time));
+    metBy(L, got.refused, floor && floor.date);
+    const words = how.again ? lineWords(L) : null;
+    if (words) L.said = runsText(words);
+    lineMoved(S);
+    if (words) FOCUS.say(words, false, true);
+    if (L.running) void reissue(S);
+    return;
+  }
+}
+
+/**
+ * A state asked for pane B refused at the board's floor (see the head; B3-S7;
+ * FP-41): the floor's line placed where the refusal stands it, rising only
+ * (`cutOf`, `placeCut`) — a state already beneath it refused with no read —
+ * pane B, its corner's line, its name and its description as they stood,
+ * nothing standing in for the state; the state last asked the one pane B
+ * shows again, so the next step counts from it; the list and the corner
+ * written again, and the floor's words said once in the status region,
+ * again where it holds them (`said`).
+ * @param {Scene} S
+ * @param {Refusal | null} r the reclaimed refusal; null where the state stands beneath the line already
+ * @param {number} asked the commit refused
+ * @param {{date: string, time: string} | null} floor the feed's row at the floor the refusal names, where read (`floorOf`)
+ * @param {boolean} said the floor's words are said
+ * @returns {Promise<void>}
+ */
+async function refusedAtFloor(S, r, asked, floor, said) {
+  const L = S.past;
+  if (!L) return;
+  if (r) placeCut(L, cutOf(L, r, asked, floor && floor.date, floor && floor.time));
+  L.asked = L.at; L.out = null; L.running = false;
+  if (!L.fell) { L.met = null; L.floor = null; L.again = false; }
+  lineMoved(S);
+  const words = floorWords(L);
+  if (said && words) FOCUS.say(asSentence(words), false, true);
+}
+
+/**
+ * A one-state step of pane B (see the head; B3-S7; D5 K-102; FP-41): the
+ * commit before (`dir` -1, "‹ earlier") or after (`dir` 1, "later ›") the one
+ * a step counts from (`stepBase`) asked (`askPast`); past the oldest commit
+ * read while rows below are still to be read, those read first and the step
+ * taken over them; inert at the end it cannot pass, its reason said at every
+ * press, again where the status region holds those words (`stepsOf`). An act
+ * in the scene (`actedIn`).
+ * @param {-1 | 1} dir
+ * @returns {Promise<boolean>} the scene stands on a draft's history
+ */
+export async function step(dir) {
+  const S = scene, L = S && S.past;
+  if (!S || !L) return false;
+  actedIn(S);
+  const way = dir < 0 ? 'earlier' : 'later', inert = stepsOf(L)[way].inert;
+  if (inert) { FOCUS.say(inert.text, false, true); return true; }
+  let to = PAST.stepFrom(L.rows, stepBase(L), dir);
+  if (to == null && dir < 0 && !L.bottom) {
+    // rows below the read's reach read first, the step taken over them
+    for (let k = 0; k < 500 && L.reading; k++) await new Promise((res) => setTimeout(res, 20));
+    if (scene !== S || S.past !== L) return true;
+    await readOlder(S);
+    if (scene !== S || S.past !== L) return true;
+    to = PAST.stepFrom(L.rows, stepBase(L), dir);
+    if (to == null) { const now = stepsOf(L)[way].inert; if (now) FOCUS.say(now.text, false, true); lineMoved(S); return true; }
+  }
+  if (to != null) void askPast(S, to);
+  return true;
+}
+
+/**
+ * A row's act (see the head; B3-S7; D5 K-56, K-102): its last state asked for
+ * pane B (`askPast`) — a press while a read is out moving the request; a row
+ * beneath the floor's line opening nothing, its reason, the floor's words,
+ * said at every press (FP-41). An act in the scene (`actedIn`).
+ * @param {number} last the row's last commit (`Row.last`)
+ */
+export function rowAct(last) {
+  const S = scene, L = S && S.past;
+  if (!S || !L) return;
+  const row = L.rows.find((r) => r.last === last);
+  if (!row) return;
+  const line = L.cut ? PAST.floorLine(L.rows, L.cut.at) : null;
+  if (PAST.isBelow(line, row)) { actedIn(S); const w = floorWords(L); if (w) FOCUS.say(asSentence(w), false, true); return; }
+  void askPast(S, row.last);
+}
+
+/** does the platform's focus stand in the list of a draft's past states (`listKey`) */
+export const inList = () => { const at = typeof document !== 'undefined' ? document.activeElement : null; return !!pastEl && !!scene && !!scene.past && !!at && pastEl.contains(at); };
+
+/**
+ * The list's ↓ and ↑ (see the head; D5 K-102, K-56): the focus moved to the
+ * list's next or previous stop in its order — a day's head and a row alike —
+ * where it stands in the list; false where it stands outside the list, or
+ * the scene is no draft's history.
+ * @param {-1 | 1} dir 1 down the list, -1 up it
+ * @returns {boolean}
+ */
+export function listKey(dir) {
+  const el = pastEl, at = typeof document !== 'undefined' ? document.activeElement : null;
+  if (!el || !at || !inList()) return false;
+  const stops = /** @type {HTMLElement[]} */ ([...el.querySelectorAll('button')]), k = stops.indexOf(/** @type {HTMLElement} */ (at));
+  const to = stops[k + dir];
+  if (to) FOCUS.land(to);
+  return true;
+}
+
+/**
+ * The links that stood on the state pane B shows, read once it rests there
+ * (see the head; B3-S7; D5 K-102): one `find_links_v` at the position its
+ * text was read at (M-PUMP's `linksAt`), its corner saying they arrive
+ * meanwhile; answered, pane B set again in place on its record with them
+ * (M-DERIVE's `withLinks`; `setPanes`), its title's name kept — the corner's
+ * clause and the region's description gone, the counts the answer's; past the
+ * bound, its corner saying they are not shown because reading them failed,
+ * its count places hollow still. Nothing taken where pane B was set from
+ * another record, or the scene closed or reopened, meanwhile. The newest kept
+ * state's links are the model's, never read here (`newestLinks`).
+ * @param {Scene} S
+ * @returns {Promise<void>}
+ */
+async function restLinks(S) {
+  const L = S.past, d = S.b.d;
+  if (!L || d.linksRead || (L.rows[0] && L.at === L.rows[0].last)) return;
+  L.links = 'arriving';
+  const out = await PUMP.linksAt(L.draft, d.readAt ?? 0, d.extent ?? 0);
+  if (scene !== S || S.past !== L || S.b.d !== d) return;
+  if ('refused' in out) { L.links = 'failed'; lineMoved(S); return; }
+  L.links = 'read';
+  const P = S.b;
+  setPanes(S, [{ side: 'b', next: { d: withLinks(d, out.links), kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold: null }, same: true }], null);
+  lineMoved(S);
+}
+
+/**
+ * The newest kept state's links, the model's record's, taken once it holds
+ * them read (see the head; `newestLinked`): pane B set again in place with
+ * them, its clause gone. The app's loop asks it on each dirty frame while the
+ * scene stands (`markKept`); nothing where pane B shows another state or its
+ * links stand read.
+ * @param {Scene} S
+ */
+function newestLinks(S) {
+  const L = S.past, d = S.b.d;
+  if (!L || L.links !== 'arriving' || !L.rows[0] || L.at !== L.rows[0].last || d.linksRead || !REC.has(L.draft) || !REC.doc(L.draft).linksRead) return;
+  L.links = 'read';
+  const P = S.b;
+  setPanes(S, [{ side: 'b', next: { d: newestLinked(L.draft, d), kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold: null }, same: true }], null);
+  lineMoved(S);
+}
+
+/**
  * The asked state as the list's reads found it, for pane B (`PastGot`): its
  * record derived at the position read (M-DERIVE's `recordAt`), its metadata
- * the model's, standing for the row whose state it is.
+ * the model's — the newest kept state's with the model's links where they are
+ * read (`newestLinked`) — standing for the commit whose state it is.
  * @param {PastList} L
  * @param {import('../model/pump.js').State} got
- * @param {number} shown the last position of the asked row
+ * @param {number} shown the commit asked
  * @param {number} t0 when its reads began, by the platform's clock
  * @returns {PastGot}
  */
-const stateGot = (L, got, shown, t0) => ({ record: { ...recordAt(L.draft, got.runs, got.at, { image: got.image }), meta: REC.has(L.draft) ? REC.doc(L.draft).meta : null }, state: got, shown, met: null, floor: null, ms: performance.now() - t0 });
+const stateGot = (L, got, shown, t0) => {
+  const record = { ...recordAt(L.draft, got.runs, got.at, { image: got.image }), meta: REC.has(L.draft) ? REC.doc(L.draft).meta : null };
+  return { record: L.rows[0] && shown === L.rows[0].last ? newestLinked(L.draft, record) : record, state: got, shown, met: null, floor: null, ms: performance.now() - t0 };
+};
 
 /**
  * The line moved where pane B shows it (see the head): pane B's corner
@@ -5875,39 +6324,64 @@ function lineMoved(S) {
 }
 
 /**
- * The asked state landed (`reissue`, `readAgain`; see the head): pane B set
- * again to it in one step (`setPanes`; FP-23) — the runs it shares with pane
- * A read off the two records' images (`sharedBetween`) — the list marking its
- * row, the line, the in-flight clause and "read it again" gone, and the
- * landing said once in the status region in the words pane B's title names
- * its state by (T-ARTICLE's `cornerTitle`, `titleRuns`).
+ * A state landed in pane B (`askPast`, `reissue`; see the head): in place, with
+ * no flight — pane B set again to it in one step (`setPanes`; FP-23), what
+ * stood at its place kept on screen by its bytes' identity where the state
+ * holds it, the runs it shares with pane A read off the two records' images
+ * (`sharedBetween`) — the list marking its row, its day opened and its row
+ * brought into view in the list where it stands in its column, no other day
+ * opened (`showRow`), the line,
+ * the in-flight clause and "read it again" gone; at a rest — nothing later
+ * asked while it was read — the landing said once in the status region in
+ * the words pane B's title names its state by (T-ARTICLE's `cornerTitle`,
+ * `titleRuns`), and the links that stood on it read (`restLinks`); else its
+ * links not read, nothing said.
  * @param {Scene} S
  * @param {PastGot} got
+ * @param {boolean} [rest] it rests there: nothing later was asked while it was read
  */
-function landPast(S, got) {
+function landPast(S, got, rest = true) {
   const L = S.past, P = S.b;
   if (!L || !els) return;
-  L.at = got.shown; L.met = got.met; L.floor = got.floor; L.running = false; L.again = false;
+  L.at = got.shown; L.met = got.met; L.floor = got.floor; L.running = false; L.again = false; L.fell = !!got.met;
+  L.links = got.record.linksRead ? 'read' : rest ? 'arriving' : 'unread';
   L.figures = { ...L.figures, stateMs: got.ms, at: got.state.at };
+  const day = PAST.dayHolding(L.days, L.at);
+  if (day) L.open.add(day.key);
   setPanes(S, [{ side: 'b', next: { d: got.record, kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold: null } }], sharedBetween(S.a, { src: P.src, d: got.record }));
+  showRow(S);
+  if (!rest) return;
   const title = cornerTitle(paneCorner(S.b).view);
   if (title) FOCUS.say(titleRuns(title));
+  void restLinks(S);
+}
+
+/**
+ * The row of the state pane B shows brought into view in the list, the least
+ * scroll that stands it there, below the day's head held at its top — the
+ * focus where it stands (see the head; FP-36) — where the list stands in its
+ * own column; after pane B's text, where pane B's own scroll holds it, nothing
+ * scrolls, so pane B keeps on screen what stood at its place (`landPast`),
+ * the row's day opened. Nothing where the platform lays out no list.
+ * @param {Scene} S
+ */
+function showRow(S) {
+  const el = pastEl;
+  if (!el || !S.past || !listBeside(S.fit)) return;
+  const row = /** @type {HTMLElement | null} */ (el.querySelector('[data-shown]'));
+  if (row && typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'nearest' });
 }
 
 /**
  * A press of "read it again" beneath pane B's line (see the head; B3-S7;
  * FP-41): where it stands inert, its reason said at every press, again where
- * the status region holds those words already; else the asked state asked as
- * a return asks it (`askState`), its whole reads while the board's
- * reconstructions are busy among them — one read at a time, a press while one
- * is out answered by that read's answer — and its answer said in the status
- * region whether or not it changes the line: the state landing as a reissue's
- * does (`landPast`); a refusal taken as every one is (`metBy`), the line
- * written in its place (`lineMoved`) and said again, the scene reissuing the
- * state where the board classes the refusal as retry (`reissue`). Nothing is
- * asked where pane B shows no past state or no act stands beneath its line,
- * and nothing is taken where the scene closed or reopened, or another state
- * was asked, before the answer. An act in the scene (`actedIn`).
+ * the status region holds those words already; else the asked state asked
+ * again through the one entry every state is asked by (`askPast`), its whole
+ * reads while the board's reconstructions are busy among them — one read at a
+ * time, a press while one is out answered by that read's answer — and its
+ * answer said in the status region whether or not it changes the line. Nothing
+ * is asked where pane B shows no past state or no act stands beneath its line.
+ * An act in the scene (`actedIn`).
  * @param {'a' | 'b'} side
  * @returns {Promise<void>}
  */
@@ -5918,24 +6392,8 @@ async function readAgain(side) {
   const a = againOf(L);
   if (!a) return;
   if (a.inert) { FOCUS.say(a.inert.text, false, true); return; }
-  const asked = L.asked, row = PAST.rowHolding(L.rows, asked);
-  if (L.asking || !row) return;
-  const stands = () => scene === S && S.past === L && L.asked === asked;
-  const t0 = performance.now();
-  L.asking = true;
-  /** @type {Awaited<ReturnType<typeof askState>>} */
-  let got;
-  try { got = await askState(L.draft, L.rows, row, L.head); } finally { L.asking = false; }
-  if (!stands()) return;
-  if (!('refused' in got)) { landPast(S, stateGot(L, got, asked, t0)); return; }
-  const floor = busy(got.refused) ? null : await floorOf(got.refused);
-  if (!stands()) return;
-  metBy(L, got.refused, floor);
-  const words = lineWords(L);
-  if (words) L.said = runsText(words);
-  lineMoved(S);
-  if (words) FOCUS.say(words, false, true);
-  if (L.running) void reissue(S);
+  if (L.out != null || !PAST.rowHolding(L.rows, L.asked)) return;
+  await askPast(S, L.asked, { again: true });
 }
 
 /** does the list stand in its own column at pane B's outer side (`PaneFit.outer`; see the head) — else after pane B's text */
@@ -5961,7 +6419,12 @@ function standList(E, S) {
   if (!pastEl) {
     const el = document.createElement('div');
     el.id = 'scenepast';
-    el.addEventListener('click', (ev) => { const h = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest('button[data-day]')); if (h && h.dataset.day) foldDay(h.dataset.day); });
+    el.addEventListener('click', (ev) => {
+      const tg = /** @type {HTMLElement} */ (ev.target), h = /** @type {HTMLElement | null} */ (tg.closest('button[data-day]')), r = /** @type {HTMLElement | null} */ (tg.closest('button.pl-row'));
+      if (h && h.dataset.day) foldDay(h.dataset.day); else if (r && r.dataset.row) rowAct(Number(r.dataset.row));
+    });
+    // the list one stop of the scene's ring: its stop the act the focus stands on (`standStops`)
+    el.addEventListener('focusin', (ev) => standStops(el, /** @type {Element | null} */ (ev.target)));
     pastEl = el;
   }
   const el = pastEl, beside = listBeside(S.fit);
@@ -5997,12 +6460,39 @@ function writeList(E, S, keep) {
   if (html === L.html) return;
   const box = listBeside(S.fit) ? el : E.paneB;
   /** the first row or head standing in view, by its key, and its top on screen */
-  const held = keep ? inViewIn(el, box) : null;
-  FOCUS.keep(el, (x) => { const d = /** @type {HTMLElement} */ (x).dataset; return d && d.day ? 'day:' + d.day : null; }, () => { el.innerHTML = html; });
+  const at = typeof document !== 'undefined' ? document.activeElement : null;
+  // the focused row or head held still where the focus stands in the list, else the first standing in view
+  const held = keep ? (at && at !== el && el.contains(at) && typeof at.getBoundingClientRect === 'function' ? keyOfStop(/** @type {HTMLElement} */ (at)) : inViewIn(el, box)) : null;
+  FOCUS.keep(el, (x) => { const d = /** @type {HTMLElement} */ (x).dataset; return d && d.day ? 'day:' + d.day : d && d.row ? 'row:' + d.row : null; }, () => { el.innerHTML = html; });
   L.html = html;
+  standStops(el, typeof document !== 'undefined' ? document.activeElement : null);
   if (!held) return;
   const now = /** @type {HTMLElement | null} */ (el.querySelector(held.sel));
   if (now) box.scrollTop += now.getBoundingClientRect().top - held.top;
+}
+
+/** a row or a day's head of the list by its selector, and its top on screen: what a writing holds still where the focus stands on it; null for any other element */
+function keyOfStop(/** @type {HTMLElement} */ x) {
+  const d = x.dataset;
+  const sel = x.classList.contains('pl-row') && d.row ? `.pl-row[data-row="${d.row}"]` : x.classList.contains('pl-head') && d.day ? `.pl-head[data-day="${d.day}"]` : null;
+  return sel ? { sel, top: x.getBoundingClientRect().top } : null;
+}
+
+/**
+ * The list one stop of the scene's ring (see the head; D5 K-61, K-102): its
+ * acts — the days' heads and the rows — out of the Tab order but one, the act
+ * the focus stands on, else the row of the state shown, else its folded day's
+ * head, else the first; the list's ↓ and ↑ move along them (`listKey`).
+ * Nothing where the platform lays out no list.
+ * @param {HTMLElement} el the list's element
+ * @param {Element | null} at the element the focus stands on
+ */
+function standStops(el, at) {
+  if (typeof el.querySelectorAll !== 'function') return;
+  const acts = /** @type {HTMLElement[]} */ ([...el.querySelectorAll('button')]);
+  if (!acts.length) return;
+  const stop = acts.find((b) => b === at) || acts.find((b) => b.hasAttribute('data-shown')) || acts[0];
+  for (const b of acts) b.tabIndex = b === stop ? 0 : -1;
 }
 
 /** the first row or day's head of the list standing in view in the box that scrolls it: its selector and its top on screen; null where none */
@@ -6123,11 +6613,15 @@ async function readOlder(S) {
  * The list of a draft's past states as it stands (the gate reads it): its
  * draft, the state shown and the state asked, its top line, the line saying
  * why pane B shows its state with "read it again" beneath it where it stands
- * (`pastWhyOf`), whether a press of it reads (`PastList.asking`), the refusal that line answers by
+ * (`pastWhyOf`), whether a read of the state asked is out (`PastList.out`) —
+ * `asking` too — the refusal that line answers by
  * its name and the date its floor names where that was read
  * (`PastList.floor`), whether the scene reissues the asked state, the clause saying
  * the state shown is not its minute's last with its count (M-PAST's
- * `notLastOf`) and the time the in-flight clause names (`pastLine`), its days
+ * `notLastOf`) and the time the in-flight clause names (`pastLine`), the
+ * links' word (`PastList.links`), each one-state step's reason where it
+ * stands inert (`stepsOf`), the floor's line — where it stands, the commit
+ * steps stop at, the newest row beneath it and its words (`floorWords`) — its days
  * — each its key, its date, whether it is folded, the hands a folded head
  * names and its rows, each its positions, its time, its hand, its kind and its
  * landmark — the reads' figures, whether rows below are still read and
@@ -6137,9 +6631,11 @@ async function readOlder(S) {
 export function past() {
   const L = scene && scene.past;
   if (!L) return null;
-  const line = pastLine(L);
+  const line = pastLine(L), steps = stepsOf(L), cut = L.cut ? PAST.floorLine(L.rows, L.cut.at) : null;
   return {
-    draft: L.draft, at: L.at, asked: L.asked, unkept: L.unkept, why: pastWhyOf(L), asking: L.asking, met: L.met ? L.met.name : null, floor: L.floor, running: L.running, notLast: line.notLast, inFlight: line.reading,
+    draft: L.draft, at: L.at, asked: L.asked, unkept: L.unkept, why: pastWhyOf(L), asking: L.out != null, out: L.out, met: L.met ? L.met.name : null, floor: L.floor, running: L.running, notLast: line.notLast, inFlight: line.reading,
+    links: L.links, steps: { earlier: steps.earlier.inert ? steps.earlier.inert.id : null, later: steps.later.inert ? steps.later.inert.id : null },
+    cut: L.cut && cut ? { at: L.cut.at, cut: cut.cut, below: cut.below, words: floorWords(L) } : null,
     from: L.from, bottom: L.bottom, reading: L.reading, figures: { ...L.figures },
     days: L.days.map((d) => ({ key: d.key, date: d.time == null ? null : dayOf(d.time), folded: PAST.isFolded(d, L.open), landmarks: d.landmarks,
       rows: d.rows.map((r) => ({ first: r.first, last: r.last, positions: [...r.positions], time: r.time, hand: { ...r.hand }, kind: r.kind, landmark: r.landmark ? { ...r.landmark } : null, words: whatOf(r).text })) })),

@@ -473,6 +473,10 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-91', chord: 'Mod+G', act: 'arrival.next', surface: 'plane' },
   { id: 'K-91', chord: 'Mod+Shift+G', act: 'arrival.previous', surface: 'plane' },
   { id: 'K-62', chord: 'Mod+R', act: 'scene.relevel', surface: 'scene' },
+  { id: 'K-102', chord: 'Alt+↓', act: 'history.earlier', surface: 'scene' },
+  { id: 'K-102', chord: 'Alt+↑', act: 'history.later', surface: 'scene' },
+  { id: 'K-102', chord: '↓', act: 'history.list.next', surface: 'scene' },
+  { id: 'K-102', chord: '↑', act: 'history.list.previous', surface: 'scene' },
   { id: 'K-63', chord: 'Esc', act: 'esc', surface: 'scene' },
   { id: 'K-64', chord: 'Mod+=', act: 'scene.swallowZoomIn', surface: 'scene' },
   { id: 'K-92', chord: 'Mod+C', act: 'platform.copy', surface: 'platform' },
@@ -1697,6 +1701,15 @@ async function replay() {
  * or → at the span its kept caret stands in returns it and extends a
  * selection from it (`extendAtKept`), and a printable key is typed at the kept
  * caret's span, else answered by the pane's own line (`typeAt`), Space by K-9's.
+ * In a draft's history scene (SC's `pastOf`; B3-S7), with no caret holding the
+ * focus — a pane's walk, a corner, the list, the scene's acts — Alt with ↓ or
+ * ↑, and nothing else held, steps the state pane B shows one back or forward,
+ * the list's order (SC's `step`; K-102): Alt read off the key on every
+ * platform (`stateStep`), Option on macOS, which spells nothing in a chord,
+ * so it is never the list's row step nor a pane's walk; at a caret the arrows
+ * stay the caret's (K-71), Esc first. In the list ↓ and ↑ move the focus along
+ * its rows and days' heads (SC's `listKey`), Enter a row's act, as the
+ * platform activates its button.
  * @param {KeyboardEvent} e
  * @param {string} chord
  * @param {Ctx} ctx
@@ -1711,6 +1724,10 @@ function sceneKey(e, chord, ctx) {
   if (SLOT_CHORDS.has(chord) || e.key === 'F5') return () => true;
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (ctx.where === 'overlay' || ctx.where === 'line') return null; // the overlay's or the line's own keys
+  // a draft's history: Alt with ↓ or ↑ a state back or forward wherever no caret holds the focus (K-102), never at a caret (K-71)
+  const dir = stateStep(e);
+  if (dir && ctx.where !== 'caret' && SCENE.pastOf()) return () => { e.preventDefault(); void SCENE.step(dir); return true; };
+  if (ctx.where === 'scene-acts' && (chord === '↓' || chord === '↑') && SCENE.inList()) return () => { e.preventDefault(); SCENE.listKey(chord === '↓' ? 1 : -1); return true; };
   // select-all (K-93; B3-S8): an editor pane's text whole at its caret, a past state's read only
   if (chord === 'Mod+A') return wholeAt(ctx) ? async () => { e.preventDefault(); await selectWhole(ctx); return true; } : null;
   // a pane's corner: a corner's keys, never its pane's
@@ -1734,6 +1751,16 @@ function sceneKey(e, chord, ctx) {
   if (printable(e)) return async () => { await typeAt(e, ctx); return true; };
   return null;
 }
+
+/**
+ * The one-state step a key makes in a draft's history (D5 K-102): Alt — Option
+ * on macOS, read off the key itself, for a chord there spells no Option (D5
+ * §0; `chordOf`) — with ↓ a state back, with ↑ a state forward, nothing else
+ * held; 0 for any other key.
+ * @param {KeyboardEvent} e
+ * @returns {-1 | 1 | 0}
+ */
+export const stateStep = (e) => (!e.altKey || e.shiftKey || e.metaKey || e.ctrlKey ? 0 : e.key === 'ArrowDown' ? -1 : e.key === 'ArrowUp' ? 1 : 0);
 
 /** a reading scene's pane's own moves where no caret is live (D5 K-60; SC's `key`) */
 const PANE_MOVES = new Set(['↓', '↑', 'PageDown', 'PageUp', 'Home', 'End']);

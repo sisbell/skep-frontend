@@ -198,13 +198,24 @@
 // by its reason (FP-41; `againHTML`), all drawn on the lines its holder gives
 // them, the line's own element and the substitution's carrying the ids and
 // the words its holder names the pane's region by (`titleHTML`);
-// after it, items of their own: the words saying the state is how the draft
-// stands now, or the clause saying it is not its minute's last, its count in
+// after it, items of their own: the links' word while the links that stood on
+// the state are not read — "links not read" while the steps run, "links —
+// arriving" while their read is out at a rest, or, past the bound, that they
+// are not shown because reading them failed (`linksHTML`); the words saying
+// the state is how the draft stands now, or the clause saying it is not its
+// minute's last, its count in
 // a slot of fixed width, an empty box named as being read while the count is
-// not known (`notLastHTML`; FP-34); the clause saying the state its act asked
-// is read again, its element busy and the one running mark after its words
+// not known (`notLastHTML`; FP-34); the clause saying the state its holder
+// asked is being read, its element busy and the one running mark after its words
 // (`inFlightHTML`); and the chip — the clauses never yielding, and its pane
-// described by those after its title in that order (`pastClauses`). Its line is the corner's
+// described by those after its title in that order (`pastClauses`). A past
+// state's corner carries its two one-state steps where its holder offers
+// them, "‹ earlier" and "later ›" (`stepsHTML`; B3-S7; D5 K-102): one line of
+// acts of their own, outside the title and the pane's name, each in a slot of
+// fixed width, its own label's at the corner's size, so neither moves as the
+// words between them change; each a native button that, where it cannot
+// pass the end it stands at, stands in its place, focusable, marked inert and
+// described by its reason (FP-41) — its holder places the line. Its line is the corner's
 // first item in words (`cornerLead`), and as stretches in their faces a
 // device's label in it the person's own words (`cornerLeadRuns`). Each item
 // says whether it holds at a reading scene's pane's top at its document's
@@ -297,7 +308,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {(marks: [Mark, ...Mark[]]) => Mark} mergedMark the one mark the links over one stretch merge into (LK.mergedMark)
  * @property {Shown[]} symbols the symbols at their spans (LK.symbols)
  * @property {(s: Shown) => string} says what a drawn link's far end's text holds of its passage, in words, before departure — the dead end's where it floats, BM-HELD's line's short form where it holds part of it, all of it in pieces, or nothing told (BM-HELD's farShort), the start of what its mirror item and its card say; '' where nothing is said
- * @property {(block: Block) => {n: number, social: boolean}} countAt the others' count per block (LK.countAt)
+ * @property {(block: Block) => {n: number, social: boolean, arriving?: boolean}} countAt the others' count per block (LK.countAt): `arriving` where the links that stood on a past state's words are not yet read, its place hollow
  * @property {number} wholeLinks the links to this document as a whole
  * @property {Reader} reader who reads (M-REC's `reader`): the acting account, or a guest's null, and whether a key for this board is present
  * @property {boolean} localTrust the board's flag (the chip's form)
@@ -336,7 +347,16 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {import('../strings.js').Run[]} hand the hand that made it, its fields each a stretch in its face (SC's `handFields`): a device's label — the person's own words — and its fingerprint's cue, the identifier's; the label alone for a key of the reader's own; the cue alone; or the cause's words, the client's
  * @property {PastWhy | null} why a line beneath it saying why the pane shows this state and not the one its act asked; null where it shows that one
  * @property {{n: number | null} | null} notLast the state is not its minute's last (M-PAST's `notLastOf`): how many changes that minute holds, null while the rows read have not told; null where the state is its minute's last, or its time is lost
- * @property {string | null} reading the state its act asked is read again (SC's `reissue`): when that state stood, in the title's form — "a time not recorded" where its row holds none; null while nothing reads
+ * @property {string | null} reading the state its holder asked is being read — a step's, a row's, a return's, or the scene's reissue (SC's `askPast`, `reissue`): when that state stood, in the title's form — "a time not recorded" where its row holds none; null while nothing reads
+ * @property {LinksWord | null} [links] the links that stood on the state are not shown, and why (SC's `PastList.links`): absent or null, they are read, or none stood
+ * @property {{earlier: StepAct, later: StepAct} | null} [steps] the corner's one-state steps where its holder offers them (`stepsHTML`; B3-S7); absent or null, none
+ */
+
+/** @typedef {'unread' | 'arriving' | 'failed'} LinksWord why a past state's links are not shown (`PastLine.links`; B3-S7): not read while the steps run, their read in flight at a rest, or reading them failed past the bound */
+
+/**
+ * @typedef {Object} StepAct — one of a past state's one-state steps as its holder offers it (`PastLine.steps`; B3-S7; D5 K-102)
+ * @property {{id: string, text: string} | null} inert why it cannot step past the end it stands at, said at every press (FP-41); null where it steps
  */
 
 /**
@@ -548,13 +568,18 @@ function edgeStyle(k) {
 
 /**
  * The others' count in a typed line's column's edge: "+⟨n⟩ others", or the
- * social types' one unnumbered mark where none is counted; nothing where
+ * social types' one unnumbered mark where none is counted; while the links it
+ * counts are not yet read — a past state's (LK's `countAt`) — its place
+ * hollow, foundations §2.1's still-arriving form, an empty box the count's
+ * width hidden from assistive technology, which the pane's corner's links'
+ * word speaks for (`linksHTML`), never a count of no link; nothing where
  * neither stands.
- * @param {{n: number, social: boolean}} c
+ * @param {{n: number, social: boolean, arriving?: boolean}} c
  * @param {number} k the block's size, in the body's em
  */
-const countHTML = (c, k) => (c.n > 0 ? `<span class="others edge" data-count="${c.n}" style="${edgeStyle(k)}">${esc(t('F.others-count', { n: numeral(c.n) }))}</span>`
-  : c.social ? `<span class="others edge social" data-count="0" style="${edgeStyle(k)}">◦</span>` : '');
+const countHTML = (c, k) => (c.arriving ? `<span class="others edge arriving" data-count="" aria-hidden="true" style="${edgeStyle(k)}"></span>`
+  : c.n > 0 ? `<span class="others edge" data-count="${c.n}" style="${edgeStyle(k)}">${esc(t('F.others-count', { n: numeral(c.n) }))}</span>`
+    : c.social ? `<span class="others edge social" data-count="0" style="${edgeStyle(k)}">◦</span>` : '');
 
 /** the stretches of a drawn link's end that meet a block */
 const runsIn = (/** @type {Shown} */ m, /** @type {{pos: number, width: number}} */ b) => m.runs.filter((r) => touches(b, r));
@@ -606,7 +631,7 @@ export const symbolLit = (links, lit) => links.length > 0 && links.every((l) => 
  * @property {string | null} blankIn a typed line's: the origin of the transcluded run between whose characters its empty lines lie, whose ground stands on them (`blankIn`); null where none does, and on every other block
  * @property {Seg[]} segs a typed line's stretches, the symbols standing in it among them
  * @property {Shown[]} ends a withheld run's: the ends drawn at it (LK's `Shown.run`), in the order LK drew them, which the one symbol at the start of its gap stands for
- * @property {{n: number, social: boolean}} count the others' count at a typed line; none at any other block, a withheld run's standing on the screen-sized layer (T-LAYER)
+ * @property {{n: number, social: boolean, arriving?: boolean}} count the others' count at a typed line, its place hollow while the links it counts are not yet read (`countHTML`); none at any other block, a withheld run's standing on the screen-sized layer (T-LAYER)
  * @property {Rec | null} rec a record atom's record
  */
 
@@ -1579,8 +1604,12 @@ const kindSlotEm = (measure) => Math.max(...[KIND_WORDS.draft, KIND_WORDS.publis
 
 /** the clause a past state's corner says it is not its minute's last by (`PastLine.notLast`; B3-S7) */
 const NOT_LAST = 'B3.history.not-last';
-/** the clause a past state's corner says the state its act asked is read again by (`PastLine.reading`; B3-S7) */
+/** the clause a past state's corner says the state its holder asked is being read by (`PastLine.reading`; B3-S7) */
 const IN_FLIGHT = 'B3.history.in-flight';
+/** the words a past state's corner says its links are not shown by, by why (`PastLine.links`; B3-S7; C-289) */
+const LINKS_WORDS = /** @type {Record<LinksWord, string>} */ ({ unread: 'B3.history.links.unread', arriving: 'B3.history.links.arriving', failed: 'B3.history.links.failed' });
+/** the one-state steps' strings, by their place on their line (B3-S7; D5 K-102) */
+const STEP_IDS = /** @type {const} */ ({ earlier: 'B3.history.earlier', later: 'B3.history.later' });
 
 /**
  * The not-last clause's count slot's width, in em of the corner's size
@@ -1610,16 +1639,54 @@ export const inFlightWords = (time) => t(IN_FLIGHT, { time });
 
 /**
  * A past state's clauses after its title in words, in the order its corner
- * draws them (`stateItems`; B3-S7): the words saying the state is how the
- * draft stands now, then the clause saying it is not its minute's last, then
- * the clause saying the state its act asked is read again; each where it
- * stands. What its pane is described by (SC's `namePane`) — a substitution's
- * words, held in its title, name that pane's region after the title's line,
- * and are no clause of these.
+ * draws them (`stateItems`; B3-S7): the links' word, then the words saying
+ * the state is how the draft stands now, then the clause saying it is not its
+ * minute's last, then the clause saying the state its holder asked is being
+ * read; each where it stands. What its pane is described by (SC's
+ * `namePane`) — a substitution's words, held in its title, name that pane's
+ * region after the title's line, and are no clause of these.
  * @param {PastLine} p
  * @returns {string[]}
  */
-export const pastClauses = (p) => [p.why && !p.why.substituted ? p.why.text : '', p.notLast ? notLastWords(p.notLast.n) : '', p.reading != null ? inFlightWords(p.reading) : ''].filter((s) => s !== '');
+export const pastClauses = (p) => [p.links ? t(LINKS_WORDS[p.links]) : '', p.why && !p.why.substituted ? p.why.text : '', p.notLast ? notLastWords(p.notLast.n) : '', p.reading != null ? inFlightWords(p.reading) : ''].filter((s) => s !== '');
+
+/**
+ * A past state's links' word as markup (`PastLine.links`; B3-S7): its words in
+ * the links' class, carrying their string — "links not read", "links —
+ * arriving", or that reading them failed (`LINKS_WORDS`).
+ * @param {string} id its string
+ */
+const linksHTML = (id) => `<span class="links-word" data-string="${esc(id)}">${esc(t(id))}</span>`;
+
+/**
+ * A past state's two one-state steps as markup (`PastLine.steps`; B3-S7; D5
+ * K-102): "‹ earlier" then "later ›", each in a slot of its own, as wide as
+ * its label at the corner's size as the view measures it — wider only where
+ * the reader's own text spacing sets the label wider, so the line wraps rather
+ * than run past its corner — so neither moves
+ * as the words beside it change; each a native button keyed on its way
+ * (`data-step`), its words the strings table's; one that cannot step past the
+ * end it stands at standing in its place, focusable, marked inert, titled and
+ * described by its reason (FP-41); their words alone where the view asks no
+ * act (`ArticleView.acts`). The holder makes the line they stand on, one line
+ * of acts of their own (T-LAYER's `setStops`).
+ * @param {{earlier: StepAct, later: StepAct}} steps
+ * @param {Pick<ArticleView, 'acts' | 'measure'>} v
+ * @returns {{earlier: string, later: string}}
+ */
+export function stepsHTML(steps, v) {
+  /** one step's slot */
+  const one = (/** @type {'earlier' | 'later'} */ way) => {
+    const id = STEP_IDS[way], a = steps[way], words = esc(t(id)), width = ` style="min-width:${v.measure(t(id), 'client')}em"`;
+    if (v.acts === false) return `<span class="step-slot ${way}"${width}><span class="step" data-string="${id}">${words}</span></span>`;
+    const inert = a.inert ? ` aria-disabled="true" data-inert="${esc(a.inert.id)}" title="${esc(a.inert.text)}" aria-description="${esc(heard(a.inert.text))}"` : '';
+    return `<span class="step-slot ${way}"${width}>${actHTML(`step${a.inert ? ' inert' : ''}`, ` data-step="${way}" data-string="${id}"${inert}`, words)}</span>`;
+  };
+  return { earlier: one('earlier'), later: one('later') };
+}
+
+/** a step's slot's width, in em at the corner's size: its label's, as the view measures it (`stepsHTML`) */
+export const stepEm = (/** @type {'earlier' | 'later'} */ way, /** @type {Measure} */ measure) => measure(t(STEP_IDS[way]), 'client');
 
 /**
  * The not-last clause as markup (FP-34): its words, carrying their string,
@@ -1687,7 +1754,7 @@ export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.bi
 
 /**
  * @typedef {Object} StateItem — one item of a corner's state (`stateItems`): a string filled, in the class it stands in
- * @property {'kind' | 'version' | 'st' | 'kept' | 'face' | 'chip' | 'held' | 'past' | 'why' | 'not-last' | 'inflight'} cls the item: the document's kind, its version statement, its state, a draft's kept word, the face standing beneath it, a draft's chip, the held version's line, a past state's line, the line saying why it shows that state, the clause saying it is not its minute's last and the clause saying the state its act asked is being read
+ * @property {'kind' | 'version' | 'st' | 'kept' | 'face' | 'chip' | 'held' | 'past' | 'why' | 'not-last' | 'inflight' | 'links'} cls the item: the document's kind, its version statement, its state, a draft's kept word, the face standing beneath it, a draft's chip, the held version's line, a past state's line, the line saying why it shows that state, the clause saying it is not its minute's last, the clause saying the state its holder asked is being read and the links' word
  * @property {string} id its string's id — the kind's `L.slot.reading` while it is being read, its slot an empty box; '' for a draft's kept word while no state is set, its slot an empty box
  * @property {Record<string, string | number>} vals the values its string is filled with
  * @property {Record<string, Face>} faces the faces of the tokens it sets in the identifier's: an owner it names
@@ -1707,10 +1774,11 @@ export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.bi
  * document and has no chip, its line alone, the corner's title
  * (`ArticleView.held`; B3-S2; D6 BM-14); a past state, its line "as it stood
  * ⟨time⟩ · ⟨hand⟩" the corner's title, a substitution's words held in it,
- * then, in one place, the line saying the state is how the draft stands now
+ * then, after the state's hand, the links' word where its links are not shown
+ * (`PastLine.links`), then, in one place, the line saying the state is how the draft stands now
  * or the clause saying it is not its minute's last, its count in a slot
- * (`PastLine.notLast`) — never both — then, while the state its act asked is
- * read again, the clause saying so (`PastLine.reading`), and the chip
+ * (`PastLine.notLast`) — never both — then, while the state its holder asked
+ * is being read, the clause saying so (`PastLine.reading`), and the chip
  * (`ArticleView.past`; B3-S7) — each title first,
  * in the kind's place, no kind's slot standing, at every fit (`cornerTitle`;
  * FP-26, FP-39); every other document its kind first (`kind`), in its slot,
@@ -1746,7 +1814,8 @@ function stateItems(d, v) {
     const now = p.why && !p.why.substituted ? [item('why', p.why.id, {}, null, { words: p.why.text })] : [];
     const notLast = p.notLast ? [item('not-last', NOT_LAST, {}, null, { words: notLastWords(p.notLast.n), count: p.notLast.n })] : [];
     const reading = p.reading != null ? [item('inflight', IN_FLIGHT, { time: p.reading })] : [];
-    return [item('past', title.id, {}, null, { title }), ...(notLast.length ? notLast : now), ...reading, chip()];
+    const links = p.links ? [item('links', LINKS_WORDS[p.links], {})] : [];
+    return [item('past', title.id, {}, null, { title }), ...links, ...(notLast.length ? notLast : now), ...reading, chip()];
   }
   const kind = item('kind', KIND_WORDS[v.kind], {});
   if (v.kind === 'published') {
@@ -1878,6 +1947,7 @@ function stateHTML(i, v, compact, statement = true) {
   if (i.cls === 'kept') return keptLineHTML(v, statement);
   if (i.cls === 'not-last') return notLastHTML(i.count ?? null, v.measure);
   if (i.cls === 'inflight') return inFlightHTML(t(i.id, i.vals), v);
+  if (i.cls === 'links') return linksHTML(i.id);
   if (i.face) return faceHTML(i.face, v, compact);
   const extra = i.cls === 'chip' ? ' data-chip="1"' : i.cls === 'why' ? ` data-string="${esc(i.id)}"` : i.members != null ? ` data-members="${i.members}"` : '';
   const words = i.words != null ? esc(i.words) : Object.keys(i.faces).length ? htmlIn(i.id, i.vals, i.faces) : esc(t(i.id, i.vals)), acts = v.acts !== false;
@@ -1910,12 +1980,12 @@ function filledEm(id, vals, faces, measure) {
  * @property {string} words its words as a person reads them
  * @property {number} em its width in em of the corner's size, as the view measures its words (`Measure`): its slot's, where it has one of fixed width — the kind's, a kept word's — and a kept line's on two rows its widest row's (`keptLineEm`)
  * @property {boolean} yields it may fold into the corner's count where a row cannot hold it: the offered read alone; every other item never yields (foundations §3.1)
- * @property {boolean} holds it holds at the top of a reading scene's pane where the corner stands at its document's head, whole (SC's; FP-26): which state the corner names — the kind, the version statement, the state, a draft's kept word — the face, which never yields, a past state's line and a substitution of its state, its clauses saying it is not its minute's last and that the state its act asked is being read, the held version's line; the chip, the words saying a past state is how the draft stands now, the offered read, the lacking line and the whole-document count scroll with the text
+ * @property {boolean} holds it holds at the top of a reading scene's pane where the corner stands at its document's head, whole (SC's; FP-26): which state the corner names — the kind, the version statement, the state, a draft's kept word — the face, which never yields, a past state's line and a substitution of its state, its links' word and its clauses saying it is not its minute's last and that the state its holder asked is being read, the held version's line; the chip, the words saying a past state is how the draft stands now, the offered read, the lacking line and the whole-document count scroll with the text
  * @property {Title} [title] the title a past state's corner's or the held version's first item is (`cornerTitle`), which its holder lays out on the lines its width gives it (`titleHTML`)
  */
 
 /** the items a reading scene's pane at its document's head holds at its top (`CornerItem.holds`), by their class */
-const HOLDING = new Set(['kind', 'version', 'st', 'kept', 'face', 'held', 'past', 'not-last', 'inflight']);
+const HOLDING = new Set(['kind', 'version', 'st', 'kept', 'face', 'held', 'past', 'not-last', 'inflight', 'links']);
 
 /**
  * A title as markup (`Title`; FP-26): its line in its class, carrying its

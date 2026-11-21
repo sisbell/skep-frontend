@@ -626,7 +626,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W, GRID } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX, ELLIPSIS } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, titleHTML, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, titleHTML, stepsHTML, stepEm, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop, stretchIn } from '../model/derive.js';
 import { iRuns } from '../model/frames.js';
@@ -5034,7 +5034,7 @@ function makeCorner(into, addr) {
  * puts a focus back on (N-FOCUS's `keep`): each of the face's acts by its key
  * on the face, its compact form's among them; the offered read's, a head's
  * count of the items it folds, the kept word's, the kept line's second act's,
- * a past state's "read it again", the act that opens the corner
+ * a past state's "read it again" and each of its steps by its way, the act that opens the corner
  * whole or compacts it again, the version statement's; none for the corner's
  * element itself, which a rewrite never replaces. A reading scene's pane keys
  * its corner's acts by it too.
@@ -5049,6 +5049,7 @@ export function cornerAct(el) {
   if (d.kept) return 'kept';
   if (d.history != null) return 'history';
   if (d.again != null) return 'again';
+  if (d.step) return 'step:' + d.step;
   if (d.whole != null) return 'whole';
   return e.classList && typeof e.classList.contains === 'function' && e.classList.contains('version') ? 'version' : null;
 }
@@ -5059,8 +5060,8 @@ const allIn = (/** @type {Element} */ el, /** @type {string} */ sel) => (typeof 
 /** the element the platform's focus stands on; null where the page holds none */
 const focusedNow = () => (typeof document !== 'undefined' ? document.activeElement : null);
 
-/** the elements of a corner beside its column that hold a line of several acts (`linesOf`): the kept line with its second act, a face's acts */
-const MULTI = '.kept-line, .face-acts';
+/** the elements of a corner beside its column that hold a line of several acts (`linesOf`): the kept line with its second act, a face's acts, a past state's two steps */
+const MULTI = '.kept-line, .face-acts, .steps';
 
 /**
  * The lines of a corner's acts beside its column (`setStops`): the acts a line
@@ -5801,7 +5802,11 @@ export function planOf(d) { d = shownDoc(d); return articlePlan(d, viewFor(d), R
  * whole or compact, in the corner's type (`titleLines`; P-REG's
  * `cornerWidth`), its line's own element carrying the id and the words the
  * scene names the pane's region by where `title` hands them in (T-ARTICLE's
- * `titleHTML`).
+ * `titleHTML`); a past state's one-state steps, where its holder offers them,
+ * at the ends of its first row, one line of acts of their own (`.steps`), the
+ * title beginning on the row beneath them — "later ›" ending the second row
+ * where one row cannot hold both, as the style wraps it (T-ARTICLE's
+ * `stepsHTML`; B3-S7).
  * @param {Doc} d
  * @param {ArticleView} [article]
  * @param {boolean} [compact] the compact form: its usual states glyphs named by their words
@@ -5810,7 +5815,8 @@ export function planOf(d) { d = shownDoc(d); return articlePlan(d, viewFor(d), R
  */
 export function sceneCorner(d, article = viewFor(d, true), compact = false, as = {}) {
   const keep = as.keep, view = cornerView(article), items = cornerItems(d, view, compact).filter((i) => !keep || keep(i.cls));
-  return items.map((i) => (i.title ? titleHTML(i.title, titleLines(i.title, cornerWidth(compact)).lines, as.title ?? null, view) : i.html)).join('');
+  const steps = view.past && view.past.steps && items.some((i) => i.title) ? stepsHTML(view.past.steps, view) : null;
+  return (steps ? `<span class="steps">${steps.earlier}${steps.later}</span>` : '') + items.map((i) => (i.title ? titleHTML(i.title, titleLines(i.title, cornerWidth(compact)).lines, as.title ?? null, view) : i.html)).join('');
 }
 
 /**
@@ -5832,7 +5838,12 @@ export function sceneCorner(d, article = viewFor(d, true), compact = false, as =
  * type at its own size and leading (`titleLines`, `cornerPx`), as many rows as
  * those lines take and never fewer than `floor` — the rows it takes handed
  * back, so its holder floors the title alone, never the clauses held after it
- * — its line's own element carrying the id and the words the scene names the
+ * — and, where a past state's holder offers its one-state steps, those at the
+ * ends of the title's first row, each in its slot, one line of acts of their
+ * own standing first in the corner (`.hsteps`), the title laid out between
+ * them on every row it takes, so the rows it takes count the one the steps
+ * share (T-ARTICLE's `stepsHTML`; B3-S7) —
+ * its line's own element carrying the id and the words the scene names the
  * pane's region by where `title` hands them in (T-ARTICLE's `titleHTML`), the
  * rest of its items on the rows after; the form opened beneath restating it
  * carries neither. Each
@@ -5854,9 +5865,15 @@ export function sceneHead(d, article, as) {
   const take = (/** @type {import('./article.js').CornerItem[]} */ all) => (as.keep ? all.filter((i) => /** @type {(cls: string) => boolean} */ (as.keep)(i.cls)) : all);
   const items = take(cornerItems(d, { ...view, opened: as.open }, true, false)), clause = as.kept;
   const pitch = LINE_H * as.px, width = ((view.cpl ?? MEASURE_CPL) * CHAR_W + EDGE) * as.px;
-  const title = items.length && items[0].title ? items[0].title : null, lines = title ? titleLines(title, width) : null;
+  const title = items.length && items[0].title ? items[0].title : null;
+  // a past state's steps at the ends of the title's first row, the title between them on every row it takes
+  const steps = title && view.past && view.past.steps ? view.past.steps : null;
+  const e = steps ? stepEm('earlier', view.measure) * CORNER.px : 0, l = steps ? stepEm('later', view.measure) * CORNER.px : 0;
+  const inset = steps ? e + HEAD_GAP : 0, room = steps ? Math.max(1, width - e - l - 2 * HEAD_GAP) : width;
+  const lines = title ? titleLines(title, room) : null;
   const titled = lines ? Math.max(1, Math.ceil(lines.count * CORNER_LINE / pitch - 1e-9), as.floor ?? 0) : 0;
   const L = headLayout(headItems(items), 0, clause ? { w: cornerPx(clause.text), words: clause.text } : null, width, pitch, titled);
+  if (steps) for (const s of L.slots) if (s.k === 0) { s.x = inset; s.w = room; }
   /** @type {string[]} each row's markup, by row */
   const rows = Array.from({ length: L.rows }, () => '');
   /** @type {number[]} the rows the slots beginning on each row take, by row: 0 where none begins there */
@@ -5869,7 +5886,9 @@ export function sceneHead(d, article, as) {
     tall[s.row] = Math.max(tall[s.row], s.rows);
   }
   const form = as.open ? openedHTML(take(cornerItems(d, { ...view, acts: false })).map((i) => i.html), items, L) : view.kept && view.keptOpen ? statementHTML(view.kept, view.keptSaid) : '';
-  const html = rows.map((r, i) => (tall[i] ? hrowHTML(i, `top:${i * pitch}px;height:${tall[i] * pitch}px`, r, i < L.held) : '')).join('')
+  const made = steps ? stepsHTML(steps, view) : null, slot = (/** @type {number} */ x, /** @type {number} */ w, /** @type {string} */ h) => `<span class="hslot" style="left:${x}px;width:${w}px;height:${pitch}px;line-height:${pitch}px">${h}</span>`;
+  const html = (made ? `<div class="hsteps" role="toolbar" style="top:0px;height:${pitch}px">${slot(0, e, made.earlier)}${slot(width - l, l, made.later)}</div>` : '')
+    + rows.map((r, i) => (tall[i] ? hrowHTML(i, `top:${i * pitch}px;height:${tall[i] * pitch}px`, r, i < L.held) : '')).join('')
     + (form ? openedFormHTML(`top:${L.rows * pitch}px;width:${width}px`, form) : '');
   return { html, rows: L.rows, held: L.held, title: titled };
 }

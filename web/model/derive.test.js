@@ -16,7 +16,7 @@
 // FP-7, FP-14).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyHeld, applyEdits, placedAgain, sourceRuns, fromBase, recordAt, boundaries, wordStop } from './derive.js';
+import { applyHeld, applyEdits, placedAgain, sourceRuns, fromBase, recordAt, withLinks, boundaries, wordStop } from './derive.js';
 import { deriveBlocks, textOf, identityIn, identityParts, placedIn, pageSpace, transcludedRuns, PAGE_LOAD } from './records.js';
 import { vSpan } from './address.js';
 import { byteLength } from '../util.js';
@@ -302,6 +302,14 @@ test('a past state\'s record keeps the image read beside its delivery at the sam
   assert.equal(wholeText(applyHeld(recordAt(D, runs, 42), [ins]).doc), 'XOlder text.', 'no image read: the anchors place nothing, the frame\'s own position');
   image[0].width = 3;
   assert.equal(d.image[0].width, 11, 'the image handed in copied, never shared');
+});
+
+test('a past state\'s record takes the links a read at its position answered as M-REC takes a document\'s — its link set those addresses and its links read — a record of its own, every other field as it stood, none read before (B3-S7; skep-frontend #704)', () => {
+  const d = recordAt(D, [contentRun(1, 'Older '), contentRun(7, 'text.')], 42);
+  assert.deepEqual([[...d.links], d.linksRead], [[], false], 'derived with no links read');
+  const L1 = D + '.0.2.1', L2 = '1.0.1.0.5.0.2.3', got = withLinks(d, [L1, L2, L1]);
+  assert.deepEqual([[...got.links], got.linksRead, got.readAt, got.derived, got.runs], [[L1, L2], true, 42, d.derived, d.runs], 'the answer\'s links, read; the text and where it was read as they stood');
+  assert.deepEqual([[...d.links], d.linksRead, got === d, got.links === d.links], [[], false, false, false], 'the record handed in untouched, the set a new one');
 });
 
 test('BM-56: a draft\'s edits are placed again in another text by the identity of the bytes each touches and of those either side — an insert after the byte it followed, a removal at the bytes it took wherever they stand — exactly where those bytes still meet, and named adrift where they do not; some left out, the rest stand where their words stood', () => {

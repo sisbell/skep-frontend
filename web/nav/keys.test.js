@@ -250,6 +250,20 @@ test('the table holds D5\'s routed rows', () => {
   for (const id of ['K-1', 'K-7', 'K-11', 'K-13', 'K-14', 'K-20', 'K-21', 'K-30', 'K-40', 'K-41', 'K-45', 'K-46', 'K-47', 'K-48', 'K-49', 'K-51', 'K-52', 'K-57', 'K-62', 'K-70', 'K-71', 'K-72', 'K-74', 'K-76', 'K-77', 'K-100', 'K-101']) assert.ok(rows.some((r) => r.id === id), id);
 });
 
+test('the one-state step of a draft\'s history reads Alt off the key on every platform — Option on macOS, which spells nothing in a chord there — Alt+↓ a state back and Alt+↑ a state forward, nothing else held; the table binds them in the scene with the list\'s ↓ and ↑ (D5 K-102, §0)', () => {
+  const mac = KEYS.MAC;
+  const ev = (/** @type {string} */ key, /** @type {object} */ mods = {}) => /** @type {any} */ ({ key, altKey: false, shiftKey: false, metaKey: false, ctrlKey: false, ...mods });
+  try {
+    for (const platform of [true, false]) {
+      KEYS._platform(platform);
+      assert.deepEqual([KEYS.stateStep(ev('ArrowDown', { altKey: true })), KEYS.stateStep(ev('ArrowUp', { altKey: true }))], [-1, 1], `${platform ? 'macOS' : 'elsewhere'}: Alt+↓ back, Alt+↑ forward`);
+      assert.deepEqual([ev('ArrowDown'), ev('ArrowDown', { altKey: true, shiftKey: true }), ev('ArrowDown', { altKey: true, metaKey: true }), ev('ArrowDown', { altKey: true, ctrlKey: true }), ev('ArrowLeft', { altKey: true })].map(KEYS.stateStep), [0, 0, 0, 0, 0], 'no Alt, or anything else held, or another key: no step');
+      assert.equal(KEYS.chordOf(ev('ArrowDown', { altKey: true })), platform ? '↓' : 'Alt+↓', 'the chord spells Alt elsewhere and no Option on macOS: the step reads the key, never the chord');
+    }
+  } finally { KEYS._platform(mac); }
+  for (const [chord, act] of [['Alt+↓', 'history.earlier'], ['Alt+↑', 'history.later'], ['↓', 'history.list.next'], ['↑', 'history.list.previous']]) assert.ok(rows.some((r) => r.id === 'K-102' && r.chord === chord && r.act === act && r.surface === 'scene'), `K-102's ${chord}`);
+});
+
 test('Mod+Shift+Enter is "read side by side" wherever it stands: the selection\'s slot, and in the LEAP box its row\'s "open beside" (D5 K-52, K-101)', () => {
   assert.deepEqual(rows.filter((r) => r.chord === 'Mod+Shift+Enter'), [{ id: 'K-101', chord: 'Mod+Shift+Enter', act: 'leap.beside', surface: 'box' }, { id: 'K-52', chord: 'Mod+Shift+Enter', act: 'selection.scene', surface: 'selection' }]);
 });

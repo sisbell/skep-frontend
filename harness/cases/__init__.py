@@ -132,8 +132,9 @@ SELECTED_WHOLE = '''((sel) => { const e = document.querySelector(sel), s = windo
 # for `CORNER_FIT`'s second read — letter spacing, word spacing and line height at the criterion's values
 READER_SPACING = 'letter-spacing:.12em !important; word-spacing:.16em !important; line-height:1.5 !important;'
 # the lines of a corner beside its column whose own rule fits them whole or breaks them onto further rows — the kept line, its
-# second act, a face's acts and a title's lines — which `CORNER_FIT` reads again at the reader's spacing (issue #694)
-SPACED = '.kept-line, .history, .face-act, .title .tl'
+# second act, a face's acts, a title's lines and a past state's one-state steps, "later ›" ending the second row where one
+# row cannot hold both — which `CORNER_FIT` reads again at the reader's spacing (issue #694; B3-S7)
+SPACED = '.kept-line, .history, .face-act, .title .tl, .steps'
 
 # every corner the selectors match, its words read against the boxes they stand in, each text node's line boxes by a Range in
 # fractional px: each slot of a head's rows — every line box inside the slot's right edge and its foot, and in a slot of one

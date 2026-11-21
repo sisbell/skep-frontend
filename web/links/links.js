@@ -45,7 +45,12 @@
 //     marks, symbol and counts there and never at the stored ordinal, and an
 //     end that text places nowhere is not drawn; a surface shown from another
 //     record — a reading scene's pane, an article set from a derived record —
-//     hands that record in (`shown`, `symbols`, `countAt`, `utmost`); the end
+//     hands that record in (`shown`, `symbols`, `countAt`, `utmost`); a past
+//     state's record, derived at a position of the board's history, draws the
+//     links that stood on its words, its own link set as a read at that
+//     position answered it (M-DERIVE's `withLinks`) and none until it is read,
+//     each block's count place then arriving — never the links the model holds
+//     of the document now (`touching`; B3-S7); the end
 //     is told apart by its stored span (`nearEnd`; its key, `endKey`)
 //     wherever it stands, and every mark and symbol drawn for it carries that
 //     key, so a click opens the card of the end clicked, never another of
@@ -546,6 +551,24 @@ function drawnEnd(l, addr, linker, end, e, over) {
   };
 }
 
+/** is a record a past state's — derived at a position of the board's history (M-DERIVE's `recordAt`): its links its own, as a read at that position answered them */
+const pastRecord = (/** @type {Doc | null | undefined} */ over) => !!over && !!over.derived && over.derived.at != null;
+
+/**
+ * The links a document's text drawn from a record touches (see the head): a
+ * past state's its own link set, each link the model holds the value of —
+ * none while that set is not read; every other record's the links the model
+ * holds touching the document (M-REC's `linksTouching`).
+ * @param {string} addr
+ * @param {Doc | null | undefined} over
+ * @returns {Link[]}
+ */
+function touching(addr, over) {
+  if (!pastRecord(over)) return REC.linksTouching(addr);
+  const d = /** @type {Doc} */ (over);
+  return d.linksRead ? [...d.links].flatMap((a) => { const l = REC.link(a); return l ? [l] : []; }) : [];
+}
+
 /** every end of a link a document draws, as a record's text places it (`drawnEnd`) */
 function endsDrawn(/** @type {Link} */ l, /** @type {string} */ addr, /** @type {'you' | 'owner' | 'others'} */ linker, /** @type {Doc | null} */ over) {
   /** @type {Shown[]} */
@@ -566,7 +589,7 @@ function endsDrawn(/** @type {Link} */ l, /** @type {string} */ addr, /** @type 
 export function shown(addr, over = textOf(addr)) {
   /** @type {Shown[]} */
   const out = [];
-  for (const l of REC.linksTouching(addr)) if (draws(l, addr)) out.push(...endsDrawn(l, addr, linkerOf(l, addr), over));
+  for (const l of touching(addr, over)) if (draws(l, addr)) out.push(...endsDrawn(l, addr, linkerOf(l, addr), over));
   return out;
 }
 
@@ -769,10 +792,13 @@ export function beams(/** @type {string} */ addr) { return state(addr).stage >= 
 /**
  * The others' links touching a block that are NOT shown — the "+⟨n⟩ others"
  * count (rule (i)–(iii)), a withheld run's the ends drawn at it (`drawnIn`);
- * zero where none.
+ * zero where none; at a past state's record whose links are not yet read, none
+ * counted and the place arriving (`touching`; foundations §2.1's still-arriving
+ * form).
  * @param {string} addr
  * @param {Block} block a block of the record's text
  * @param {Doc | null} [over] the record of the text its ends are placed in (`shown`)
+ * @returns {{n: number, social: boolean, arriving?: boolean}}
  */
 export function countAt(addr, block, over = textOf(addr)) { return countUnder(state(addr), addr, block, over); }
 
@@ -792,7 +818,7 @@ export function countAt(addr, block, over = textOf(addr)) { return countUnder(st
 export function utmost(addr, over = textOf(addr)) {
   /** @type {Shown[]} */
   const all = [];
-  for (const l of REC.linksTouching(addr)) if (classify(l) === 'passage') all.push(...endsDrawn(l, addr, linkerOf(l, addr), over));
+  for (const l of touching(addr, over)) if (classify(l) === 'passage') all.push(...endsDrawn(l, addr, linkerOf(l, addr), over));
   return { shown: all };
 }
 
@@ -801,16 +827,20 @@ export function utmost(addr, over = textOf(addr)) {
  * an end drawn in the block where the record's text places it (`drawnIn` over
  * `placedOver`): on its readable stretches, or at the withheld run it lies
  * wholly inside, counted at that run's block — and whether a social link
- * touches the document.
+ * touches the document; at a past state's record whose links are not yet
+ * read, none, arriving (`touching`).
  * @param {Reveal} r
  * @param {string} addr
  * @param {Block} block
  * @param {Doc | null} over the record of the text its ends are placed in
+ * @returns {{n: number, social: boolean, arriving?: boolean}}
  */
 function countUnder(r, addr, block, over) {
+  // a past state's links not yet read: its count place arriving, never a count of no link
+  if (pastRecord(over) && !(/** @type {Doc} */ (over)).linksRead) return { n: 0, social: false, arriving: true };
   let n = 0, social = false;
   const blocks = over ? over.blocks : [];
-  for (const l of REC.linksTouching(addr)) {
+  for (const l of touching(addr, over)) {
     const kind = classify(l);
     if (kind === 'social') { social = true; continue; }
     if (kind !== 'passage') continue;

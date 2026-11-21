@@ -201,7 +201,7 @@ import * as TRAIL from '../nav/trail.js';
 import * as PAST from '../model/past.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
-import { t, tHTML, tRuns, lastRead, addressedHTML, sentence, sentences, hintSentences, heard, runsText, asRuns, fields, runningHTML, FIELD } from '../strings.js';
+import { t, tHTML, tRuns, lastRead, addressedHTML, sentence, sentences, asSentence, hintSentences, heard, runsText, asRuns, fields, runningHTML, FIELD } from '../strings.js';
 import { esc, fingerprintCue, timeOf, dayOf } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
@@ -212,7 +212,7 @@ import * as PROV from '../overlays/provenance.js';
 import * as SEL from '../overlays/selection.js';
 import { recorder } from '../test/canvas.js';
 import { HEAD_CPL, MEASURE_CPL, CHAR_W, EDGE, LINE_H, fitFor, setAdvance } from '../plane/layout.js';
-import { cornerWidth } from '../plane/register.js';
+import { cornerWidth, CORNER } from '../plane/register.js';
 
 /** @returns {import('../model/frames.js').ComparePair} */
 const pair = (/** @type {number} */ u1, /** @type {number} */ u2, /** @type {number} */ width) => ({ d1: '1.0.1.0.3', d2: '1.0.1.0.3.2', u1, u2, width });
@@ -3074,12 +3074,19 @@ test('a row naming an edition a pane reads at its bare address, read again while
 const PASTD = '1.0.1.0.96', PAST_TEXT = 'Its first line. Its newest words.', PAST_AT = 40, PAST_OLD = 'Its first line.';
 const PAST_T0 = Date.UTC(2026, 10, 16, 9);
 const PAST_ROWS = [[30, 'create_new_document', PAST_T0], [PAST_AT, 'insert', PAST_T0 + 2 * 60000], [48, 'insert', PAST_T0 + 5 * 60000]].map(([at, op, time]) => ({ position: at, at, op, docs: [PASTD], class: 'drafts', key: 'bare', time }));
-/** the draft's state at a position as the board answers it: its first `n` bytes, the draft's own */
+/** the draft's state at a position as the board answers it: its first `n` bytes, the draft's own — and the links that stood on them, none */
 const pastAt = (/** @type {number} */ at, /** @type {number} */ n) => ({
   [FAKE.keyOf('op', { frame: F.opAt(at, F.retrieveDocVSpanSet(PASTD)) })]: { result: { as_of: at, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
   [FAKE.keyOf('op', { frame: F.opAt(at, F.retrieveV(PASTD, 1, n)) })]: { result: { as_of: at, resp: 'delivery', items: [{ content: PAST_TEXT.slice(0, n) }] } },
   [FAKE.keyOf('op', { frame: F.opAt(at, F.image(PASTD, 1, n)) })]: { result: { as_of: at, resp: 'runs', runs: [{ i_start: PASTD + '.0.1.1', width: String(n) }] } },
+  [pastLinksKey(at, n)]: { result: { as_of: at, resp: 'addrs', addrs: [] } },
 });
+/** the key of the links read of the draft's state at a position: `find_links_v` over its first `n` bytes, as of it */
+const pastLinksKey = (/** @type {number} */ at, /** @type {number} */ n) => FAKE.keyOf('op', { frame: F.opAt(at, F.findLinksV(PASTD, 1, n)) });
+/** a corner's markup with the past state's one-state steps before its rows taken off: its rows, the first first */
+const rowsOfHead = (/** @type {string} */ html) => html.replace(/^<div class="hsteps"[^>]*>.*?<\/div>/, '');
+/** a corner beside its column with the past state's one-state steps' line before its title taken off */
+const stepsOff = (/** @type {string} */ html) => html.replace(/^<span class="steps">(?:<span class="step-slot [^"]*"[^>]*>.*?<\/span>){2}<\/span>/, '');
 Object.assign(script, reads(PASTD, PAST_TEXT, { published: false }), pastAt(PAST_AT, PAST_OLD.length), pastAt(48, PAST_TEXT.length));
 /** the draft's history scripted as the narrowed feed answers it from where its read begins, its rows those given */
 function pastRows(/** @type {object[]} */ rows = PAST_ROWS) {
@@ -3148,7 +3155,7 @@ test('a draft\'s history opens from its corner\'s act beside the current text: p
     assert.deepEqual([L?.at, L?.unkept, L?.why], [PAST_AT, false, null], 'the state before the newest change, its row the one below the top');
     assert.ok(panes?.b.blocks.map((b) => b.text).join('') === PAST_OLD, `pane B the text as it stood: ${JSON.stringify(panes?.b.blocks)}`);
     const time = lastRead(PAST_T0 + 2 * 60000), hand = t('F.slot.unsigned'), line = t('B3.history.row', { time, hand });
-    const rowB = /^<div class="hrow" data-row="0" data-held="1"[^>]*>(.*?)<\/div>/.exec(p.cornerB.innerHTML);
+    const rowB = /^<div class="hrow" data-row="0" data-held="1"[^>]*>(.*?)<\/div>/.exec(rowsOfHead(p.cornerB.innerHTML));
     assert.ok(rowB && rowB[1].includes(`<span class="title"><span class="past" data-string="B3.history.row" id="sceneB-title" role="img" aria-label="${esc(heard(line))}"><span class="tl">${esc(line)}</span></span></span>`) && !rowB[1].includes('data-chip') && !p.cornerB.innerHTML.includes('class="kind'),
       `pane B's corner at its document's head titled: its line first, in the kind's place, on its first row, held at the pane's top, its own element named by its words heard — no kind's slot (issues #677, #687) — ${p.cornerB.innerHTML}`);
     assert.ok(/<div class="hrow" data-row="[1-9]\d*" role="toolbar"[^>]*>.*data-chip="1"/.test(p.cornerB.innerHTML) && !p.cornerB.innerHTML.includes('kept-word') && !p.cornerB.innerHTML.includes('data-history'),
@@ -3168,7 +3175,7 @@ test('a draft\'s history opens from its corner\'s act beside the current text: p
     const list = p.afterB[0];
     assert.ok(list && list.id === 'scenepast' && String(list.className).includes('beside'), 'the list in its column at pane B\'s outer side, after pane B in the page\'s order');
     const html = String(list.innerHTML);
-    assert.ok(html.includes(`<div class="pl-row" data-row="${PAST_AT}" data-shown="1" aria-current="true">`) && html.includes(`<div class="pl-row" data-row="48">`) && html.includes(`<div class="pl-who">${esc(hand)}</div>`) && !html.includes('pl-now'),
+    assert.ok(html.includes(`<button type="button" class="pl-row" data-row="${PAST_AT}" data-shown="1" aria-current="true" tabindex="-1">`) && html.includes(`<button type="button" class="pl-row" data-row="48" tabindex="-1">`) && html.includes(`<div class="pl-who">${esc(hand)}</div>`) && !html.includes('pl-now'),
       `its rows, newest first, the hand once at the head of its run, the shown row marked, no top line: ${html}`);
     assert.deepEqual(L?.days.map((d) => [d.folded, d.rows.map((r) => r.last)]), [[false, [48, PAST_AT, 30]]], 'one day, open');
     const kept = TRAIL.current()?.scene, asked = kept?.held.past;
@@ -3234,7 +3241,7 @@ test('where the draft holds words the board has not kept, its history opens on t
     await pastOpened(p);
     assert.deepEqual([SCENE.past()?.at, SCENE.past()?.unkept], [48, true], 'the newest kept state, the top row\'s');
     const html = String(p.afterB[0].innerHTML);
-    assert.ok(html.startsWith(`<div class="pl-now" data-string="L.history.unkept">${esc(t('L.history.unkept'))}</div>`) && html.includes('<div class="pl-row" data-row="48" data-shown="1"'), `the top line above the rows, the top row marked: ${html}`);
+    assert.ok(html.startsWith(`<div class="pl-now" data-string="L.history.unkept">${esc(t('L.history.unkept'))}</div>`) && html.includes('<button type="button" class="pl-row" data-row="48" data-shown="1"'), `the top line above the rows, the top row marked: ${html}`);
   } finally { WRITE.setHeld(PASTD, []); WRITE.setKept(PASTD, null); }
 }));
 
@@ -3281,8 +3288,10 @@ function fitAt(/** @type {ReturnType<typeof page>} */ p, /** @type {number} */ w
 }
 /** a head's width at a fit, px: the pane's column and its edge (SC's `shapeCorner`) */
 const headPx = (/** @type {{cpl: number, px: number}} */ F) => (F.cpl * CHAR_W + EDGE) * F.px;
+/** the room a past state's title takes at its document's head, px: the head's width less its two one-state steps' slots at the ends of its first row and their gaps (T-LAYER's `sceneHead`; B3-S7) */
+const titlePx = (/** @type {{cpl: number, px: number}} */ F) => headPx(F) - LAYER.cornerPx(t('B3.history.earlier')) - LAYER.cornerPx(t('B3.history.later')) - 2 * CORNER.pad;
 /** the first row of a corner at its document's head, held at the pane's top: its height and the title's lines */
-const titleRow = (/** @type {string} */ html) => { const m = /^<div class="hrow" data-row="0" data-held="1" style="top:0px;height:([\d.]+)px">(.*?)<\/div>/.exec(html); return m ? { h: Number(m[1]), lines: [...m[2].matchAll(/<span class="tl(?: wraps)?">(.*?)<\/span>/g)].map((x) => x[1]) } : null; };
+const titleRow = (/** @type {string} */ html) => { const m = /^<div class="hrow" data-row="0" data-held="1" style="top:0px;height:([\d.]+)px">(.*?)<\/div>/.exec(rowsOfHead(html)); return m ? { h: Number(m[1]), lines: [...m[2].matchAll(/<span class="tl(?: wraps)?">(.*?)<\/span>/g)].map((x) => x[1]) } : null; };
 /** the words pane B's title's line's own element names the pane by, as its corner's markup carries them; undefined where none does */
 const titleName = (/** @type {string} */ html) => /id="sceneB-title" role="img" aria-label="([^"]*)"/.exec(html)?.[1];
 
@@ -3306,8 +3315,8 @@ test('a titled corner keeps its held rows while its fit stands: its line narrowe
   const fp = '7a'.repeat(32), cue = fingerprintCue(fp), time = lastRead(PAST_T0 + 2 * 60000);
   const fit1 = { cpl: MEASURE_CPL, px: 17 }, fit2 = SCENE.paneFit(1440, { pad: 0, gap: 8, column: SCENE.columnPx(), outer: SCENE.listPx(0) }, 17);
   /** a label the line breaks at as another's key at the scene's fit and holds whole at the narrower fit as the reader's own */
-  const label = [...Array(160).keys()].map((n) => 'desk – ' + 'x'.repeat(n)).find((l) => LAYER.cornerPx(t('B3.history.row', { time, hand: fields(l, cue) })) > headPx(fit1)
-    && LAYER.cornerPx(fields(l, cue)) <= headPx(fit1) && LAYER.cornerPx(t('B3.history.row', { time, hand: l })) <= headPx(fit2));
+  const label = [...Array(160).keys()].map((n) => 'desk – ' + 'x'.repeat(n)).find((l) => LAYER.cornerPx(t('B3.history.row', { time, hand: fields(l, cue) })) > titlePx(fit1)
+    && LAYER.cornerPx(fields(l, cue)) <= titlePx(fit1) && LAYER.cornerPx(t('B3.history.row', { time, hand: l })) <= titlePx(fit2));
   assert.ok(label && fit2.cpl < fit1.cpl, 'a label to break the line at the scene\'s fit and not at the narrower one');
   REC.takeAccountKey('1.0.77', { label: /** @type {string} */ (label), fingerprint: fp });
   await PUMP.loadWhole(PASTD);
@@ -3343,12 +3352,12 @@ test('where the board will not read the state before the newest change — recla
     assert.deepEqual([SCENE.past()?.at, SCENE.past()?.asked, why?.id, why?.text, why?.substituted, SCENE.past()?.running, SCENE.past()?.inFlight], [48, PAST_AT, 'B3.history.reclaimed', words, true, false, null],
       'the newest kept state in the place of the one asked, the line naming the board and the time it stood — a substitution, nothing reading');
     assert.ok(SCENE.panes()?.b.blocks.map((b) => b.text).join('') === PAST_TEXT, 'pane B the newest kept state');
-    const row = /^<div class="hrow" data-row="0" data-held="1"[^>]*>(.*?)<\/div>/.exec(p.cornerB.innerHTML);
+    const row = /^<div class="hrow" data-row="0" data-held="1"[^>]*>(.*?)<\/div>/.exec(rowsOfHead(p.cornerB.innerHTML));
     assert.ok(row && row[1].includes('data-string="B3.history.row"') && row[1].includes(whyDrawn('B3.history.reclaimed', words)) && (SCENE.panes()?.b.heldRows ?? 0) >= 2,
       `its line and the substitution's words after it on the held rows, two at the least: ${p.cornerB.innerHTML}`);
     assert.ok(!p.cornerB.innerHTML.includes('⟨') && !p.cornerB.innerHTML.includes('aria-busy'), `no token left in pane B's corner, nothing busy: ${p.cornerB.innerHTML}`);
     const list = String(p.afterB[0].innerHTML);
-    assert.ok(list.includes(`<div class="pl-row" data-row="48" data-shown="1" aria-current="true">`) && list.includes(`</div><div class="pl-floor" data-string="B3.history.reclaimed">${esc(words)}</div>`)
+    assert.ok(list.includes(`<button type="button" class="pl-row" data-row="48" data-shown="1" aria-current="true" tabindex="-1">`) && list.includes(`</button><div class="pl-floor" data-string="B3.history.reclaimed">${esc(words)}</div>`)
       && list.indexOf('pl-floor') > list.indexOf('data-row="48"') && list.indexOf('pl-floor') < list.indexOf(`data-row="${PAST_AT}"`) && !list.includes('pl-reading'),
       `the list's floor mark below the row of the state shown, saying the same: ${list}`);
     assert.deepEqual(p.said.slice(said).filter((w) => w === heard(words)), [heard(words)], 'the line said once in the status region');
@@ -3363,7 +3372,7 @@ test('a state refused as reclaimed at its row is asked again at the last positio
     assert.deepEqual([SCENE.past()?.at, SCENE.past()?.why, SCENE.past()?.figures.at, pastAsks(47) - asked], [PAST_AT, null, 47, 1], 'the state asked, read at 47, where it stood last');
     assert.ok(SCENE.panes()?.b.blocks.map((b) => b.text).join('') === PAST_OLD, 'pane B the state as asked');
     const list = String(p.afterB[0].innerHTML);
-    assert.ok(list.includes(`<div class="pl-row" data-row="${PAST_AT}" data-shown="1" aria-current="true">`) && !list.includes('pl-floor') && !p.cornerB.innerHTML.includes('class="why"'), `its row marked, no line and no floor mark: ${list}`);
+    assert.ok(list.includes(`<button type="button" class="pl-row" data-row="${PAST_AT}" data-shown="1" aria-current="true" tabindex="-1">`) && !list.includes('pl-floor') && !p.cornerB.innerHTML.includes('class="why"'), `its row marked, no line and no floor mark: ${list}`);
   } finally { restore(); WRITE.setKept(PASTD, null); }
 }, { acts: true }));
 
@@ -3400,7 +3409,7 @@ test('a past state the board is busy on is reissued as the scene stands — the 
     const heldRows = [...corner.matchAll(/<div class="hrow" data-row="\d+" data-held="1"[^>]*>(.*?)<\/div>(?=<div|$)/g)].map((m) => m[1]).join('');
     assert.ok(heldRows.includes(inflight) && corner.indexOf(inflight) < corner.indexOf('data-chip'), `the clause on the rows held at the pane's top, ahead of the chip: ${corner}`);
     assert.deepEqual([p.paneB.attrs['aria-labelledby'], p.paneB.attrs['aria-description']], ['sceneB-title sceneB-why sceneB-name', heard(clause)], 'pane B named by its title, then the line by its own element, then its address; described by the clause, heard');
-    assert.ok(String(p.afterB[0].innerHTML).includes(`<div class="pl-row reading" data-row="${PAST_AT}">`) && String(p.afterB[0].innerHTML).includes(`<span class="pl-reading" data-string="B3.history.reading">${esc(t('B3.history.reading'))}</span>`),
+    assert.ok(String(p.afterB[0].innerHTML).includes(`<button type="button" class="pl-row reading" data-row="${PAST_AT}" tabindex="-1">`) && String(p.afterB[0].innerHTML).includes(`<span class="pl-reading" data-string="B3.history.reading">${esc(t('B3.history.reading'))}</span>`),
       `the asked row says "reading": ${p.afterB[0].innerHTML}`);
     const asked = pastAsks(PAST_AT);
     assert.ok(await within(1500, () => pastAsks(PAST_AT) > asked), 'reissued as the scene stands');
@@ -3411,7 +3420,7 @@ test('a past state the board is busy on is reissued as the scene stands — the 
     assert.ok(await within(2500, () => SCENE.past()?.at === PAST_AT), 'the asked state lands');
     assert.deepEqual([SCENE.past()?.why, SCENE.past()?.running, SCENE.past()?.met, SCENE.past()?.inFlight, p.cornerB.innerHTML.includes('class="why"'), p.cornerB.innerHTML.includes('class="inflight"'), p.cornerB.innerHTML.includes('aria-busy'), String(p.afterB[0].innerHTML).includes('pl-reading'), p.paneB.attrs['aria-description'], p.paneB.attrs['aria-labelledby']],
       [null, false, null, null, false, false, false, false, undefined, 'sceneB-title sceneB-name'], 'the line and the clause gone from the corner, the name and the description, nothing reading');
-    assert.ok(SCENE.panes()?.b.blocks.map((b) => b.text).join('') === PAST_OLD && String(p.afterB[0].innerHTML).includes(`<div class="pl-row" data-row="${PAST_AT}" data-shown="1"`), 'pane B set to the state asked, its row marked');
+    assert.ok(SCENE.panes()?.b.blocks.map((b) => b.text).join('') === PAST_OLD && String(p.afterB[0].innerHTML).includes(`<button type="button" class="pl-row" data-row="${PAST_AT}" data-shown="1"`), 'pane B set to the state asked, its row marked');
     const landing = heard(t('B3.history.row', { time: lastRead(PAST_T0 + 2 * 60000), hand: t('F.slot.unsigned') }));
     assert.deepEqual([p.said.slice(n).filter((w) => w === landing).length, p.said.slice(said).filter((w) => w === busy).length], [1, 1], 'the landing said once, in the words pane B\'s title names it by; the line once in all');
     const after = pastAsks(PAST_AT);
@@ -3481,7 +3490,7 @@ test('a refusal of the asked state that is not reclaimed and that the scene does
         assert.ok(corner.includes(`<span class="why" data-string="L.history.unread" id="sceneB-why" role="img" aria-label="${esc(heard(runs))}">${codeDrawn(runs)}</span>`),
           `${name}: the line in pane B's corner, each stretch in its face, its own element naming pane B's region: ${corner}`);
         assert.equal(corner.includes('data-again'), !withheld, `${name}: "read it again" ${withheld ? 'never beside the draft\'s withheld words' : 'beneath the line'}: ${corner}`);
-        assert.ok(list.includes(`<div class="pl-row unread" data-row="${PAST_AT}">`) && list.includes(`<span class="pl-unread" data-string="L.history.not-read">${esc(t('L.history.not-read'))}</span>`) && !list.includes('pl-reading') && !list.includes('pl-floor'),
+        assert.ok(list.includes(`<button type="button" class="pl-row unread" data-row="${PAST_AT}" tabindex="-1">`) && list.includes(`<span class="pl-unread" data-string="L.history.not-read">${esc(t('L.history.not-read'))}</span>`) && !list.includes('pl-reading') && !list.includes('pl-floor'),
           `${name}: the asked row says "not read", where "reading" stands while the scene reads it again: ${list}`);
         assert.deepEqual([p.paneB.attrs['aria-labelledby'], p.paneB.attrs['aria-description']], ['sceneB-title sceneB-why sceneB-name', undefined], `${name}: pane B named by its title, then the line, then its address`);
         const told = p.said.slice(said);
@@ -3680,7 +3689,7 @@ test('a return reads the draft\'s rows written past the position its entry read 
     const back = GO.back(); await flown(); await back;
     const L = SCENE.past(), line = t('B3.history.row', { time: lastRead(T), hand: t('F.slot.unsigned') });
     assert.deepEqual([SCENE.isOpen(), L?.at, L?.days[0]?.rows[0]?.last, L?.why?.id], [true, at, at, 'B3.history.reclaimed'], 'the newest kept state under the row written since, topping the list, the line saying why');
-    assert.ok(p.cornerB.innerHTML.includes(`<span class="tl">${esc(line)}</span>`) && String(p.afterB[0].innerHTML).includes(`<div class="pl-row" data-row="${at}" data-shown="1"`), `pane B titled with when it stood, its row marked: ${p.cornerB.innerHTML}`);
+    assert.ok(p.cornerB.innerHTML.includes(`<span class="tl">${esc(line)}</span>`) && String(p.afterB[0].innerHTML).includes(`<button type="button" class="pl-row" data-row="${at}" data-shown="1"`), `pane B titled with when it stood, its row marked: ${p.cornerB.innerHTML}`);
   } finally { restore(); if (since) delete script[since]; WRITE.setKept(PASTD, null); }
 }, { acts: true }));
 
@@ -3734,8 +3743,8 @@ test('a past state\'s pane carries no kind at any fit — at its document\'s hea
     const { corner, stacked, ...beside } = paneBNamed(p);
     assert.ok(corner !== 'head' && stacked, `the scene stacked, the corners beside their columns — ${corner}`);
     assert.deepEqual(beside, named, 'stacked, beside its column: no kind\'s slot, named and described as at its head');
-    assert.ok(p.cornerB.innerHTML.startsWith('<span class="title"><span class="past" data-string="B3.history.row" id="sceneB-title"') && p.cornerB.innerHTML.includes(whyDrawn(why.id, why.text)),
-      `its title first, the substitution's words held in it after its line's own element, named by them: ${p.cornerB.innerHTML}`);
+    assert.ok(p.cornerB.innerHTML.startsWith('<span class="steps">') && stepsOff(p.cornerB.innerHTML).startsWith('<span class="title"><span class="past" data-string="B3.history.row" id="sceneB-title"') && p.cornerB.innerHTML.includes(whyDrawn(why.id, why.text)),
+      `its one-state steps' line first (B3-S7), then its title, the substitution's words held in it after its line's own element, named by them: ${p.cornerB.innerHTML}`);
     restore(); restore = fitAt(p, 390);
     SCENE.refaced(); SCENE.draw();
     assert.deepEqual(paneBNamed(p), { corner: 'head', stacked: true, ...named }, 'stacked, at its document\'s head: the same');
@@ -3769,9 +3778,11 @@ test('a row arriving above the state pane B shows takes the words saying that st
     const chip = p.acts.b.find((b) => b.dataset.chip);
     assert.ok(chip, `pane B's corner at its document's head holds its chip's act: ${p.cornerB.innerHTML}`);
     chip.focus();
+    assert.ok(/data-step="earlier"[^>]*data-inert="B3.history.first"/.test(p.cornerB.innerHTML), `"‹ earlier" inert at the draft's first state, the one row read: ${p.cornerB.innerHTML}`);
     SCENE.dropped({ row: pastRow(20, Date.UTC(2026, 10, 14, 9)), addrs: [PASTD], at: 0 });
     assert.deepEqual(told(), ['B3.history.now', heard(t('B3.history.now')), true], 'an older row: still how the draft stands now, said so by all three');
-    assert.equal(p.doc.activeElement, chip, 'the corner\'s items as they stood, none of its elements written again: the focus on the act it stood on');
+    assert.ok(!/data-step="earlier"[^>]*aria-disabled/.test(p.cornerB.innerHTML) && /** @type {any} */ (p.doc.activeElement).dataset?.chip === '1',
+      `the corner's items as they stood, save "‹ earlier", live now an older state stands to step to (B3-S7): the focus kept on the chip's act — ${p.cornerB.innerHTML}`);
     SCENE.dropped({ row: pastRow(56, PAST_T0 + 9 * 60000), addrs: [PASTD], at: 0 });
     assert.deepEqual(told(), [null, undefined, false], 'a newer row: the line gone from the corner and the description together, as the row is taken in — no frame between them');
     assert.ok(p.doc.activeElement !== chip && /** @type {any} */ (p.doc.activeElement).dataset?.chip === '1', 'the corner written again, the focus kept on its chip\'s act standing in its place');
@@ -3863,6 +3874,7 @@ test('the not-last clause\'s count stands as an empty box of its width, named as
     script[FAKE.keyOf('changes', older(0))] = UNREACHABLE;
     let release = fake.hold('changes', older(0));
     await open();
+    await until(() => SCENE.past()?.links === 'read', 'the links that stood on the state shown read at its rest');
     assert.deepEqual([SCENE.past()?.at, SCENE.past()?.notLast, SCENE.past()?.bottom, SCENE.past()?.reading], [PAST_AT, { n: null }, false, true], 'its count not yet told, the rows below being read');
     const empty = countIn(p.cornerB.innerHTML);
     assert.deepEqual([empty?.shows, empty?.pending, empty?.name], ['', true, esc(heard(t('L.slot.reading')))], `an empty box of its width, named as being read: ${p.cornerB.innerHTML}`);
@@ -3893,6 +3905,271 @@ test('the not-last clause\'s count stands as an empty box of its width, named as
     SCENE.close();
   } finally { delete script[FAKE.keyOf('changes', older(0))]; delete script[FAKE.keyOf('changes', older(32))]; WRITE.setKept(PASTD, null); }
 }, { acts: true }));
+
+// ---- a draft's history: the one-state steps and the faces they meet (B3-S7; D5 K-102; skep-frontend #663, #704) ----------------
+
+/** the draft's rows for its steps: its mint; a minute of two commits of one hand — a burst inside the minute — and its newest change, minutes apart */
+const STEP_ROWS = [[30, 'create_new_document', PAST_T0], [PAST_AT, 'insert', PAST_T0 + 2 * 60000], [44, 'insert', PAST_T0 + 2 * 60000 + 10000], [48, 'insert', PAST_T0 + 5 * 60000]]
+  .map(([at, op, time]) => ({ position: at, at, op, docs: [PASTD], class: 'drafts', key: 'bare', time }));
+/** the states the steps read beyond those every past test reads: the minute's last commit's and the mint's */
+const STEP_STATES = { 44: 20, 30: 3 };
+/** the minute of two commits, as its row's time and the title's line name it */
+const STEP_MINUTE = PAST_T0 + 2 * 60000 + 10000;
+/** the draft held whole, its kept state "kept", and its history over rows opened from its corner's act */
+async function stepsOpened(/** @type {ReturnType<typeof page>} */ p, /** @type {object[]} */ rows = STEP_ROWS) {
+  await PUMP.loadWhole(PASTD);
+  WRITE.setKept(PASTD, { word: 'kept', reason: null });
+  pastRows(rows);
+  const opening = GO.history(PASTD); await flown();
+  return opening;
+}
+/** how many times the links that stood on the draft's first `n` bytes at a position were asked */
+const linksAsks = (/** @type {number} */ at, /** @type {number} */ n) => fake.asked.filter((k) => k === pastLinksKey(at, n)).length;
+/** how many history reads — `/op-at` frames — at a position were asked, of any kind */
+const opAtAsks = (/** @type {number} */ at) => fake.asked.filter((k) => k.startsWith('op:') && k.includes(`"at":${at},`)).length;
+/** pane B's one-state step of a way, as its corner holds it */
+const stepIn = (/** @type {ReturnType<typeof page>} */ p, /** @type {'earlier' | 'later'} */ way) => p.acts.b.find((b) => b.dataset.step === way) ?? null;
+
+test('one state back or forward counts from the state last asked while its read is out, else from the state shown: "later ›" reaching the newest kept state reads it plainly — no history read and no links read there — then three presses of "‹ earlier" while the first one\'s read is out move the request alone, reading nothing of their own: the first state landed with no rest, its links never read, then the third read and landed at a rest, its links read there, the second never read; while the first read is out, pane B keeps its state, the in-flight clause "reading ⟨time⟩" — the asked row\'s time — on its own busy element with the one running mark, nothing reissued, pane B described by it and named as it stood, the asked row "reading"; at the draft\'s first state "‹ earlier" inert in its place, focused still, its reason said at every press; a key in the pane there swallowed with C-337 (B3-S7; D5 K-102; P46, P73; skep-frontend #696, #704; FP-41)', () => onPage(async (p) => {
+  await onTrail(p);
+  const restore = pastAnswering(STEP_STATES);
+  try {
+    assert.equal(await stepsOpened(p), true, 'the scene shows');
+    assert.deepEqual([SCENE.past()?.at, SCENE.past()?.days.map((d) => d.rows.map((r) => r.positions))], [44, [[[48], [PAST_AT, 44], [30]]]], 'the state before the newest change: the minute\'s last commit');
+    SCENE.markKept();
+    assert.ok(p.cornerB.innerHTML.startsWith('<div class="hsteps" role="toolbar"') && /data-step="earlier"[^>]*>‹ earlier<\/button>.*data-step="later"[^>]*>later ›<\/button>/.test(p.cornerB.innerHTML),
+      `pane B's corner leads with its two steps, one line of acts of their own, "‹ earlier" then "later ›": ${p.cornerB.innerHTML}`);
+    // "later ›": the newest kept state, the draft as the board holds it — read as the plane reads it, never through the board's history
+    const at48 = opAtAsks(48);
+    p.paneB.scrollTop = 120;
+    clickIn(p, 'b', stepIn(p, 'later'), false);
+    assert.ok(await within(1500, () => SCENE.past()?.at === 48), 'later ›: the newest kept state');
+    assert.equal(p.paneB.scrollTop, 120, 'landed in place: pane B where the reader stood in it, never set back to its top');
+    assert.deepEqual([opAtAsks(48) - at48, SCENE.past()?.links, SCENE.past()?.steps.later, SCENE.past()?.why?.id], [0, 'read', 'B3.history.now', 'B3.history.now'],
+      'no history read at 48, its text\'s nor its links\': its links the model\'s record\'s; "later ›" inert there, the draft as it stands now (issue #700)');
+    // three presses of "‹ earlier" while the first one's read is out
+    const release = fake.hold('op', { frame: F.opAt(44, F.retrieveDocVSpanSet(PASTD)) });
+    const was = { 44: pastAsks(44), 40: pastAsks(PAST_AT), 30: pastAsks(30), l44: linksAsks(44, 20), l30: linksAsks(30, 3) }, named = p.paneB.attrs['aria-labelledby'], title = titleName(p.cornerB.innerHTML);
+    await SCENE.step(-1); await aFrame();
+    const clause = t('B3.history.in-flight', { time: lastRead(STEP_MINUTE) });
+    assert.deepEqual([SCENE.past()?.at, SCENE.past()?.asked, SCENE.past()?.out, SCENE.past()?.running, SCENE.past()?.inFlight, SCENE.past()?.asking], [48, 44, 44, false, lastRead(STEP_MINUTE), true],
+      'the first press: its read out, pane B on the state it shows, the in-flight clause the asked row\'s time — no reissue running');
+    SCENE.markKept();
+    assert.ok(p.cornerB.innerHTML.includes(`<span class="inflight" data-string="B3.history.in-flight" aria-busy="true">${esc(clause)}${runningHTML()}</span>`) && p.cornerB.innerHTML.split('class="running"').length === 2 && p.paneB.attrs['aria-busy'] === undefined,
+      `the clause on its own busy element, the one running mark; pane B never busy: ${p.cornerB.innerHTML}`);
+    assert.deepEqual([p.paneB.attrs['aria-labelledby'], titleName(p.cornerB.innerHTML), p.paneB.attrs['aria-description']], [named, title, heard(clause)], 'named as it stood, described by the clause');
+    assert.ok(String(p.afterB[0].innerHTML).includes(`<button type="button" class="pl-row reading" data-row="44"`), `the asked row reading: ${p.afterB[0].innerHTML}`);
+    await SCENE.step(-1); await SCENE.step(-1);
+    assert.deepEqual([SCENE.past()?.asked, SCENE.past()?.out, pastAsks(PAST_AT) - was[40], pastAsks(30) - was[30]], [30, 44, 0, 0], 'two presses more, counted from where the person is going: the request at the third state back, nothing read of their own');
+    release();
+    assert.ok(await within(1500, () => SCENE.past()?.at === 30 && SCENE.past()?.links === 'read'), 'the third state lands, its links read');
+    assert.deepEqual([pastAsks(44) - was[44], pastAsks(PAST_AT) - was[40], pastAsks(30) - was[30], linksAsks(44, 20) - was.l44, linksAsks(30, 3) - was.l30], [1, 0, 1, 0, 1],
+      'one read of the first press\'s state, one of the third, none of the second; the first passed while its read was out, its links never read; the third\'s at its rest');
+    assert.deepEqual([SCENE.past()?.bottom, SCENE.past()?.steps], [true, { earlier: 'B3.history.first', later: null }], '"‹ earlier" inert at the draft\'s first state, the rows read reaching the feed\'s first position');
+    SCENE.markKept();
+    const first = sentence('B3.history.first'), earlier = /** @type {any} */ (stepIn(p, 'earlier'));
+    assert.ok(earlier && earlier.getAttribute('aria-disabled') === 'true' && earlier.dataset.inert === 'B3.history.first' && earlier.getAttribute('title') === first, `inert in its place, focusable, its reason its title: ${p.cornerB.innerHTML}`);
+    earlier.focus();
+    const said = p.said.length;
+    clickIn(p, 'b', earlier, true); await aFrame(); SCENE.markKept();
+    clickIn(p, 'b', stepIn(p, 'earlier'), true); await aFrame(); SCENE.markKept();
+    assert.deepEqual([p.said.slice(said).filter((w) => w === heard(first)).length, /** @type {any} */ (p.doc.activeElement).dataset?.step, SCENE.past()?.at], [2, 'earlier', 30], 'each press says why, again where the region holds it; the focus on the act; nothing moved');
+    HINT.act(); p.paneB.focus();
+    await keyAt(p.paneB, 'k');
+    assert.equal(HINT.standing()?.id, 'B3.history.read-only', 'a printable key at the stepped state: C-337, a past state read and never edited (issue #556)');
+  } finally { HINT.act(); restore(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('a step inside a minute lands at that commit, its row the one marked shown; refused there as reclaimed it is asked again at the position before the row\'s next commit — never its row\'s last; a return asks again the state asked last, that commit, never its row\'s last (B3-S7; issue #688; FP-23, FP-25)', () => onPage(async (p) => {
+  await onTrail(p);
+  const restore = pastAnswering({ ...STEP_STATES, [PAST_AT]: 'history_reclaimed', 43: PAST_OLD.length, 47: 20 });
+  try {
+    assert.equal(await stepsOpened(p), true, 'the scene shows');
+    const at43 = pastAsks(43), at47 = pastAsks(47);
+    await SCENE.step(-1);
+    assert.ok(await within(1500, () => SCENE.past()?.at === PAST_AT), 'the commit inside the minute lands');
+    assert.deepEqual([pastAsks(43) - at43, pastAsks(47) - at47, SCENE.past()?.figures.at, SCENE.past()?.why], [1, 0, 43, null], 'asked again at 43, the row\'s next commit less one, read there and shown as asked — never at 47, the row\'s');
+    assert.ok(SCENE.panes()?.b.blocks.map((b) => b.text).join('') === PAST_OLD && String(p.afterB[0].innerHTML).includes('<button type="button" class="pl-row" data-row="44" data-shown="1"'), `pane B the commit's state, its row marked: ${p.afterB[0].innerHTML}`);
+    const at = TRAIL.cursorIndex();
+    const board = GO.wholeBoard(); await flown(); await board;
+    assert.equal(TRAIL.all()[at].scene?.left?.asked, PAST_AT, 'the scene as left keeps the state asked last');
+    const asks = { 40: pastAsks(PAST_AT), 44: pastAsks(44) };
+    const back = GO.back(); await flown(); await back;
+    assert.deepEqual([SCENE.isOpen(), SCENE.past()?.at, SCENE.past()?.asked, pastAsks(PAST_AT) - asks[40], pastAsks(44) - asks[44]], [true, PAST_AT, PAST_AT, 1, 0], 'Back: the state asked last asked again, that commit — never its row\'s last');
+  } finally { restore(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('a step\'s read the board is busy on is reissued at the commit asked as the scene stands, the busy line and the in-flight clause standing, and a step to another state ends that reissue; a step\'s read refused otherwise is worded as a read — "could not read it as it stood ⟨time⟩", "read it again" beneath it, the asked row "not read" — pane B keeping the state it shows; "read it again" at that commit reads that commit (issues #688, #702; B3-S7)', () => onPage(async (p) => {
+  await onTrail(p);
+  let restore = pastAnswering({ ...STEP_STATES, [PAST_AT]: 'history_busy' });
+  try {
+    assert.equal(await stepsOpened(p), true, 'the scene shows');
+    await SCENE.step(-1);
+    assert.ok(await within(2500, () => SCENE.past()?.running === true), 'busy: the scene reads the state again');
+    assert.deepEqual([SCENE.past()?.at, SCENE.past()?.asked, SCENE.past()?.met, SCENE.past()?.why?.id, SCENE.past()?.inFlight], [44, PAST_AT, 'history_busy', 'B3.history.busy', lastRead(STEP_MINUTE)], 'pane B on the state it shows, the busy line, the clause');
+    const busy = pastAsks(PAST_AT);
+    assert.ok(await within(1500, () => pastAsks(PAST_AT) > busy) && pastAsks(44) >= 0, 'reissued at the commit asked');
+    await SCENE.step(1);
+    assert.ok(await within(1500, () => SCENE.past()?.asked === 44 && SCENE.past()?.at === 44 && SCENE.past()?.running === false), 'a step forward from the state asked, where the person was going: the state shown asked, read again and landed');
+    const ended = pastAsks(PAST_AT);
+    await new Promise((r) => setTimeout(r, 700));
+    assert.deepEqual([pastAsks(PAST_AT) - ended, SCENE.past()?.running, SCENE.past()?.met], [0, false, null], 'the reissue of the state before ended with the next ask, the line with it');
+    restore(); restore = pastAnswering({ ...STEP_STATES, [PAST_AT]: 'internal_panic' });
+    const text = SCENE.panes()?.b.blocks.map((b) => b.text).join('');
+    await SCENE.step(-1);
+    assert.ok(await within(1500, () => SCENE.past()?.met === 'internal_panic'), 'the step\'s read refused');
+    const why = SCENE.past()?.why;
+    assert.deepEqual([SCENE.past()?.at, SCENE.past()?.asked, why?.id, why?.again, SCENE.past()?.running, SCENE.panes()?.b.blocks.map((b) => b.text).join('') === text], [44, PAST_AT, 'L.history.unread', { inert: null }, false, true],
+      'pane B on the state it shows, the line a read\'s words, "read it again" beneath it, nothing reissued');
+    assert.ok(String(why?.text).includes(lastRead(STEP_MINUTE)) && String(p.afterB[0].innerHTML).includes('<button type="button" class="pl-row unread" data-row="44"'), `that state's time, the asked row "not read": ${why?.text} ${p.afterB[0].innerHTML}`);
+    restore(); restore = pastAnswering(STEP_STATES);
+    SCENE.markKept();
+    const at40 = pastAsks(PAST_AT);
+    clickIn(p, 'b', againIn(p), false);
+    assert.ok(await within(1500, () => SCENE.past()?.at === PAST_AT), '"read it again": the commit asked read and landed');
+    assert.equal(pastAsks(PAST_AT) - at40, 1, 'read at that commit, inside its row');
+  } finally { restore(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('a step\'s read refused at the board\'s floor stands the floor\'s line — beneath the row whose state stood at the floor, a hairline labelled "⟨board⟩ keeps this draft\'s history back to ⟨time⟩", ⟨time⟩ the floor\'s row\'s, never L.history.floor where a state before the newest is readable — pane B, its corner, its name and its description as they stood, the floor\'s words said once, the next step counting from the state shown; "‹ earlier" inert at the line with those words; each row below it, a publication\'s among them, in its place, focusable, opening nothing and saying why at every press (skep-frontend #663\'s design decision; issue #700; FP-41)', () => onPage(async (p) => {
+  await onTrail(p);
+  const T42 = PAST_T0 + 3 * 60000, rowKey = FAKE.keyOf('changes', { session: 's-1', since: 41, limit: 1 });
+  const PUB = { position: 25, at: 25, op: 'publish', docs: [PASTD + '.1', PASTD], class: 'published', attest: { alg: 'mldsa65-ed25519', sig: 'ab' }, time: PAST_T0 - 60000 };
+  const restore = pastAnswering({ ...STEP_STATES, 30: { floor: 42 } });
+  script[rowKey] = { result: { entries: [{ ...pastRow(42, T42), docs: ['1.0.1.0.97'] }], next: 42, head: 60 } };
+  try {
+    assert.equal(await stepsOpened(p, [PUB, ...STEP_ROWS]), true, 'the scene shows');
+    await SCENE.step(-1);
+    assert.ok(await within(1500, () => SCENE.past()?.at === PAST_AT), 'a state back, inside the minute');
+    SCENE.markKept();
+    const corner = p.cornerB.innerHTML, named = p.paneB.attrs['aria-labelledby'], described = p.paneB.attrs['aria-description'], at30 = pastAsks(30), said = p.said.length;
+    await SCENE.step(-1);
+    const words = t('B3.history.reclaimed', { board: BOARD_NAME(), time: timeOf(T42) });
+    assert.ok(await within(1500, () => !!SCENE.past()?.cut), 'the floor\'s line placed');
+    SCENE.markKept();
+    assert.deepEqual([SCENE.past()?.at, SCENE.past()?.asked, SCENE.past()?.met, SCENE.past()?.why, SCENE.past()?.cut], [PAST_AT, PAST_AT, null, null, { at: 42, cut: PAST_AT, below: 30, words: { id: 'B3.history.reclaimed', text: words } }],
+      'pane B on the state it shows, the state asked that one again, no line; the floor\'s line beneath the minute\'s row, steps stopping at its first commit');
+    assert.deepEqual([p.cornerB.innerHTML.replace(/<span class="step-slot earlier".*?<\/span>/, ''), p.paneB.attrs['aria-labelledby'], p.paneB.attrs['aria-description']], [corner.replace(/<span class="step-slot earlier".*?<\/span>/, ''), named, described],
+      'its corner but "‹ earlier", its name and its description as they stood: nothing stands in for the state (issue #687)');
+    assert.deepEqual([pastAsks(30) - at30, p.said.slice(said).filter((w) => w === heard(asSentence({ id: 'B3.history.reclaimed', text: words }))).length], [1, 1], 'asked once; the floor\'s words said once');
+    const list = String(p.afterB[0].innerHTML);
+    assert.ok(list.includes(`data-row="44" data-shown="1" aria-current="true" tabindex="-1">`) && list.includes(`</button><div class="pl-floor" data-string="B3.history.reclaimed">${esc(words)}</div>`)
+      && /<button type="button" class="pl-row below" data-row="30" aria-disabled="true" data-inert="B3.history.reclaimed"/.test(list) && /class="pl-row below" data-row="25" aria-disabled="true"/.test(list) && !list.includes('L.history.floor'),
+      `the hairline beneath the row whose state stood at the floor, the rows below it in their places, inert, a publication's among them: ${list}`);
+    assert.equal(SCENE.past()?.steps.earlier, 'B3.history.reclaimed', '"‹ earlier" inert at the line, its reason the floor\'s words');
+    const asks = { 30: pastAsks(30), 25: opAtAsks(25) }, said2 = p.said.length;
+    SCENE.rowAct(30); await aFrame(); SCENE.rowAct(25); await aFrame(); SCENE.rowAct(30); await aFrame();
+    assert.deepEqual([pastAsks(30) - asks[30], opAtAsks(25) - asks[25], p.said.slice(said2).filter((w) => w).length, SCENE.past()?.at], [0, 0, 3, PAST_AT], 'a row below the line opens nothing, a publication\'s as every one, each press saying why');
+    clickIn(p, 'b', stepIn(p, 'earlier'), false); await aFrame();
+    assert.deepEqual([pastAsks(30) - asks[30], p.said.at(-1)], [0, heard(asSentence({ id: 'B3.history.reclaimed', text: words }))], '"‹ earlier" reads nothing, saying the floor\'s words');
+  } finally { delete script[rowKey]; restore(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('"‹ earlier" at the oldest row read where the reads end at the feed\'s floor — the first position its files hold — is inert with the floor\'s words for it, never "this is the draft\'s first state"; "later ›" at the newest kept state where the draft held words the board had not kept says it is the newest kept state and what was written since is not yet kept; a step into a folded day opens it alone, the row of the state shown brought into view (B3-S7; skep-frontend #661, #662)', () => onPage(async (p) => {
+  await onTrail(p);
+  const restore = pastAnswering(STEP_STATES);
+  try {
+    const entries = STEP_ROWS.slice(1), rows = PAST.rowsOf(entries);
+    const got = /** @type {import('./scene.js').PastGot} */ (await SCENE.pastState(PASTD, rows, rows[1], 60));
+    await SCENE.open(PASTD, PASTD, { past: { draft: PASTD, entries, from: 35, bottom: true, head: 60, asked: 44, unkept: false, figures: { pages: 1, read: 3, readMs: 0 } } }, { past: got });
+    await SCENE.step(-1);
+    assert.ok(await within(1500, () => SCENE.past()?.at === PAST_AT), 'a state back, the oldest commit read');
+    const floor = t('B3.history.reclaimed', { board: BOARD_NAME(), time: timeOf(STEP_MINUTE) });
+    assert.deepEqual([SCENE.past()?.bottom, SCENE.past()?.steps.earlier], [true, 'B3.history.reclaimed'], 'the reads end at the feed\'s floor: "‹ earlier" inert with the floor\'s words');
+    const said = p.said.length;
+    await SCENE.step(-1);
+    assert.deepEqual([p.said.slice(said), SCENE.past()?.at], [[heard(asSentence({ id: 'B3.history.reclaimed', text: floor }))], PAST_AT], 'its press says the oldest row\'s time the board keeps back to — never the draft\'s first state');
+    SCENE.close();
+  } finally { restore(); }
+  const held = /** @type {any} */ ({ held: 1, doc: PASTD, base: 48, frame: { op: 'insert', doc: PASTD, at: { ordinal: '1', subspace: '1' }, values: ['x'], as_of: 48, id: 'h.1' }, cause: 'unreachable', sent: false, time: 1 });
+  WRITE.setHeld(PASTD, [held]);
+  try {
+    await pastOpened(p);
+    assert.deepEqual([SCENE.past()?.at, SCENE.past()?.unkept, SCENE.past()?.steps.later], [48, true, 'L.history.newest-kept'], 'the newest kept state, words not yet kept since');
+    SCENE.markKept();
+    const later = /** @type {any} */ (stepIn(p, 'later')), reason = sentence('L.history.newest-kept');
+    assert.ok(later && later.dataset.inert === 'L.history.newest-kept' && later.getAttribute('title') === reason, `"later ›" inert with its reason: ${p.cornerB.innerHTML}`);
+    const said = p.said.length;
+    clickIn(p, 'b', later, true); await aFrame();
+    assert.deepEqual(p.said.slice(said), [heard(reason)], 'said at its press');
+  } finally { SCENE.close(); WRITE.setHeld(PASTD, []); WRITE.setKept(PASTD, null); }
+  const restore2 = pastAnswering(STEP_STATES);
+  try {
+    const OLD = Date.UTC(2026, 10, 14, 9), rows = [{ ...STEP_ROWS[0], time: OLD }, ...STEP_ROWS.slice(1)];
+    assert.equal(await stepsOpened(p, rows), true, 'the scene shows, its mint on a day of its own');
+    const keys = /** @type {string[]} */ (SCENE.past()?.days.map((d) => d.key));
+    SCENE.foldDay(keys[0]); SCENE.foldDay(keys[1]);
+    assert.deepEqual(SCENE.past()?.days.map((d) => d.folded), [true, true], 'both days folded by the reader');
+    await SCENE.step(-1); assert.ok(await within(1500, () => SCENE.past()?.at === PAST_AT));
+    assert.deepEqual(SCENE.past()?.days.map((d) => d.folded), [false, true], 'the shown state\'s day opened, the other as the reader left it (issue #662)');
+    await SCENE.step(-1); assert.ok(await within(1500, () => SCENE.past()?.at === 30));
+    assert.deepEqual(SCENE.past()?.days.map((d) => d.folded), [false, false], 'a step into the folded day opens it');
+  } finally { restore2(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('the links that stood on a past state are read once it rests there, at the position its text was read at, after its text\'s read — "links — arriving" after its hand in its corner and its description while out, its count places hollow, its name unchanged — then the counts the answer\'s and the clause gone; past the bound "the links on this state are not shown — reading them failed" in the clause\'s place, the counts hollow still (B3-S7; skep-frontend #704)', () => onPage(async (p) => {
+  await onTrail(p);
+  const key = pastLinksKey(44, 20), release = fake.hold('op', { frame: F.opAt(44, F.findLinksV(PASTD, 1, 20)) });
+  const restore = pastAnswering(STEP_STATES);
+  try {
+    const opening = stepsOpened(p);
+    assert.equal(await opening, true, 'the scene shows');
+    const text = fake.asked.indexOf(pastKey(44)), links = fake.asked.indexOf(key);
+    assert.ok(text >= 0 && links > text, 'the links read sent after the state\'s text read');
+    SCENE.markKept();
+    assert.deepEqual([SCENE.past()?.links, p.paneB.attrs['aria-labelledby']], ['arriving', 'sceneB-title sceneB-name'], 'arriving at its rest; named by its title and address');
+    const arriving = t('B3.history.links.arriving');
+    assert.ok(p.cornerB.innerHTML.includes(`<span class="links-word" data-string="B3.history.links.arriving">${esc(arriving)}</span>`) && p.paneB.attrs['aria-description'] === heard(arriving),
+      `"links — arriving" in its corner and its description: ${p.cornerB.innerHTML}`);
+    release();
+    assert.ok(await within(1500, () => SCENE.past()?.links === 'read'), 'the links read answered');
+    SCENE.markKept();
+    assert.deepEqual([p.cornerB.innerHTML.includes('links-word'), p.paneB.attrs['aria-description'], p.paneB.attrs['aria-labelledby']], [false, undefined, 'sceneB-title sceneB-name'], 'the clause gone from the corner and the description, the name as it stood');
+  } finally { SCENE.close(); release(); restore(); WRITE.setKept(PASTD, null); }
+  const failing = pastAnswering({ ...STEP_STATES });
+  script[pastLinksKey(44, 20)] = { refused: { kind: 'refused', name: 'scan_busy', status: 503, code: 'scan_busy', detail: null, op: 'find_links_v', site: {}, body: { error: 'scan_busy' } } };
+  try {
+    assert.equal(await stepsOpened(p), true, 'the scene shows again');
+    assert.ok(await within(2500, () => SCENE.past()?.links === 'failed'), 'past the bound: failed');
+    SCENE.markKept();
+    const failed = t('B3.history.links.failed');
+    assert.ok(p.cornerB.innerHTML.includes(`<span class="links-word" data-string="B3.history.links.failed">${esc(failed)}</span>`) && p.paneB.attrs['aria-description'] === heard(failed), `the failed words in the clause's place: ${p.cornerB.innerHTML}`);
+  } finally { script[pastLinksKey(44, 20)] = { result: { as_of: 44, resp: 'addrs', addrs: [] } }; failing(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('in a draft\'s history Alt+↓ and Alt+↑ step the state pane B shows one back and one forward wherever no caret holds the focus — at either pane\'s walk, at the list — on both platforms, Option on macOS read off the key, never the walk\'s step nor the list\'s; at a caret in the editor pane the arrows stay the caret\'s; the list\'s ↓ taken by the list (D5 K-102, K-71, §0)', () => onPage((p) => withEditors(async () => {
+  await onTrail(p);
+  const restore = pastAnswering(STEP_STATES), mac = KEYS.MAC;
+  try {
+    assert.equal(await stepsOpened(p), true, 'the scene shows');
+    const list = p.afterB[0];
+    for (const platform of [true, false]) {
+      KEYS._platform(platform);
+      const on = platform ? 'macOS' : 'elsewhere';
+      for (const [target, where, name] of /** @type {const} */ ([[p.paneB, 'scene', 'pane B\'s walk'], [p.paneA, 'scene', 'pane A\'s walk'], [list, 'scene-acts', 'the list']])) {
+        // the list's element is the scene's one, made on the file's first page: the focus stood on it on this one
+        if (target === list) p.doc.activeElement = list; else target.focus();
+        const focus = SCENE.panes()?.b.focus;
+        assert.equal(await keyAt(target, 'ArrowDown', { altKey: true }, where), true, `${on}, ${name}: Alt+↓ taken`);
+        assert.ok(await within(1500, () => SCENE.past()?.at === PAST_AT), `${on}, ${name}: a state back`);
+        assert.equal(SCENE.panes()?.b.focus, focus, `${on}, ${name}: never the walk's step`);
+        await keyAt(target, 'ArrowUp', { altKey: true }, where);
+        assert.ok(await within(1500, () => SCENE.past()?.at === 44), `${on}, ${name}: Alt+↑ a state forward`);
+      }
+      p.doc.activeElement = list;
+      const asked = SCENE.past()?.asked;
+      assert.equal(await keyAt(list, 'ArrowDown', {}, 'scene-acts'), true, `${on}: the list's ↓ taken by the list`);
+      assert.equal(SCENE.past()?.asked, asked, `${on}: the list's ↓ no step of the state`);
+    }
+    KEYS._platform(mac);
+    p.paneA.focus();
+    assert.ok(LAYER.placeCaret(PASTD, 4), 'a caret placed in the editor pane');
+    const asked = SCENE.past()?.asked;
+    await keyAt(p.paneA, 'ArrowDown', { altKey: true }, 'caret');
+    await aFrame();
+    assert.deepEqual([SCENE.past()?.asked, SCENE.past()?.out, LAYER.caret()?.live], [asked, null, true], 'at a caret Alt+↓ stays the caret\'s: no state asked, the caret live');
+  } finally { KEYS._platform(mac); LAYER.dropCaret(); restore(); WRITE.setKept(PASTD, null); }
+}), { acts: true }));
 
 test('a hand is named by its fields, each in its face: a key of the reader\'s own by its device label alone, as their byline names them; another\'s key by its label and its fingerprint\'s cue; a key no label names by its cue; a keyless hand by its words — the list and a past state\'s corner alike (issue #677; FP-34)', () => {
   const own = '3c'.repeat(32), theirs = '4d'.repeat(32), unnamed = '5e'.repeat(32);

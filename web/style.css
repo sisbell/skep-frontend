@@ -288,6 +288,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .sp.gap { color:#4b5563; }
 /* the chrome inside a block is never the document's bytes: a drag crosses it unselected, the copy never carries it */
 .dtext .sym, .dtext .edge { user-select:none; -webkit-user-select:none; }
+/* a count place while the links it counts are not yet read — a past state's (B3-S7): hollow, foundations §2.1's still-arriving
+   form, never a count of no link */
+.dtext .others.edge.arriving { display:block; width:2.2em; height:1em; margin-top:.25em; border:1px dashed var(--dim); border-radius:2px; box-sizing:border-box; }
+#sceneB .dtext .others.edge.arriving { margin-left:auto; }
 /* THE CARET'S MARK (D5 K-70; FP-31): the page's own caret, set by T-LAYER at its character boundary in the standing part
    each frame — a mark of no width, so it moves no word and sets no line, one em tall on the text's baseline; hollow
    where the caret is kept, the text left to the walk (K-77) */
@@ -376,7 +380,20 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    tabular figures as wide as T-ARTICLE sets it, an empty box on a faint ground while the count is not known; that the state
    its act asked is read again, the running mark after its words — each on a line of its own, wrapped between its words and
    never cut, folded or hidden, in either form — on one line in a head's row its words fit */
-.corner .not-last, .corner .inflight { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
+.corner .not-last, .corner .inflight, .corner .links-word { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
+/* a past state's one-state steps (B3-S7; D5 K-102; FP-41): "‹ earlier" and "later ›" at the two ends of the corner's first
+   row, each in a slot of its label's width at the corner's size (T-ARTICLE's `stepsHTML`), so neither moves as the words
+   between them change; beside its column one line of acts above the title, "later ›" ending the second row where one row
+   cannot hold both; at its document's head the slots at the ends of the title's first row (T-LAYER's `sceneHead`); an
+   inert step dim, still focusable and pressed for its reason */
+.corner .steps { display:flex; flex-wrap:wrap; justify-content:space-between; column-gap:var(--corner-pad, 6px); }
+.corner .steps > .step-slot.later { margin-left:auto; text-align:right; }
+.corner .step-slot { display:inline-block; flex:none; white-space:nowrap; }
+.corner button.step { color:#cfd6df; text-decoration:underline dotted; cursor:pointer; white-space:nowrap; }
+.corner button.step.inert { color:#8b8f96; text-decoration:none; cursor:default; }
+:is(#corners, .pane) .corner.head > .hsteps { position:absolute; left:0; right:0; z-index:3; pointer-events:none; }
+:is(#corners, .pane) .corner.head > .hsteps > .hslot { pointer-events:auto; }
+:is(#corners, .pane) .corner.head > .hsteps > .hslot:last-child { justify-content:flex-end; }
 .corner .not-last .count { display:inline-block; height:1lh; vertical-align:top; text-align:center; white-space:pre; font-variant-numeric:tabular-nums; }
 .corner .not-last .count.pending { background:rgba(139,143,150,.12); border-radius:2px; }
 /* THE FACE BENEATH THE KEPT WORD (B3-S2; P48; P67): a moved document's, never yielding — whole, its sentence and its hands
@@ -685,13 +702,17 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #scenepast.after { flex:none; align-self:stretch; margin-top:1em; border-top:1px solid var(--line); padding-top:6px; }
 #sceneB.past-after:not(.head) { flex-wrap:wrap; }
 #sceneB.past-after:not(.head) > #scenepast.after { flex:0 0 100%; }
-#scenepast .pl-now, #scenepast .pl-floor { padding:0 0 .2em 6px; color:#cfd6df; }
+#scenepast .pl-now, #scenepast .pl-floor { padding-bottom:.2em; padding-left:6px; color:#cfd6df; }
 #scenepast .pl-head { position:sticky; top:var(--past-held, 0px); z-index:1; display:block; width:100%; margin:0; padding:.15em 0 .15em 6px; border:0; border-left:3px solid transparent; background:var(--bg); color:#cfd6df; font:inherit; text-align:left; white-space:normal; }
 #scenepast button.pl-head { cursor:pointer; }
 #scenepast .pl-head .pl-fold { margin-right:.3em; }
 #scenepast .pl-head .pl-hands { display:block; color:#8b8f96; }
 #scenepast .pl-who { padding-left:9px; color:#8b8f96; }
-#scenepast .pl-row { display:flex; align-items:baseline; padding-left:6px; border-left:3px solid transparent; color:#cfd6df; font-variant-numeric:tabular-nums; }
+#scenepast .pl-row { display:flex; align-items:baseline; width:100%; margin:0; padding:0 0 0 6px; border:0; border-left:3px solid transparent; background:transparent; color:#cfd6df; font:inherit; font-variant-numeric:tabular-nums; text-align:left; cursor:pointer; }
+#scenepast .pl-row.below { cursor:default; }
+/* the floor's line (B3-S7): a hairline across the column labelled with the floor's words, held in view below its day's head
+   as the rows beneath it scroll; the rows below it in their places, nothing greyed */
+#scenepast .pl-floor { position:sticky; top:calc(var(--past-held, 0px) + 1.6em); z-index:1; border-top:1px solid #8b8f96; background:var(--bg); padding-top:.2em; }
 #scenepast .pl-time { flex:none; min-width:var(--pl-time, auto); }
 #scenepast .pl-join { flex:none; white-space:pre; }
 #scenepast .pl-what { flex:1 1 0; min-width:0; }

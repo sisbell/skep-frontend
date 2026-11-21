@@ -380,8 +380,20 @@ STATES = [
          how="once the page is quiet, `op` armed to refuse the read of the state before the newest change as `internal_panic`, then the act clicked; after the shots, the corner's \"read it again\" clicked, the arm spent (skep-frontend #702)",
          claim='the state asked refused and not read again, the newest kept state stands in its place under the line saying it could not be read as it stood at that state\'s time and that the board refused the read, the refusal\'s name after it set as code (L.history.unread, L.history.unread.refused) — no word of a write — on rows held at the pane\'s top; beneath it "read it again" (L.history.read-again), live, in a slot of its own width; the asked row "not read" (L.history.not-read); pane B named by its title, the line, then its address as the AX tree computes them, with no description; the state asked once and never again by the scene; every word of both panes\' corners inside the box it stands in; the act\'s press asks the state again, which the test board reads: pane B on the state asked, the line, the act and "not read" gone'),
     dict(screen='B3-S7', state='unkept', walk='W-08', step=8, drawn=True,
-         how="a line of the case's own draft held (`op` armed to answer `held`), then the act clicked (skep-frontend #661)",
-         claim='the history opens on the newest kept state, the held words standing in the current pane alone, the list\'s top line "now — not yet kept" (L.history.unkept)'),
+         how="a line of the case's own draft held (`op` armed to answer `held`), then the act clicked; \"later ›\" pressed (skep-frontend #661)",
+         claim='the history opens on the newest kept state, the held words standing in the current pane alone, the list\'s top line "now — not yet kept" (L.history.unkept); "later ›" inert there in its place, its press saying it is the newest kept state and what was written since is not yet kept (L.history.newest-kept)'),
+    dict(screen='B3-S7', state='steps', walk='W-08', step=8, drawn=True,
+         how="three bursts typed into the case's own draft and kept, two in one minute and one past the next minute's turn, then the act clicked; at each width a row's act, \"‹ earlier\" and \"later ›\" clicked, Alt+↓ and Alt+↑ at pane B's walk, Tab, → and Enter at its corner, the list's ↓ and Enter, Alt+↓ pressed again while a state read is held at its answer, the newest row's act and the oldest's, and \"‹ earlier\" down to the draft's first state; then the window at STACKED_BESIDE (B3-S7; D5 K-102; skep-frontend #677, #687)",
+         claim='"‹ earlier" and "later ›" (B3.history.earlier, B3.history.later) at the two ends of pane B\'s corner\'s first row, each in a slot of its own, every word inside the box it stands in; each act and key one state back or forward — a commit inside the minute\'s row reached, that row marked shown — pane B the text the test board held at that position, named by its new title; a held key\'s repeats one further read; "‹ earlier" inert at the draft\'s first state, "later ›" at the newest kept state (B3.history.first, B3.history.now), each saying why at a press, the focus on it; beside its column the steps at the ends of its first row, the title beneath them'),
+    dict(screen='B3-S7', state='step-in-flight', walk='W-08', step=8, drawn=True,
+         how="a step's state read held at its answer (`drv.held`), then answered `history_busy` at every attempt the read makes, then let through (B3-S7; skep-frontend #688, #696, #702)",
+         claim='while the step\'s read is out pane B keeps its state, the asked row says "reading" (B3.history.reading) and pane B\'s corner "reading ⟨time⟩" (B3.history.in-flight) — the asked row\'s time — on its own busy element with the one running mark, in the description and not the name, nothing reissued; answered busy, the line "history is busy — trying again" (B3.history.busy), the scene reading it again, the mark on the clause and never on the line or pane B; let through, pane B set to the state in one step, the line and the clause gone'),
+    dict(screen='B3-S7', state='floor', walk='W-08', step=8, drawn=True,
+         how="once the page is quiet, `op` armed to refuse a step's read as `history_reclaimed` naming as its floor the first position of the row above the state asked, then \"‹ earlier\" clicked; a row below the line pressed (skep-frontend #663)",
+         claim='the floor\'s line across the list beneath the row whose state stood at the floor, labelled "⟨board⟩ keeps this draft\'s history back to ⟨time⟩ — earlier states are not readable here" (B3.history.reclaimed), ⟨time⟩ the floor\'s row\'s; pane B, its corner and its name as they stood; a row below it in its place, focusable, opening nothing and saying why at its press; "‹ earlier" inert with the same words'),
+    dict(screen='B3-S7', state='links', walk='W-08', step=8, drawn=True,
+         how="a row's act, its state's links read held at its answer (`drv.held`); then answered; then Alt+↓ twice while a text read is held (skep-frontend #704)",
+         claim='at a rest the state\'s links read by `/op-at` with `find_links_v` at the position its text was read at, after that read; while out "links — arriving" (B3.history.links.arriving) after its hand in pane B\'s corner and its description, its name unchanged, its count places hollow; answered, the clause gone and the counts the answer\'s; a state passed while its text read was out never its links read'),
     # B3-S1's scene rule (skep-frontend #556): a reading scene's pane holding the person's own draft is its editor
     dict(screen='B3-S1', state='pane-typed', walk='W-08', step=3, drawn=True,
          how="`window.__skep.scene.open(mine, DOC)`, a click on a word of pane A's text, then keys typed there; Mod+Z; a line held there (`op` armed `held`) (D5 K-70, K-72, K-75)",
@@ -2912,11 +2924,12 @@ PAST_TITLE = '''(async (down) => { const pane = document.getElementById("sceneB"
   pane.scrollTop = s0; await frames();
   return {at, scrolled, moved, focused, hidden, kind: !!c.querySelector(".kind"), rows: ((window.__skep.scene.panes() || {}).b || {}).heldRows}; })(%s)'''
 # a past state's pane's corner and name as the person meets them at any fit (issue #687): whether its corner stands at its
-# document's head, whether its title leads it — beside its column its first item, at its head on its first row — and the
+# document's head, whether its title leads it — beside its column its first item after the line of its one-state steps
+# (B3-S7), at its head on its first row — and the
 # past line's words; whether a kind's slot stands in it; the words the past line's own element names pane B by, how pane B
 # is labelled and the address its head names
 PAST_LEAD = '''(() => { const pane = document.getElementById("sceneB"), c = pane && pane.querySelector(":scope > .corner"); if (!c) return null;
-  const head = c.classList.contains("head"), t = c.querySelector('[data-string="B3.history.row"]'), lead = head ? c.querySelector('.hrow[data-row="0"] .hslot > .title') : c.firstElementChild;
+  const head = c.classList.contains("head"), t = c.querySelector('[data-string="B3.history.row"]'), lead = head ? c.querySelector('.hrow[data-row="0"] .hslot > .title') : [...c.children].find((x) => !x.classList.contains("steps"));
   const name = document.getElementById("sceneB-title"), addr = document.getElementById("sceneB-name");
   return {head, leads: !!lead && !!t && lead.classList.contains("title") && lead.contains(t), words: t ? t.textContent : null, kind: !!c.querySelector(".kind"),
           name: name && name === t ? name.getAttribute("aria-label") : null, labelled: pane.getAttribute("aria-labelledby"), address: addr ? addr.textContent : null}; })()'''
@@ -2987,6 +3000,40 @@ UNREAD_SEEN = '''(() => { const pane = document.getElementById("sceneB"), c = pa
           mark: mark ? {words: mark.textContent, id: mark.dataset.string || null, row: marked ? Number(marked.dataset.row) : null} : null,
           labelled: pane.getAttribute("aria-labelledby"), description: pane.getAttribute("aria-description")}; })()'''
 
+# pane B's one-state steps as a person meets them (B3-S7; D5 K-102): each step's words, its string, whether it stands inert and
+# the string of its reason, its tab stop, its box and its slot's box on screen; whether the corner stands at its document's head,
+# its box and its content box; the line the steps stand on — its class, its role and its box — and the box of the title's first
+# line
+STEPS_SEEN = '''(() => { const c = document.querySelector("#sceneB > .corner"); if (!c) return null;
+  const box = (e) => { if (!e) return null; const q = e.getBoundingClientRect(); return {left: q.left, right: q.right, top: q.top, bottom: q.bottom}; };
+  const s = getComputedStyle(c), cb = c.getBoundingClientRect(), px = (v) => parseFloat(v) || 0;
+  const act = (way) => { const b = c.querySelector('button[data-step="' + way + '"]'); return b ? {words: b.textContent, id: b.dataset.string || null, inert: b.getAttribute("aria-disabled"), reason: b.dataset.inert || null, stop: b.tabIndex, box: box(b), slot: box(b.closest(".step-slot"))} : null; };
+  const line = c.querySelector(":scope > .hsteps, :scope > .steps"), title = c.querySelector('[data-string="B3.history.row"]'), tl = title && title.querySelector(".tl");
+  return {head: c.classList.contains("head"), corner: box(c), content: {left: cb.left + px(s.borderLeftWidth) + px(s.paddingLeft), right: cb.right - px(s.borderRightWidth) - px(s.paddingRight)},
+          line: line ? {cls: line.className, role: line.getAttribute("role"), box: box(line)} : null, earlier: act("earlier"), later: act("later"), title: box(tl || title)}; })()'''
+# a row of the list clicked, as a pointer's click makes it — by its last position (`data-row`); whether it stood to click
+ROW_CLICK = '''((last) => { const b = document.querySelector(`#scenepast button.pl-row[data-row="${last}"]`); if (b) b.click(); return !!b; })(%d)'''
+# one of pane B's steps clicked (formatted with its way, as JSON); whether it stood to click
+STEP_CLICK = '''((way) => { const b = document.querySelector(`#sceneB > .corner button[data-step="${way}"]`); if (b) b.click(); return !!b; })(%s)'''
+# what the platform's focus stands on in the scene: a step's way, a row's last position, a day's key, else the element's id or tag
+SCENE_FOCUS = '''(() => { const a = document.activeElement; if (!a) return null; const d = a.dataset || {};
+  return d.step ? "step:" + d.step : d.row ? "row:" + d.row : d.day ? "day:" + d.day : a.id || a.tagName; })()'''
+# the links' word in pane B's corner, its string and whether it stands after the title; how many count places of pane B's article
+# stand hollow, and how many hold a count
+LINKS_SEEN = '''(() => { const c = document.querySelector("#sceneB > .corner"), w = c && c.querySelector(".links-word"), t = c && c.querySelector('[data-string="B3.history.row"]');
+  const art = document.querySelector("#sceneB > article.dtext");
+  return {word: w ? {words: w.textContent, id: w.dataset.string || null, after_title: !!t && !!(t.compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING)} : null,
+          hollow: art ? art.querySelectorAll(".others.edge.arriving").length : null, counts: art ? art.querySelectorAll(".others.edge:not(.arriving)").length : null}; })()'''
+# the page's `op` calls from a mark on: each `/op-at` frame's position and op, and its answer's outcome
+OP_AT_CALLS = '''((from) => window.__skep.bridge.calls().slice(from).filter((c) => c.name === "op" && /"at":/.test(c.frame || ""))
+  .map((c) => { let f = null; try { f = JSON.parse(c.frame); } catch (e) { f = null; } return f ? {at: f.at, op: f.frame && f.frame.op, outcome: c.outcome} : null; }).filter((x) => x))(%d)'''
+# pane B's in-flight clause as a person meets it now: its words, whether its element is busy and carries the one running mark,
+# the running marks pane B's corner holds, the line saying why pane B shows its state — its words, whether it is busy and carries
+# a mark — whether pane B is busy, and whether a row of the list says "reading"
+IN_FLIGHT_NOW = '''(() => { const c = document.querySelector("#sceneB > .corner"), e = c && c.querySelector(".inflight"), pane = document.getElementById("sceneB"), l = document.getElementById("scenepast"), why = c && c.querySelector(".why");
+  const words = e ? [...e.childNodes].filter((n) => !(n.classList && n.classList.contains("running"))).map((n) => n.textContent).join("") : null;
+  return {words, busy: e ? e.getAttribute("aria-busy") : null, mark: !!e && !!e.querySelector('.running[data-string="L.running"]'), marks: c ? c.querySelectorAll(".running").length : 0,
+          why: why ? {words: why.textContent, busy: why.getAttribute("aria-busy"), mark: !!why.querySelector(".running")} : null, pane_busy: pane ? pane.getAttribute("aria-busy") : null, reading: !!l && !!l.querySelector(".pl-reading")}; })()'''
 
 def past_rows(ctx, r, shoot, red, ops_allowed, m):
     """A DRAFT's HISTORY (B3-S7; skep-frontend #661, #662, #585, #617), on the machine's page at the case's own draft
@@ -3669,13 +3716,379 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         ok = (P.get('unkept') is True and L.get('now') == t(ctx, 'L.history.unkept') and bool(rows) and P.get('at') == rows[0]['last']
               and flat(pane_text('b')) == flat(text2) and 'Held.' in pane_text('a') and 'Held.' not in pane_text('b'))
         panes = ctx.js('window.__skep.scene.panes()') or {}
+        # "later ›" inert at the newest kept state, its press saying it is the newest kept state and what was written since is not
+        # yet kept, the focus on it (skep-frontend #661's words; FP-41)
+        later = (ctx.js(STEPS_SEEN) or {}).get('later') or {}
+        ctx.js('(() => { const b = document.querySelector(\'#sceneB > .corner button[data-step="later"]\'); if (b) b.focus(); })()'); ctx.frames(1)
+        ctx.drv.key('Enter'); ctx.frames(3)
+        said, at = live(ctx), ctx.js(SCENE_FOCUS)
+        want = heard(ctx, sentence(ctx, 'L.history.newest-kept'))
+        later_ok = later.get('inert') == 'true' and later.get('reason') == 'L.history.newest-kept' and said == want and at == 'step:later' and (P.get('steps') or {}).get('later') == 'L.history.newest-kept'
         return {'the state': (ok, {'unkept': P.get('unkept'), 'now': L.get('now'), 'at': P.get('at'), 'top': rows[0]['last'] if rows else None, 'why': P.get('why'), 'a': pane_text('a')[-40:], 'b': pane_text('b')[-40:],
                                    'b_blocks': len((panes.get('b') or {}).get('blocks') or []), 'b_derived': (panes.get('b') or {}).get('derived'), 'want_b': text2[-40:], 'rows': [(x['first'], x['last'], x['kind']) for x in rows[:3]]}),
+                '"later ›" inert with the newest kept state\'s words': (later_ok, {'later': later, 'said': said, 'want': want, 'focus': at, 'steps': P.get('steps')}),
                 "the corners' words in their boxes": fit_part(ctx, figures, 'unkept', w, *pane_corners)}
     shoot('unkept', unkept_check)
     close_scene()
     out, back = drop_all(k)
     r.check(bool(out) and back, "B3-S7 · unkept: the held line dropped, the draft reads \"kept\" again", {'out': out})
+
+    # ---- 3b: the one-state steps and the faces they meet (B3-S7; D5 K-102; skep-frontend #663, #677, #687, #688, #696, #704) ------
+    past_now = lambda: ctx.js('window.__skep.scene.past()') or {}
+    rows_now = lambda: [row for dd in past_now().get('days') or [] for row in dd['rows']]
+
+    def commits():
+        """every commit of the rows read, newest first (M-PAST's `commitsOf`)"""
+        return [x for row in rows_now() for x in sorted(row['positions'], reverse=True)]
+
+    def board_at(at):
+        """the draft's text as the test board held it at a position, read off the board's history as a reading row (M-PUMP's
+        `stateAt`): the oracle a landing is held to"""
+        return ctx.js('(async (a, at) => { const s = await (await import("./model/pump.js")).stateAt(a, at); return "refused" in s ? null : s.runs.map((x) => x.text || "").join(""); })(%s, %d)' % (json.dumps(mine), at), timeout=60)
+
+    def landed(at, max_s=20):
+        """pane B rests at a commit: its state shown, nothing asked further and nothing read"""
+        ok = wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.at === %d && p.asked === %d && p.out == null && !p.running; })()' % (at, at), max_s)
+        ctx.frames(2)
+        return ok
+
+    def kept_burst(words):
+        caret_end(first_line()); press(words)
+        return state_kept()
+
+    def next_minute(max_s=75):
+        minute = ctx.js('Math.floor(Date.now() / 60000)')
+        t0 = time.time()
+        while ctx.js('Math.floor(Date.now() / 60000)') <= minute and time.time() - t0 < max_s:
+            time.sleep(0.5)
+        time.sleep(1.0)
+
+    # three bursts kept: two in one minute — the row of a minute holding two commits and more — and one past the next minute's turn
+    recentre(); ctx.settle(10); quiet()
+    if (ctx.js('60 - (Date.now() / 1000) % 60') or 60) < 20:
+        next_minute()
+    m_a = ctx.js('Math.floor(Date.now() / 60000)')
+    a_ok = kept_burst(' Step one.'); quiet()
+    b_ok = kept_burst(' Step two.'); quiet()
+    m_b = ctx.js('Math.floor(Date.now() / 60000)')
+    next_minute()
+    c_ok = kept_burst(' Step three.'); quiet()
+    ctx.js('(async () => (await import("./text/layer.js")).dropCaret())()'); ctx.frames(2)
+    opened_s = open_by_act()
+    whole_s = opened_s and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.bottom === true && p.reading === false; })()', 90)
+    rows_s = rows_now()
+    top_s, ab_s = (rows_s[0] if rows_s else {}), (rows_s[1] if len(rows_s) > 1 else {})
+    r.check(a_ok and b_ok and c_ok and m_a == m_b and opened_s and whole_s and len(ab_s.get('positions') or []) >= 2 and isinstance(top_s.get('time'), int) and isinstance(ab_s.get('time'), int)
+            and top_s['time'] // 60000 != ab_s['time'] // 60000 and past_now().get('at') == ab_s.get('last'),
+            "B3-S7 · steps: three bursts typed into the case's own draft and kept by the test board, two in one minute — one row holding two commits and more — and one past the next minute's turn; the act opens the draft's history on the minute's last state, its rows read to their bottom",
+            {'kept': [a_ok, b_ok, c_ok], 'minutes': [m_a, m_b], 'opened': opened_s, 'whole': whole_s, 'rows': [(x['first'], x['last'], len(x['positions'])) for x in rows_s[:4]], 'at': past_now().get('at')})
+    texts = {}
+
+    def text_at(at):
+        if at not in texts:
+            texts[at] = board_at(at)
+        return texts[at]
+
+    def prev_of(at, way='earlier'):
+        """the commit one state back from a commit (`earlier`), or forward (`later`), across the rows read; None at an end"""
+        cs = commits()
+        if at not in cs:
+            return None
+        k = cs.index(at) + (1 if way == 'earlier' else -1)
+        return cs[k] if 0 <= k < len(cs) else None
+
+    def step_by(how, way):
+        """one step by a way of acting — the corner's act clicked, Alt with the arrow at pane B's walk — from the state pane B rests
+        at: the commit it asks, whether it landed there at a rest, whether pane B holds the board's text there and the row shown
+        holds it, and pane B's name as the AX tree computes it"""
+        want = prev_of(past_now().get('at'), way)
+        if how == 'click':
+            ctx.js(STEP_CLICK % json.dumps(way))
+        else:
+            ctx.js('document.getElementById("sceneB").focus({preventScroll: true})'); ctx.frames(1)
+            ctx.drv.key('ArrowDown' if way == 'earlier' else 'ArrowUp', mods=('Alt',))
+        ok = want is not None and landed(want)
+        shown_row = next((x for x in rows_now() if want in x['positions']), {})
+        lst = ctx.js(PAST_LIST) or {}
+        marked = [x['last'] for d in lst.get('days') or [] for x in d['lines'] if x['shown'] and not x['who']]
+        text_ok = ok and flat(pane_text('b')) == flat(text_at(want) or '')
+        return {'want': want, 'landed': ok, 'text': text_ok, 'marked': marked == [shown_row.get('last')], 'name': (named_as(ctx, '#sceneB') or {}).get('name')}
+
+    def steps_check(w):
+        """the steps at a width: a row's act on the minute's row; "‹ earlier" clicked — a commit inside that row — and Alt+↑ and
+        Alt+↓ at pane B's walk; Tab, → and Enter at its corner; Alt+↓ pressed four times while a state read is held — one
+        further read; the newest row's act and "later ›" inert; the oldest row's act and "‹ earlier" down to the draft's first
+        state, inert; the minute's row's act again, both steps standing"""
+        fit = fit_part(ctx, figures, 'steps', w, *pane_corners)
+        quiet(); ctx.js(ROW_CLICK % ab_s['last'])
+        at_ab = landed(ab_s['last'])
+        name0 = (named_as(ctx, '#sceneB') or {}).get('name')
+        seen = ctx.js(STEPS_SEEN) or {}
+        e, l, ti = seen.get('earlier') or {}, seen.get('later') or {}, seen.get('title') or {}
+        eb, lb = e.get('box') or {}, l.get('box') or {}
+        line = seen.get('line') or {}
+        if seen.get('head'):
+            placed = (bool(eb) and bool(lb) and bool(ti) and eb['right'] <= ti['left'] + 0.5 and lb['left'] >= ti['right'] - 0.5
+                      and eb['top'] < ti['bottom'] and eb['bottom'] > ti['top'] and lb['top'] < ti['bottom'] and lb['bottom'] > ti['top'] and line.get('role') == 'toolbar')
+        else:
+            placed = bool(eb) and bool(lb) and bool(ti) and (line.get('box') or {}).get('bottom', 1e9) <= ti['top'] + 0.5
+        words_ok = (e.get('words') == t(ctx, 'B3.history.earlier') and e.get('id') == 'B3.history.earlier' and l.get('words') == t(ctx, 'B3.history.later') and l.get('id') == 'B3.history.later'
+                    and e.get('inert') is None and l.get('inert') is None)
+        # "‹ earlier" clicked: a commit inside the minute's row, that row marked shown; Alt+↑ back, Alt+↓ again
+        s1 = step_by('click', 'earlier')
+        inside = s1['want'] in (ab_s.get('positions') or []) and s1['want'] != ab_s.get('last')
+        s2 = step_by('keys', 'later')
+        s3 = step_by('keys', 'earlier')
+        # a commit inside the minute's row names its state by the row's own title: pane B's name as it stood (issue #687)
+        steps_ok = all(x['landed'] and x['text'] and x['marked'] and x['name'] == name0 for x in (s1, s2, s3)) and inside and s2['want'] == ab_s['last']
+        # Tab, → and Enter at pane B's corner: the steps' line one stop, → along it, Enter "later ›"
+        ctx.js('document.getElementById("sceneB").focus({preventScroll: true})'); ctx.frames(1)
+        tab_at = None
+        for _ in range(6):
+            ctx.drv.key('Tab'); ctx.frames(1)
+            tab_at = ctx.js(SCENE_FOCUS)
+            if tab_at and str(tab_at).startswith('step:'):
+                break
+        ctx.drv.key('ArrowRight'); ctx.frames(1)
+        arrow_at = ctx.js(SCENE_FOCUS)
+        want4 = s2['want']
+        ctx.drv.key('Enter')
+        keys_ok = tab_at == 'step:earlier' and arrow_at == 'step:later' and landed(want4) and ctx.js(SCENE_FOCUS) == 'step:later'
+        # a held key's repeats: Alt+↓ four times while the first state read is held at its answer — one further read
+        quiet()
+        start = past_now().get('at')
+        ladder = []
+        for _ in range(4):
+            nxt = prev_of(ladder[-1] if ladder else start)
+            if nxt is None:
+                break
+            ladder.append(nxt)
+        calls_h = ctx.js('window.__skep.bridge.calls().length') or 0
+        ctx.drv.held = {'match': lambda post: '"at":' in post and '"retrieve_doc_v_span_set"' in post and mine in post, 'paused': None}
+        ctx.drv.call('Fetch.enable', {'patterns': [{'urlPattern': '*/bridge/op', 'requestStage': 'Response'}]})
+        try:
+            ctx.js('document.getElementById("sceneB").focus({preventScroll: true})'); ctx.frames(1)
+            for _ in range(4):
+                ctx.drv.key('ArrowDown', mods=('Alt',)); ctx.frames(1)
+            held_ok = ctx.drv.answer_op('whole')
+        finally:
+            ctx.drv.unhold()
+        repeats_landed = len(ladder) == 4 and landed(ladder[-1], 30)
+        reads_h = ctx.js(STATE_READS % calls_h) or []
+        firsts = [x['at'] for x in reads_h]
+        repeats_ok = held_ok and repeats_landed and len(set(firsts)) == 2 and firsts[0] == ladder[0] and ladder[-1] in firsts and ladder[1] not in firsts and ladder[2] not in firsts
+        r.figures.setdefault('history_steps', {})[str(w)] = {'presses': 4, 'reads': len(set(firsts)), 'read_at': sorted(set(firsts), reverse=True), 'state_ms': (past_now().get('figures') or {}).get('stateMs'), 'state_at': (past_now().get('figures') or {}).get('at')}
+        # the newest row's act — the newest kept state — and "later ›" inert there, its press saying why, the focus on it
+        ctx.js(ROW_CLICK % top_s['last'])
+        newest_ok = landed(top_s['last'])
+        # another row's state: pane B named anew, by that state's title
+        name_top = (named_as(ctx, '#sceneB') or {}).get('name')
+        newest_ok = newest_ok and bool(name_top) and name_top != name0
+        ctx.js('(() => { const b = document.querySelector(\'#sceneB > .corner button[data-step="later"]\'); if (b) b.focus(); })()'); ctx.frames(1)
+        now_words = heard(ctx, sentence(ctx, 'B3.history.now'))
+        ctx.drv.key('Enter'); ctx.frames(3)
+        said_now, focus_now, seen_now = live(ctx), ctx.js(SCENE_FOCUS), ctx.js(STEPS_SEEN) or {}
+        later_end = newest_ok and (seen_now.get('later') or {}).get('inert') == 'true' and (seen_now.get('later') or {}).get('reason') == 'B3.history.now' and said_now == now_words and focus_now == 'step:later' and past_now().get('at') == top_s['last']
+        # the oldest row's act, then "‹ earlier" down to the draft's first state — inert there, its press saying why
+        oldest = rows_now()[-1]
+        ctx.js(ROW_CLICK % oldest['last'])
+        first_ok = landed(oldest['last'])
+        for _ in range(len(oldest['positions']) + 1):
+            P = past_now()
+            if (P.get('steps') or {}).get('earlier'):
+                break
+            ctx.js(STEP_CLICK % json.dumps('earlier')); landed(prev_of(P['at']) or P['at'])
+        P = past_now()
+        reason = (P.get('steps') or {}).get('earlier')
+        want_reason = 'B3.history.first' if P.get('from') == 0 else 'B3.history.reclaimed'
+        ctx.js('(() => { const b = document.querySelector(\'#sceneB > .corner button[data-step="earlier"]\'); if (b) b.focus(); })()'); ctx.frames(1)
+        ctx.drv.key('Enter'); ctx.frames(3)
+        first_said, first_focus = live(ctx), ctx.js(SCENE_FOCUS)
+        want_first = heard(ctx, sentence(ctx, 'B3.history.first')) if want_reason == 'B3.history.first' else None
+        first_end = (first_ok and P.get('at') == min(oldest['positions']) and reason == want_reason and first_focus == 'step:earlier'
+                     and (want_first is None or first_said == want_first) and P.get('bottom') is True)
+        # the minute's row's act again: both steps standing, the shot's state
+        ctx.js(ROW_CLICK % ab_s['last']); back_ok = landed(ab_s['last'])
+        return {'the steps at the ends of the first row, in the strings table\'s words': (at_ab and placed and words_ok, {'seen': seen, 'at': past_now().get('at')}),
+                'each step one state, landing at the test board\'s text, its row marked, pane B named anew': (steps_ok, {'steps': [s1, s2, s3], 'inside': inside, 'row': ab_s.get('positions'), 'name0': name0}),
+                'Tab, → and Enter at the corner': (keys_ok, {'tab': tab_at, 'arrow': arrow_at, 'want': want4, 'at': past_now().get('at')}),
+                'a held key\'s repeats, one further read': (repeats_ok, {'held': held_ok, 'ladder': ladder, 'reads': reads_h[:8]}),
+                '"later ›" inert at the newest kept state': (later_end, {'seen': seen_now.get('later'), 'said': said_now, 'want': now_words, 'focus': focus_now, 'name': [name0, name_top]}),
+                '"‹ earlier" inert at the draft\'s first state': (first_end, {'at': P.get('at'), 'oldest': oldest.get('positions'), 'reason': reason, 'want': want_reason, 'from': P.get('from'), 'said': first_said, 'focus': first_focus}),
+                'both standing again': (back_ok, {'at': past_now().get('at')}),
+                "the corners' words in their boxes": fit}
+    shoot('steps', steps_check)
+
+    # stacked with both corners beside their columns: the steps at the ends of the corner's first row, the title beneath them
+    was = ctx.resize(*STACKED_BESIDE)
+    try:
+        ctx.settle(10); ctx.frames(3)
+        fit_b, seen_b, boxes_b = ctx.js('window.__skep.scene.fit()') or {}, ctx.js(STEPS_SEEN) or {}, corner_fit(ctx, '#sceneB > .corner')
+    finally:
+        ctx.resize(*was); ctx.settle(10); ctx.frames(3)
+    eb, lb, cb, ln = (seen_b.get('earlier') or {}).get('box') or {}, (seen_b.get('later') or {}).get('box') or {}, seen_b.get('content') or {}, (seen_b.get('line') or {}).get('box') or {}
+    r.check(fit_b.get('stacked') is True and fit_b.get('corner') in ('whole', 'compact') and not seen_b.get('head') and bool(eb) and bool(lb) and bool(cb)
+            and abs(eb['left'] - cb['left']) <= 1 and abs(lb['right'] - cb['right']) <= 1 and ln.get('bottom', 1e9) <= (seen_b.get('title') or {}).get('top', -1) + 0.5
+            and bool(boxes_b.get('read')) and not boxes_b.get('over'),
+            "B3-S7 · steps at %d px: the panes stacked, pane B's corner beside its column — \"‹ earlier\" at its first row's start and \"later ›\" at its end, or ending the second row where one cannot hold both, the title beginning on the row beneath them, every word inside its box (issue #687; FP-26)" % STACKED_BESIDE[0],
+            {'fit': fit_b, 'seen': seen_b, 'boxes': boxes_b})
+
+    # ---- `step-in-flight`: a step's read out, then answered busy, then let through (B3-S7; skep-frontend #688, #696, #702) ---------
+    def in_flight_steps_check(w):
+        quiet(); ctx.js(ROW_CLICK % ab_s['last']); landed(ab_s['last']); quiet()
+        name0, text0 = (named_as(ctx, '#sceneB') or {}).get('name'), pane_text('b')
+        want = prev_of(ab_s['last'])
+        asked_row = next((x for x in rows_now() if want in x['positions']), {})
+        clause = ctx.js('(async (time) => { const T = await import("./strings.js"); return T.t("B3.history.in-flight", {time: time == null ? T.t("L.history.floor.untimed") : T.stoodAt(time)}); })(%s)' % json.dumps(asked_row.get('time')))
+        attempts = ctx.js('(async () => (await import("./model/pump.js")).HISTORY_ATTEMPTS ?? 6)()') or 6
+        hold = lambda: setattr(ctx.drv, 'held', {'match': lambda post: '"at":' in post and '"retrieve_doc_v_span_set"' in post and mine in post, 'paused': None})
+        busy_refusal = {'kind': 'refused', 'name': 'history_busy', 'status': 503, 'code': 'history_busy', 'detail': None, 'op': 'retrieve_doc_v_span_set', 'site': {}, 'body': {'error': 'history_busy'}}
+        hold()
+        ctx.drv.call('Fetch.enable', {'patterns': [{'urlPattern': '*/bridge/op', 'requestStage': 'Response'}]})
+        try:
+            ctx.js(STEP_CLICK % json.dumps('earlier'))
+            out_ok = wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.out != null; })()', 10)
+            ctx.frames(2)
+            P0, seen0 = past_now(), ctx.js(IN_FLIGHT_NOW) or {}
+            as0 = named_as(ctx, '#sceneB') or {}
+            flight_ok = (out_ok and P0.get('out') == want and P0.get('asked') == want and P0.get('at') == ab_s['last'] and P0.get('running') is False and P0.get('inFlight') and clause.endswith(P0['inFlight'])
+                         and seen0.get('words') == clause and seen0.get('busy') == 'true' and seen0.get('mark') and seen0.get('marks') == 1 and seen0.get('why') is None and seen0.get('pane_busy') is None
+                         and seen0.get('reading') and as0.get('name') == name0 and (as0.get('description') or '').endswith(heard(ctx, clause)) and pane_text('b') == text0)
+            # answered busy at every attempt the read makes: the scene reads it again
+            answered = []
+            for _ in range(int(attempts)):
+                answered.append(ctx.drv.answer_op('refused', refusal=busy_refusal, wait_s=5))
+                hold()
+            running = wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.running === true; })()', 10)
+            ctx.frames(2)
+            P1, seen1 = past_now(), ctx.js(IN_FLIGHT_NOW) or {}
+            busy_words = t(ctx, 'B3.history.busy')
+            busy_ok = (running and P1.get('met') == 'history_busy' and (P1.get('why') or {}).get('id') == 'B3.history.busy' and P1.get('at') == ab_s['last']
+                       and seen1.get('words') == clause and seen1.get('busy') == 'true' and seen1.get('mark') and seen1.get('marks') == 1
+                       and seen1.get('why') == {'words': busy_words, 'busy': None, 'mark': False} and seen1.get('pane_busy') is None)
+        finally:
+            ctx.drv.unhold()
+        gone_ok = landed(want, 20) and (ctx.js(IN_FLIGHT_NOW) or {}).get('words') is None and ctx.js('!document.querySelector("#sceneB > .corner .why")') and flat(pane_text('b')) == flat(text_at(want) or '')
+        return {'the step\'s read out: pane B as it stood, the clause on its own busy element, the asked row reading': (flight_ok, dict(seen0, past={k: P0.get(k) for k in ('at', 'asked', 'out', 'running', 'inFlight')}, want=clause, named=as0, name0=name0)),
+                'answered busy: the line, the scene reading it again, the mark on the clause alone': (busy_ok, dict(seen1, answered=answered, past={k: P1.get(k) for k in ('at', 'asked', 'met', 'running', 'why')})),
+                'let through: pane B set to the state, the line and the clause gone': (gone_ok, {'at': past_now().get('at'), 'want': want}),
+                "the corners' words in their boxes": fit_part(ctx, figures, 'step-in-flight', w, *pane_corners)}
+    shoot('step-in-flight', in_flight_steps_check)
+
+    # ---- `floor`: a step's read refused at the board's floor (skep-frontend #663) ------------------------------------------------
+    # pane B at the first commit of the minute's row; the arm refuses the state before it — the row below's last — naming as its
+    # floor that first commit, the first position of the row above the state asked, so no read again is owed: the line falls
+    # beneath the minute's row, its first commit the state read at the floor
+    def floor_check(w):
+        # each width afresh: a scene of its own, so the line placed at the first width stands at no other
+        close_scene(); quiet()
+        opened = open_by_act() and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.bottom === true && p.reading === false; })()', 90)
+        first_ab = min(ab_s['positions'])
+        ctx.js(ROW_CLICK % ab_s['last']); landed(ab_s['last'])
+        for _ in range(len(ab_s['positions'])):
+            P = past_now()
+            if P.get('at') == first_ab:
+                break
+            ctx.js(STEP_CLICK % json.dumps('earlier')); landed(prev_of(P['at']) or P['at'])
+        quiet()
+        below_row = rows_s[2] if len(rows_s) > 2 else {}
+        corner0, name0, text0 = ctx.js('(document.querySelector("#sceneB > .corner") || {}).textContent'), named_as(ctx, '#sceneB') or {}, pane_text('b')
+        seq, calls_f = ctx.editor_seq(), ctx.js('window.__skep.bridge.calls().length') or 0
+        armed = ctx.arm('op', refusal={'kind': 'refused', 'name': 'history_reclaimed', 'status': 410, 'code': 'history_reclaimed', 'detail': None, 'op': 'retrieve_doc_v_span_set', 'site': {}, 'body': {'error': 'history_reclaimed', 'floor': first_ab}})
+        ctx.js(STEP_CLICK % json.dumps('earlier'))
+        placed = wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && !!p.cut && p.out == null; })()', 20)
+        ctx.settle(10); ctx.frames(3)
+        taken = ctx.consumed('op', seq)
+        P = past_now()
+        row_t = ctx.js('(async (at) => { const o = await (await import("./model/pump.js")).rowAt(at); return "refused" in o || !o.row ? null : o.row.time; })(%d)' % first_ab)
+        words = ctx.js('(async (time) => { const T = await import("./strings.js"), U = await import("./util.js"); return T.t("B3.history.reclaimed", {board: T.t("L.mirror.board.name", {node: "1", origin: window.__skep.model.board().origin}), time: time == null ? T.t("L.history.floor.untimed") : U.timeOf(time)}); })(%s)' % json.dumps(row_t))
+        seen = ctx.js(RECLAIMED_SEEN) or {}
+        name1 = named_as(ctx, '#sceneB') or {}
+        line_ok = (opened and (armed.get('result') or {}).get('armed') == 'op' and placed and taken and P.get('at') == first_ab and P.get('asked') == first_ab and P.get('met') is None
+                   and (P.get('cut') or {}).get('cut') == first_ab and (P.get('cut') or {}).get('words') == {'id': 'B3.history.reclaimed', 'text': words}
+                   and seen.get('floor') == {'words': words, 'after': ab_s['last']} and seen.get('why') is None and pane_text('b') == text0
+                   and name1.get('name') == name0.get('name') and name1.get('description') == name0.get('description'))
+        # a row below the line: in its place, inert, focusable, its press saying why and reading nothing; "‹ earlier" inert alike
+        calls_b = ctx.js('window.__skep.bridge.calls().length') or 0
+        btn = ctx.js('((last) => { const b = document.querySelector(`#scenepast button.pl-row[data-row="${last}"]`); if (!b) return null; b.focus(); return {inert: b.getAttribute("aria-disabled"), reason: b.dataset.inert || null, focused: document.activeElement === b}; })(%d)' % below_row.get('last', -1)) or {}
+        ctx.drv.key('Enter'); ctx.frames(3)
+        said_b = live(ctx)
+        ctx.drv.key('Enter'); ctx.frames(3)
+        said_b2 = live(ctx)
+        want_said = heard(ctx, ctx.js('(async (w) => (await import("./strings.js")).asSentence({id: "B3.history.reclaimed", text: w}))(%s)' % json.dumps(words)))
+        below_ok = (btn.get('inert') == 'true' and btn.get('reason') == 'B3.history.reclaimed' and btn.get('focused') and said_b == want_said and said_b2 == want_said
+                    and not (ctx.js(STATE_READS % calls_b) or []) and past_now().get('at') == first_ab)
+        earlier_ok = (past_now().get('steps') or {}).get('earlier') == 'B3.history.reclaimed'
+        r.figures.setdefault('history_floor_line', {})[str(w)] = {'floor': first_ab, 'cut': P.get('cut'), 'row_time': row_t, 'reads': (ctx.js(STATE_READS % calls_f) or [])[:4]}
+        return {'the floor\'s line beneath the row read at the floor, pane B as it stood': (line_ok, {'armed': armed, 'placed': placed, 'consumed': taken, 'past': {k: P.get(k) for k in ('at', 'asked', 'met', 'cut', 'why')}, 'seen': seen, 'want': words,
+                                                                                                    'name': [name0, name1], 'corner_was': (corner0 or '')[:200]}),
+                'a row below it focusable, opening nothing, saying why at every press': (below_ok, {'row': below_row.get('last'), 'button': btn, 'said': [said_b, said_b2], 'want': want_said}),
+                '"‹ earlier" inert with the floor\'s words': (earlier_ok, {'steps': past_now().get('steps')}),
+                "the corners' words in their boxes": fit_part(ctx, figures, 'floor', w, *pane_corners)}
+    shoot('floor', floor_check)
+    close_scene()
+
+    # ---- `links`: the links that stood on a state, read once it rests there (skep-frontend #704) ------------------------------------
+    opened_l = open_by_act() and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.bottom === true && p.reading === false && p.links === "read"; })()', 90)
+
+    def links_check(w):
+        quiet()
+        start = top_s['last'] if past_now().get('at') != top_s['last'] else ab_s['last']
+        ctx.js(ROW_CLICK % start); landed(start); quiet()
+        target = ab_s['last'] if start != ab_s['last'] else rows_s[2]['last']
+        calls_l = ctx.js('window.__skep.bridge.calls().length') or 0
+        ctx.drv.held = {'match': lambda post: '"at":' in post and '"find_links_v"' in post and mine in post, 'paused': None}
+        ctx.drv.call('Fetch.enable', {'patterns': [{'urlPattern': '*/bridge/op', 'requestStage': 'Response'}]})
+        try:
+            ctx.js(ROW_CLICK % target)
+            arriving = landed(target) and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.links === "arriving"; })()', 10)
+            ctx.frames(2)
+            seen0, as0 = ctx.js(LINKS_SEEN) or {}, named_as(ctx, '#sceneB') or {}
+            arriving_words = t(ctx, 'B3.history.links.arriving')
+            out_ok = (arriving and seen0.get('word') == {'words': arriving_words, 'id': 'B3.history.links.arriving', 'after_title': True} and (seen0.get('hollow') or 0) > 0
+                      and heard(ctx, arriving_words) in (as0.get('description') or '') and heard(ctx, arriving_words) not in (as0.get('name') or ''))
+            answered = ctx.drv.answer_op('whole')
+        finally:
+            ctx.drv.unhold()
+        read_ok = answered and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.links === "read"; })()', 10)
+        ctx.frames(3)
+        seen1 = ctx.js(LINKS_SEEN) or {}
+        as1 = named_as(ctx, '#sceneB') or {}
+        ops = ctx.js(OP_AT_CALLS % calls_l) or []
+        text_k = next((i for i, x in enumerate(ops) if x['op'] == 'retrieve_doc_v_span_set' and x['at'] == target), None)
+        link_k = next((i for i, x in enumerate(ops) if x['op'] == 'find_links_v'), None)
+        sent_ok = text_k is not None and link_k is not None and link_k > text_k and ops[link_k]['at'] == (past_now().get('figures') or {}).get('at') and sum(1 for x in ops if x['op'] == 'find_links_v') == 1
+        gone_ok = read_ok and seen1.get('word') is None and seen1.get('hollow') == 0 and heard(ctx, arriving_words) not in (as1.get('description') or '') and as1.get('name') == as0.get('name')
+        # a step taken while a text read is out: the state passed never its links read
+        quiet()
+        start2 = past_now().get('at')
+        passed = [x for x in (prev_of(start2), prev_of(prev_of(start2) or -1)) if x is not None]
+        calls_p = ctx.js('window.__skep.bridge.calls().length') or 0
+        ctx.drv.held = {'match': lambda post: '"at":' in post and '"retrieve_doc_v_span_set"' in post and mine in post, 'paused': None}
+        ctx.drv.call('Fetch.enable', {'patterns': [{'urlPattern': '*/bridge/op', 'requestStage': 'Response'}]})
+        try:
+            ctx.js('document.getElementById("sceneB").focus({preventScroll: true})'); ctx.frames(1)
+            ctx.drv.key('ArrowDown', mods=('Alt',)); ctx.frames(1)
+            ctx.drv.key('ArrowDown', mods=('Alt',)); ctx.frames(1)
+            ctx.drv.answer_op('whole')
+        finally:
+            ctx.drv.unhold()
+        rested = len(passed) == 2 and landed(passed[1]) and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.links === "read"; })()', 10)
+        ops_p = ctx.js(OP_AT_CALLS % calls_p) or []
+        link_at = [x['at'] for x in ops_p if x['op'] == 'find_links_v']
+        state_at = {x['at'] for x in ops_p if x['op'] == 'retrieve_doc_v_span_set'}
+        passed_ok = rested and len(link_at) == 1 and passed[0] not in link_at and passed[1] in state_at
+        r.figures.setdefault('history_links', {})[str(w)] = {'ops': ops[:6], 'passed': passed, 'links_read_at': link_at}
+        return {'while the links read is out: "links — arriving", described, not named, the counts hollow': (out_ok, dict(seen0, named=as0, target=target)),
+                'the read sent as /op-at with find_links_v at the state\'s position, after its text\'s read': (sent_ok, {'ops': ops[:8], 'at': (past_now().get('figures') or {}).get('at')}),
+                'answered: the clause gone, the counts the answer\'s, the name as it stood': (gone_ok, dict(seen1, named=as1)),
+                'a state passed while its text read was out: no links read for it': (passed_ok, {'passed': passed, 'links_at': link_at, 'states': sorted(state_at)}),
+                "the corners' words in their boxes": fit_part(ctx, figures, 'links', w, *pane_corners)}
+    if opened_l:
+        shoot('links', links_check)
+    else:
+        red('links', {'opened': opened_l})
+    close_scene()
     # the rows called no preview and wrote nothing but their own lines
     calls = [c['name'] for c in page_calls(ctx)[calls0:]]
     health1 = ctx.health()

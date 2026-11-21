@@ -725,6 +725,25 @@ test('a substitution\'s words are drawn each stretch in its face — the client\
   assert.ok(!none.includes('again-slot') && !none.includes('data-again') && none.includes(`<span class="why" data-string="B3.history.busy">${esc(t('B3.history.busy'))}</span>`), `no act where its holder offers none; words handed with no stretches the client's: ${none}`);
 });
 
+test('a past state\'s links not shown stand as their word after its hand, held at a pane\'s top and never yielding — "links not read" while the steps run, "links — arriving" while their read is out at a rest, that reading them failed past the bound — in the clauses its pane is described by, first; and a block\'s count place hollow while the links it counts are not yet read, never a count of none (B3-S7; skep-frontend #704; foundations §2.1)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), past = { time: 'at 14:02', hand: HAND, why: null };
+  const shape = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => [i.cls, i.holds, i.yields]);
+  for (const compact of [false, true]) {
+    assert.deepEqual(shape(cornerItems(draft, draftView({ past: { ...past, links: 'arriving', notLast: { n: 2 }, reading: 'at 14:01' } }), compact)), [['past', true, false], ['links', true, false], ['not-last', true, false], ['inflight', true, false], ['chip', false, false]],
+      `${compact ? 'compact' : 'whole'}: after the state's hand, before the other clauses, held, never yielding`);
+  }
+  for (const [w, id] of /** @type {const} */ ([['unread', 'B3.history.links.unread'], ['arriving', 'B3.history.links.arriving'], ['failed', 'B3.history.links.failed']])) {
+    const item = /** @type {import('./article.js').CornerItem} */ (cornerItems(draft, draftView({ past: { ...past, links: w } }))[1]);
+    assert.equal(item.html, `<span class="links-word" data-string="${id}">${esc(t(id))}</span>`, `${w}: its words, carrying its string`);
+    assert.deepEqual(pastClauses({ ...past, links: w, notLast: { n: 2 } }), [t(id), notLastWords(2)], `${w}: first among the clauses its pane is described by`);
+  }
+  assert.deepEqual(shape(cornerItems(draft, draftView({ past: { ...past, links: null } }))), [['past', true, false], ['chip', false, false]], 'read: no word');
+  const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: '# abcdefgh ij', origin: null }] });
+  const hollow = articleHTML(d, view({ countAt: () => ({ n: 0, social: false, arriving: true }) }), '1.0.1');
+  assert.ok(hollow.includes('<span class="others edge arriving" data-count="" aria-hidden="true" style="') && !hollow.includes(esc(t('F.others-count', { n: 0 }))), `the count place hollow, no count: ${hollow}`);
+  assert.deepEqual(articlePlan(d, view({ countAt: () => ({ n: 0, social: false, arriving: true }) }), '1.0.1'), articlePlan(d, view(), '1.0.1'), 'and it sets no line');
+});
+
 test('a past state\'s clauses stand between its title and its chip while its holder hands them in, each held at a pane\'s top and none ever yielding, in either form: "one of ⟨n⟩ changes that minute, not the last" in the place of the words saying the state is how the draft stands now, its count in a slot of one width whether it shows 2 or 9 or is not yet known — then an empty box named as being read; "reading ⟨time⟩" ahead of the chip, its element busy and the one running mark after its words, its words alone where the view asks no act; each in the mirror\'s words, and in the order drawn in the clauses its pane is described by (issue #696; B3-S7; FP-26, FP-34)', () => {
   const draft = doc({ kind: 'draft', meta: null }), past = { time: 'at 14:02', hand: HAND, why: null };
   const now = { id: 'B3.history.now', text: t('B3.history.now'), substituted: false }, sub = { id: 'B3.history.busy', text: t('B3.history.busy'), substituted: true };

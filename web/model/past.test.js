@@ -3,11 +3,13 @@
 // own, each row's hand and kind read off the row as the wire spells it — and
 // the list's days, what folds and what stands open, and what arriving rows do
 // (B3-S7 THE LIST; skep-frontend #662); how long a row's state stood, to the
-// position before the draft's next change (skep-frontend #688); and whether a
-// row's state is not its minute's last (skep-frontend #696).
+// position before the draft's next change (skep-frontend #688); whether a
+// row's state is not its minute's last (skep-frontend #696); and the one-state
+// step across the commits read, how long a commit's state stood, and where
+// the floor's line falls (B3-S7; D5 K-102; skep-frontend #663).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { handOf, kindOf, landmarkOf, rowsOf, daysOf, openOnOpening, isFolded, entriesOf, arrive, versionOf, dayHolding, rowHolding, stoodUntil, notLastOf } from './past.js';
+import { handOf, kindOf, landmarkOf, rowsOf, daysOf, openOnOpening, isFolded, entriesOf, arrive, versionOf, dayHolding, rowHolding, stoodUntil, notLastOf, stoodUntilAt, commitsOf, stepFrom, floorLine, isBelow, risen } from './past.js';
 
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 
@@ -142,4 +144,34 @@ test('a row\'s state is not its minute\'s last where a newer row of the list sha
   assert.deepEqual([notLastOf(lost, 40, true), notLastOf(all, 99, true)], [null, null], 'its time lost: never; no row holding the position: none');
   const gap = rowsOf([row(20, { key: 'bare', time: NOON + 2 * MIN }), row(30, { key: OTHER, time: null }), mine, theirs]);
   assert.deepEqual(notLastOf(gap, 40, false), { n: null }, 'below its minute\'s rows only one whose time is lost, and one of that minute below it: not yet');
+});
+
+/** a draft's rows across three minutes of one hand: its mint alone, then a minute of two commits — a burst inside the minute — then the newest change alone */
+const STEPS = rowsOf([row(30, { time: NOON }), row(40, { time: NOON + 2 * MIN }), row(44, { time: NOON + 2 * MIN + 5000 }), row(48, { time: NOON + 5 * MIN })]);
+
+test('one state back or forward is the commit before or after another across the rows read — a burst inside a minute reached by the step, its row the one shown — and none past the oldest commit read or the newest (B3-S7: "a burst inside the minute reached by the step"; D5 K-102)', () => {
+  assert.deepEqual(STEPS.map((r) => r.positions), [[48], [40, 44], [30]], 'three rows, the middle one two commits');
+  assert.deepEqual(commitsOf(STEPS), [48, 44, 40, 30], 'every commit, newest first, the list\'s order');
+  assert.deepEqual([stepFrom(STEPS, 48, -1), stepFrom(STEPS, 44, -1), stepFrom(STEPS, 40, -1), stepFrom(STEPS, 30, -1)], [44, 40, 30, null], 'back: into the minute\'s row at its last commit, then its first, then the row below; none past the oldest');
+  assert.deepEqual([stepFrom(STEPS, 30, 1), stepFrom(STEPS, 40, 1), stepFrom(STEPS, 44, 1), stepFrom(STEPS, 48, 1)], [40, 44, 48, null], 'forward alike; none past the newest');
+  assert.equal(rowHolding(STEPS, 40)?.last, 44, 'a commit inside a row: that row the one marked shown');
+  assert.equal(stepFrom(STEPS, 41, -1), null, 'none from a position no commit stands at');
+});
+
+test('a commit\'s state stood to the position before the draft\'s next commit — inside its row, its row\'s next commit less one; at its row\'s last, before the next row; the newest\'s to the head read — never its row\'s last state where it is not the row\'s last (issue #688\'s re-ask, at a commit; B3-S7)', () => {
+  assert.deepEqual([stoodUntilAt(STEPS, 40, 60), stoodUntilAt(STEPS, 44, 60), stoodUntilAt(STEPS, 30, 60), stoodUntilAt(STEPS, 48, 60), stoodUntilAt(STEPS, 48, null)], [43, 47, 39, 60, 48]);
+  assert.equal(stoodUntilAt(STEPS, 44, 60), stoodUntil(STEPS, STEPS[1], 60), 'a row\'s last commit: the row\'s own');
+  assert.equal(stoodUntilAt(STEPS, 41, 60), 41, 'a position no commit stands at: its own');
+});
+
+test('the floor\'s line falls beneath the newest commit at or before the floor — the state that stood there, read at the floor — every row wholly older beneath it, that commit\'s row above it whole, no row spanning it; none where no commit read stands at or before the floor (skep-frontend #663\'s design decision)', () => {
+  assert.deepEqual(floorLine(STEPS, 42), { cut: 40, below: 30 }, 'the floor inside the minute\'s row: steps stop at its first commit, the row above the line, the mint below');
+  assert.deepEqual(floorLine(STEPS, 47), { cut: 44, below: 30 }, 'the floor past the row\'s last commit: that commit read there');
+  assert.deepEqual(floorLine(STEPS, 48), { cut: 48, below: 44 }, 'at the newest commit: every older row below — no state before the newest readable');
+  assert.deepEqual(floorLine(STEPS, 30), { cut: 30, below: null }, 'at the oldest commit read: no row read below');
+  assert.equal(floorLine(STEPS, 20), null, 'below every commit read: no line among them');
+  const line = floorLine(STEPS, 42);
+  assert.deepEqual(STEPS.map((r) => isBelow(line, r)), [false, false, true], 'the rows above and below');
+  assert.deepEqual(STEPS.map((r) => isBelow(null, r)), [false, false, false], 'no line, none below');
+  assert.deepEqual([risen(null, 42), risen(42, 47), risen(47, 35), risen(47, 47)], [42, 47, 47, 47], 'the line only rises: a later refusal\'s lower floor leaves it where it stood');
 });
