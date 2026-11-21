@@ -71,8 +71,9 @@
 // the second window's line, `answers_lost` the hand-over's, keyed on the
 // refusal's name alone and its ⟨board⟩ and ⟨time⟩ the caller's to fill,
 // `write_in_bare_session` the keyless line, `history_busy`,
-// `history_reclaimed` (its ⟨board⟩ the board as the line names it, its
-// ⟨time⟩ the caller's, else "a time not recorded" — never a token), S6's
+// `history_reclaimed` (its ⟨board⟩ the board as the line names it; the
+// floor's own words where the caller hands in the date its floor names, else
+// its ⟨time⟩ the caller's, else "a time not recorded" — never a token), S6's
 // each of those that says words were lost — the own-bug entry, the held
 // store's bound, the hand-over's — under the head "not kept" and offering
 // the act that copies the unkept words out (`Face.head`; D6 BM-10, BM-19,
@@ -406,13 +407,15 @@ function clauseFace(c, follow) {
  * the caller's to fill through `ctx`, and stands as the design writes it
  * where none is handed in; save `history_reclaimed`'s, which never stand
  * unfilled (FP-34): the board as the line names it where none is handed in,
- * and the time the state shown stood, else "a time not recorded" — never the
- * refusal's floor, a position of the board's log.
+ * and, where the caller hands in the date the refusal's floor names, the
+ * floor's own words — no earlier state readable, the board keeping states
+ * back to that date — else the time the state shown stood, else "a time not
+ * recorded"; never the refusal's floor itself, a position of the board's log.
  * A face saying words were lost — the own-bug entry, the held store's
  * bound, the hand-over's — stands under the head "not kept" and offers the
  * act that copies the unkept words out, which the caller hands in (`ctx.copy`).
  * @param {Refusal} r
- * @param {{addr?: string, board?: string, time?: string, copy?: () => void}} [ctx] `addr` the document the act named; `board` the board's name as the line names it; `time` the time elapsed, in words — at `history_reclaimed`, the time the state shown stood (SC's `pastWhyOf`); `copy` what "copy these words out" does at a loss face
+ * @param {{addr?: string, board?: string, time?: string, date?: string, copy?: () => void}} [ctx] `addr` the document the act named; `board` the board's name as the line names it; `time` the time elapsed, in words — at `history_reclaimed`, the time the state shown stood (SC's `pastWhyOf`); `date` at `history_reclaimed`, the date the board keeps states back to, the day of the feed's row at the refusal's floor (SC's `floorOf`); `copy` what "copy these words out" does at a loss face
  * @returns {Face}
  */
 export function wordsFor(r, ctx = {}) {
@@ -449,7 +452,8 @@ export function wordsFor(r, ctx = {}) {
     case 'answers_lost': return lost('B3.answers_lost', given);
     case 'write_in_bare_session': return f('B3.keyless');
     case 'history_busy': return f('B3.history.busy');
-    case 'history_reclaimed': return f('B3.history.reclaimed', { board: ctx.board ?? boardName(), time: ctx.time ?? t('L.history.floor.untimed') });
+    case 'history_reclaimed': return ctx.date != null ? f('L.history.floor', { board: ctx.board ?? boardName(), date: ctx.date })
+      : f('B3.history.reclaimed', { board: ctx.board ?? boardName(), time: ctx.time ?? t('L.history.floor.untimed') });
     case 'slot_too_large': return f('B3.slot_too_large');
     case 'source_not_registered': return f('B3.source_not_registered', { address: addr });
     case 'dangling_source': return f('B3.dangling_source');

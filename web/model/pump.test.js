@@ -73,9 +73,13 @@
 // image its held text lacks, in parts, halved where refused for its size and
 // each refusal recorded once, and a text a whole read finds held with no
 // image covering it read for its image; bytes read by their identity in parts
-// of at most one delivery's items, a refusal handed up; and a document's text
+// of at most one delivery's items, a refusal handed up; a document's text
 // and its image as they stood at a position of the board's history, read one
-// after the other for an act and kept nowhere. With SKEP_REPLAY
+// after the other for an act and kept nowhere, and as the board holds them
+// now, never through its history — from the model's record read whole, else,
+// while the window writes the draft, off the board at its head and kept
+// nowhere; the feed's row at a position, read as one row of `changes`; and a
+// draft's history read above a position alone. With SKEP_REPLAY
 // naming a script the harness recorded, the model's snapshot is printed for
 // the gate.
 import { test, beforeEach } from 'node:test';
@@ -4146,6 +4150,84 @@ test('a document\'s text and its image as they stood at a position of the board\
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('a document\'s text and its image as the board holds them now are read as a whole read reads them, never as of a position of its history: held whole, an image placing every position, nothing read and the record\'s own answered, at the position its text was read at; an image leaving a position unplaced read over the text and taken; a text held in part read whole with its image; a draft the window writes — its burst open, or words of it dialed the board has not acked — read off the board at its head and kept nowhere; the refusal a read met handed up; counted in flight while out (B3-S7; issue #700)', async () => {
+  const X = '1.0.1.0.122', Y = '1.0.1.0.123', TEXT = 'Words now.', n = TEXT.length;
+  const run = { pos: 1, width: n, kind: /** @type {const} */ ('content'), text: TEXT, ref: null, origin: null };
+  /** @type {Record<string, unknown>} */
+  const script = {
+    [FAKE.keyOf('op', { frame: F.retrieveV(X, 1, n) })]: { result: { resp: 'delivery', as_of: 31, items: [{ content: TEXT }] } },
+    [FAKE.keyOf('op', { frame: F.image(X, 1, n) })]: { result: { resp: 'runs', as_of: 31, runs: [{ i_start: X + '.0.1.1', width: String(n) }] } },
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(Y) })]: { refused: { kind: 'unreachable', name: 'unreachable', text: '' } },
+  };
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  REC._reset();
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1' }));
+  /** the draft as the model holds it: its extent, its metadata, no links, and its text with the image given — placing its first `placed` positions */
+  const hold = (/** @type {Array<Record<string, unknown>> | null} */ text, placed = n) => {
+    REC.takeSpanSet(X, [{ subspace: 1, ordinal: 1, positions: n }], 30);
+    REC.takeMetadata(X, { doc: X, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 30 });
+    REC.takeLinks(X, []);
+    if (text) REC.takeDelivery(X, /** @type {any} */ (text), 30, placed ? { from: 1, runs: [{ iStart: X + '.0.1.1', width: placed }] } : null);
+  };
+  const whole = { runs: [run], image: [{ pos: 1, width: n, prefix: X + '.0.1', ordinal: 1 }] };
+  hold([run]);
+  assert.deepEqual([await PUMP.stateNow(X), fake.asked], [{ ...whole, at: 30 }, []], 'held whole, every position placed: nothing read, the record\'s own text and image, as read at 30');
+  REC.invalidate(X);
+  hold([run], 4);
+  const was = PUMP.inflightCount(), release = fake.hold('op', { frame: F.image(X, 1, n) }), gapped = PUMP.stateNow(X);
+  for (let i = 0; i < 50 && !fake.asked.length; i++) await new Promise((r) => setImmediate(r));
+  assert.deepEqual([fake.asked, PUMP.inflightCount()], [[FAKE.keyOf('op', { frame: F.image(X, 1, n) })], was + 1], 'an image placing four positions alone: the image read over the text, counted in flight while out');
+  release();
+  assert.deepEqual([await gapped, REC.doc(X).image], [{ ...whole, at: 30 }, whole.image], 'the image read placing every position, taken');
+  REC.invalidate(X);
+  hold([{ ...run, width: 4, text: 'Word' }], 4);
+  assert.deepEqual(await PUMP.stateNow(X), { ...whole, at: 31 }, 'its text held in part: read whole, with its image, as read at 31');
+  // the window writing the draft: the model holds it as it stands, so the board's text is read at its head beside it
+  const KEPT = 'Words kept.', m = KEPT.length;
+  Object.assign(script, {
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(X) })]: { result: { resp: 'span_set', as_of: 33, set: [{ start: '1.1', width: '0.' + m }] } },
+    [FAKE.keyOf('op', { frame: F.retrieveV(X, 1, m) })]: { result: { resp: 'delivery', as_of: 33, items: [{ content: KEPT }] } },
+    [FAKE.keyOf('op', { frame: F.image(X, 1, m) })]: { result: { resp: 'runs', as_of: 33, runs: [{ i_start: X + '.0.1.1', width: String(m) }] } },
+  });
+  const before = REC.doc(X).runs.map((r) => r.text).join('');
+  for (const writes of [() => REC.setTyping(X, true), () => REC.setWriting(X, true)]) {
+    writes();
+    assert.deepEqual(await PUMP.stateNow(X), { runs: [{ ...run, width: m, text: KEPT }], image: [{ pos: 1, width: m, prefix: X + '.0.1', ordinal: 1 }], at: 33 }, 'its burst open, or words of it dialed and unacked: the board\'s text at its head, as read at 33');
+    assert.equal(REC.doc(X).runs.map((r) => r.text).join(''), before, 'kept nowhere: the record as it stood');
+    REC.setTyping(X, false); REC.setWriting(X, false);
+  }
+  const refused = await PUMP.stateNow(Y);
+  assert.deepEqual(['refused' in refused && refused.refused.name, PUMP.inflightCount()], ['unreachable', was], 'its extent not answered: the refusal handed up, nothing left in flight');
+  assert.ok(!fake.asked.some((k) => k.includes('"at":')), 'no read as of a position of the board\'s history');
+});
+
+test('the feed\'s row at a position is read for an act as one row of `changes` past the position before it — under the page\'s session, in the guest form where none stands: the row where the first read stands at the position; none where it stands past it or none comes; the refusal met handed up; counted in flight while out (B3-S7; issue #700)', async () => {
+  const at = (/** @type {number} */ position) => ({ position, at: position, op: 'insert', docs: ['1.0.1.0.124'], class: 'published', time: 7 });
+  const page = (/** @type {object[]} */ entries) => ({ result: { entries, next: 60, head: 60 } });
+  const fake = FAKE.create({
+    [FAKE.keyOf('changes', { session: 's-1', since: 45, limit: 1 })]: page([at(46)]),
+    [FAKE.keyOf('changes', { session: 's-1', since: 46, limit: 1 })]: page([at(48)]),
+    [FAKE.keyOf('changes', { session: 's-1', since: 59, limit: 1 })]: page([]),
+    [FAKE.keyOf('changes', { session: 's-1', since: 9, limit: 1 })]: { refused: { kind: 'refused', name: 'history_reclaimed', body: { error: 'history_reclaimed', floor: 20 } } },
+    [FAKE.keyOf('changes', { guest: true, board: 'b-1', since: 45, limit: 1 })]: page([at(46)]),
+  });
+  PORT.boot(fake);
+  REC._reset();
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1' }));
+  const was = PUMP.inflightCount(), reading = PUMP.rowAt(46);
+  assert.equal(PUMP.inflightCount(), was + 1, 'counted in flight while out');
+  assert.deepEqual(await reading, { row: at(46) }, 'the row at the position');
+  assert.deepEqual([await PUMP.rowAt(47), await PUMP.rowAt(60)], [{ row: null }, { row: null }], 'the first row read past the position, or none come: no row there');
+  const no = await PUMP.rowAt(10);
+  assert.deepEqual(['refused' in no && no.refused.name, PUMP.inflightCount()], ['history_reclaimed', was], 'the refusal handed up, nothing left in flight');
+  REC.setSession(null);
+  assert.deepEqual(await PUMP.rowAt(46), { row: at(46) }, 'a guest\'s read in the guest form');
+  assert.deepEqual(fake.unanswered, []);
+});
+
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {
   const file = process.env.SKEP_REPLAY;
   if (!file) return; // the harness sets it
@@ -4202,7 +4284,7 @@ test('bytes read by their identity: `retrieve_i` at the page\'s class, the spans
   assert.deepEqual('refused' in few && few.refused, { kind: 'shell', name: 'malformed_answer' }, 'an answer of fewer positions than asked: malformed');
 });
 
-test('a draft\'s history is read off the feed narrowed to the draft — `under` the draft, under the session — in windows from the head back as the launch reads, until the rows read hold what the caller asks or the windows reach the feed\'s first position, each window paged by its `next`; the narrowed feed\'s positions never move the page\'s own on the whole feed; the rows below a first read\'s reach read alone; counted in flight while out; a refused page ending the read (B3-S7 THE LIST; the past states survey\'s R1; FP-18)', async () => {
+test('a draft\'s history is read off the feed narrowed to the draft — `under` the draft, under the session — in windows from the head back as the launch reads, until the rows read hold what the caller asks or the windows reach the feed\'s first position, each window paged by its `next`; the narrowed feed\'s positions never move the page\'s own on the whole feed; the rows below a first read\'s reach read alone, and those above a position alone; counted in flight while out; a refused page ending the read (B3-S7 THE LIST; the past states survey\'s R1; FP-18)', async () => {
   const W = '1.0.1.0.12', HEAD = 5000, OWN_W = PUMP.OWN_WINDOW;
   /** the draft's rows on the narrowed feed: one every hundred positions from 100 */
   const ROWS = Array.from({ length: 49 }, (_, i) => ({ position: 100 * (i + 1), at: 100 * (i + 1), op: 'insert', docs: [W], class: 'drafts', key: 'bare', time: 1 }));
@@ -4239,6 +4321,10 @@ test('a draft\'s history is read off the feed narrowed to the draft — `under` 
   const older = await PUMP.historyOf(W, { below: first.from });
   assert.deepEqual([asked[0].since, older.from, older.rows.length, older.rows[0].position, older.rows.at(-1)?.position, older.head], [first.from - OWN_W, 0, 44, 100, 4400, first.from], 'below the first read\'s reach: windows from there back to the feed\'s first position, every row there and none above, read up to where it was asked below');
   assert.equal(REC.feedAt(), was, 'nor did those');
+  asked.length = 0;
+  const since = await PUMP.historyOf(W, { above: 4300 });
+  assert.deepEqual([since.from, since.rows.map((u) => u.position), since.head, asked.every((a) => a.since >= 4300)], [4300, [4400, 4500, 4600, 4700, 4800, 4900], AT, true],
+    'above a position: the windows from the page\'s place back to it and no further, every row past it and none at or below it (issue #700)');
   asked.length = 0;
   const all = await PUMP.historyOf(W);
   assert.deepEqual([all.from, all.rows.length], [0, 49], 'asked for nothing: the windows down to the feed\'s first position');

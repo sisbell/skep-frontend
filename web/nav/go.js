@@ -313,14 +313,16 @@
 // scene, the focus moved into its history pane; else a departure — the
 // draft's open burst committed and its flight landed (W-WRITE's), its history
 // read from the head back (M-PUMP's `historyOf`), the state it opens on read
-// at a position and derived (SC's `pastState`) — the state before the draft's
-// newest change, or the newest kept one where words not kept yet stand, or
-// where the board reads not the one asked, a substitution its corner holds
-// with its line (T-ARTICLE's `PastWhy`) — then the scene opened on the
-// draft's current text and that state, levelled at the selection standing in
-// the draft, else at the newest change's place nearest the caret
-// (`changeNear`), its entry keeping the state asked, so a return asks it
-// again (SC's `Held.past`).
+// and derived (SC's `pastState`) — the state before the draft's newest change,
+// read at a position of the board's history, or the newest kept one, the
+// draft as the board holds it, where words not kept yet stand, or where the
+// board reads not the one asked, a substitution its corner holds with its
+// line (T-ARTICLE's `PastWhy`) — then the scene opened on the draft's current
+// text and that state, levelled at the selection standing in the draft, else
+// at the newest change's place nearest the caret (`changeNear`), its entry
+// keeping the state asked, so a return asks it again (SC's `Held.past`);
+// where no state is read, or the history read is refused, nothing opens and
+// every press says why in the status region (FP-41; `historyRefused`).
 // HOME (the acting account's region), WHOLE BOARD (the board at the clamp)
 // and an account's region push too (foundations §2.2), and so does a walk's
 // moment unfolded where the camera stands away from the view its walk showed
@@ -524,7 +526,7 @@ import { accountCell, boardCell, continuationCell, continuationOf } from '../pla
 import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf, accountOf } from '../model/address.js';
 import { sameSpan } from '../text/span.js';
 import * as PAST from '../model/past.js';
-import { t, sentence } from '../strings.js';
+import { t, sentence, asSentence } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -2931,6 +2933,21 @@ export function closeScene(byKey = false) {
 let histories = 0;
 
 /**
+ * Why a draft's history opened nothing, as a sentence the press says in the
+ * status region (FP-41; `history`): where the board did not answer, the words
+ * the act stands inert by while it does not (T-LAYER's `historyAct`); else the
+ * refusal's own (O-FACES' `wordsFor`).
+ * @param {import('../bridge/shapes').Refusal} r
+ * @param {string} addr the draft
+ * @returns {string}
+ */
+function historyRefused(r, addr) {
+  if (!PUMP.unanswered(r)) return asSentence(FACES.wordsFor(r, { addr }));
+  const b = REC.board();
+  return sentence('L.history.unanswered', { board: b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : '' });
+}
+
+/**
  * The newest change's places in two texts of a draft (B3-S7): each stretch
  * the current text holds that the past state does not, at
  * its place in each — the past state's after the byte standing before it there
@@ -2975,15 +2992,18 @@ export function changeNear(past, now, near) {
  * state shown nor why, so a return asks it again (SC's `Held.past`).
  * The state asked is the draft as it stood before its newest change, the position
  * the row below the top row ends at; where the draft holds words the board has
- * not kept, the newest kept state, the position the top row ends at, the list
- * saying so above it; where no row stands below the top, the top row's own,
- * which is how the draft stands now, its corner saying so. A state refused as
+ * not kept, the newest kept state, the top row's, the list saying so above it;
+ * where no row stands below the top, the top row's own, which is how the
+ * draft stands now, its corner saying so. The newest kept state is the draft
+ * as the board holds it now, read as the plane's acts read it and never from
+ * the board's history (M-PUMP's `stateNow`). A past state refused as
  * reclaimed is asked again where it last stood, and one the board does not
  * read yields to the newest kept one, its corner saying why in the refusal's
  * words — a substitution — which the scene asks again while the board
- * classes it as retry (SC's); where that is not read either, or the
- * history read is refused, nothing opens and the act's site says why; where
- * it reads no row, the status region says the draft stands as it is. The panes
+ * classes it as retry (SC's); where the newest kept state is not read either,
+ * or the history read is refused, nothing opens, and every press says why in
+ * the status region (FP-41; `historyRefused`); where it reads no row, the
+ * status region says the draft stands as it is. The panes
  * level at a selection standing in the draft, else at the newest change's
  * place nearest the caret, else the walk's span in the draft (`changeNear`).
  * A later act made while the reads are out — this one again among them —
@@ -2999,7 +3019,7 @@ export async function history(addr, opts = {}) {
   if (!act) return false;
   if (act.inert) { FOCUS.say(act.inert.text, false, true); return false; }
   if (SCENE.pastOf() === addr) { SCENE.focusPast(); return true; }
-  const mine = ++histories, start = made, site = signed(opts.site ?? null);
+  const mine = ++histories, start = made;
   const stands = () => mine === histories && made === start;
   WRITE.commit(addr);
   await WRITE.landed(addr);
@@ -3008,14 +3028,14 @@ export async function history(addr, opts = {}) {
   const read = await PUMP.historyOf(addr, { enough: (rows) => PAST.rowsOf(rows).length >= 2 });
   const readMs = performance.now() - t0;
   if (!stands()) return false;
-  if (read.refused) { FACES.showRefusal(site, read.refused, addr); return false; }
+  if (read.refused) { FOCUS.say(historyRefused(read.refused, addr), false, true); return false; }
   const rows = PAST.rowsOf(read.rows), unkept = WRITE.unkept(addr);
   // no row read, no state to open on: the draft as it stands is all its history holds
   if (!rows.length) { FOCUS.say(sentence('B3.history.now'), false, true); return false; }
   const asked = (unkept ? null : rows[1]) ?? rows[0];
   const got = await SCENE.pastState(addr, rows, asked, read.head);
   if (!stands()) return false;
-  if ('refused' in got) { FACES.showRefusal(site, got.refused, addr); return false; }
+  if ('refused' in got) { FOCUS.say(historyRefused(got.refused, addr), false, true); return false; }
   const sel = SEL.selected(), caret = LAYER.caretIn(addr), f = WALK.focusedSpan();
   const near = caret ? caret.pos : f && f.addr === addr ? f.pos : null;
   const change = sel && sel.addr === addr ? null : changeNear(got.state.image, LAYER.shownOf(addr).image, near);

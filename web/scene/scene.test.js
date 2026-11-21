@@ -153,13 +153,17 @@
 // and gone once the focus goes into another document's pane, one raised on
 // the plane judged by nothing under a scene (B3-S5). And a draft's history's
 // past state: refused as reclaimed, asked again where it last stood, else the
-// newest kept state in its place under a line naming the board and the time
-// that state stood, no token left, and the list's floor mark below its row;
-// refused busy, reissued — the in-flight clause after the title carrying the
-// one running mark on its own busy element, the asked row reading, the pause
-// doubling to its cap — until pane B is set to it in one step, the line said
-// once with the clause and the landing once, no reissue outliving the scene;
-// its trail entry keeping the state asked, read again by a return (FP-23,
+// newest kept state in its place — the draft as the board holds it, never
+// asked of the board's history — under a line naming the board and the date
+// of the feed's row at the floor the refusal names, else the time that state
+// stood, no token left, and the list's floor mark below its row; refused
+// busy, the scene opening on the newest kept state at the act and at a
+// return, no face raised, and reissued — the in-flight clause after the title
+// carrying the one running mark on its own busy element, the asked row
+// reading, the pause doubling to its cap — until pane B is set to it in one
+// step, the line said once with the clause and the landing once, no reissue
+// outliving the scene; its trail entry keeping the state asked, read again by
+// a return over the rows written since (FP-23,
 // FP-34, FP-36); a row arriving above the state shown taking the words saying
 // it is how the draft stands now from pane B's corner and its description in
 // the one step that takes the row in, an older row touching neither nor any
@@ -198,7 +202,7 @@ import * as PAST from '../model/past.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
 import { t, tHTML, lastRead, addressedHTML, sentence, sentences, hintSentences, heard, runsText, asRuns, fields, runningHTML } from '../strings.js';
-import { esc, fingerprintCue, timeOf } from '../util.js';
+import { esc, fingerprintCue, timeOf, dayOf } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
 import { edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML, cornerTitle, titleRuns } from '../text/article.js';
@@ -3098,15 +3102,16 @@ const pastKey = (/** @type {number} */ at) => FAKE.keyOf('op', { frame: F.opAt(a
 const pastAsks = (/** @type {number} */ at) => fake.asked.filter((k) => k === pastKey(at)).length;
 /**
  * The board refusing the draft's state at each position given, by the refusal's name — as the board answers `/op-at`,
- * naming no floor — or, the position lying inside a commit, `not_a_position` naming the committed one below it; or
- * answering it, a number of its bytes; what puts the script back as it stood
- * @param {Record<number, string | number | {nearest: number}>} at
+ * naming no floor — or as reclaimed naming the floor given; or, the position lying inside a commit, `not_a_position`
+ * naming the committed one below it; or answering it, a number of its bytes; what puts the script back as it stood
+ * @param {Record<number, string | number | {nearest: number} | {floor: number}>} at
  */
 function pastAnswering(at) {
   /** @type {Record<string, unknown>} */
   const set = {};
   for (const [p, a] of Object.entries(at)) {
     if (typeof a === 'number') Object.assign(set, pastAt(Number(p), a));
+    else if (typeof a === 'object' && 'floor' in a) set[pastKey(Number(p))] = { refused: { kind: 'refused', name: 'history_reclaimed', status: 410, code: 'history_reclaimed', detail: null, op: 'retrieve_doc_v_span_set', site: {}, body: { error: 'history_reclaimed', floor: a.floor } } };
     else if (typeof a === 'object') set[pastKey(Number(p))] = { refused: { kind: 'refused', name: 'not_a_position', status: 409, code: 'not_a_position', detail: null, op: 'retrieve_doc_v_span_set', site: {}, body: { error: 'not_a_position', nearest: a.nearest } } };
     else set[pastKey(Number(p))] = { refused: { kind: 'refused', name: a, status: a === 'history_busy' ? 503 : 410, code: a, detail: null, op: 'retrieve_doc_v_span_set', site: {}, body: { error: a } } };
   }
@@ -3435,6 +3440,98 @@ test('a reissue answered by a refusal the board does not class as retry ends: th
     await new Promise((r) => setTimeout(r, 400));
     assert.equal(pastAsks(PAST_AT), closed, 'no reissue outlives its scene');
   } finally { restore(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+/** the overlay the host shows, by its kind; none where it shows none */
+const overlayKind = () => HOST.currentState()?.kind ?? null;
+
+test('a past state the board stays busy on, the newest kept one too as the board\'s history would read it, opens the scene at the act on the newest kept state — the draft as the board holds it, read as the plane reads it and never asked of the board\'s history — no face raised, and the state asked reissued, landing once the board reads it (issue #700\'s design decision; FP-25, FP-41)', () => onPage(async (p) => {
+  await onTrail(p);
+  let restore = pastAnswering({ [PAST_AT]: 'history_busy', 48: 'history_busy' });
+  const newest = pastAsks(48);
+  try {
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    assert.deepEqual([SCENE.past()?.at, SCENE.past()?.met, SCENE.past()?.running, pastAsks(48) - newest, overlayKind()], [48, 'history_busy', true, 0, null],
+      'the newest kept state in the place of the one asked, its state never asked of the board\'s history; the state asked reissued; no face at the act');
+    assert.ok(SCENE.panes()?.b.blocks.map((b) => b.text).join('') === PAST_TEXT, 'pane B the draft as the board holds it');
+    restore(); restore = () => {};
+    assert.ok(await within(2500, () => SCENE.past()?.at === PAST_AT), 'the state asked lands once the board reads it');
+  } finally { restore(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('a return to a draft\'s history whose state asked the board stays busy on, the newest kept one too as its history would read it, reopens the scene on the newest kept state — no notice at the viewport\'s corner — the state asked reissued as at the act (issue #700\'s design decision: "`sceneAt` reopens the same way")', () => onPage(async (p) => {
+  await onTrail(p);
+  let restore = () => {};
+  try {
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    const board = GO.wholeBoard(); await flown(); await board;
+    restore = pastAnswering({ [PAST_AT]: 'history_busy', 48: 'history_busy' });
+    // the state asked read whole at most HISTORY_ATTEMPTS times as the scene reopens: its flight landed once it shows
+    const back = GO.back(); await within(3000, () => SCENE.isOpen()); await flown(); await back;
+    assert.deepEqual([SCENE.isOpen(), SCENE.past()?.at, SCENE.past()?.met, SCENE.past()?.running, HOST.notice(), overlayKind()], [true, 48, 'history_busy', true, null, null],
+      'Back reopens it on the newest kept state, the state asked reissued, nothing faced');
+    restore(); restore = () => {};
+    assert.ok(await within(2500, () => SCENE.past()?.at === PAST_AT), 'the state asked lands');
+  } finally { restore(); WRITE.setKept(PASTD, null); }
+}, { acts: true, notice: true }));
+
+test('where no state before the newest is readable — reclaimed at its row and where it last stood, the refusal naming its floor — pane B\'s line and the list\'s floor mark say no earlier state is readable on the board, which keeps states back to the date of the feed\'s row at that floor, said once and naming no position; "a time not recorded" where that row\'s time was lost; where no row at the floor is read, the time the state shown stood (issue #700\'s design decision; FP-34)', () => onPage(async (p) => {
+  await onTrail(p);
+  const T46 = PAST_T0 + 4 * 60000, rowKey = FAKE.keyOf('changes', { session: 's-1', since: 45, limit: 1 }), other = '1.0.1.0.97';
+  const restore = pastAnswering({ [PAST_AT]: { floor: 46 }, 47: { floor: 46 } });
+  /** the line pane B's corner and the list's floor mark carry, the feed's row at the floor answered so */
+  const lineWith = async (/** @type {unknown} */ answer) => {
+    if (SCENE.isOpen()) SCENE.close();
+    script[rowKey] = answer;
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    const why = SCENE.past()?.why, list = String(p.afterB[0].innerHTML);
+    assert.ok(why && p.cornerB.innerHTML.includes(`<span class="why" data-string="${why.id}">${esc(why.text)}</span>`) && list.includes(`<div class="pl-floor" data-string="${why.id}">${esc(why.text)}</div>`),
+      `the corner's line and the floor mark the same words: ${p.cornerB.innerHTML} ${list}`);
+    return why;
+  };
+  try {
+    const said = p.said.length, words = t('L.history.floor', { board: BOARD_NAME(), date: dayOf(T46) });
+    const why = await lineWith({ result: { entries: [{ ...pastRow(46, T46), docs: [other] }], next: 46, head: 60 } });
+    assert.deepEqual([SCENE.past()?.at, why, SCENE.past()?.floor], [48, { id: 'L.history.floor', text: words, substituted: true }, dayOf(T46)], 'the newest kept state in its place, the line naming the board and the date of the row at the floor');
+    assert.ok(!p.cornerB.innerHTML.includes('⟨') && !words.includes('46'), `no token and no position: ${words}`);
+    assert.deepEqual(p.said.slice(said).filter((w) => w === heard(words)), [heard(words)], 'the line said once');
+    const untimed = await lineWith({ result: { entries: [{ ...pastRow(46, T46), docs: [other], time: null }], next: 46, head: 60 } });
+    assert.equal(untimed?.text, t('L.history.floor', { board: BOARD_NAME(), date: t('L.history.floor.untimed') }), 'the row\'s time lost: "a time not recorded"');
+    const stood = t('B3.history.reclaimed', { board: BOARD_NAME(), time: timeOf(PAST_T0 + 5 * 60000) });
+    const past = await lineWith({ result: { entries: [{ ...pastRow(47, T46), docs: [other] }], next: 47, head: 60 } });
+    assert.deepEqual([past?.id, past?.text], ['B3.history.reclaimed', stood], 'no row at the floor itself: the time the state shown stood');
+    const refused = await lineWith({ refused: { kind: 'unreachable', name: 'unreachable', text: '' } });
+    assert.deepEqual([refused?.id, refused?.text], ['B3.history.reclaimed', stood], 'the row not read: the time the state shown stood');
+    SCENE.close();
+    script[rowKey] = { result: { entries: [{ ...pastRow(46, T46), docs: [other] }], next: 46, head: 60 } };
+    let busy = pastAnswering({ [PAST_AT]: 'history_busy' });
+    try {
+      assert.equal(await pastOpened(p), true, 'the scene shows, busy');
+      busy(); busy = pastAnswering({ [PAST_AT]: { floor: 46 }, 47: { floor: 46 } });
+      assert.ok(await within(1500, () => SCENE.past()?.met === 'history_reclaimed'), 'the reissue answered reclaimed, naming its floor');
+      assert.deepEqual([SCENE.past()?.why?.id, SCENE.past()?.why?.text, SCENE.past()?.running], ['L.history.floor', words, false], 'the reissue\'s line names the date of the row at that floor, nothing running');
+    } finally { busy(); }
+  } finally { SCENE.close(); restore(); delete script[rowKey]; WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('a return reads the draft\'s rows written past the position its entry read up to, so the newest kept state stands under its own row: the state asked refused, the one in its place is the draft as it stands now — the list topped by the row written since the scene was left, its row marked, pane B titled with when it stood (issue #700\'s design decision; FP-23)', () => onPage(async (p) => {
+  await onTrail(p);
+  // the page's place on the feed past the draft's rows, so its history read reads up to a head
+  REC.reachFeed(Math.max(REC.feedAt() ?? 0, 70));
+  let restore = () => {}, since = '';
+  try {
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    const head = /** @type {number} */ (TRAIL.current()?.scene?.held.past?.head), at = head + 13, T = PAST_T0 + 9 * 60000;
+    const board = GO.wholeBoard(); await flown(); await board;
+    since = FAKE.keyOf('changes', { session: 's-1', since: head, under: PASTD });
+    script[since] = { result: { entries: [pastRow(at, T)], next: at, head: at } };
+    REC.reachFeed(at);
+    restore = pastAnswering({ [PAST_AT]: 'history_reclaimed', 47: 'history_reclaimed' });
+    const back = GO.back(); await flown(); await back;
+    const L = SCENE.past(), line = t('B3.history.row', { time: lastRead(T), hand: t('F.slot.unsigned') });
+    assert.deepEqual([SCENE.isOpen(), L?.at, L?.days[0]?.rows[0]?.last, L?.why?.id], [true, at, at, 'B3.history.reclaimed'], 'the newest kept state under the row written since, topping the list, the line saying why');
+    assert.ok(p.cornerB.innerHTML.includes(`<span class="tl">${esc(line)}</span>`) && String(p.afterB[0].innerHTML).includes(`<div class="pl-row" data-row="${at}" data-shown="1"`), `pane B titled with when it stood, its row marked: ${p.cornerB.innerHTML}`);
+  } finally { restore(); if (since) delete script[since]; WRITE.setKept(PASTD, null); }
 }, { acts: true }));
 
 /** the narrowest scene width, from 300 px, at which the panes stack with both corners beside their columns — the list's column `outer` px wide asked for (`SCENE.paneFit`, as `fitAt` lays the scene out) */

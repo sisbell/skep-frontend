@@ -399,25 +399,32 @@
 // draft's current text, its corner the draft's (`current`); a change of the
 // page's class sets it again from the model's record of its document, as
 // every pane (FP-29). Opened as a draft's history (`Held.past`; B3-S7; N-GO's
-// `history`) on the draft's address, pane B is a past state of the draft,
-// derived from the board's history at a position (M-DERIVE's `recordAt`):
-// the state the act asked (`PastHeld.asked`), read at the position its row
-// ends at — refused there as reclaimed, at the last position it stood, before
-// the draft's next change (M-PAST's `stoodUntil`), or the committed one the
-// board names below it, unless asked there already or the refusal's floor
-// lies past it (`askState`; M-PUMP's `stateAt`) — and where it is refused,
-// the newest kept state in its place (`pastState`): the act's own read shown
-// as the scene opens (`Showing.past`), and read again as it reopens, for its
-// entry keeps the state asked and never the record shown nor why
-// (`pastSource`, `asLeft`). Its corner is titled by what it
+// `history`) on the draft's address, pane B is a state of the draft derived
+// at a position (M-DERIVE's `recordAt`): the state the act asked
+// (`PastHeld.asked`) — a past one read from the board's history at the
+// position its row ends at, refused there as reclaimed, at the last position
+// it stood, before the draft's next change (M-PAST's `stoodUntil`), or the
+// committed one the board names below it, unless asked there already or the
+// refusal's floor lies past it (`askState`; M-PUMP's `stateAt`); the newest
+// row's the draft as the board holds it now, read as the plane's acts read a
+// document and never from the board's history (M-PUMP's `stateNow`) — and
+// where the past one is refused, the newest kept state in its place
+// (`pastState`): the act's own read shown as the scene opens
+// (`Showing.past`), and read again as it reopens, over the rows its entry
+// keeps and those of the draft written since (`pastSince`), for its entry
+// keeps the state asked and never the record shown nor why (`pastSource`,
+// `asLeft`). Its corner is titled by what it
 // is at every fit, in the kind's place (`titled`) — "as it stood ⟨time⟩ ·
 // ⟨hand⟩", a key of the reader's own named by its device label alone
 // (`handFields`) — with the chip after it, and where it shows another state
 // than its act asked a line saying why (`pastLine`): the latest refusal the
 // asked state's reads met, in O-FACES' words (`Faces.words`; `pastWhyOf`) —
-// reclaimed, naming the board and the time the state shown stood, "a time
-// not recorded" where its row holds none; busy, while the scene reissues the
-// asked state (`reissue`) — a whole read at a time, the first RETRY_MS after
+// reclaimed, naming the board and the date it keeps states back to, the day
+// of the feed's row at the floor the refusal names (`floorOf`; M-PUMP's
+// `rowAt`), "a time not recorded" where the board lost that row's time; where
+// it names no floor or no row there is read, the time the state shown stood,
+// "a time not recorded" where its row holds none; busy, while the scene
+// reissues the asked state (`reissue`) — a whole read at a time, the first RETRY_MS after
 // the last answer, each pause twice the one before, PAST_RETRY_MAX_MS at the
 // most (`reissueGap`), and only while its answer is one the board classes as
 // retry (BM-HELD's `busy`) — until it lands, the scene closes or reopens, or
@@ -702,7 +709,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {FeedUpdate[]} entries its feed rows read, in position order
  * @property {number} from the position its read reached down to: rows below it are read as the scene stands (`readOlder`); 0 where every row is read
  * @property {boolean} bottom its read reached the feed's first position, or the first one the feed's files hold (M-PUMP's `HistoryRead.floor`): no row below `from` is to be read
- * @property {number | null} head the position its read reached up to (M-PUMP's `HistoryRead.head`): the newest row's state stood until it (M-PAST's `stoodUntil`); null where none is known
+ * @property {number | null} head the position its read reached up to (M-PUMP's `HistoryRead.head`): a return reads the rows written past it (`pastSince`); null where none is known
  * @property {number} asked the last position of the row whose state the act asked: the row below the top row, else the top row
  * @property {boolean} unkept the draft held words the board had not kept as the act was taken: the list's top line says so
  * @property {{pages: number, read: number, readMs: number}} figures the history read's pages and rows and its time (FP-18)
@@ -714,7 +721,9 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {import('../model/pump.js').State} state the state as the board answered it: its text, its image and the position read
  * @property {number} shown the last position of the row whose state it is: the asked row's, else the newest row's in its place
  * @property {Refusal | null} met the latest refusal the asked state's reads met, where the newest kept state stands in its place; null where it is the state asked
+ * @property {string | null} floor the date the board keeps states back to, where `met` is a reclaimed refusal naming its floor and the feed's row there was read (`floorOf`); null otherwise
  * @property {number} ms the reads' time by the platform's clock (FP-18)
+ * @property {PastHeld} [held] what the history stands on as the state was read, where a return read the rows written past its entry's head (`pastSince`); absent where it stands on its opener's
  */
 
 /**
@@ -728,8 +737,9 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {number} at the last position of the row whose state pane B shows
  * @property {number} asked the last position of the row whose state the act asked (`PastHeld.asked`)
  * @property {Refusal | null} met the latest refusal the asked state's reads met, where pane B shows another state in its place: why it does (`pastWhyOf`); null where it shows the one asked
+ * @property {string | null} floor the date the board keeps states back to, where `met` is a reclaimed refusal naming its floor and the feed's row there was read (`floorOf`): the line's words then the floor's; null otherwise
  * @property {boolean} running the scene reissues the asked state (`reissue`): pane B's corner carries the in-flight clause, the running mark after it (`pastLine`), and the asked row says "reading"
- * @property {number | null} head the position the rows were first read up to (`PastHeld.head`)
+ * @property {number | null} head the position the rows were first read up to (`PastHeld.head`): the act's, a return's past it (`pastSince`)
  * @property {boolean} unkept the list's top line says the draft holds words not yet kept
  * @property {string | null} said the line's words as the status region last said them (`sayLine`); null where it said none
  * @property {number} from the position the rows read reach down to, every row above it read; 0 where every row is read
@@ -1036,7 +1046,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {(addr: string, anchor: Anchor, abandon: () => void) => void} reaching an act on it waiting for the answer, which the face's dismissal abandons (FP-25)
  * @property {(far: string, anchor: Anchor, told: boolean) => void} floating the texts hold none of what it stood for, in the dead end's words; `told` its name says them where the focus lands
  * @property {(said: Said, anchor: Anchor, again: (() => void) | null, told: boolean) => void} held the line's words (FP-21), "try again" where a retry may tell; `told` as `floating`'s
- * @property {(r: Refusal, ctx: {time?: string}) => {id: string, text: string}} words a refusal's words by its name (O-FACES' `wordsFor`), a past state's line among them; `time` the time the state shown stood
+ * @property {(r: Refusal, ctx: {time?: string, date?: string}) => {id: string, text: string}} words a refusal's words by its name (O-FACES' `wordsFor`), a past state's line among them; `time` the time the state shown stood; `date` the date the board keeps states back to (`PastList.floor`)
  */
 
 /** @typedef {{key: string, focus: boolean}} Listed a stroke's list standing as the reader left the scene (`Left.list`): the stroke's key (`strokeKey`), and whether the platform's focus stood in the list */
@@ -1826,10 +1836,13 @@ async function askState(addr, rows, row, head, attempts) {
 
 /**
  * The state a draft's history shows in pane B (see the head): the asked
- * row's (`askState`); where that is refused and the asked row is not the
- * newest, the newest row's in its place, the asked one's refusal kept as why
- * (`PastGot.met`); the refusal met where the state to show could not be read.
- * Each derived at the position read (M-DERIVE's `recordAt`).
+ * row's (`askState`), the newest row's the draft as the board holds it now
+ * (M-PUMP's `stateNow`), never read as of a position of the board's history;
+ * where the asked state is refused, the newest kept state in its place, the
+ * asked one's refusal kept as why (`PastGot.met`) with the date its floor
+ * names, where it names one (`floorOf`); the refusal met where the state to
+ * show could not be read. Each derived at the position read (M-DERIVE's
+ * `recordAt`).
  * @param {string} addr the draft
  * @param {readonly import('../model/past.js').Row[]} rows its rows, newest first (M-PAST's `rowsOf`)
  * @param {import('../model/past.js').Row} asked the row whose state the act asks
@@ -1837,22 +1850,59 @@ async function askState(addr, rows, row, head, attempts) {
  * @returns {Promise<PastGot | {refused: Refusal}>}
  */
 export async function pastState(addr, rows, asked, head) {
-  const t0 = performance.now(), top = rows[0];
-  /** @type {(s: import('../model/pump.js').State, shown: number, met: Refusal | null) => PastGot} */
-  const got = (s, shown, met) => ({ record: { ...recordAt(addr, s.runs, s.at, { image: s.image }), meta: REC.has(addr) ? REC.doc(addr).meta : null }, state: s, shown, met, ms: performance.now() - t0 });
+  const t0 = performance.now(), top = rows[0] ?? asked;
+  /** @type {(s: import('../model/pump.js').State, shown: number, met: Refusal | null, floor: string | null) => PastGot} */
+  const got = (s, shown, met, floor) => ({ record: { ...recordAt(addr, s.runs, s.at, { image: s.image }), meta: REC.has(addr) ? REC.doc(addr).meta : null }, state: s, shown, met, floor, ms: performance.now() - t0 });
+  if (asked.last === top.last) { const s = await PUMP.stateNow(addr); return 'refused' in s ? s : got(s, top.last, null, null); }
   const first = await askState(addr, rows, asked, head);
-  if (!('refused' in first)) return got(first, asked.last, null);
-  if (!top || top.last === asked.last) return first;
-  const newest = await askState(addr, rows, top, head);
-  return 'refused' in newest ? newest : got(newest, top.last, first.refused);
+  if (!('refused' in first)) return got(first, asked.last, null, null);
+  const [s, floor] = await Promise.all([PUMP.stateNow(addr), floorOf(first.refused)]);
+  return 'refused' in s ? s : got(s, top.last, first.refused, floor);
+}
+
+/**
+ * The date a reclaimed refusal's floor names (see the head; FP-34): the day
+ * the feed's row at that position was written (M-PUMP's `rowAt`), "a time not
+ * recorded" where the board lost that row's time; null where the refusal is
+ * no reclaimed one or names no floor, or no row at the floor could be read —
+ * the read refused, or the first row read standing past it.
+ * @param {Refusal} r
+ * @returns {Promise<string | null>}
+ */
+async function floorOf(r) {
+  const floor = r.name === 'history_reclaimed' ? /** @type {{body?: {floor?: unknown}}} */ (r).body?.floor : null;
+  if (typeof floor !== 'number') return null;
+  const out = await PUMP.rowAt(floor);
+  if ('refused' in out || !out.row) return null;
+  return out.row.time == null ? t('L.history.floor.untimed') : dayOf(out.row.time);
+}
+
+/**
+ * What a draft's history stands on as it reopens (see the head): the rows
+ * its entry keeps, with those of the draft written past the position they
+ * were read up to read now (M-PUMP's `historyOf` above it), each once, and
+ * that read's head, so the newest kept state stands under its own row; the
+ * entry's alone where no head is known, the read was refused, or it read no
+ * row.
+ * @param {PastHeld} h
+ * @param {() => boolean} stands
+ * @returns {Promise<PastHeld>}
+ */
+async function pastSince(h, stands) {
+  if (h.head == null || !stands()) return h;
+  const got = await PUMP.historyOf(h.draft, { above: h.head });
+  if (got.refused || !got.rows.length) return h;
+  const held = new Set(h.entries.map((u) => u.position));
+  return { ...h, entries: [...h.entries, ...got.rows.filter((u) => !held.has(u.position))].sort((x, y) => x.position - y.position), head: got.head ?? h.head };
 }
 
 /**
  * Pane B of a draft's history as the scene opens or reopens on the draft's
  * address (see the head): the state its act read, where the act hands it in
- * (`Showing.past`), else the one read now from the rows its entry keeps
- * (`pastState`); the refusal met where no state could be read, as a pane's
- * read refused answers — the state found beside the record (`past`).
+ * (`Showing.past`), else the one read now (`pastState`) over the rows its
+ * entry keeps and those written since (`pastSince`, `PastGot.held`); the
+ * refusal met where no state could be read, as a pane's read refused answers
+ * — the state found beside the record (`past`).
  * @param {PastHeld} h
  * @param {PastGot | null} got the act's own read
  * @param {() => boolean} stands
@@ -1860,11 +1910,12 @@ export async function pastState(addr, rows, asked, head) {
  */
 async function pastSource(h, got, stands) {
   const none = { d: null, n: null, whole: false, refused: null, unheard: null, past: null };
-  const rows = PAST.rowsOf(h.entries), asked = PAST.rowHolding(rows, h.asked);
-  const out = got ?? (asked && stands() ? await pastState(h.draft, rows, asked, h.head) : null);
+  const on = got ? h : await pastSince(h, stands);
+  const rows = PAST.rowsOf(on.entries), asked = PAST.rowHolding(rows, on.asked);
+  const out = got ?? (asked && stands() ? await pastState(on.draft, rows, asked, on.head) : null);
   if (!out) return none;
   if ('refused' in out) return { ...none, refused: out.refused, unheard: PUMP.unanswered(out.refused) ? out.refused : null };
-  return { d: out.record, n: null, whole: true, refused: null, unheard: null, past: out };
+  return { d: out.record, n: null, whole: true, refused: null, unheard: null, past: on === h ? out : { ...out, held: on } };
 }
 
 /**
@@ -5504,18 +5555,19 @@ function pastLine(L) {
  * Why pane B shows the state it shows (see the head; T-ARTICLE's `PastWhy`):
  * where it shows another than its act asked, the latest refusal the asked
  * state's reads met in O-FACES' words (`Faces.words`) — reclaimed naming the
- * board and the time the state shown stood, "a time not recorded" where its
- * row holds none — a substitution; else, where it shows the state asked, that
- * state the newest row's and the draft holding no words the board has not
- * kept, the words saying it is how the draft stands now; else none. Derived,
- * never kept: a row arriving above the state shown takes the last away.
+ * board and the date its floor names (`PastList.floor`), else the time the
+ * state shown stood, "a time not recorded" where its row holds none — a
+ * substitution; else, where it shows the state asked, that state the newest
+ * row's and the draft holding no words the board has not kept, the words
+ * saying it is how the draft stands now; else none. Derived, never kept: a
+ * row arriving above the state shown takes the last away.
  * @param {PastList} L
  * @returns {import('../text/article.js').PastWhy | null}
  */
 function pastWhyOf(L) {
   if (L.met) {
     if (!faces) return null;
-    const row = PAST.rowHolding(L.rows, L.at), w = faces.words(L.met, { time: row && row.time != null ? timeOf(row.time) : t('L.history.floor.untimed') });
+    const row = PAST.rowHolding(L.rows, L.at), w = faces.words(L.met, { time: row && row.time != null ? timeOf(row.time) : t('L.history.floor.untimed'), ...(L.floor != null ? { date: L.floor } : {}) });
     return { id: w.id, text: w.text, substituted: true };
   }
   const top = L.rows[0];
@@ -5541,20 +5593,21 @@ export function pastAsOf() {
 }
 
 /**
- * The list a draft's history opens with (`Held.past`): its rows (M-PAST's
- * `rowsOf`) and days (`daysOf`), no day open until it first stands
- * (`standList`); the state pane B shows as its reads found it (`PastGot`),
- * running where they met a refusal the board classes as retry, which the
- * scene reissues as it stands (`pastStood`).
+ * The list a draft's history opens with (`Held.past`), over the rows the
+ * state shown was read over, where a return read more (`PastGot.held`): its
+ * rows (M-PAST's `rowsOf`) and days (`daysOf`), no day open until it first
+ * stands (`standList`); the state pane B shows as its reads found it
+ * (`PastGot`), running where they met a refusal the board classes as retry,
+ * which the scene reissues as it stands (`pastStood`).
  * @param {PastHeld} h
  * @param {PastGot} got
  * @returns {PastList}
  */
 function pastListOf(h, got) {
-  const rows = PAST.rowsOf(h.entries);
+  const on = got.held ?? h, rows = PAST.rowsOf(on.entries);
   return {
-    draft: h.draft, entries: [...h.entries], rows, days: PAST.daysOf(rows), open: new Set(), opened: false, at: got.shown, asked: h.asked, met: got.met, running: busy(got.met),
-    head: h.head, unkept: h.unkept, said: null, from: h.from, bottom: h.bottom, reading: false, figures: { ...h.figures, stateMs: got.ms, at: got.state.at, older: null }, html: '',
+    draft: on.draft, entries: [...on.entries], rows, days: PAST.daysOf(rows), open: new Set(), opened: false, at: got.shown, asked: on.asked, met: got.met, floor: got.floor, running: busy(got.met),
+    head: on.head, unkept: on.unkept, said: null, from: on.from, bottom: on.bottom, reading: false, figures: { ...on.figures, stateMs: got.ms, at: got.state.at, older: null }, html: '',
   };
 }
 
@@ -5609,7 +5662,8 @@ function sayLine(S, lead = null) {
  * (see the head; BM-HELD's `busy`): a whole read at a time (`askState`), after
  * a pause that doubles to PAST_RETRY_MAX_MS (`reissueGap`), until it lands —
  * pane B set again to it in one step (`landPast`) — or a refusal of another
- * class ends it, the line stating that answer alone; each answer's words
+ * class ends it, the line stating that answer alone, a reclaimed one with
+ * the date its floor names once that is read (`floorOf`); each answer's words
  * written in its place (`lineMoved`). It ends with nothing more where the
  * scene closed or reopened, or another state was asked, meanwhile.
  * @param {Scene} S
@@ -5627,8 +5681,12 @@ async function reissue(S) {
     if (!stands()) return;
     const t0 = performance.now(), got = await askState(L.draft, L.rows, row, L.head, 1);
     if (!stands()) return;
-    if ('refused' in got) { L.met = got.refused; L.running = busy(got.refused); lineMoved(S); continue; }
-    landPast(S, { record: { ...recordAt(L.draft, got.runs, got.at, { image: got.image }), meta: REC.has(L.draft) ? REC.doc(L.draft).meta : null }, state: got, shown: asked, met: null, ms: performance.now() - t0 });
+    if ('refused' in got) {
+      const floor = busy(got.refused) ? null : await floorOf(got.refused);
+      if (!stands()) return;
+      L.met = got.refused; L.floor = floor; L.running = busy(got.refused); lineMoved(S); continue;
+    }
+    landPast(S, { record: { ...recordAt(L.draft, got.runs, got.at, { image: got.image }), meta: REC.has(L.draft) ? REC.doc(L.draft).meta : null }, state: got, shown: asked, met: null, floor: null, ms: performance.now() - t0 });
   }
 }
 
@@ -5664,7 +5722,7 @@ function lineMoved(S) {
 function landPast(S, got) {
   const L = S.past, P = S.b;
   if (!L || !els) return;
-  L.at = got.shown; L.met = got.met; L.running = false;
+  L.at = got.shown; L.met = got.met; L.floor = got.floor; L.running = false;
   L.figures = { ...L.figures, stateMs: got.ms, at: got.state.at };
   setPanes(S, [{ side: 'b', next: { d: got.record, kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold: null } }], sharedBetween(S.a, { src: P.src, d: got.record }));
   const title = cornerTitle(paneCorner(S.b).view);
@@ -5856,7 +5914,8 @@ async function readOlder(S) {
  * The list of a draft's past states as it stands (the gate reads it): its
  * draft, the state shown and the state asked, its top line, the line saying
  * why pane B shows its state (`pastWhyOf`), the refusal that line answers by
- * its name and whether the scene reissues the asked state, the clause saying
+ * its name and the date its floor names where that was read
+ * (`PastList.floor`), whether the scene reissues the asked state, the clause saying
  * the state shown is not its minute's last with its count (M-PAST's
  * `notLastOf`) and the time the in-flight clause names (`pastLine`), its days
  * — each its key, its date, whether it is folded, the hands a folded head
@@ -5870,7 +5929,7 @@ export function past() {
   if (!L) return null;
   const line = pastLine(L);
   return {
-    draft: L.draft, at: L.at, asked: L.asked, unkept: L.unkept, why: pastWhyOf(L), met: L.met ? L.met.name : null, running: L.running, notLast: line.notLast, inFlight: line.reading,
+    draft: L.draft, at: L.at, asked: L.asked, unkept: L.unkept, why: pastWhyOf(L), met: L.met ? L.met.name : null, floor: L.floor, running: L.running, notLast: line.notLast, inFlight: line.reading,
     from: L.from, bottom: L.bottom, reading: L.reading, figures: { ...L.figures },
     days: L.days.map((d) => ({ key: d.key, date: d.time == null ? null : dayOf(d.time), folded: PAST.isFolded(d, L.open), landmarks: d.landmarks,
       rows: d.rows.map((r) => ({ first: r.first, last: r.last, positions: [...r.positions], time: r.time, hand: { ...r.hand }, kind: r.kind, landmark: r.landmark ? { ...r.landmark } : null, words: whatOf(r).text })) })),

@@ -31,8 +31,9 @@
 // where no board is held, why as one entry and the no-board face with
 // what still works, a page URL whose `port` names no port saying so in the
 // entry, the face and every call's answer (FP-35); and the editor's refusal
-// names each mapped to their entry's words with no act, a name no document
-// drafts words for kept on the generic refusal line; the face of a
+// names each mapped to their entry's words with no act — `history_reclaimed`
+// to the floor's own where the date its floor names is handed in (FP-34) — a
+// name no document drafts words for kept on the generic refusal line; the face of a
 // passage the person's own removal took, its act the put-back; and the moved
 // document's face standing at its corner and never as an overlay — its
 // words, its hands and its acts, its compact form naming its one device's
@@ -377,7 +378,7 @@ test('a withheld run\'s card reads the claims on its origin before it shows, whe
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('each of the editor\'s refusal names maps to its entry\'s words — the three own-bug tokens to the one own-bug entry, the halt to one of two forms by its `why`, a token the refusal does not carry filled from the caller and else left as the design writes it, save history_reclaimed\'s, filled with the board this page holds and "a time not recorded" — a face saying words were lost under its head "not kept" with the act that copies them out, every other with no act; an unlisted name keeps the generic refusal line (issues #410, #533; B3; D6)', () => {
+test('each of the editor\'s refusal names maps to its entry\'s words — the three own-bug tokens to the one own-bug entry, the halt to one of two forms by its `why`, a token the refusal does not carry filled from the caller and else left as the design writes it, save history_reclaimed\'s, filled with the board this page holds and "a time not recorded", or, the date its floor names handed in, the floor\'s own words — a face saying words were lost under its head "not kept" with the act that copies them out, every other with no act; an unlisted name keeps the generic refusal line (issues #410, #533, #700; B3; D6)', () => {
   const board = (/** @type {string} */ name, /** @type {object} */ [more] = [{}]) => /** @type {Refusal} */ ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'insert', site: {}, body: null, ...more });
   const shell = (/** @type {string} */ name, /** @type {object} */ [more] = [{}]) => /** @type {Refusal} */ ({ kind: 'shell', name, ...more });
   /** @type {Array<[Refusal, string, Record<string, string>?]>} each refusal, the id its face shows, and the values its words take */
@@ -418,6 +419,14 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
   assert.ok(!reclaimed.text.includes('⟨') && !reclaimed.text.includes('2048'), `no token and no log position: ${reclaimed.text}`);
   assert.equal(FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed' } }]), { time: '09:05' }).text, t('B3.history.reclaimed', { board: t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), time: '09:05' }),
     'a refusal naming no floor, the time the state shown stood handed in: the same words, that time in them');
+  // the date the refusal's floor names handed in: no earlier state readable, the board keeping states back to it — never the floor's position
+  for (const date of ['16 November 2026', t('L.history.floor.untimed')]) {
+    const floored = FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), { board: 'board 1', time: '09:05', date });
+    assert.deepEqual([floored.id, floored.text, floored.acts], ['L.history.floor', t('L.history.floor', { board: 'board 1', date }), []], `the date its floor names handed in, ${date}: the floor's own words, no act (issue #700)`);
+    assert.ok(!floored.text.includes('⟨') && !floored.text.includes('2048') && !floored.text.includes('09:05'), `no token, no log position and not the time the state shown stood: ${floored.text}`);
+  }
+  assert.equal(FACES.wordsFor(board('history_reclaimed'), { date: '16 November 2026' }).text, t('L.history.floor', { board: t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), date: '16 November 2026' }),
+    'no board handed in: the board this page holds');
   assert.equal(FACES.wordsFor(board('published_target')).text, t('C-45', { D: '' }), 'C-45 at a target the act did not name');
   for (const name of ['empty_source', 'frame_too_large', 'attest_not_composed', 'self_supersession', 'ill_formed_successor', 'head_unreadable', 'session_died', 'nothing_to_undo', 'no_merge', 'not_followed']) {
     assert.deepEqual(FACES.wordsFor(shell(name)), { id: 'L.refused', text: t('L.refused', { name }), acts: [] }, `${name}: no entry drafted for it — the generic refusal line`);

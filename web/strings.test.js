@@ -1301,3 +1301,12 @@ test('a past state\'s reclaimed line names the board and a time, never a positio
   assert.deepEqual([u.text, u.cls, u.source, u.lane, /B3-S7/.test(u.screen ?? '')], ['a time not recorded', 'DRAFT', '', true, true], 'the decision\'s words for a state with no recorded time: the lane\'s own');
   assert.ok(lacking().some((x) => x.id === 'L.history.floor.untimed'), 'listed for the report');
 });
+
+test('where no state before the newest is readable the line names the board and the date it keeps states back to, never a position of the board\'s log: the lane\'s own words as issue #700 decided them, naming its screens, listed for the report, "a time not recorded" its date where the row at the floor lost its time (B3-S7; FP-34)', () => {
+  const e = STRINGS['L.history.floor'];
+  assert.deepEqual([e.text, e.cls, e.source, e.lane, e.kind, /B3-S7/.test(e.screen ?? '')],
+    ['no earlier state is readable on ⟨board⟩, which keeps states back to ⟨date⟩, and this draft last changed before then', 'DRAFT', '', true, 'K16', true], 'the decision\'s words: the lane\'s own');
+  assert.equal(t('L.history.floor', { board: 'board 1', date: '16 November 2026' }), 'no earlier state is readable on board 1, which keeps states back to 16 November 2026, and this draft last changed before then', 'its two tokens filled, none left');
+  assert.ok(lacking().some((x) => x.id === 'L.history.floor'), 'listed for the report');
+  assert.ok((STRINGS['L.history.floor.untimed'].screen ?? '').includes('L.history.floor names'), '"a time not recorded" names the date it stands for there');
+});

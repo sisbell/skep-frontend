@@ -97,8 +97,11 @@
 // stand in a text (`compareParts`) and a text's image over a region
 // (`imageParts`), at the head or as of a position of the board's history; a
 // document's text and its image as they stood at such a position, kept
-// nowhere (`stateAt`); and the values bytes hold, read by their identity in
-// parts of at most MAX_DELIVERY_ITEMS positions (`readIdentity`; FP-21).
+// nowhere (`stateAt`), and as the board holds them now — from the model's
+// record read whole, else, while the window writes the draft, off the board at
+// its head and kept nowhere (`stateNow`); the feed's row at a position
+// (`rowAt`); and the values bytes hold, read by their identity in parts of at
+// most MAX_DELIVERY_ITEMS positions (`readIdentity`; FP-21).
 // The orders every read keeps. A read goes at the page's class (`atClass`):
 // it waits for an acquire out, and one the class changed under, or that met
 // the end of the session it went out under, is asked again in the form the
@@ -266,12 +269,15 @@
 // text, read off the document's image as it stood before the write
 // (`landedOf`) — each a read in flight while it is out.
 // A draft's history (B3-S7 THE LIST): its feed narrowed to the draft, read in
-// the launch's windows from the head back down to the feed's first position or
-// the first one its files hold, the rows handed up every row of the positions
-// the read covers, the narrowed feed's `next` kept with the read alone and
-// never as the page's place on the whole feed (`historyOf`); and one of its
-// past states, its text and its image read at a position of the board's
-// history (`stateAt`) — each a read in flight.
+// the launch's windows from the head back down to the feed's first position,
+// the first one its files hold, or the position a read before read up to, the
+// rows handed up every row of the positions the read covers, the narrowed
+// feed's `next` kept with the read alone and never as the page's place on the
+// whole feed (`historyOf`); one of its past states, its text and its image
+// read at a position of the board's history (`stateAt`); its newest kept
+// state, the draft as the board holds it now, never read through a history
+// read (`stateNow`); and the feed's row at the floor a history refusal names
+// (`rowAt`) — each a read in flight.
 // Rules: FP-1, FP-2, FP-6, FP-9, FP-11, FP-21, FP-22, FP-23, FP-27, FP-28,
 // FP-29, FP-34, FP-35.
 
@@ -283,6 +289,7 @@ import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation } from '../plane/projection.js';
 import { estimate, estimatedSpan, LINE_H } from '../plane/layout.js';
 import { versionAddress, homeOf, documentOf, memberOf, isTrunkMember, kindOf, accountOf, parentAccount, cmpAddr, isUnder } from './address.js';
+import { stretchIn } from './derive.js';
 import { keyFingerprint } from '../util.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
@@ -1429,9 +1436,9 @@ const feedFloorOf = (r) => {
  * positions first, forward, page after page, each page from the one before's
  * `next`, then the window before them, OWN_WIDEN times as many — until the
  * rows read hold what the caller asks (`enough`) or the windows reach the
- * feed's first position; from position 0 where the page holds no head
- * (M-REC's `feedAt`), or below `below` where a read of the windows above it
- * went before. A page refused because its `since` lies below the first
+ * feed's first position, or `above`; from position 0 where the page holds no
+ * head (M-REC's `feedAt`), or below `below` where a read of the windows above
+ * it went before. A page refused because its `since` lies below the first
  * position the feed's files hold, naming that floor (`feedFloorOf`), is asked
  * again from the floor — from the position before it, and from the floor
  * itself where that one is refused too — and the read ends with that window
@@ -1444,11 +1451,11 @@ const feedFloorOf = (r) => {
  * row read where the page holds no head, the one window read from position 0
  * up — so the rows handed up are every row of the positions the read covers.
  * @param {string} draft
- * @param {{enough?: (rows: FeedUpdate[]) => boolean, below?: number}} [o] `enough` the rows read so far hold what the caller asks: no window is read after the one that made it so; `below` read only the positions at and below it — the windows a read before left
+ * @param {{enough?: (rows: FeedUpdate[]) => boolean, below?: number, above?: number}} [o] `enough` the rows read so far hold what the caller asks: no window is read after the one that made it so; `below` read only the positions at and below it — the windows a read before left; `above` read only the positions above it — those written past where a read before read up to: no window reaches below it
  * @returns {Promise<HistoryRead>}
  */
 export async function historyOf(draft, o = {}) {
-  const head = o.below ?? REC.feedAt(), key = 'history ' + draft;
+  const head = o.below ?? REC.feedAt(), low = Math.max(0, o.above ?? 0), key = 'history ' + draft;
   /** @type {Map<number, FeedUpdate>} */
   const rows = new Map();
   /** @type {HistoryRead} */
@@ -1460,7 +1467,7 @@ export async function historyOf(draft, o = {}) {
     /** the window read last: it read `(since, until]` */
     let until = head == null ? Infinity : head;
     for (let width = OWN_WINDOW; ; width *= OWN_WIDEN) {
-      let since = head == null ? 0 : Math.max(0, head - width);
+      let since = head == null ? low : Math.max(low, head - width);
       for (let from = since; from < until;) {
         const page = await atClass((x) => PORT.changes(x ? { session: x.session, since: from, under: draft } : { guest: /** @type {const} */ (true), board: REC.board()?.board, since: from, under: draft }));
         if ('refused' in page) {
@@ -1478,7 +1485,7 @@ export async function historyOf(draft, o = {}) {
       }
       if (out.refused) { if (until === Infinity) reach(since); else reach(until, true); return out; }
       reach(since, out.floor);
-      if (out.floor || since === 0 || (o.enough && o.enough(out.rows))) return out;
+      if (out.floor || since <= low || (o.enough && o.enough(out.rows))) return out;
       until = since;
     }
   } finally { inflight.delete(key); dirty(); }
@@ -1589,6 +1596,104 @@ async function stateOnce(addr, at, above) {
     const im = await imageParts(addr, 1, n, { at: pos });
     return 'refused' in im ? im : { runs: text.runs, image: placedRuns(im.runs), at: pos };
   }
+}
+
+/**
+ * A document's text and its image as the board holds them now, for an act
+ * that names its newest kept state beside its past ones (B3-S7), over its
+ * first WHOLE_CAP positions, never read as of a position of the board's
+ * history (`stateAt`), so no refusal of a history read meets it: as the
+ * plane's acts read a document (`heldNow`), from the model's record read
+ * whole; where the model holds a draft as it stands for the window's writing
+ * — its burst open, or words of it dialed the board has not acked (M-REC's
+ * `typing`, `writing`), which no read sets meanwhile — read off the board at
+ * its head and kept nowhere (`headNow`). A pass the document was dropped under
+ * is begun again, at most DROP_ATTEMPTS passes, NOT_ANSWERED past them. The
+ * refusal a read met. The reads count as a read in flight.
+ * @param {string} addr
+ * @returns {Promise<State | {refused: Refusal}>}
+ */
+export async function stateNow(addr) {
+  const key = 'now ' + addr;
+  inflight.add(key);
+  try {
+    for (let pass = 1; ; pass++) {
+      const out = REC.typing(addr) || REC.writing(addr) ? await headNow(addr) : await heldNow(addr);
+      if (out !== 'dropped') return out;
+      if (pass >= DROP_ATTEMPTS) return { refused: NOT_ANSWERED };
+    }
+  } finally { inflight.delete(key); dirty(); }
+}
+
+/**
+ * One pass of `stateNow` from the model's record: read whole (`wholeOf`) —
+ * what the record holds standing, what it lacks read and taken — and, where
+ * its image leaves a position of the text unplaced (M-REC's `imageGaps`),
+ * that text's image read over it (`imageParts`) and taken. It stands as read
+ * at the position its text was answered at (`Doc.readAt`), else, a text of no
+ * position, its extent's (`Doc.extentAt`), else 0. NOT_ANSWERED where the
+ * record holds its text less than whole once the whole read ends.
+ * @param {string} addr
+ * @returns {Promise<State | {refused: Refusal} | 'dropped'>} 'dropped' where the document was dropped while its image read
+ */
+async function heldNow(addr) {
+  const w = await wholeOf(addr);
+  if (w.refused) return { refused: w.refused };
+  const d = REC.doc(addr), n = Math.min(d.extent ?? 0, WHOLE_CAP);
+  const held = !w.doc || d.extent == null ? null : n > 0 ? stretchIn(d, 1, n) : { runs: [], ids: [] };
+  if (!held) return { refused: NOT_ANSWERED };
+  const at = d.readAt ?? d.extentAt ?? 0;
+  if (!REC.imageGaps(held.ids, 1, n).length) return { runs: held.runs, image: held.ids, at };
+  const dropped = watchDrops(addr), im = await imageParts(addr, 1, n);
+  if (dropped()) return 'dropped';
+  if ('refused' in im) return im;
+  REC.takeImage(addr, 1, im.runs);
+  return { runs: held.runs, image: placedRuns(im.runs), at };
+}
+
+/**
+ * One pass of `stateNow` off the board at its head, kept nowhere: its extent,
+ * then its text and that text's image one after the other (`textParts`,
+ * `imageParts`), as read at the position its text was answered at, else its
+ * extent's, else 0.
+ * @param {string} addr
+ * @returns {Promise<State | {refused: Refusal} | 'dropped'>} 'dropped' where the document was dropped while it read
+ */
+async function headNow(addr) {
+  const dropped = watchDrops(addr), out = await read(F.retrieveDocVSpanSet(addr));
+  if (dropped()) return 'dropped';
+  if ('refused' in out) return out;
+  const c = F.decodeSpanSet(out.answer).find((s) => s.subspace === 1), n = Math.min(c ? c.positions : 0, WHOLE_CAP), at = F.asOf(out.answer) ?? 0;
+  if (!n) return { runs: [], image: [], at };
+  const text = /** @type {{runs: import('./frames.js').Run[], asOf: number | null} | {refused: Refusal}} */ (await textParts(addr, 1, n));
+  if (dropped()) return 'dropped';
+  if ('refused' in text) return text;
+  const im = await imageParts(addr, 1, n);
+  if (dropped()) return 'dropped';
+  return 'refused' in im ? im : { runs: text.runs, image: placedRuns(im.runs), at: text.asOf ?? at };
+}
+
+/**
+ * The feed's row at a position of the board's log, read for an act — the
+ * floor a refusal of a history read names, the row whose time says when the
+ * board keeps states back to (B3-S7): one row of `changes` after the position
+ * before it (wire.md §The change feed), under the page's session at its
+ * class, or in the guest form where none stands. The row where the first one
+ * the page reads stands at the position; none where it stands past it or
+ * none comes — a row the page's class reads nothing of among them. The
+ * refusal the page met. The read counts as a read in flight.
+ * @param {number} position
+ * @returns {Promise<{row: FeedUpdate | null} | {refused: Refusal}>}
+ */
+export async function rowAt(position) {
+  const key = 'row ' + position, since = Math.max(0, position - 1);
+  inflight.add(key);
+  try {
+    const out = await atClass((x) => PORT.changes(x ? { session: x.session, since, limit: 1 } : { guest: /** @type {const} */ (true), board: REC.board()?.board, since, limit: 1 }));
+    if ('refused' in out) return { refused: out.refused };
+    const u = out.result.entries[0];
+    return { row: u && u.position === position ? u : null };
+  } finally { inflight.delete(key); dirty(); }
 }
 
 /**
