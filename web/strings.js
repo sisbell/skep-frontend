@@ -1460,6 +1460,12 @@ export const STRINGS = {
   'L.corner.draft': { text: '◌', cls: 'DRAFT', kind: 'K12', source: '', screen: 'the corner, compact', lane: true },
   // a corner at its document's head (FP-26): the items its rows cannot hold, folded into one count that opens them whole
   'L.corner.more': { text: '⟨n⟩ more', cls: 'DRAFT', kind: 'K23', source: '', screen: 'the corner, at its document\'s head', lane: true },
+  // a caret, a selection's moved end or the walk's span no move of the camera brings clear of its document's head (FP-37):
+  // what covers its line and how to clear it — the kept word's statement opened beneath the head, ⟨word⟩ the kept word whose
+  // act closes it; the corner's items opened whole there; the head itself in a window too short to hold the line below it
+  'L.cover.statement': { text: 'the statement open at this document’s head covers your line — “⟨word⟩” above it closes it', cls: 'DRAFT', kind: 'K18', source: '', screen: 'the one line and the status region: a caret, a selection\'s end or the walk\'s span under the kept word\'s statement opened beneath its document\'s head', lane: true },
+  'L.cover.opened': { text: 'the corner opened whole at this document’s head covers your line — the act that opened it closes it', cls: 'DRAFT', kind: 'K18', source: '', screen: 'the one line and the status region: a caret, a selection\'s end or the walk\'s span under the corner\'s items opened whole beneath its document\'s head', lane: true },
+  'L.cover.short': { text: 'this document’s head covers your line in a window this short — a taller window shows both', cls: 'DRAFT', kind: 'K18', source: '', screen: 'the one line and the status region: a caret, a selection\'s end or the walk\'s span under its document\'s head where the window holds no room for its line below the head', lane: true },
   // an edition's state keyed by venue (P7): on a notebook ⟨venue⟩ its clause (F.published.notebook), then ⟨state⟩ the state's
   // own words, as the corner sets them after its kind and its version statement
   'L.corner.venue': { text: '⟨venue⟩ · ⟨state⟩', cls: 'DRAFT', kind: 'K12', source: '', screen: 'the corner: an edition\'s state on a notebook', lane: true },

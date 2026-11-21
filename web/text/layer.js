@@ -241,9 +241,23 @@
 // band, the fold with it, and the article set again in its place re-anchors
 // the camera on the passage being read (FP-8). No act leaves the caret under
 // the one line or what a head covers — its held rows, or a form opened beneath
-// them (`headClear`, `placeCaretMark`) — nor the end of the page's selection a
-// press, K-8 or the platform's own keys moved under what a head covers
-// (`keepClear`; FP-37). Beneath a draft's kept word its corner
+// them (`headClear`) — nor the end of the page's selection a press, K-8 or the
+// platform's own keys moved (`placeCaretMark`, `keepClear`; FP-37): the
+// target's whole line is brought clear by the first step that works, each
+// tested against the head where it will stand after the move (`coverAt`) —
+// the least pan, made only where the head the pan leaves stands clear of the
+// line, so never for a line its head rides its band over; else, where no form
+// stands opened beneath the head, one move of the camera to the view framing
+// the line at the landing's em, where the rows fit their band, lowered by the
+// least pan there where they still reach it (`frameClear`), flown with its aim
+// on the target as it moves on, or set at once under reduced motion (P-CAM's
+// `reducedMotion`), no trail entry made and the walk standing; else nothing
+// moves, and the one line and the status region say what covers the target
+// and how to clear it (`bringClear`; the reader `covered`). A walk key's
+// flight to a span lands at that view too (N-WALK's, by `frameClear`). Only
+// the act's own frame moves the camera so: a pan, a zoom, a return or a cover
+// arriving over a target standing still moves nothing for it. Beneath a
+// draft's kept word its corner
 // carries the face standing there — a moved document's (the reader `face`;
 // B3-S2; T-ARTICLE draws it) — never yielding: whole beside its column where
 // the corner stands whole, compact where it stands compact or at its
@@ -606,7 +620,7 @@ import * as WRITE from '../write/write.js';
 import * as MACHINE from '../write/machine.js';
 import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
-import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, landingPx, panBy, panInto, flying } from '../plane/camera.js';
+import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, landingPx, panBy, leastPan, flying, fly, set as setView, viewAt, reducedMotion } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W, GRID } from '../plane/layout.js';
@@ -928,6 +942,7 @@ import { t, plural, facedHTML, lastRead, runsText, joinRuns, sentence, CLIENT_CL
  * @property {(addr: string) => (number | null)} newer the newer version a document's corner on the plane offers to read in its place, where a newer version's arrival pinned its box on the version it stands for (N-GO's `newerAt`); null where it offers none
  * @property {(addr: string) => (CornerFace | null)} face the face standing at a draft's corner on the plane beneath its kept word (O-FACES' `cornerFace`; B3-S2): a moved document's; null where none stands
  * @property {() => EditorPane[]} panes the reading scene's editor panes as they stand (SC's `editorPanes`): none where no scene stands
+ * @property {(words: import('../strings.js').Words, id: string) => void} covered says what covers a target an act moved or acted at, and how to clear it, where no move of the camera brings it clear of its document's head (`bringClear`): in the one line until the next act, and in the status region (L-LINE's `transient`)
  */
 
 /**
@@ -1024,8 +1039,8 @@ const openStatements = new Map();
 const shownCache = new Map();
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
-/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document and no account named, no corner offering a newer version or carrying a face, no editor pane */
-const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false, vanished: () => {}, atop: () => 0, newer: () => null, face: () => null, panes: () => [] });
+/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document and no account named, no corner offering a newer version or carrying a face, no editor pane, a target left covered told to no one */
+const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false, vanished: () => {}, atop: () => 0, newer: () => null, face: () => null, panes: () => [], covered: () => {} });
 /** @type {Readers} */
 let read = noReaders();
 /** is a version the one its box shows (see the head)? */
@@ -2100,6 +2115,28 @@ export function frameOf(addr, pos, fsPx = landingPx()) {
   if ((first.h + f.band) * scale <= seen.h) return { x, y: box.y + first.y + (first.h - f.band) / 2, fs: f.fs };
   const { VH } = viewport();
   return { x, y: box.y + padded(f, first).y + (VH / 2 - seen.y) / scale, fs: f.fs };
+}
+
+/**
+ * The view at the landing's em that frames the line holding a position clear
+ * of the one line and of what its document's head covers there (see the
+ * head; FP-37): the reading view of the position (`frameOf`, P-CAM's
+ * `viewAt`), lowered by the least pan at that scale where the head standing
+ * there still covers the line (`coverAt`, `panFor`) — at that size the rows
+ * fit their band, so only a form opened beneath them, or a window too short
+ * to hold the line below them, leaves it covered. `clear` false where the
+ * line stands covered even so, the view then the reading view itself. Read
+ * again each frame by the move that brings a target clear (`bringClear`) and
+ * by N-WALK's flight to a span.
+ * @param {string} addr
+ * @param {number} pos a position of the text shown
+ * @returns {{view: import('../plane/camera.js').View, clear: boolean}}
+ */
+export function frameClear(addr, pos) {
+  const at = frameOf(addr, pos), v = viewAt(at, at.fs), line = lineBox(addr, pos, v), cover = coverAt(addr, v);
+  if (clearOf(line, cover, null)) return { view: v, clear: true };
+  const d = panFor(line, cover, null), w = panned(v, d), moved = { ...line, x: line.x + d.dx, y: line.y + d.dy };
+  return clearOf(moved, coverAt(addr, w), null) ? { view: w, clear: true } : { view: v, clear: false };
 }
 
 /**
@@ -4655,6 +4692,104 @@ function placeHead(c, rec, head, formH) {
 export function headClear(addr) { const c = corners.get(addr); return c && c.head ? c.bottom : null; }
 
 /**
+ * @typedef {Object} Cover — what a corner standing at its document's head would cover on screen with the camera at a view (`coverAt`)
+ * @property {number} x its left edge (px)
+ * @property {number} w its width (px): its column's text and edge
+ * @property {number} y its top (px)
+ * @property {number} bottom the foot of what it covers (px): its held rows', or a form's opened beneath its rows
+ * @property {'statement' | 'opened' | null} form the form standing opened beneath its rows: a kept word's statement (`openStatement`), its items whole (`openCorner`); null where none stands
+ */
+
+/**
+ * What a document's corner standing at its head would cover on screen with
+ * the camera at a view (see the head; FP-37): its rows laid out across the
+ * column nearest that view's visible centre at that view's scale
+ * (`headLayout`), every row held where they run deeper there than the band
+ * above the column, held by the one hold below the one line (P-LABEL's
+ * `holdTop`) and pushed down by a surface standing at its place (the reader
+ * `atop`), as `headOf` and `placeHead` stand them at the camera's own view;
+ * a form standing opened beneath its rows at the height it stands at now.
+ * At the camera's own view its foot is `headClear`'s. Null where its
+ * document's corner stands at no head now, or the document stands below its
+ * reading scale at that view.
+ * @param {string} addr
+ * @param {import('../plane/camera.js').View} view
+ * @returns {Cover | null}
+ */
+export function coverAt(addr, view) {
+  const rec = mounted.get(addr), c = corners.get(addr);
+  if (!rec || !c || !c.head || rec.fold.band <= 0 || !readsAt(rec.fs, view.scale)) return null;
+  const f = rec.fold, box = docBox(addr), scale = view.scale, { VW, VH } = viewport();
+  const centre = centreAt(view), col = f.columns[columnAt(f, centre.x - box.x, centre.y - box.y)];
+  const open = openWhole.has(addr), items = open ? rec.corner.openedItems : rec.corner.items, k = keptIn(addr);
+  const pitch = LINE_H * f.fs * scale, width = (col.w + EDGE * f.fs) * scale;
+  const L = headLayout(headItems(items), nameWidth(rec.d), k ? { w: clauseWidth(k), words: k.text } : null, width, pitch);
+  const held = (L.rows * LINE_H * f.fs > f.band * (1 + 1e-9) ? L.rows : L.held) * pitch;
+  const onScreen = (/** @type {number} */ wy) => (wy - view.y) * scale + VH / 2;
+  const at = onScreen(box.y + col.y - f.band), top = holdTop(at, read.top() + HOLD.gap, onScreen(box.y + col.y + col.h), held);
+  const y = Math.round(top) + Math.round(read.atop(boxOf(addr))), below = Math.max(held, L.rows * pitch - (top - at));
+  const o = /** @type {HTMLElement | null} */ (c.el.querySelector(':scope > .opened'));
+  return { x: Math.round((box.x + col.x - view.x) * scale + VW / 2), w: width, y, bottom: y + (o ? below + o.offsetHeight : held), form: o ? (open ? 'opened' : 'statement') : null };
+}
+
+/**
+ * The box of the line holding a position of a document's text shown, on
+ * screen with the camera at a view: across its column's text, at the line's
+ * top and as tall as the line, in the fold its article stands in, else the one
+ * its text is set in (P-LAY's `placeOf`).
+ * @param {string} addr
+ * @param {number} pos a position of the text shown
+ * @param {import('../plane/camera.js').View} view
+ * @returns {Rect}
+ */
+function lineBox(addr, pos, view) {
+  const rec = mounted.get(addr), f = rec ? rec.fold : foldOf(REC.doc(addr)), box = docBox(addr), p = placeIn(f, pos), { VW, VH } = viewport();
+  return { x: (box.x + p.x - view.x) * view.scale + VW / 2, y: (box.y + p.y - view.y) * view.scale + VH / 2, w: p.w * view.scale, h: p.h * view.scale };
+}
+
+/**
+ * The least pan that brings a line in below the one line and, where the line
+ * stands across a head's column, below what the head covers (P-CAM's
+ * `leastPan`, read and not made): inside the visible view below them, across
+ * only by a mark's stretch where one is given — the caret's — else up or down
+ * alone; or, short of `into`, down alone and only where the line's top stands
+ * above them.
+ * @param {Rect} line the line's box on screen (`lineBox`)
+ * @param {Cover | null} cover what its document's head covers at the same view (`coverAt`)
+ * @param {{x: number, w: number} | null} mark the mark's stretch across on screen; null where none is drawn
+ * @param {boolean} [into] the line is brought inside the visible view, not only below its top
+ * @returns {{dx: number, dy: number}}
+ */
+function panFor(line, cover, mark, into = true) {
+  const { VW, VH } = viewport();
+  const under = !!cover && line.x < cover.x + cover.w && cover.x < line.x + line.w;
+  const floor = Math.max(read.top(), under ? /** @type {Cover} */ (cover).bottom : -Infinity);
+  if (!into) return { dx: 0, dy: line.y < floor ? floor - line.y : 0 };
+  return leastPan({ x: mark ? mark.x : 0, y: line.y, w: mark ? mark.w : VW, h: line.h }, { x: 0, y: floor, w: VW, h: VH - floor });
+}
+
+/** does what a head covers stand over a line on screen: across the line's column, the line's top above its foot and the line's foot below its top */
+const covers = (/** @type {Cover | null} */ cover, /** @type {Rect} */ line) => !!cover && line.x < cover.x + cover.w && cover.x < line.x + line.w && line.y < cover.bottom - 0.5 && line.y + line.h > cover.y + 0.5;
+
+/** does a pan move nothing: under half a px along each axis */
+const noPan = (/** @type {{dx: number, dy: number}} */ d) => Math.abs(d.dx) < 0.5 && Math.abs(d.dy) < 0.5;
+
+/**
+ * Does a line stand clear where it stands (`panFor`): no pan would move it —
+ * and, brought inside the visible view (`into`), its top above the viewport's
+ * foot, so a line the head leaves no room for below what it covers is never
+ * clear there, though its top meets that foot.
+ * @param {Rect} line
+ * @param {Cover | null} cover
+ * @param {{x: number, w: number} | null} mark
+ * @param {boolean} [into]
+ */
+const clearOf = (line, cover, mark, into = true) => noPan(panFor(line, cover, mark, into)) && (!into || line.y < viewport().VH - 0.5);
+
+/** a view moved by a pan of screen px, as `panBy` moves the camera */
+const panned = (/** @type {import('../plane/camera.js').View} */ v, /** @type {{dx: number, dy: number}} */ d) => ({ x: v.x - d.dx / v.scale, y: v.y - d.dy / v.scale, scale: v.scale });
+
+/**
  * Where a focus on an act of a corner standing at its document's head is
  * brought into view (see the head; FP-20, FP-26): for an act on a row past
  * its held rows, that row's own place on screen as last placed — unclamped,
@@ -5379,12 +5514,92 @@ let placed = null;
 /** @type {{span: Span, end: SelectionEnd} | null} the page's selection whose moved end the next frame keeps clear of its document's head (`keepClear`); null where none is owed */
 let clearing = null;
 
+/** the flight that brings a target clear of its document's head at the landing's em (ms): a walk key's to a span (N-WALK's) */
+const CLEAR_MS = 260;
+
+/**
+ * @typedef {Object} Target — what an act moved or acted at, as `bringClear` brings its line clear (FP-37)
+ * @property {string} addr its document
+ * @property {() => (number | null)} pos its position in the text shown, read again as a move to it flies so the move follows it: the caret's now, the selection's moved end's now; null where it stands nowhere
+ * @property {{x: number, w: number} | null} mark its mark's stretch across on screen where one is drawn — the caret's — which a pan brings into view across too; null where none is, a pan moving up or down alone
+ * @property {boolean} into its line is brought inside the visible view — the caret's; else only below the one line and what the head covers, wherever below them it stands — a selection's end
+ */
+
+/**
+ * A target's whole line brought clear of the one line and of what its
+ * document's head covers (see the head; FP-37) by the first step that works,
+ * each tested against the head where it will stand after the move
+ * (`coverAt`): the least pan below them (`panFor`), made where the head
+ * standing at the panned view leaves the line clear — never for a line
+ * within the head's overflow, which rides its band with the head over it;
+ * else, where no form stands opened beneath the head, one move of the camera
+ * to the view framing the line at the landing's em clear of the head there
+ * (`frameClear`), flown with its aim reading the target again each frame, or
+ * set at once where the reader asks for reduced motion (P-CAM's
+ * `reducedMotion`) — no trail entry made, the walk where it stands; else
+ * nothing moves, and the one line and the status region say what covers the
+ * target and how to clear it (`tellCover`). Nothing where the line stands
+ * clear already, or the target stands nowhere.
+ * @param {Target} g
+ * @returns {'clear' | 'panned' | 'landing' | 'covered'} what it did
+ */
+function bringClear(g) {
+  const pos = g.pos();
+  if (pos == null) return 'clear';
+  const now = { x: cam.x, y: cam.y, scale: cam.scale }, line = lineBox(g.addr, pos, now), cover = coverAt(g.addr, now);
+  if (clearOf(line, cover, g.mark, g.into)) return 'clear';
+  const d = panFor(line, cover, g.mark, g.into), mark = g.mark ? { x: g.mark.x + d.dx, w: g.mark.w } : null;
+  if (!noPan(d) && clearOf({ ...line, x: line.x + d.dx, y: line.y + d.dy }, coverAt(g.addr, panned(now, d)), mark, g.into)) { panBy(d.dx, d.dy); markDirty(); return 'panned'; }
+  const to = !cover || !cover.form ? frameClear(g.addr, pos) : null;
+  if (to && to.clear) {
+    let last = to.view;
+    if (reducedMotion()) setView(last);
+    else void fly(() => { const p = g.pos(); if (p != null && REC.has(g.addr) && REC.doc(g.addr).from >= 0) last = frameClear(g.addr, p).view; return last; }, CLEAR_MS);
+    markDirty();
+    return 'landing';
+  }
+  tellCover(g.addr, cover);
+  return 'covered';
+}
+
+/**
+ * What covers a target no move of the camera brings clear, and how to clear
+ * it, told in the one line and the status region (the reader `covered`;
+ * FP-37): the statement opened beneath its document's head, closed by the
+ * kept word above it (`openStatement`); the corner's items opened whole
+ * there, closed by the act that opened them (`openCorner`); else the head
+ * itself, in a window too short to hold the line below it.
+ * @param {string} addr the target's document
+ * @param {Cover | null} cover what its head covers where the target stands
+ */
+function tellCover(addr, cover) {
+  const form = cover ? cover.form : null, k = form === 'statement' ? WRITE.keptOf(addr) : null;
+  const id = k ? 'L.cover.statement' : form === 'opened' ? 'L.cover.opened' : 'L.cover.short';
+  read.covered(sentence(id, k ? { word: keptWord(k).text } : {}), id);
+}
+
+/**
+ * Where the line holding a position of a document stands covered by its
+ * document's head at the camera's view, what covers it and how to clear it
+ * told (`tellCover`): N-WALK's, as a walk key's flight to a span lands where
+ * no view clears it (`frameClear`). Nothing where the line stands clear of it.
+ * @param {string} addr
+ * @param {number} pos a position of the text shown
+ * @returns {boolean} it was told
+ */
+export function tellCovered(addr, pos) {
+  const now = { x: cam.x, y: cam.y, scale: cam.scale }, cover = coverAt(addr, now);
+  if (!covers(cover, lineBox(addr, pos, now))) return false;
+  tellCover(addr, cover);
+  return true;
+}
+
 /**
  * The page's selection kept clear of its document's head (see the head;
- * FP-37): where the line the end the act that made it moved stands on, as its
- * article's fold sets it, has its top above the bottom of what the head
- * covers (`headClear`), the camera moved down by the least pan that brings it
- * below, no flight running; read once, and owed no more. Nothing where the
+ * FP-37): the line the end the act that made it moved stands on, as its
+ * article's fold sets it, brought clear of the one line and of what the head
+ * covers (`bringClear`), its end read again as a move to it flies, no flight
+ * of another's running; read once, and owed no more. Nothing where the
  * selection's document stands with no head.
  */
 function keepClear() {
@@ -5392,10 +5607,7 @@ function keepClear() {
   if (clear == null || !rec) { clearing = null; return; }
   if (flying()) return;
   clearing = null;
-  const pos = endPos(g);
-  if (pos == null) return;
-  const top = sy(docBox(rec.d.addr).y + placeIn(rec.fold, pos).y);
-  if (top < clear - 0.5) { panBy(0, clear - top); markDirty(); }
+  bringClear({ addr: g.span.addr, pos: () => endPos(g), mark: null, into: false });
 }
 
 /**
@@ -6246,22 +6458,26 @@ function refound(addr, site, sel, width) {
  * longer holds the paste's place by the time it answers (`refound`). Nothing
  * is placed where the clipboard held no text, or where its text, its line
  * endings set, is more than one paste places, in UTF-8 bytes (W-WRITE's
- * `PASTE_MAX_BYTES`). False where no live caret stands, or its draft cannot
- * be written now (W-WRITE's `unwritable`).
+ * `PASTE_MAX_BYTES`). The caret placed after what it placed owes the frame
+ * its line brought clear (`placeCaretMark`), save where a pointer's or the
+ * camera's act was made while its source was read (`kept`): then it owes
+ * nothing, and no camera moves for it (FP-25, FP-37). False where no live
+ * caret stands, or its draft cannot be written now (W-WRITE's `unwritable`).
  * @param {string} text the clipboard's plain text, as the paste event carried it
  * @param {Span | null} [over] the selection drawn in the caret's text, in the text shown
  * @param {unknown} [entry] skep's own entry, as the paste event carried it: none where it carried none
+ * @param {() => boolean} [kept] has a pointer's or the camera's act been made since the paste was made (N-KEYS' `pointed`): none, where it is not given
  * @returns {Pasted | false | Promise<Pasted | false>}
  */
-export function caretPaste(text, over = null, entry = null) {
+export function caretPaste(text, over = null, entry = null, kept = () => false) {
   const c = pageCaret();
   if (!c || !c.live || WRITE.unwritable(c.addr)) return false;
   const placed = pasteText(text);
   if (!placed) return 'none';
   if (byteLength(placed) > WRITE.PASTE_MAX_BYTES) return 'large';
   const addr = c.addr, at = c.pos;
-  /** the caret moved to `pos` where it still stands in the draft the paste was made in */
-  const after = (/** @type {number} */ pos) => { const now = pageCaret(); if (now && now.addr === addr) setCaret({ addr, pos, live: now.live }); };
+  /** the caret moved to `pos` where it still stands in the draft the paste was made in, owing the frame nothing where a pointer's or the camera's act was made meanwhile */
+  const after = (/** @type {number} */ pos) => { const now = pageCaret(); if (now && now.addr === addr) setCaret({ addr, pos, live: now.live }, kept() ? null : 'collapse'); };
   const span = over && over.addr === addr && wholeIn(shownOf(addr), over) ? over : null;
   const pos = span ? span.pos : at, width = span ? span.width : 0;
   const b = REC.board(), plan = PASSAGE.planOf(entry, text, b ? b.origin : null);
@@ -6614,34 +6830,43 @@ export function caretsMarked() { return marking().map((m) => valueOf(m.c)); }
  * there, save where the move extended a selection the page placed or a
  * pointer's gesture made, which stands — then, in an editor pane, the pane's
  * scroll moved the least that brings the mark inside it, below what its head
- * covers, the camera standing (SC's `into`); on the plane, the camera moved
- * by the least pan that brings the mark inside the visible view, below the
- * one line and below what a corner standing at its document's head covers
- * (`headClear`), so no act leaves the caret under them (FP-37), no flight
- * running. Nothing where the platform does not set the articles.
+ * covers, the camera standing (SC's `into`); on the plane, the caret's line
+ * brought inside the visible view, below the one line and clear of what a
+ * corner standing at its document's head covers, by the first move of the
+ * camera that clears it, its aim on the caret as it moves on (`bringClear`),
+ * so no act leaves the caret under them (FP-37) — none while a flight runs,
+ * which a move bringing it clear follows it in. Where the platform does not
+ * set the articles no mark is set, and the caret's line standing in its
+ * mounted article stands for its mark's part (`posStands`).
  */
 function placeCaretMark() {
-  if (!engine || !layer) return;
-  for (const m of /** @type {HTMLElement[]} */ ([...layer.querySelectorAll('.' + CARET_MARK), ...paneMarks])) { const p = m.parentNode; m.remove(); if (p) p.normalize(); }
-  paneMarks = [];
+  if (!layer) return;
   /** @type {HTMLElement | null} the page's own caret's mark */
   let mark = null;
   const c = pageCaret(), own = c ? paneOf(c.addr) : null;
-  for (const m of marking()) {
-    const set = markAt(m.c, m.pane);
-    if (set && m.pane) paneMarks.push(set);
-    if (m.c.addr === current) mark = set;
+  if (engine) {
+    for (const m of /** @type {HTMLElement[]} */ ([...layer.querySelectorAll('.' + CARET_MARK), ...paneMarks])) { const p = m.parentNode; m.remove(); if (p) p.normalize(); }
+    paneMarks = [];
+    for (const m of marking()) {
+      const set = markAt(m.c, m.pane);
+      if (set && m.pane) paneMarks.push(set);
+      if (m.c.addr === current) mark = set;
+    }
   }
-  if (!c || !mark) return;
-  if (caretOwed && !pressed && !typing()) {
-    const s = window.getSelection();
-    if (caretOwed === 'collapse' && s) s.collapse(mark.parentNode, [...(/** @type {Node} */ (mark.parentNode)).childNodes].indexOf(mark));
-    caretOwed = null;
-    const q = mark.getBoundingClientRect();
-    if (own) { if (q.height > 0) own.into({ top: q.top, bottom: q.bottom }); return; }
-    const clear = Math.max(read.top(), headClear(c.addr) ?? 0), { VW, VH } = viewport();
-    if (q.height > 0 && !flying()) { const moved = panInto({ x: q.left, y: q.top, w: 1, h: q.height }, { x: 0, y: clear, w: VW, h: VH - clear }); if (moved.dx || moved.dy) markDirty(); }
-  }
+  if (!c || !caretOwed || pressed || typing() || (engine ? !mark : !!own || !posStands(c.addr, c.pos))) return;
+  if (mark && caretOwed === 'collapse') { const s = window.getSelection(); if (s) s.collapse(mark.parentNode, [...(/** @type {Node} */ (mark.parentNode)).childNodes].indexOf(mark)); }
+  caretOwed = null;
+  const q = mark ? mark.getBoundingClientRect() : null;
+  if (own) { if (q && q.height > 0) own.into({ top: q.top, bottom: q.bottom }); return; }
+  if ((q && !(q.height > 0)) || flying()) return;
+  const addr = c.addr;
+  bringClear({ addr, pos: () => { const now = pageCaret(); return now && now.addr === addr ? now.pos : null; }, mark: q ? { x: q.left, w: 1 } : null, into: true });
+}
+
+/** does the line holding a position of a document's text shown stand in its mounted article (`lineStands`): the part a caret's mark there would be set in stands */
+function posStands(/** @type {string} */ addr, /** @type {number} */ pos) {
+  const rec = mounted.get(addr), line = rec ? placeIn(rec.fold, pos).line : null;
+  return line != null && lineStands(addr, line);
 }
 
 /**

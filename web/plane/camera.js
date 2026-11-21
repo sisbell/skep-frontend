@@ -11,7 +11,11 @@
 // with it the landing's em, the reading size but where even a column of one
 // character is wider than the view (`landingPx`). View state, never
 // serialized or sent (FP-7). A focus landing on a sign the view does not show
-// whole is brought in by the least pan (`panInto`; FP-20).
+// whole is brought in by the least pan (`panInto`; FP-20), which is read
+// without moving the camera too (`leastPan`), so a pan is tested at the view it
+// leaves before it is made. Whether the reader asks for reduced motion is an
+// input the app sets from the platform's preference (`setReducedMotion`), read
+// by a move that sets its view at once where it holds (`reducedMotion`).
 // A flight is bound for a view fixed at its act, or for an aim (`Aim`): the
 // view that reads the passage it lands on, wherever its document is set while
 // it flies (FP-8, FP-25). Each frame moves the camera toward the destination
@@ -53,7 +57,7 @@
 // root; the bound's floor 40 (S3's); the clamp's margin 0.6 of the world's
 // width; a flight 620 ms where none is given, dipping out where its distance
 // exceeds 1.5 viewports.
-// Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11, FP-20, FP-25, FP-26, FP-31.
+// Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11, FP-20, FP-25, FP-26, FP-31, FP-37.
 
 import { WORLD_W, WORLD_H, DEPTH_SOUND, G, LEAF } from './projection.js';
 import { STANDARD_FS, MEASURE_CPL, fitFor } from './layout.js';
@@ -102,6 +106,8 @@ let fitNow = /** @type {import('./layout.js').Fit} */ ({ cpl: MEASURE_CPL, compa
 const S3_MAX = 40;
 /** the zoom-in bound: S3's, raised per E18 (a) by `reach`, never lowered */
 let maxS = S3_MAX;
+/** does the reader ask for reduced motion (see the head): the platform's preference as the app last set it; false until it is set */
+let still = false;
 
 /** the fit of the viewport at the reading size (see the head): the full measure, the corner beside it, and the landing at the reading size, until a viewport is set */
 function refit() {
@@ -133,6 +139,11 @@ export const fit = () => fitNow;
 export const measure = () => fitNow.cpl;
 /** the em every arrival at reading scale sets a document's text at, in px (see the head): the reading size, smaller only where even a column of one character is wider than the view */
 export const landingPx = () => fitNow.px;
+
+/** the reader's preference for reduced motion, set by the app from the platform's as it loads and as it changes (see the head) @param {boolean} on */
+export function setReducedMotion(on) { still = !!on; }
+/** does the reader ask for reduced motion (see the head): a move that honours it sets its view at once */
+export const reducedMotion = () => still;
 
 /** @param {number} wx @returns {number} */
 export const sx = (wx) => (wx - cam.x) * cam.scale + VW / 2;
@@ -333,18 +344,29 @@ export function reanchor(a, b, k, within) {
 export function panBy(/** @type {number} */ dx, /** @type {number} */ dy) { cut(); cam.x -= dx / cam.scale; cam.y -= dy / cam.scale; clamp(); }
 
 /**
- * The least pan that brings a screen rect inside the visible view (see the
- * head): along each axis none where the rect stands inside it, else the move
- * that brings its nearer edge to the view's — its start where it is longer
- * than the view. Answers the move made, in screen px; nothing moves where it
- * is none.
+ * The least pan that brings a screen rect inside a stretch of the screen (see
+ * the head), read and not made: along each axis none where the rect stands
+ * inside it, else the move that brings its nearer edge to the stretch's — its
+ * start where it is longer than the stretch. In screen px, as `panBy` takes it.
+ * @param {Rect} r
+ * @param {Rect} seen the stretch: the visible view (`visibleView`), or a part of it
+ * @returns {{dx: number, dy: number}}
+ */
+export function leastPan(r, seen) {
+  const along = (/** @type {number} */ a, /** @type {number} */ len, /** @type {number} */ s, /** @type {number} */ room) => (a < s || len > room ? s - a : a + len > s + room ? s + room - (a + len) : 0);
+  return { dx: along(r.x, r.w, seen.x, seen.w), dy: along(r.y, r.h, seen.y, seen.h) };
+}
+
+/**
+ * The least pan that brings a screen rect inside the visible view, made
+ * (`leastPan`). Answers the move made, in screen px; nothing moves where it is
+ * none.
  * @param {Rect} r
  * @param {Rect} seen the visible view (`visibleView`)
  * @returns {{dx: number, dy: number}}
  */
 export function panInto(r, seen) {
-  const along = (/** @type {number} */ a, /** @type {number} */ len, /** @type {number} */ s, /** @type {number} */ room) => (a < s || len > room ? s - a : a + len > s + room ? s + room - (a + len) : 0);
-  const dx = along(r.x, r.w, seen.x, seen.w), dy = along(r.y, r.h, seen.y, seen.h);
+  const { dx, dy } = leastPan(r, seen);
   if (dx || dy) panBy(dx, dy);
   return { dx, dy };
 }
@@ -411,8 +433,8 @@ let dirtyFlag = true;
 export function markDirty() { dirtyFlag = true; }
 export function takeDirty() { const d = dirtyFlag; dirtyFlag = false; return d; }
 
-/** reset everything (tests): the view, any flight cut short, the viewport, the reading size at a 16 px root and the full measure, the zoom-in bound at S3's, the dirty mark */
+/** reset everything (tests): the view, any flight cut short, the viewport, the reading size at a 16 px root and the full measure, the zoom-in bound at S3's, no reduced motion asked, the dirty mark */
 export function _reset() {
   cut(); cam.x = WORLD_W / 2; cam.y = WORLD_H / 2; cam.scale = 1;
-  VW = 1; VH = 1; sized = false; READING_PX = READING_REM * 16; refit(); maxS = S3_MAX; dirtyFlag = true;
+  VW = 1; VH = 1; sized = false; READING_PX = READING_REM * 16; refit(); maxS = S3_MAX; still = false; dirtyFlag = true;
 }

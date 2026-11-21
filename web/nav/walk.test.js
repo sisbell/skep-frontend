@@ -34,7 +34,8 @@
 // sets nothing and flies nowhere; in a document folded into columns the
 // camera follows the walk to a span's line in its column and to the outline
 // framed no nearer than reading size, in the fold a resize in the air sets
-// the document in, and a step made below a document's
+// the document in, a span's line lowered below its document's head where a
+// window this short would frame it under the head's held rows, and a step made below a document's
 // reading scale frames it short of that scale; the grain below a document is
 // the document's own and the re-take's order holds at every band, the element
 // under a view's centre read at any view the one the re-take takes where it
@@ -90,6 +91,7 @@ import * as WALK from './walk.js';
 import * as FOCUS from './focus.js';
 import * as LK from '../links/links.js';
 import { farShort } from '../beams/held.js';
+import { page } from '../test/dom.js';
 
 const D = '1.0.1.0.3';
 /** a second document: a separator alone, then a span, a block of one space, a span — two elements of the walk among four blocks */
@@ -1084,6 +1086,44 @@ test('the camera follows the walk through a resize in the air (FP-8): ↓ onto a
   } finally {
     CAM.setViewport(1440, 900);
     index([D, E]);
+  }
+});
+
+test('a walk key\'s flight to a span lands where the span\'s line stands clear of its document\'s head: at the landing\'s em, lowered by the least pan below the head\'s held rows where a window this short sets the reading view\'s line under them (issue #703\'s design decision; FP-37)', async () => {
+  /** two views the same, within a flight's rounding */
+  const near = (/** @type {{x: number, y: number, scale: number}} */ a, /** @type {{x: number, y: number, scale: number}} */ b) => [a.x - b.x, a.y - b.y, a.scale - b.scale].every((d, i) => Math.abs(d) <= 1e-9 * Math.max(1, Math.abs([b.x, b.y, b.scale][i])));
+  /** the reading view of a span of H: its column framed with its margins, at the landing's em, the line at the view's middle */
+  const spanView = (/** @type {number} */ pos) => { const at = LAYER.frameOf(H, pos); return CAM.viewAt(at, at.fs); };
+  await PUMP.loadWhole(H);
+  index([D, E, H]);
+  // H's text and corner on a page of the DOM, 390 px across and 140 px tall below a one line 30 px tall: its corner at its head
+  const dom = page({ width: 390, height: 140 });
+  dom.install();
+  try {
+    CAM.setViewport(390, 140);
+    const layer = dom.element('div'), corners = dom.element('div');
+    layer.clientWidth = 390; layer.clientHeight = 140;
+    dom.document.body.appendChild(layer); dom.document.body.appendChild(corners);
+    LAYER.attach(/** @type {any} */ (layer), /** @type {any} */ (corners));
+    LAYER.readers({ top: () => 30 });
+    const b = REC.doc(H).blocks[40];
+    CAM.set(spanView(b.pos));
+    LAYER.frame();
+    await WALK.focusTo(H, b.pos);
+    LAYER.frame();
+    const down = WALK.key('down'), next = /** @type {number} */ (WALK.current()?.pos), plain = spanView(next), to = LAYER.frameClear(H, next);
+    assert.ok(LAYER.cornerAt(H)?.head && to.clear && to.view.scale === plain.scale && to.view.y < plain.y, `H's corner at its head, the reading view's line under its held rows: the view clear of them lower — ${JSON.stringify(to)} from ${JSON.stringify(plain)}`);
+    assert.ok(near(CAM.destination(), to.view), `↓: bound for that view, never the reading view the head covers the line in — ${JSON.stringify(CAM.destination())}`);
+    await run(down);
+    LAYER.frame();
+    const top = CAM.sy(docBox(H).y + placeOf(LAYER.foldOf(REC.doc(H)), next).y);
+    assert.deepEqual(walkAt(), ['block', H, next]);
+    assert.ok(top >= /** @type {number} */ (LAYER.headClear(H)) - 0.5 && top < 140, `landed: the span's line in view below the held rows — its top ${top}, their foot ${LAYER.headClear(H)}`);
+  } finally {
+    LAYER.clear(); LAYER.readers({});
+    CAM.setViewport(1440, 900);
+    index([D, E]);
+    dom.uninstall();
   }
 });
 

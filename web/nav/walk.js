@@ -143,8 +143,10 @@
 // scale, else no nearer than just short of that (T-LAYER's
 // `scaleBelowReading`), so no step takes a document to its reading scale from
 // below it; a span to its line where the text shown sets it, its
-// column framed at the landing's em (T-LAYER's `frameOf`); a document's frame
-// and a span's line read again
+// column framed at the landing's em, lowered where its document's head would
+// cover the line there, and where no view clears it the one line told what
+// covers it once the move lands (T-LAYER's `frameClear`, `tellCovered`;
+// FP-37); a document's frame and a span's line read again
 // each frame as the document is set while the camera flies, at the position
 // the walk's node holds and under the cap decided as the move is made, their
 // last answer kept while the page holds none of its text (P-CAM's `Aim`;
@@ -282,7 +284,7 @@
 // (`dropped`) — on that document still where the new class may not read it,
 // named by its withheld box's words, its cover.
 // Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-13, FP-20, FP-21, FP-22,
-// FP-23, FP-24, FP-29, FP-33, FP-34, FP-35, FP-36.
+// FP-23, FP-24, FP-29, FP-33, FP-34, FP-35, FP-36, FP-37.
 
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
@@ -1265,10 +1267,13 @@ function heldBy(addr) {
  * at its reading scale, else no nearer than just short of that (T-LAYER's
  * `scaleBelowReading`), so a step never takes a document to its reading scale
  * from below it; a span's line, or a link's end's, where the text shown sets
- * it, its column framed with both its margins, at the landing's em
- * (T-LAYER's `frameOf`; P-CAM's `landingPx`) — the document's frame and the
- * span's line each read again as the camera flies (`aimIn`) — nowhere where
- * the document's extent is read first and a later move overtook this one
+ * it, its column framed with both its margins, at the landing's em, lowered
+ * by the least pan there where its document's head would cover the line
+ * (T-LAYER's `frameClear`; P-CAM's `landingPx`) — the document's frame and
+ * the span's line each read again as the camera flies (`aimIn`) — and where
+ * no view there clears the line, what covers it told once the move lands
+ * unovertaken (T-LAYER's `tellCovered`; FP-37); nowhere where the
+ * document's extent is read first and a later move overtook this one
  * meanwhile.
  * @param {number} move the move's count
  */
@@ -1293,7 +1298,15 @@ async function flyToFocus(move) {
     }), 300);
   } else {
     const addr = focus.addr, pos = focus.pos;
-    await CAM.fly(aimIn(addr, () => { const at = LAYER.frameOf(addr, pos); return CAM.viewAt(at, at.fs); }), 260);
+    /** does the view the move lands at, as its aim last read it, frame the line clear of its document's head */
+    let clear = true;
+    const landed = await CAM.fly(aimIn(addr, () => {
+      if (pos == null) { const at = LAYER.frameOf(addr, pos); return CAM.viewAt(at, at.fs); }
+      const to = LAYER.frameClear(addr, pos);
+      clear = to.clear;
+      return to.view;
+    }), 260);
+    if (landed && !clear && pos != null && move === moves) LAYER.tellCovered(addr, pos);
   }
   CAM.markDirty();
 }

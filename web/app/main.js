@@ -42,6 +42,8 @@
 // the one line's first layout (L-LINE's `fit`), set again at every change of
 // the window's size; a
 // board the list read again finds launches the same way (M-PUMP's `onOpen`).
+// The reader's preference for reduced motion, the platform's, is handed to
+// P-CAM as the page boots and again as it changes (`setReducedMotion`).
 // What a module reads of an owner above it is handed in once as the page
 // boots (FP-10, FP-11): T-LAYER's readers (the selection, the walk's focus,
 // the line's bottom, the trail's current entry, the version each box shows
@@ -52,8 +54,10 @@
 // is set again as, N-GO's `vanished`, FP-21 — how far an in-document
 // find's box pushes a corner's items down, N-FIND's `atop` — and the newer
 // version a corner offers to read where an arrival pinned its box, N-GO's
-// `newerAt`, FP-23 — and a reading scene's editor panes as they stand, which
-// the caret is served in, SC's `editorPanes`, FP-38); N-LEAP's (the current address, L-LINE's
+// `newerAt`, FP-23 — a reading scene's editor panes as they stand, which
+// the caret is served in, SC's `editorPanes`, FP-38 — and who says what covers
+// a target no move of the camera brings clear of its document's head, the one
+// line's transient segment, FP-37); N-LEAP's (the current address, L-LINE's
 // `currentAddress`, and the document in view — the document the line's
 // `addressDisplay` names at its reading scale, as the version its box shows,
 // N-GO's `shownIn`, FP-22 — beside which a row opens its place, `reading`
@@ -153,7 +157,7 @@
 // page-locally unless its URL asks for it by `?machine=`.
 // Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9, FP-10, FP-11, FP-14, FP-15,
 // FP-20, FP-22, FP-23, FP-24, FP-25, FP-26, FP-27, FP-28, FP-29, FP-34,
-// FP-35, FP-36.
+// FP-35, FP-36, FP-37.
 
 import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';
@@ -372,11 +376,13 @@ async function boot() {
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote'), foot: el('leapfoot') }, () => LINE.currentAddress(), reading, (words, id) => LINE.transient(words, id));
   FIND.attach({ box: el('find'), input: /** @type {HTMLInputElement} */ (el('findq')), count: el('findcount'), prev: /** @type {HTMLButtonElement} */ (el('findprev')), next: /** @type {HTMLButtonElement} */ (el('findnext')), note: el('findnote') });
   LINE.attach(el('line'), { open: (byKey, at) => LEAP.open(at), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift, asOf: SCENE.pastAsOf, hint: (id, at) => HINT.show(id, null, { at }), acted: () => HINT.act() });
-  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt, face: FACES.cornerFace, panes: SCENE.editorPanes });
+  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt, face: FACES.cornerFace, panes: SCENE.editorPanes, covered: (words, id) => LINE.transient(words, id) });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null), first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords(), enter: () => { LINE.act(); HINT.act(); return KEYS.activate(); } });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', () => { resize(); LINE.fit(); }); resize();
+  const motion = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  if (motion) { CAM.setReducedMotion(motion.matches); motion.addEventListener('change', (e) => CAM.setReducedMotion(e.matches)); }
   document.addEventListener('copy', (e) => {
     const b = REC.board(), origin = b ? b.origin : '';
     if (LAYER.onCopy(e, origin)) return;

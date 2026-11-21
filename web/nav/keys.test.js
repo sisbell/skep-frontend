@@ -80,7 +80,9 @@
 // line — in the span the walk stands on there, each a span Esc leaves the
 // walk on and where Enter or a printable key returns the caret, Mod+V and
 // Mod+X there left standing at their keydown for the paste and the cut
-// event, which return the caret and act at it; Mod+Enter at
+// event, which return the caret and act at it, a paste whose source is read
+// by identity placing its caret owing the frame its line brought clear, and
+// owing nothing where a pointer's or the camera's act came while it read; Mod+Enter at
 // a live caret follows from a selection drawn in the caret's own text alone —
 // with none there, whatever a slot chord made before it, it selects nothing,
 // follows nothing and leaves the caret where it stands, giving the caret's
@@ -2692,6 +2694,33 @@ test('B3-S5 (i): a paste whose source no record at hand holds waits on its read 
     KEYS.pasteEvent(clip({ 'text/plain': 'xyz', [PASSAGE.TYPE]: entry.replace('"ordinal":4', '"ordinal":10') }).e, EVENT);
     await KEYS.clipped();
     assert.deepEqual([editsOfD(), DELETION.pasteFace(), said.at(-1)], [before, { addr: D, ...FACES.pasteWords('withheld', S) }, heard(FACES.pasteWords('withheld', S).text)], 'refused `withheld`: nothing placed, the face naming the origin, said');
+  } finally { PORT.boot(null); DELETION._reset(); }
+}));
+
+test('a paste whose source is read by identity places its caret as it lands owing the frame its line brought clear — and owing nothing where a pointer\'s or the camera\'s act was made while it read, so no camera moves for it (issue #703\'s design decision; FP-25, FP-37)', () => onPlane(async () => {
+  REC.setBoard({ board: 'b-1', name: '', origin: ORIGIN });
+  DELETION._reset();
+  const S = '1.0.1.0.30';
+  /** skep's own entry naming three of S's bytes from `ordinal`, the read by identity that answers it, and its answer: "xyz" */
+  const sourced = (/** @type {number} */ ordinal) => {
+    const frame = F.retrieveI([{ start: `${S}.0.1.${ordinal}`, width: 3 }]);
+    const entry = JSON.stringify({ board: ORIGIN, doc: S, member: null, plain: false, pos: null, width: null, ids: [{ prefix: S + '.0.1', ordinal, width: 3 }], version: PASSAGE.VERSION, lengths: [3] });
+    return { frame, entry, answer: { [FAKE.keyOf('op', { frame })]: { result: { as_of: 9, items: ['x', 'y', 'z'].map((ch, i) => ({ at: `${S}.0.1.${ordinal + i}`, value: { content: ch } })), resp: 'i_delivery' } } } };
+  };
+  const first = sourced(4), second = sourced(10), fake = FAKE.create({ ...first.answer, ...second.answer });
+  PORT.boot(fake);
+  try {
+    await focusOn(D, 1);
+    await KEYS.dispatch(keyOf('Enter'), PLANE);
+    for (const [s, pointer] of /** @type {const} */ ([[first, false], [second, true]])) {
+      const release = fake.hold('op', { frame: s.frame }), at = /** @type {[string, number, boolean]} */ (caret());
+      assert.equal(KEYS.pasteEvent(clip({ 'text/plain': 'xyz', [PASSAGE.TYPE]: s.entry }).e, EVENT), true);
+      if (pointer) KEYS.pointed();
+      release();
+      await KEYS.clipped();
+      assert.deepEqual([caret(), LAYER.caretOwes()], [[D, at[1] + 3, true], pointer ? null : 'collapse'],
+        pointer ? 'a pointer\'s act made while it read: the caret after what it placed, owing the frame nothing' : 'placed as it lands: the caret after what it placed, owing the frame its line brought clear');
+    }
   } finally { PORT.boot(null); DELETION._reset(); }
 }));
 

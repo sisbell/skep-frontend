@@ -33,7 +33,11 @@ each row's line of acts and a focus on the passed row's act bringing it in
 below them by the camera moved down alone, every row held with the first
 below the reading size where the head wraps deeper than its band, and over a
 column of a later row a head of several rows in that column's band (issue
-#689); a corner standing
+#689); there, a caret on the column's first line the head deeper than its band
+covers brought clear by → in one move of the camera to the landing's em, set
+at once where the reader asks for reduced motion, no trail entry made, the
+walk kept — and at 1440 px, where no head stands, no such move made (issue
+#703); a corner standing
 left of the view tabbed to brought in by the camera moved across alone (issue
 #436); and Back made once the
 window is put back lands on the
@@ -5154,6 +5158,135 @@ def head_rows_pass(ctx, r):
     return out
 
 
+# the page's own caret's mark on the plane: its top and its height on screen; null where none is set
+CARET_MARK_AT = '(() => { const m = document.querySelector("#domlayer .caret-mark"); if (!m) return null; const q = m.getBoundingClientRect(); return {top: q.top, h: q.height}; })()'
+# the em every arrival at reading scale sets a document's text at, in px (P-CAM's `landingPx`)
+LANDING_PX = '(async () => (await import("./plane/camera.js")).landingPx())()'
+# the em the camera's em is lowered to over the caret, in px: above the readable threshold, where the caret still takes keys
+COVER_ZOOM_EM = 8.5
+
+
+def head_clears_caret(ctx, r):
+    """A CARET THE HEAD COVERS COMES CLEAR BY THE CAMERA ALONE (issue #703's design decision: "No pan is made for a line
+    within the head's overflow ... One camera move frames the target as a landing does: instant under reduced motion, no
+    trail entry, the walk's focus kept on the target"; FP-37): in a window HEAD_ROWS_PX wide, the own draft held moved
+    through the gate's doors as `head_rows_pass` holds it — page state alone, nothing written — the caret placed by Enter
+    at its first paragraph, the column its corner stands across topping the view at 400 px, and the camera's em lowered
+    to COVER_ZOOM_EM about the view's centre, the head wrapping deeper than the band over the caret's line: → (K-71), a
+    move that writes nothing, makes one move of the camera to the landing's em, the caret's mark in view below what the
+    head covers, no trail entry made and the walk where it stood; a second → moves nothing; and, the camera put back
+    there under reduced motion, → sets that move at once — unmeasured where the head wraps no deeper over the caret's line
+    there (FP-18); then at 1440 px, where no head stands, → there moves the camera to no landing's em; its figures"""
+    W = WINDOW[2]
+    row = {'held': 1, 'doc': W, 'base': 0, 'frame': {'op': 'insert', 'doc': W, 'at': {'ordinal': '1', 'subspace': '1'}, 'values': ['Held.']},
+           'cause': 'moved', 'sent': True, 'time': 0, 'refusal': None, 'sendable': False, 'hands': [{'key': 'other', 'fingerprint': 'ab' * 32, 'label': LONG_HAND}]}
+    drop = '(async () => { (await import("./text/layer.js")).dropCaret(); })()'
+    clear_of = lambda: ctx.js('window.__skep.headClear(%s)' % json.dumps(W))
+    em_of = lambda: (ctx.js('window.__skep.fold(%s)' % json.dumps(W)) or {}).get('fs', 0) * ctx.camera()['scale']
+    walk_of = lambda: ctx.js('(() => { const f = window.__skep.view.focus(); return f && {kind: f.kind, addr: f.addr, pos: f.pos}; })()')
+    trail_of = lambda: len((ctx.js('window.__skep.trail()') or {}).get('entries') or [])
+    paras = [x for x in ctx.js('window.__skep.model.doc(%s)' % json.dumps(W))['blocks'] if x['kind'] == 'para' and x['text'].strip()]
+    if not paras:
+        r.check(False, 'the own draft holds a paragraph to place a caret in (what the checks below stand on)', None)
+        return {'doc': W}
+    first = paras[0]['pos']
+    out = {'window': HEAD_ROWS_PX, 'doc': W, 'pos': first}
+
+    def caret_at():
+        """the caret placed by Enter at the first paragraph, the column the corner stands across
+        topping the view at 400 px, then the camera's em lowered to COVER_ZOOM_EM about the view's centre: the caret, the
+        corner and the view there"""
+        ctx.leap(W, first)
+        ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
+        ctx.frames(1)
+        ctx.drv.key('Enter')
+        ctx.frames(3)
+        ctx.settle()
+        placed, cam, f = ctx.js('window.__skep.corner(%s)' % json.dumps(W)), ctx.camera(), ctx.js('window.__skep.fold(%s)' % json.dumps(W)) or {}
+        col = (f.get('columns') or [{}])[placed['column'] if placed else 0]
+        ctx.set_view(cam['x'], col.get('y', 0) + (900 / 2 - 400) / cam['scale'], cam['scale'])
+        em = em_of()
+        if em > COVER_ZOOM_EM:
+            cam = ctx.camera()
+            ctx.set_view(cam['x'], cam['y'], cam['scale'] * COVER_ZOOM_EM / em)
+        return {'caret': ctx.js('window.__skep.caret()'), 'corner': ctx.js('window.__skep.corner(%s)' % json.dumps(W)), 'camera': ctx.camera(), 'em': em_of(),
+                'mark': ctx.js(CARET_MARK_AT), 'clear': clear_of()}
+
+    was = ctx.resize(HEAD_ROWS_PX, 900)
+    try:
+        ctx.settle()
+        held_set = ctx.js('window.__skep.write.setHeld(%s, %s)' % (json.dumps(W), json.dumps([row])))
+        ctx.js('window.__skep.write.setKept(%s, %s)' % (json.dumps(W), json.dumps({'word': 'not yet kept', 'reason': None, 'cause': {'token': 'moved', 'arm': None}})))
+        at = caret_at()
+        c0, m0, clear0 = at['caret'], at['mark'], at['clear']
+        ok = bool(held_set) and bool(c0) and c0['live'] and c0['pos'] == first and bool(at['corner']) and at['corner']['head'] and abs(at['em'] - COVER_ZOOM_EM) <= 0.05
+        r.check(ok, f'a {HEAD_ROWS_PX} px window, the own draft held moved: its corner at its head, the caret live at its first paragraph by Enter, the camera\'s em at {COVER_ZOOM_EM} px (what the checks below stand on)', at)
+        if not ok:
+            return dict(out, at=at)
+        out['zoomed'] = at
+        if not (m0 and clear0 is not None and m0['top'] < clear0 - 0.5):
+            r.note(f'a caret under a head deeper than its band is unmeasured here: at {COVER_ZOOM_EM} px the caret\'s mark stands at {m0 and m0["top"]} px, what the head covers ending at {clear0} px (FP-18; layer.test.js holds it)')
+            return out
+        landing, trail0, walk0, cam0 = ctx.js(LANDING_PX), trail_of(), walk_of(), ctx.camera()
+        ctx.drv.key('ArrowRight')
+        ctx.frames(3)
+        ctx.settle()
+        ctx.frames(2)
+        c1, m1, clear1, em1, trail1, walk1, cam1 = ctx.js('window.__skep.caret()'), ctx.js(CARET_MARK_AT), clear_of(), em_of(), trail_of(), walk_of(), ctx.camera()
+        moved = {'landing_px': landing, 'em': em1, 'mark': m1, 'clear': clear1, 'caret': c1, 'trail': [trail0, trail1], 'walk': [walk0, walk1], 'camera': [cam0, cam1]}
+        r.check(bool(c1) and c1['live'] and c1['pos'] == first + 1 and abs(em1 - landing) <= 0.05 and bool(m1) and clear1 is not None and m1['top'] >= clear1 - 1
+                and m1['top'] + m1['h'] <= 900 + 1 and trail1 == trail0 and walk1 == walk0,
+                f'→ at the caret the head covers at {COVER_ZOOM_EM} px: one move of the camera to the landing\'s em, the caret\'s mark in view below what the head covers, no trail entry made and the walk where it stood',
+                moved)
+        ctx.drv.key('ArrowRight')
+        ctx.frames(3)
+        ctx.settle()
+        ctx.frames(2)
+        cam2 = ctx.camera()
+        r.check(same_view(cam2, cam1), 'a second → there moves nothing: the caret\'s line stands clear', {'camera': [cam1, cam2]})
+        # reduced motion asked, the camera put back where the head covered the caret's line: → sets the landing's view at once
+        ctx.drv.call('Emulation.setEmulatedMedia', {'features': [{'name': 'prefers-reduced-motion', 'value': 'reduce'}]})
+        ctx.frames(2)
+        ctx.set_view(at['camera']['x'], at['camera']['y'], at['camera']['scale'])
+        m3, clear3 = ctx.js(CARET_MARK_AT), clear_of()
+        ctx.drv.key('ArrowRight')
+        ctx.frames(1)
+        flying, em4 = ctx.js('window.__skep.view.flying()'), em_of()
+        reduced = {'mark': m3, 'clear': clear3, 'flying': flying, 'em': em4, 'landing_px': landing}
+        r.check(bool(m3) and clear3 is not None and m3['top'] < clear3 - 0.5 and not flying and abs(em4 - landing) <= 0.05,
+                'under reduced motion, the camera put back where the head covers the caret\'s line, → sets the landing\'s view at once: no flight, the landing\'s em a frame after the key',
+                reduced)
+        out.update({'moved': moved, 'reduced': reduced})
+    finally:
+        ctx.drv.call('Emulation.setEmulatedMedia', {'features': []})
+        ctx.js(drop)
+        ctx.js('window.__skep.write.setHeld(%s, [])' % json.dumps(W))
+        ctx.js('window.__skep.write.setKept(%s, null)' % json.dumps(W))
+        ctx.resize(*was)
+    ctx.settle()
+    ctx.frames(3)
+    # at 1440 px no head stands: → at the caret moves the camera to no landing's em
+    was = ctx.resize(1440, 900)
+    try:
+        ctx.settle()
+        wide = caret_at()
+        ctx.drv.key('ArrowRight')
+        ctx.frames(3)
+        ctx.settle()
+        ctx.frames(2)
+        em5, c5 = em_of(), ctx.js('window.__skep.caret()')
+        r.check(not (wide['corner'] or {}).get('head') and bool(c5) and c5['live'] and abs(em5 - wide['em']) <= 0.05,
+                f'at 1440 px, where no head stands, → at the caret at {COVER_ZOOM_EM} px moves the camera to no landing\'s em',
+                {'corner': wide['corner'], 'em': [wide['em'], em5], 'caret': c5})
+        out['wide'] = {'em': [wide['em'], em5]}
+    finally:
+        ctx.js(drop)
+        ctx.resize(*was)
+    ctx.settle()
+    ctx.frames(3)
+    return out
+
+
 # the first edition's corner on the plane: its rect on screen, whether the platform's focus stands in it and on which of its
 # acts, by the act's first class, and the one line's bottom
 CORNER_AT = '''((a) => { const e = document.querySelector(`#corners [data-corner="${a}"]`); if (!e) return null; const q = e.getBoundingClientRect(), f = document.activeElement;
@@ -5439,6 +5572,8 @@ def run(ctx):
     r.figures['head_guards'] = head_guards(ctx, r)
     # a head's rows pass under its held rows clipped and never hidden, each act keeping its stop and a focus on one bringing its row in (issue #689)
     r.figures['head_rows'] = head_rows_pass(ctx, r)
+    # a caret a head deeper than its band covers comes clear by one move of the camera to the landing's em (issue #703)
+    r.figures['head_clears_caret'] = head_clears_caret(ctx, r)
     # a focus landing in a corner the view does not show brings it in (issue #436)
     r.figures['corner_tabbed'] = corner_tabbed(ctx, r)
     # Back after the window was put back from a narrow one lands on the passage left there (issue #221)

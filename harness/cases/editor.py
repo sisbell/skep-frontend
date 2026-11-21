@@ -136,8 +136,8 @@ worst excess a figure (`fit_part`; issues #678, #694); and its kept line's
 second act stands at one place in the corner whichever of the three words
 stands, half a px either way (issue #694). At the narrow width, where the own draft's corner
 stands at its head, the live caret moved up under the head's held row brings
-the camera down alone, the caret's mark at the row's bottom
-(`caret_under_head`; issue #436). A person's click in another paragraph of the own draft places the
+the camera down alone by the least pan, the caret's whole line at the row's
+bottom and its mark below the row (`caret_under_head`; issues #436, #703). A person's click in another paragraph of the own draft places the
 caret there and stands the walk on that paragraph's span, Mod+K at the caret
 drawing the acts card there and selecting nothing (`click_follows`; B3-S13;
 issue #471). A drag across two words of the own draft leaves the caret live
@@ -531,36 +531,56 @@ PANE_TEXT = '''(() => ["sceneA", "sceneB"].map((id) => { const p = document.getE
 # the caret's mark as the platform lays it out: its top and its height, on screen; null where none stands
 CARET_MARK = '(() => { const m = document.querySelector("#domlayer .caret-mark"); if (!m) return null; const q = m.getBoundingClientRect(); return {top: q.top, h: q.height}; })()'
 
+# the line holding a position of a document as its fold sets it, on screen with the camera at a view — the camera's own
+# where none is given: its top and its height (formatted with the address, the position and the view, as JSON)
+LINE_AT = '''(async (a, p, v) => { const S = window.__skep, Y = await import("./plane/layout.js"), L = await import("./text/layer.js"), R = await import("./model/records.js");
+  const q = Y.placeOf(L.foldOf(R.doc(a)), p), b = S.boxOf(a), at = v || S.view.camera(), vp = S.view.viewport();
+  return {top: (b.y + q.y - at.y) * at.scale + vp.VH / 2, h: q.h * at.scale}; })(%s, %d, %s)'''
+
+
+def line_at(ctx, doc, pos, view=None):
+    """the line holding a position of a document on screen, where its fold sets it with the camera at `view`, else where
+    the camera stands: its top and its height"""
+    return ctx.js(LINE_AT % (json.dumps(doc), pos, json.dumps(view)))
+
 
 def caret_under_head(ctx, doc):
-    """THE CARET UNDER A HEAD'S HELD ROW (issue #436's design decision: "No caret, focus, selection or landing stands
-    under that row"): in a window NARROW_PX wide, the live caret standing in a draft whose corner stands at its head,
-    the camera moved alone so the caret's mark stands 2 px below what the head covers (`headClear`), then ↑ (K-71) —
-    the caret moved up, under the row, and the camera moved down alone by the least pan, the mark at the row's bottom;
-    what the head covered, the mark, the caret and the camera before and after, and whether all of it held"""
+    """THE CARET'S LINE UNDER A HEAD'S HELD ROW (issue #436's design decision: "No caret, focus, selection or landing
+    stands under that row"; issue #703's: "bring the target's whole line clear of the head by the first step that
+    works"): in a window NARROW_PX wide, the live caret standing in a draft whose corner stands at its head, the camera
+    moved alone so the caret's line stands 2 px below what the head covers (`headClear`), then ↑ (K-71) — the caret
+    moved up, its line under the row, and the camera moved down alone by the least pan, that line's top at the row's
+    bottom and the caret's mark below the row; what the head covered, the caret's line and its mark, the caret and the
+    camera before and after, the pan made and the one its line wanted, and whether all of it held"""
     was = ctx.resize(*NARROW)
     try:
         ctx.settle(10); ctx.frames(3)
-        clear, mark = None, None
+        clear, line = None, None
         for _ in range(4):
             ctx.frames(2)
-            clear, mark = ctx.js('window.__skep.headClear(%s)' % json.dumps(doc)), ctx.js(CARET_MARK)
-            if clear is None or mark is None:
-                return {'ok': False, 'clear': clear, 'mark': mark}
-            delta = clear + 2 - mark['top']
+            c = ctx.js('window.__skep.caret()')
+            clear, line = ctx.js('window.__skep.headClear(%s)' % json.dumps(doc)), c and line_at(ctx, doc, c['pos'])
+            if clear is None or not line:
+                return {'ok': False, 'clear': clear, 'line': line}
+            delta = clear + 2 - line['top']
             if abs(delta) < 0.5:
                 break
             cam = ctx.camera()
             ctx.set_view(cam['x'], cam['y'] - delta / cam['scale'], cam['scale'])
         before, cam0, c0 = ctx.js(CARET_MARK), ctx.camera(), ctx.js('window.__skep.caret()')
+        line0 = c0 and line_at(ctx, doc, c0['pos'])
         ctx.drv.key('ArrowUp')
         ctx.frames(3)
         ctx.frames(2)
         after, cam1, c1, clear1 = ctx.js(CARET_MARK), ctx.camera(), ctx.js('window.__skep.caret()'), ctx.js('window.__skep.headClear(%s)' % json.dumps(doc))
+        # the line the caret moved to: where it stood with the camera before the key, and where it stands now
+        under, line1 = (line_at(ctx, doc, c1['pos'], cam0), line_at(ctx, doc, c1['pos'])) if c1 else (None, None)
         down = (cam0['y'] - cam1['y']) * cam1['scale']
-        ok = (bool(c0 and c1) and c1['live'] and c1['pos'] < c0['pos'] and bool(after) and clear1 is not None and abs(after['top'] - clear1) <= 1
-              and down > 1 and abs(cam1['x'] - cam0['x']) < 1e-9 and abs(cam1['scale'] - cam0['scale']) < 1e-12)
-        return {'ok': ok, 'clear': [clear, clear1], 'mark': [before, after], 'caret': [c0, c1], 'down_px': down}
+        want = clear1 - under['top'] if under and clear1 is not None else None
+        ok = (bool(c0 and c1 and line0) and c1['live'] and c1['pos'] < c0['pos'] and bool(after and under and line1) and clear1 is not None
+              and line0['top'] >= clear1 - 0.5 and under['top'] < clear1 - 1 and abs(line1['top'] - clear1) <= 1 and after['top'] >= clear1 - 0.5
+              and abs(down - want) <= 1 and abs(cam1['x'] - cam0['x']) < 1e-9 and abs(cam1['scale'] - cam0['scale']) < 1e-12)
+        return {'ok': ok, 'clear': [clear, clear1], 'line': [line0, under, line1], 'mark': [before, after], 'caret': [c0, c1], 'down_px': down, 'want_px': want}
     finally:
         ctx.resize(*was); ctx.frames(3)
 
@@ -4619,9 +4639,9 @@ def run(ctx):
         ok = bool(c) and c['live'] and c['addr'] == OWN and c['pos'] == target['pos'] and len(marks) == 1 and not kept
         return ok, {'caret': c, 'marks_shown': len(marks), 'kept': kept}
     shoot('caret-placed', placed_check, recentre)
-    # the caret moved a line up under the own draft's held head row at the narrow width (issue #436; FP-37), then put back
+    # the caret moved a line up, its line under the own draft's held head row at the narrow width (issues #436, #703; FP-37), then put back
     under = caret_under_head(ctx, OWN)
-    r.check(under['ok'], f"at {NARROW_PX} px, the own draft's corner at its head: the live caret moved up (K-71) under the held row brings the camera down alone, by the least pan, its mark at the row's bottom (issue #436)", under)
+    r.check(under['ok'], f"at {NARROW_PX} px, the own draft's corner at its head: the live caret moved up (K-71), its line under the held row, brings the camera down alone, by the least pan, that whole line at the row's bottom and its mark below the row (issues #436, #703)", under)
     ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(OWN), target['pos'])); ctx.frames(2)
     for ch in word:
         ctx.drv.key(ch)

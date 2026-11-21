@@ -17,8 +17,12 @@
 // clipped and never hidden, every row held below the reading size where they
 // are deeper than the band, a focus on a passed row's act brought in by that
 // row's own place, a form opened beneath it, the band's change re-anchoring
-// the camera — and a kept word said where it
-// changes; a reading scene's pane's view at its measure and its corner,
+// the camera, what it would cover at any view as it covers at the camera's own,
+// and a caret's line or a selection's moved end's brought clear of it by the
+// first move that clears it — the least pan, else one move to the landing's em
+// following the caret, at once under reduced motion — or, where a form or a
+// window this short leaves none, what covers it told — and a kept word said
+// where it changes; a reading scene's pane's view at its measure and its corner,
 // compact beside its column or at its document's head, measured in the
 // corner's own type whatever its view measures the article at, no row naming
 // it, its rows held at the pane's top through what says which state it shows — a past
@@ -121,7 +125,7 @@ import { CORNER, ADDRESS, COL, HOLD, MARGIN, cornerWidth } from '../plane/regist
 import { holdTop, holdStack, lineHeight, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
-import { CLAUSE_READING, articleHTML, faceRuns, cornerTitle, titleHTML, titleRuns } from './article.js';
+import { CLAUSE_READING, articleHTML, faceRuns, cornerTitle, titleHTML, titleRuns, keptWord } from './article.js';
 import * as FACES from '../overlays/faces.js';
 import { farSays } from '../beams/held.js';
 import { pastSigns } from '../beams/beams.js';
@@ -2487,6 +2491,196 @@ test('below the reading size a head whose rows are deeper than the band above it
   CAM.set(reading);
   LAYER.frame();
   assert.ok(deep() <= band + 1e-6 && headRows(el).some((r) => !r.held), `back at the reading size, a row past the held ones unheld — ${JSON.stringify(headRows(el))}`);
+}));
+
+/**
+ * The camera's em lowered about the view's centre, D at its reading scale, until its head — narrower — wraps deeper
+ * than the band above its column, every row held, and `until` holds too where one is given (`onHead`): the view the
+ * camera stands at then
+ * @param {() => boolean} [until]
+ */
+function deeperThanBand(until = () => true) {
+  const el = /** @type {any} */ (LAYER.cornerOf(D)), f = LAYER.foldOf(REC.doc(D)), reading = CAM.view(), band = f.band / (LINE_H * f.fs);
+  const deep = () => headRows(el).reduce((n, r) => n + r.h, 0) / (LINE_H * f.fs * CAM.cam.scale);
+  let s = 1;
+  while ((deep() <= band + 1e-6 || !until()) && f.fs * reading.scale * (s - 0.02) >= LOD_TXT_LO) { s -= 0.02; CAM.set({ ...reading, scale: reading.scale * s }); LAYER.frame(); }
+  assert.ok(LAYER.cornerAt(D)?.head && deep() > band + 1e-6 && headRows(el).every((r) => r.held) && until(), `at ${s.toFixed(2)} of the reading scale the head's rows deeper than the band, every one held: ${deep()} of ${band}`);
+  return CAM.view();
+}
+
+/** is the first line of the column D's corner stands across under what its head covers */
+const firstCovered = () => lineOn(headsColumnFirst()).top < /** @type {number} */ (LAYER.headClear(D)) - 0.5;
+
+/** D's corner's form opened beneath its rows as tall as the platform lays it out, px (`standIn`): set on the form standing, the next frame reading it */
+const formTall = (/** @type {number} */ px) => { /** @type {any} */ (LAYER.cornerOf(D)).part('opened').offsetHeight = px; LAYER.frame(); };
+
+/** a flight run to its landing, the layer framed at each step, then framed once more where it landed */
+function landed() { for (let i = 0; i < 8 && CAM.flying(); i++) { CAM.step(Infinity); LAYER.frame(); } LAYER.frame(); }
+
+/** the line holding a position of D's text on screen: its top and its height */
+const lineOn = (/** @type {number} */ pos) => { const p = placeOf(LAYER.foldOf(REC.doc(D)), pos); return { top: CAM.sy(docBox(D).y + p.y), h: p.h * CAM.cam.scale }; };
+
+/** the first position a line opens at in the column D's corner stands across */
+function headsColumnFirst() {
+  const f = LAYER.foldOf(REC.doc(D)), col = f.columns[/** @type {NonNullable<ReturnType<typeof LAYER.cornerAt>>} */ (LAYER.cornerAt(D)).column];
+  return /** @type {number} */ (f.lines.slice(col.first, col.first + col.n).find((l) => l.at != null)?.at);
+}
+
+/** two views the same, within a flight's rounding */
+const sameView = (/** @type {{x: number, y: number, scale: number}} */ a, /** @type {{x: number, y: number, scale: number}} */ b) => [a.x - b.x, a.y - b.y, a.scale - b.scale].every((d, i) => Math.abs(d) <= 1e-9 * Math.max(1, Math.abs([b.x, b.y, b.scale][i])));
+
+test('below the reading size, where a head\'s rows run deeper than the band above its column, a caret placed on a line within their overflow comes clear by one move of the camera to the landing\'s em — never a pan its head rides its band over — its line below what the head covers there, the move following the caret as it moves on; set at once where the reader asks for reduced motion; and a selection\'s moved end there alike (issue #703\'s design decision; FP-37)', () => onHead(() => {
+  movedLong();
+  CAM.setViewport(390, 900);
+  landAt(null);
+  LAYER.frame();
+  const covered = deeperThanBand(firstCovered), f = LAYER.foldOf(REC.doc(D)), pos = headsColumnFirst();
+  const box = docBox(D), col = f.columns[/** @type {any} */ (LAYER.cornerAt(D)).column], band = CAM.sy(box.y + col.y - f.band);
+  assert.ok(band > LINE_PX + HOLD.gap && firstCovered(), `the head riding its band, below the hold, over the column's first line: the band at ${band}, ${JSON.stringify(lineOn(pos))}, its foot ${LAYER.headClear(D)}`);
+  LAYER.placeCaret(D, pos);
+  LAYER.frame();
+  const to = CAM.destination();
+  assert.ok(CAM.flying() && Math.abs(to.scale * f.fs - CAM.fit().px) < 1e-6, `one move of the camera, bound for the landing's em: ${to.scale * f.fs} px, ${CAM.fit().px} the landing's`);
+  assert.ok(sameView(to, LAYER.frameClear(D, pos).view), 'bound for the view framing the caret\'s line clear of the head there');
+  // the caret moved on while the camera flies: the move follows it, its flight never cut
+  const flight = CAM.cam.anim;
+  assert.ok(LAYER.caretMove('down'));
+  const moved = /** @type {number} */ (LAYER.caret()?.pos);
+  LAYER.frame();
+  assert.ok(moved !== pos && CAM.cam.anim === flight && sameView(CAM.destination(), LAYER.frameClear(D, moved).view), `the flight bound now for the line the caret moved to, ${moved}`);
+  landed();
+  const now = lineOn(moved), foot = /** @type {number} */ (LAYER.headClear(D));
+  assert.ok(Math.abs(CAM.cam.scale * f.fs - CAM.fit().px) < 1e-6 && now.top >= foot - 0.5 && now.top + now.h <= 900 + 0.5, `landed: at the landing's em, the caret's line in view below what the head covers — ${JSON.stringify(now)}, its foot ${foot}`);
+  // under reduced motion the same move set at once
+  CAM.setReducedMotion(true);
+  CAM.set(covered);
+  LAYER.frame();
+  LAYER.placeCaret(D, pos);
+  LAYER.frame();
+  assert.ok(!CAM.flying() && Math.abs(CAM.cam.scale * f.fs - CAM.fit().px) < 1e-6 && sameView(CAM.view(), LAYER.frameClear(D, pos).view), `reduced motion: the landing's view set at once — ${JSON.stringify(CAM.view())}`);
+  LAYER.frame();
+  assert.ok(lineOn(pos).top >= /** @type {number} */ (LAYER.headClear(D)) - 0.5, 'its line below what the head covers');
+  // Esc leaving the caret kept there: the same move for the kept caret's line
+  CAM.set(covered);
+  LAYER.frame();
+  assert.ok(LAYER.leaveCaret('esc'));
+  LAYER.frame();
+  assert.ok(LAYER.caret()?.live === false && sameView(CAM.view(), LAYER.frameClear(D, pos).view), `Esc: the kept caret's line brought clear by the same move — ${JSON.stringify(CAM.view())}`);
+  CAM.setReducedMotion(false);
+  // a selection's moved end on that line: the same one move
+  LAYER.dropCaret();
+  CAM.set(covered);
+  LAYER.frame();
+  LAYER.placeSelection({ addr: D, pos, width: 1 }, 'start');
+  LAYER.frame();
+  assert.ok(CAM.flying() && Math.abs(CAM.destination().scale * f.fs - CAM.fit().px) < 1e-6, `a selection's moved end: bound for the landing's em — ${JSON.stringify(CAM.destination())}`);
+  landed();
+  assert.ok(lineOn(pos).top >= /** @type {number} */ (LAYER.headClear(D)) - 0.5, 'its line below what the head covers');
+}));
+
+test('where a head\'s rows run deeper than the band above its column, a caret on a line past their overflow under the held rows comes clear by the least pan at the scale it stands at, down by what the head covers less where its line stood, the head held where it stood (issue #703\'s design decision; FP-37)', () => onHead(() => {
+  movedLong();
+  CAM.setViewport(390, 900);
+  landAt(null);
+  LAYER.frame();
+  deeperThanBand();
+  const f = LAYER.foldOf(REC.doc(D)), col = f.columns[/** @type {any} */ (LAYER.cornerAt(D)).column], scale = CAM.cam.scale, P = LINE_H * f.fs * scale, hold = LINE_PX + HOLD.gap;
+  const deep = headRows(LAYER.cornerOf(D)).reduce((n, r) => n + r.h, 0);
+  // a line whose depth below its band's top passes the head's own: past the overflow, where the head never rides over it
+  const past = f.lines.slice(col.first, col.first + col.n).find((l) => l.at != null && (f.band + (l.top - col.top) * f.fs) * scale >= deep + P);
+  assert.ok(past, 'a line past the head\'s overflow in its column');
+  const pos = /** @type {number} */ (past.at);
+  // the camera moved alone so that line's top stands at the hold, under the head's held rows
+  CAM.set({ ...CAM.view(), y: CAM.cam.y + (lineOn(pos).top - hold) / scale });
+  LAYER.frame();
+  const before = CAM.view(), foot = /** @type {number} */ (LAYER.headClear(D));
+  assert.ok(Math.abs(lineOn(pos).top - hold) < 1e-6 && foot > hold + P, `the line at the hold, under the held rows' foot ${foot}`);
+  LAYER.placeCaret(D, pos);
+  LAYER.frame();
+  assert.ok(!CAM.flying() && CAM.cam.scale === before.scale && CAM.cam.x === before.x && Math.abs((before.y - CAM.cam.y) * scale - (foot - hold)) < 1e-6, `one pan at the scale it stands at, down by ${foot - hold} px: ${JSON.stringify(CAM.view())} from ${JSON.stringify(before)}`);
+  LAYER.frame();
+  assert.ok(Math.abs(/** @type {number} */ (LAYER.headClear(D)) - foot) < 1e-6 && lineOn(pos).top >= foot - 0.5, `the head held where it stood, the line below it: ${JSON.stringify(lineOn(pos))}`);
+}));
+
+test('where a form opened beneath a head covers a caret\'s line no move of the camera is made — no pan the form rides its band over, and no move to the landing\'s em — and the one line and the status region are told what covers it and how to clear it, at each act at the caret (issue #703\'s design decision; FP-37, FP-41)', () => onHead(() => {
+  movedLong();
+  /** @type {Array<[unknown, string]>} */
+  const told = [];
+  LAYER.readers({ top: () => LINE_PX, face: FACES.cornerFace, covered: (w, id) => { told.push([w, id]); } });
+  CAM.setViewport(390, 900);
+  landAt(null);
+  LAYER.openStatement(D, true);
+  LAYER.frame();
+  formTall(150);
+  const pos = headsColumnFirst(), cover = LAYER.coverAt(D, CAM.view());
+  assert.ok(cover && cover.form === 'statement' && lineOn(pos).top < cover.bottom - 0.5, `at the reading size, the statement opened beneath the head over the column's first line: ${JSON.stringify(cover)}, ${JSON.stringify(lineOn(pos))}`);
+  const before = CAM.view(), words = sentence('L.cover.statement', { word: keptWord(/** @type {any} */ (WRITE.keptOf(D))).text });
+  LAYER.placeCaret(D, pos);
+  LAYER.frame();
+  assert.deepEqual([CAM.view(), CAM.flying(), told], [before, false, [[words, 'L.cover.statement']]], 'nothing moved; what covers the line and how to clear it told');
+  assert.ok(String(words).includes('statement') && String(words).includes(keptWord(/** @type {any} */ (WRITE.keptOf(D))).text), `the statement named, and the kept word that closes it: ${words}`);
+  assert.ok(LAYER.caretMove('right'));
+  LAYER.frame();
+  assert.deepEqual([CAM.view(), told.length], [before, 2], 'the next act at the caret: nothing moved, told again');
+  LAYER.openStatement(D, false);
+}));
+
+test('what a head would cover at the camera\'s own view is what it covers there — its held rows\' foot, a form opened beneath its rows, its rows unheld and held, at and below the reading size — and none where its corner stands beside its column (issue #703\'s design decision; FP-37)', () => onHead(() => {
+  movedLong();
+  const agree = (/** @type {string} */ where) => {
+    const c = LAYER.coverAt(D, CAM.view()), clear = LAYER.headClear(D);
+    assert.ok(c && clear != null && Math.abs(c.bottom - clear) < 1e-9 && c.y === standsAt(LAYER.cornerOf(D))?.y, `${where}: ${JSON.stringify(c)}, what the head covers ${clear}`);
+  };
+  landAt(null);
+  LAYER.frame();
+  assert.deepEqual([LAYER.cornerAt(D)?.head, LAYER.coverAt(D, CAM.view())], [false, null], '1440 px: the corner beside its column, no head and nothing it covers');
+  CAM.setViewport(390, 900);
+  landAt(null);
+  LAYER.frame();
+  agree('at the reading size, unheld');
+  bandAt(LINE_PX + HOLD.gap - 2 * LINE_H * LAYER.foldOf(REC.doc(D)).fs * CAM.cam.scale);
+  agree('at the reading size, held below the one line');
+  LAYER.openStatement(D, true);
+  LAYER.frame();
+  agree('a form opened beneath its rows');
+  LAYER.openStatement(D, false);
+  LAYER.frame();
+  landAt(null);
+  LAYER.frame();
+  deeperThanBand();
+  agree('below the reading size, every row held');
+  bandAt(LINE_PX + HOLD.gap - LINE_H * LAYER.foldOf(REC.doc(D)).fs * CAM.cam.scale);
+  agree('below the reading size, held below the one line');
+}));
+
+test('in a window too short for a line at the middle of the reading view to stand below a head\'s held rows, the view framing it at the landing\'s em is lowered by the least pan below them; where a form opened beneath them leaves no room for it even so, that view is the reading view and not clear, and the line standing covered is told what covers it (issue #703\'s design decision; FP-37)', () => onHead(() => {
+  movedLong();
+  /** @type {Array<[unknown, string]>} */
+  const told = [];
+  LAYER.readers({ top: () => LINE_PX, face: FACES.cornerFace, covered: (w, id) => { told.push([w, id]); } });
+  CAM.setViewport(390, 140);
+  const pos = REC.doc(D).blocks[40].pos;
+  landAt(pos);
+  LAYER.frame();
+  const f = LAYER.foldOf(REC.doc(D)), at = LAYER.frameOf(D, pos), plain = CAM.viewAt(at, at.fs);
+  assert.ok(LAYER.cornerAt(D)?.head && lineOn(pos).top < /** @type {number} */ (LAYER.headClear(D)) - 0.5, `the reading view's line under the held rows: ${JSON.stringify(lineOn(pos))}, their foot ${LAYER.headClear(D)}`);
+  assert.equal(LAYER.tellCovered(D, pos), true, 'standing covered there: told');
+  const to = LAYER.frameClear(D, pos);
+  assert.ok(to.clear && to.view.scale === plain.scale && to.view.x === plain.x && to.view.y < plain.y, `lowered at the landing's em: ${JSON.stringify(to)} from ${JSON.stringify(plain)}`);
+  CAM.set(to.view);
+  LAYER.frame();
+  const now = lineOn(pos);
+  assert.ok(now.top >= /** @type {number} */ (LAYER.headClear(D)) - 0.5 && now.top + now.h <= 140 + 0.5 && Math.abs(CAM.cam.scale * f.fs - CAM.fit().px) < 1e-6, `there its line below the held rows, in view: ${JSON.stringify(now)}`);
+  assert.equal(LAYER.tellCovered(D, pos), false, 'clear there: nothing told');
+  LAYER.openStatement(D, true);
+  CAM.set(plain);
+  LAYER.frame();
+  formTall(100);
+  const again = LAYER.frameClear(D, pos);
+  assert.ok(!again.clear && sameView(again.view, plain), `the statement opened beneath them: no room below it even lowered — the reading view, not clear: ${JSON.stringify(again)}`);
+  told.length = 0;
+  assert.deepEqual([LAYER.tellCovered(D, pos), told.map(([, id]) => id)], [true, ['L.cover.statement']], 'standing covered: what covers it told');
+  LAYER.openStatement(D, false);
 }));
 
 test('over a column of a later row of its fold the corner stands at its document\'s head in that column\'s own band — its first row at the band\'s top, every row inside the band and none hidden — and a focus on an act of a row past its held rows is brought in by that row\'s own place, below them, a held row\'s by none (issue #689; FP-20, FP-26)', () => onHead(() => {

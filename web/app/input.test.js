@@ -1775,6 +1775,9 @@ test('a click placing the caret in another draft the person may edit keeps the c
 
 test('a Shift press the canvas takes on a draft the person may edit before the text under it stands — the caret live there — is held for the text and, once the frame sets it, extends from the caret to the point pressed, the caret live there and the selection standing (issue #568\'s design decision; FP-12, FP-40)', () => onGestures(async ({ D, at, dom, plane, platform }) => {
   LAYER.clear();
+  // the camera on D's first line, at its reading scale: the caret placed there stands in view, and the frame that sets
+  // the text moves no camera for it, so the press held for that text is still the one made
+  CAM.set({ ...CAM.view(), ...LAYER.centreOf(D, 1) });
   LAYER.placeCaret(D, 9);
   assert.deepEqual([LAYER.isMounted(D), caretNow()], [false, [D, 9, true]], 'no text of D stands, the caret live in it at 9');
   // a point of D's first line on screen: once the frame sets the text, the platform finds its position 20 and its block there

@@ -91,7 +91,9 @@
 // selection drawn in the caret's text (`selectedAtCaret`; T-LAYER's
 // `caretPaste`) — the same words by identity, else the plain text as new
 // bytes — the walk then on the caret's span; one whose source is read by
-// identity first holds every key until it is placed or told (`reading`); a
+// identity first holds every key until it is placed or told (`reading`), and
+// a pointer's or the camera's act made meanwhile is kept, its caret then
+// owing the frame no move of the camera (`pointed`; FP-25); a
 // paste told — words not matching the passage its entry names, placed as new
 // bytes, or nothing placed, its source refused or not read, at the act or by
 // the board after it (W-WRITE's `onUnplaced`) — raises its face where it was
@@ -334,11 +336,12 @@
 // State (FP-10), beside the held keys: whether Mod+S has been
 // answered whole this session (`saveAnswered`), how many keys the dispatch
 // has taken (`keysTaken`), the save chord's latest answer (`saving`), the
-// latest paste or cut made (`clipping`), and the undo or redo reading the
-// text its step stands in — set aside, or kept by a pointer's or the
-// camera's act (`undoing`).
+// latest paste or cut made (`clipping`), a paste whose source is read by
+// identity — kept by a pointer's or the camera's act (`reading`, `pasting`)
+// — and the undo or redo reading the text its step stands in — set aside, or
+// kept by a pointer's or the camera's act (`undoing`).
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-13, FP-14, FP-20, FP-21, FP-24,
-// FP-25, FP-27, FP-34, FP-35, FP-36, FP-38, FP-39, FP-40, FP-41.
+// FP-25, FP-27, FP-34, FP-35, FP-36, FP-37, FP-38, FP-39, FP-40, FP-41.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -619,6 +622,8 @@ export const saved = () => saving;
 let clipping = Promise.resolve();
 /** @type {Promise<unknown> | null} a paste whose source is being read by identity (T-LAYER's `caretPaste`), settled once it is placed or told: keys wait for it as for a jump in the air (`waiting`) */
 let reading = null;
+/** @type {{kept: boolean} | null} that paste while its source is read (`reading`), kept where a pointer's or the camera's act was made meanwhile (`pointed`): its caret, placed once it lands, then owes the frame no move of the camera */
+let pasting = null;
 
 /**
  * @typedef {Object} Undoing — an undo or a redo reading the text its step stands in (`undoChord`; see the head)
@@ -638,7 +643,7 @@ export const clipped = () => clipping;
 /** the keys that are a modifier going down: none of them a key typed */
 const MODIFIER_KEYS = ['Shift', 'Meta', 'Control', 'Alt', 'AltGraph', 'CapsLock'];
 /** reset what the save chord holds (tests): Mod+S not yet answered whole, no key taken, no answer owed, no paste or cut being made, no undo reading */
-export function _reset() { saveAnswered = false; keysTaken = 0; saving = Promise.resolve(); clipping = Promise.resolve(); reading = null; undoing = null; }
+export function _reset() { saveAnswered = false; keysTaken = 0; saving = Promise.resolve(); clipping = Promise.resolve(); reading = null; pasting = null; undoing = null; }
 
 /** the keys held for a landing, the one whose act is being made there, and an undo or a redo reading the text its step stands in (the gate's settle signal) */
 export const holding = () => held.length + (making ? 1 : 0) + (undoing ? 1 : 0);
@@ -1543,9 +1548,14 @@ function undoSite(addr) {
  * A pointer's or the camera's act made (APP-INPUT's: every press, every
  * wheel): an undo or a redo reading the text its step stands in is kept —
  * its step taken where it stands once its read answers, and said, nothing
- * moved for it (`undoChord`). Nothing where none reads.
+ * moved for it (`undoChord`) — and so is a paste whose source is read by
+ * identity: its caret, placed once it lands, owes the frame no move of the
+ * camera (`pasting`; T-LAYER's `caretPaste`). Nothing where neither reads.
  */
-export function pointed() { if (undoing && !undoing.aside) undoing.kept = true; }
+export function pointed() {
+  if (undoing && !undoing.aside) undoing.kept = true;
+  if (pasting) pasting.kept = true;
+}
 
 /**
  * Esc at an undo or a redo reading the text its step stands in (`esc`): set
@@ -1833,7 +1843,9 @@ export function pasteEvent(e, ctx) {
  * identity; then the selection ended (O-SELECTION's `clear`), the walk on the
  * caret's span and the moved verdict's line said where the draft owes it
  * (`clipping`). A paste whose source is read by identity first holds every
- * key until it is placed or told (`reading`). Where it is told — words that
+ * key until it is placed or told (`reading`), its caret owing the frame no
+ * move of the camera where a pointer's or the camera's act was made
+ * meanwhile (`pasting`, `pointed`). Where it is told — words that
  * do not match the passage its entry names, placed as new bytes; nothing
  * placed, the source refused or not read — its face stands where it was made
  * (`told`). The clipboard holding no text, or more than one paste places, is
@@ -1855,7 +1867,7 @@ function pasteAt(text, entry, e, ctx) {
   if (addr) {
     if (unwritableSays(addr, e, ctx)) return true;
     if (kept) LAYER.returnCaret(false, kept.addr);
-    const over = selectedAtCaret(), out = LAYER.caretPaste(text, over, entry);
+    const mine = { kept: false }, over = selectedAtCaret(), out = LAYER.caretPaste(text, over, entry, () => mine.kept);
     /** what the paste did, answered: the walk following what it placed, its face where it is told, its line where nothing was placed for its size or its emptiness */
     const answer = (/** @type {import('../text/layer.js').Pasted | false} */ r) => {
       const told = r && typeof r === 'object' ? r : null;
@@ -1865,7 +1877,8 @@ function pasteAt(text, entry, e, ctx) {
       else if (r === 'large') HINT.show('L.paste.large', { size: megabytes(byteLength(LAYER.pasteText(text))), limit: megabytes(WRITE.PASTE_MAX_BYTES) }, hinted(e, ctx));
     };
     if (!(out instanceof Promise)) { answer(out); return true; }
-    const settled = out.then(answer).finally(() => { if (reading === settled) reading = null; });
+    pasting = mine;
+    const settled = out.then(answer).finally(() => { if (reading === settled) reading = null; if (pasting === mine) pasting = null; });
     reading = settled;
     // the door waits for the paste to be placed or told, then for the walk to follow what it placed
     /** @type {Promise<void>} */
