@@ -365,6 +365,13 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    line of its own, wrapped and never cut — the why on one line in a head's row its words fit */
 .corner .past { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
 .corner .why { display:block; margin-top:.3em; white-space:normal; }
+/* a past state's "read it again" beneath the line saying why it shows another state (B3-S7; FP-41): on a line of its own, in
+   a slot of the width T-ARTICLE sets, so it stands at one width whether it acts or not, its words wrapped between them inside
+   the slot and never cut; its click cue its act's, an inert one dim, still focusable and pressed for its reason */
+.corner .again-slot { display:inline-block; max-width:100%; margin-top:.3em; vertical-align:top; white-space:normal; }
+.corner .again-slot > .again { white-space:normal; color:#cfd6df; }
+.corner button.again { text-decoration:underline dotted; cursor:pointer; }
+.corner button.again.inert { color:#8b8f96; text-decoration:none; cursor:default; }
 /* a past state's clauses after its title (B3-S7; FP-26, FP-34): that it is not its minute's last, its count in a slot of
    tabular figures as wide as T-ARTICLE sets it, an empty box on a faint ground while the count is not known; that the state
    its act asked is read again, the running mark after its words — each on a line of its own, wrapped between its words and
@@ -413,6 +420,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    never cut, folded or hidden */
 .pane .corner .title { display:block; white-space:normal; }
 .pane .corner .title > .past, .pane .corner .title > .held, .pane .corner .title > .why { display:block; margin:0; }
+.pane .corner .title > .again-slot { margin:0; }
 .pane .corner .title .tl { display:block; white-space:nowrap; }
 .pane .corner .title .tl.wraps, .pane .corner:not(.head) .title .tl { white-space:normal; }
 #corners .corner.head .name { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
@@ -669,7 +677,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    a row its time of day in a slot of tabular figures as wide as the widest (`--pl-time`, SC's) and what it did beside it,
    wrapping only between words and hanging under its own first word; the row of the state pane B shows, or its folded
    day's head, marked by a bar at its edge; the asked row whose state SC reads again saying "reading" right after what it
-   did; the line saying why the state shown stands in the place of a reclaimed one, below its row, set as the top line is; a focused head
+   did, and "not read" there where its read was refused and is not read again; the line saying why the state shown stands
+   in the place of a reclaimed one, below its row, set as the top line is; a focused head
    or row scrolled clear of the held head */
 #scenepast { font:var(--corner-px)/1.4 var(--face-client); color:#8b8f96; user-select:none; -webkit-user-select:none; }
 #scenepast.beside { position:absolute; top:26px; right:0; bottom:0; width:var(--scene-list); padding:8px var(--scene-list-pad); border-left:var(--scene-list-rule) solid var(--line); overflow:auto; z-index:1; background:var(--bg); scroll-padding-top:1.7em; }
@@ -686,8 +695,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #scenepast .pl-time { flex:none; min-width:var(--pl-time, auto); }
 #scenepast .pl-join { flex:none; white-space:pre; }
 #scenepast .pl-what { flex:1 1 0; min-width:0; }
-#scenepast .pl-row.reading .pl-what { flex:0 1 auto; }
-#scenepast .pl-reading { flex:none; color:#8b8f96; }
+#scenepast .pl-row:is(.reading, .unread) .pl-what { flex:0 1 auto; }
+#scenepast :is(.pl-reading, .pl-unread) { flex:none; color:#8b8f96; }
 #scenepast.after .pl-head { scroll-margin-top:var(--past-held, 0px); }
 #scenepast.after .pl-row { scroll-margin-top:calc(var(--past-held, 0px) + 1.6em); }
 #scenepast [data-shown] { border-left-color:#cfd6df; }

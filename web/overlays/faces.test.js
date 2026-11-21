@@ -892,7 +892,7 @@ test('a face that arrives without the reader\'s act folds nothing: the unfold is
 });
 
 // placed last: the endings drop every read the tests above hold
-test('the withheld face at a COVERED document — one the class the page left read, withheld from the class it reads at now — while the ending stands says the one line\'s words for that ending in the arm\'s place, and offers the line\'s sign-in act, faced where the face stood: "signed out" for the page\'s own close; "could not reconnect as ⟨account⟩ after a restart" leading the guest line for a re-acquire refused — never the entitlement arm (issue #177: "sign-in is offered in the one line\'s words for that ending"); and so at any document whose text the page holds as the ending stands (issue #179: "Its text is on screen … Where the session ended, show the session-ended notice, offer sign-in")', () => {
+test('the withheld face at a COVERED document — one the class the page left read, withheld from the class it reads at now — while the ending stands says the one line\'s words for that ending in the arm\'s place, and offers the line\'s sign-in act, faced where the face stood: "signed out" for the page\'s own close; "could not reconnect as ⟨account⟩ after a restart" leading the guest line for a re-acquire refused — never the entitlement arm (issue #177: "sign-in is offered in the one line\'s words for that ending"); and so at any document whose text the page holds as the ending stands (issue #179: "Its text is on screen … Where the session ended, show the session-ended notice, offer sign-in"); the words those faces name its state by — the ending\'s, else the withheld box\'s — the cause a past state\'s line gives (issue #702)', () => {
   const Y = '1.0.1.0.8', at = { span: { addr: Y, pos: 1 }, sign: Y };
   /** @type {Array<[string, () => void, {id: string, text: string}, string]>} each ending, its words and the face its sign-in act shows */
   const endings = [
@@ -915,6 +915,7 @@ test('the withheld face at a COVERED document — one the class the page left re
       o?.acts?.a0(/** @type {any} */ ({}), false);
       assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], [signIn, at], `${what}: its act faces what the line's sign-in faces, where the face stood`);
       HOST.dismiss();
+      assert.deepEqual(FACES.withheldWords(Y), words, `${what}: the words its faces name its state by, a past state's line's cause — the ending's (issue #702)`);
     }
     // a document read after the page's own close, then withheld: its text on screen, access changed after it was read
     readAs(READERS[0]);
@@ -934,6 +935,7 @@ test('the withheld face at a COVERED document — one the class the page left re
     FACES.withheld(Y, at);
     assert.deepEqual(faceShown()?.arm?.[0], entitlementArm({ account: '1.0.1', keyPresent: true }, '1.0.1').id, 'no ending standing: the entitlement arm, as at any withheld document');
     HOST.dismiss();
+    assert.deepEqual(FACES.withheldWords(Y), { id: 'F.corner.withheld', text: t('F.corner.withheld', { owner: '1.0.1' }) }, 'no ending standing: the withheld box\'s words its faces name its state by (issue #702)');
   } finally { REC.setSessionRefused(null); REC.takeOwner('1.0.2.1', { prefix: OWNER, principal: 901 }); REC.takeRefused(X, 'withheld'); }
 });
 

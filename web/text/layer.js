@@ -442,8 +442,10 @@
 // at its document's head in the plane's head form (`sceneHead`; FP-26) — a
 // past state's or the held version's title leading it in either, broken at
 // its joiners as the corner's width asks (`titleLines`), its line's own
-// element carrying the id and the words the scene names the pane's region by
-// (T-ARTICLE's `titleHTML`), a past state's clauses after it never folded, and
+// element and a substitution's carrying the ids and the words the scene names
+// the pane's region by (T-ARTICLE's `titleHTML`), "read it again" beneath a
+// substitution's words on lines the title counts, its slot measured at the
+// corner's own size, a past state's clauses after it never folded, and
 // at the head the rows the scene holds at the pane's top marked so
 // (`HeadLayout.held`), the rows the title took handed back to floor it at the
 // next writing (`sceneHead`); and
@@ -1798,7 +1800,8 @@ function linesAt(/** @type {string} */ words, /** @type {number} */ width, wide 
  * wrapped between its words, never cut. Each line its words, the joiner it
  * breaks at at its end, so the lines read together are the line's words;
  * `count` the lines they take — a wrapped one counted line by line — with a
- * substitution's words after them on lines of their own (`linesAt`).
+ * substitution's words after them on lines of their own, and its "read it
+ * again" beneath them where it stands (`linesAt`).
  * @param {import('./article.js').Title} title
  * @param {number} width px
  * @param {(s: string) => number} [wide] words' width, px: the corner's type at its own size (`cornerPx`) where none is given
@@ -1821,7 +1824,8 @@ export function titleLines(title, width, wide = cornerPx) {
   };
   if (n) lay(0, n);
   const lines = spans.map(([i, j]) => ({ words: words(i, j), wraps: !fits(i, j) }));
-  const count = lines.reduce((c, l) => c + (l.wraps ? linesAt(l.words.trimEnd(), width, wide) : 1), 0) + (title.substituted ? linesAt(title.substituted.text, width, wide) : 0);
+  const s = title.substituted;
+  const count = lines.reduce((c, l) => c + (l.wraps ? linesAt(l.words.trimEnd(), width, wide) : 1), 0) + (s ? linesAt(s.text, width, wide) : 0) + (s && s.again ? linesAt(t('L.history.read-again'), width, wide) : 0);
   return { lines, count };
 }
 
@@ -4895,7 +4899,7 @@ function makeCorner(into, addr) {
  * puts a focus back on (N-FOCUS's `keep`): each of the face's acts by its key
  * on the face, its compact form's among them; the offered read's, a head's
  * count of the items it folds, the kept word's, the kept line's second act's,
- * the act that opens the corner
+ * a past state's "read it again", the act that opens the corner
  * whole or compacts it again, the version statement's; none for the corner's
  * element itself, which a rewrite never replaces. A reading scene's pane keys
  * its corner's acts by it too.
@@ -4909,6 +4913,7 @@ export function cornerAct(el) {
   if (d.more) return 'more';
   if (d.kept) return 'kept';
   if (d.history != null) return 'history';
+  if (d.again != null) return 'again';
   if (d.whole != null) return 'whole';
   return e.classList && typeof e.classList.contains === 'function' && e.classList.contains('version') ? 'version' : null;
 }
@@ -5592,8 +5597,8 @@ export function planOf(d) { d = shownDoc(d); return articlePlan(d, viewFor(d), R
  * @returns {string}
  */
 export function sceneCorner(d, article = viewFor(d, true), compact = false, as = {}) {
-  const keep = as.keep, items = cornerItems(d, cornerView(article), compact).filter((i) => !keep || keep(i.cls));
-  return items.map((i) => (i.title ? titleHTML(i.title, titleLines(i.title, cornerWidth(compact)).lines, as.title ?? null) : i.html)).join('');
+  const keep = as.keep, view = cornerView(article), items = cornerItems(d, view, compact).filter((i) => !keep || keep(i.cls));
+  return items.map((i) => (i.title ? titleHTML(i.title, titleLines(i.title, cornerWidth(compact)).lines, as.title ?? null, view) : i.html)).join('');
 }
 
 /**
@@ -5647,7 +5652,7 @@ export function sceneHead(d, article, as) {
   for (const s of L.slots) {
     const html = s.k === -1 ? keptHTML(clause)
       : s.k === -2 ? moreHTML(L.folded, as.open)
-        : title && lines && s.k === 0 ? titleHTML(title, lines.lines, as.title ?? null) : items[s.k].html;
+        : title && lines && s.k === 0 ? titleHTML(title, lines.lines, as.title ?? null, view) : items[s.k].html;
     rows[s.row] += `<span class="hslot${s.rows > 1 ? ' wraps' : ''}" style="left:${s.x}px;width:${s.w}px;height:${s.rows * pitch}px;line-height:${s.rows > 1 ? '' : pitch + 'px'}">${html}</span>`;
     tall[s.row] = Math.max(tall[s.row], s.rows);
   }

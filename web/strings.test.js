@@ -1310,3 +1310,21 @@ test('where no state before the newest is readable the line names the board and 
   assert.ok(lacking().some((x) => x.id === 'L.history.floor'), 'listed for the report');
   assert.ok((STRINGS['L.history.floor.untimed'].screen ?? '').includes('L.history.floor names'), '"a time not recorded" names the date it stands for there');
 });
+
+test('where the read of a past state\'s asked state stopped, its line, each of its causes, its act and the asked row\'s mark are the lane\'s own words as issue #702 decided them, each naming B3-S7, listed for the report — a read\'s words, none saying anything was written; filled, the line leaves no token (B3-S7; FP-34)', () => {
+  /** @type {Record<string, [string, string]>} each entry's words and its kind */
+  const want = {
+    'L.history.unread': ['could not read it as it stood ⟨time⟩ — ⟨cause⟩', 'K6'],
+    'L.history.unread.unanswered': ['⟨board⟩ did not answer', 'K6'],
+    'L.history.unread.fault': ['a fault in this client', 'K6'],
+    'L.history.unread.refused': ['⟨board⟩ refused the read', 'K6'],
+    'L.history.read-again': ['read it again', 'K1'],
+    'L.history.not-read': ['not read', 'K25'],
+  };
+  for (const [id, [text, kind]] of Object.entries(want)) {
+    const e = STRINGS[id];
+    assert.deepEqual([e.text, e.cls, e.source, e.lane, e.kind, /B3-S7/.test(e.screen ?? ''), /written/.test(e.text)], [text, 'DRAFT', '', true, kind, true, false], id);
+    assert.ok(lacking().some((x) => x.id === id), `${id}: listed for the report`);
+  }
+  assert.equal(t('L.history.unread', { time: 'at 14:00', cause: t('L.history.unread.refused', { board: 'board 1' }) }), 'could not read it as it stood at 14:00 — board 1 refused the read', 'its two tokens filled, none left');
+});

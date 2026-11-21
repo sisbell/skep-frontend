@@ -703,6 +703,28 @@ test('a title naming a region carries on its line\'s own element — never the s
   assert.ok(!plain.includes(' id=') && !plain.includes('role=') && !plain.includes('aria-label'), `drawn with none: neither id nor name — ${plain}`);
 });
 
+test('a substitution\'s words are drawn each stretch in its face — the client\'s with each address the identifier\'s, a refusal\'s name set as code — and, where its holder names a region by them after the title, carry on their own element the id handed in and, as an image of them, their words heard, a refusal\'s name kept as written; "read it again" beneath them in a slot as wide as its words at the corner\'s size, a native button keyed on the act, inert in its place — focusable, titled and described by its reason — and its words alone where the view asks no act (issue #702; FP-41, FP-26; style S22)', () => {
+  const runs = [{ text: 'could not read it as it stood at 14:00 — board 1 refused the read · ', face: /** @type {const} */ ('client') }, { text: 'internal_panic', face: /** @type {const} */ ('ident') }];
+  const sub = { id: 'L.history.unread', text: runsText(runs), runs, substituted: true, again: { inert: null } };
+  const title = /** @type {import('./article.js').Title} */ (cornerTitle({ past: { time: 'at 14:02', hand: HAND, why: sub } })), lines = [{ words: 'as it stood at 14:02 · desk · e427 2902 a114 39e5', wraps: false }];
+  const view = { acts: true, measure: (/** @type {string} */ s) => s.length / 2 };
+  const named = titleHTML(title, lines, { id: 'sceneB-title', words: titleRuns(title), why: 'sceneB-why' }, view);
+  const why = `<span class="why" data-string="L.history.unread" id="sceneB-why" role="img" aria-label="${esc(heard(runs))}">${esc(runs[0].text)}<span class="code id">internal_panic</span></span>`;
+  const act = `<span class="again-slot" style="width:${t('L.history.read-again').length / 2}em"><button type="button" class="again" data-again data-string="L.history.read-again" tabindex="-1">${esc(t('L.history.read-again'))}</button></span>`;
+  assert.ok(named.endsWith(why + act + '</span>'), `the words in their faces on their own element, named, the act beneath them in its slot: ${named}`);
+  assert.ok(heard(runs).endsWith('internal_panic') && heard(runs).includes('board 1 refused the read'), `heard: the refusal's name kept as written, the joiners pauses — ${heard(runs)}`);
+  const plain = titleHTML(title, lines, null, view);
+  assert.ok(plain.includes(`<span class="why" data-string="L.history.unread">${esc(runs[0].text)}<span class="code id">internal_panic</span></span>`) && !plain.includes('sceneB-why'), `handed no id: neither id nor name on the words — ${plain}`);
+  const inert = { id: 'L.history.unanswered', text: 'Board 1 is not answering — its past states can be read once it answers.' };
+  const held = titleHTML({ ...title, substituted: { ...sub, again: { inert } } }, lines, null, view);
+  assert.ok(held.includes(`<span class="again-slot" style="width:${t('L.history.read-again').length / 2}em"><button type="button" class="again inert" data-again data-string="L.history.read-again" aria-disabled="true" data-inert="L.history.unanswered" title="${esc(inert.text)}" aria-description="${esc(heard(inert.text))}" tabindex="-1">${esc(t('L.history.read-again'))}</button></span>`),
+    `inert: in its place, in a slot of the same width, focusable, marked inert, titled and described by its reason — ${held}`);
+  const restated = titleHTML(title, lines, null, { ...view, acts: false });
+  assert.ok(restated.includes(`<span class="again-slot" style="width:${t('L.history.read-again').length / 2}em"><span class="again" data-string="L.history.read-again">${esc(t('L.history.read-again'))}</span></span>`) && !restated.includes('<button'), `where the view asks no act: its words alone — ${restated}`);
+  const none = titleHTML({ ...title, substituted: { id: 'B3.history.busy', text: t('B3.history.busy'), substituted: true } }, lines, null, view);
+  assert.ok(!none.includes('again-slot') && !none.includes('data-again') && none.includes(`<span class="why" data-string="B3.history.busy">${esc(t('B3.history.busy'))}</span>`), `no act where its holder offers none; words handed with no stretches the client's: ${none}`);
+});
+
 test('a past state\'s clauses stand between its title and its chip while its holder hands them in, each held at a pane\'s top and none ever yielding, in either form: "one of ⟨n⟩ changes that minute, not the last" in the place of the words saying the state is how the draft stands now, its count in a slot of one width whether it shows 2 or 9 or is not yet known — then an empty box named as being read; "reading ⟨time⟩" ahead of the chip, its element busy and the one running mark after its words, its words alone where the view asks no act; each in the mirror\'s words, and in the order drawn in the clauses its pane is described by (issue #696; B3-S7; FP-26, FP-34)', () => {
   const draft = doc({ kind: 'draft', meta: null }), past = { time: 'at 14:02', hand: HAND, why: null };
   const now = { id: 'B3.history.now', text: t('B3.history.now'), substituted: false }, sub = { id: 'B3.history.busy', text: t('B3.history.busy'), substituted: true };
@@ -729,7 +751,7 @@ test('a past state\'s clauses stand between its title and its chip while its hol
   assert.equal(words, 'reading at 14:01', 'no joiner of its own: "reading ⟨time⟩"');
   assert.equal(cornerItems(draft, draftView({ past: { ...past, reading: 'at 14:01' }, acts: false }))[1].html, `<span class="inflight" data-string="B3.history.in-flight">${esc(words)}</span>`, 'where the view asks no act: its words alone, so one mark stands');
   assert.equal(cornerWords(draft, draftView({ past: { ...past, notLast: { n: 3 }, reading: 'at 14:01' } })), [t('B3.history.not-last', { n: 3 }), words, t('C-28.flag-on')].join(', '), 'the mirror voices them after the title, in their order');
-  assert.deepEqual(pastClauses({ ...past, why: sub, notLast: { n: 3 }, reading: 'at 14:01' }), [sub.text, notLastWords(3), inFlightWords('at 14:01')], 'what its pane is described by: why, then not the minute\'s last, then reading — in the order drawn');
+  assert.deepEqual(pastClauses({ ...past, why: sub, notLast: { n: 3 }, reading: 'at 14:01' }), [notLastWords(3), inFlightWords('at 14:01')], 'what its pane is described by: not the minute\'s last, then reading — in the order drawn; a substitution\'s words name its region after the title and describe it not (issue #702)');
   assert.deepEqual([pastClauses({ ...past, why: now, notLast: null, reading: null }), pastClauses({ ...past, notLast: null, reading: null })], [[now.text], []], 'each where it stands, none where none does');
 });
 

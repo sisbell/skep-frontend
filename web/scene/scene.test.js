@@ -201,7 +201,7 @@ import * as TRAIL from '../nav/trail.js';
 import * as PAST from '../model/past.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
-import { t, tHTML, lastRead, addressedHTML, sentence, sentences, hintSentences, heard, runsText, asRuns, fields, runningHTML } from '../strings.js';
+import { t, tHTML, tRuns, lastRead, addressedHTML, sentence, sentences, hintSentences, heard, runsText, asRuns, fields, runningHTML, FIELD } from '../strings.js';
 import { esc, fingerprintCue, timeOf, dayOf } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
@@ -998,7 +998,7 @@ function page(as = {}) {
   LAYER.attach(/** @type {any} */ (element('the text layer')), /** @type {any} */ (corners));
   const canvas = Object.assign(element('the scene\'s canvas'), { getContext: () => recorder().ctx });
   SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas, stop, strokes }), {
-    end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, a, told) => FACES.floating(far, a, null, told), held: FACES.held, words: (r, ctx) => FACES.wordsFor(r, ctx) },
+    end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, a, told) => FACES.floating(far, a, null, told), held: FACES.held, words: (r, ctx) => FACES.wordsFor(r, ctx), withheldOf: FACES.withheldWords },
     history: (addr) => { void GO.history(addr); },
   });
   /** @type {any[]} what stands after pane B in the scene: the list of a draft's past states, beside pane B's corner */
@@ -3103,8 +3103,9 @@ const pastAsks = (/** @type {number} */ at) => fake.asked.filter((k) => k === pa
 /**
  * The board refusing the draft's state at each position given, by the refusal's name — as the board answers `/op-at`,
  * naming no floor — or as reclaimed naming the floor given; or, the position lying inside a commit, `not_a_position`
- * naming the committed one below it; or answering it, a number of its bytes; what puts the script back as it stood
- * @param {Record<number, string | number | {nearest: number} | {floor: number}>} at
+ * naming the committed one below it; or not answering it; or answering it, a number of its bytes; what puts the script
+ * back as it stood
+ * @param {Record<number, string | number | {nearest: number} | {floor: number} | {unanswered: true}>} at
  */
 function pastAnswering(at) {
   /** @type {Record<string, unknown>} */
@@ -3112,6 +3113,7 @@ function pastAnswering(at) {
   for (const [p, a] of Object.entries(at)) {
     if (typeof a === 'number') Object.assign(set, pastAt(Number(p), a));
     else if (typeof a === 'object' && 'floor' in a) set[pastKey(Number(p))] = { refused: { kind: 'refused', name: 'history_reclaimed', status: 410, code: 'history_reclaimed', detail: null, op: 'retrieve_doc_v_span_set', site: {}, body: { error: 'history_reclaimed', floor: a.floor } } };
+    else if (typeof a === 'object' && 'unanswered' in a) set[pastKey(Number(p))] = { refused: { kind: 'unreachable', name: 'unreachable', text: '' } };
     else if (typeof a === 'object') set[pastKey(Number(p))] = { refused: { kind: 'refused', name: 'not_a_position', status: 409, code: 'not_a_position', detail: null, op: 'retrieve_doc_v_span_set', site: {}, body: { error: 'not_a_position', nearest: a.nearest } } };
     else set[pastKey(Number(p))] = { refused: { kind: 'refused', name: a, status: a === 'history_busy' ? 503 : 410, code: a, detail: null, op: 'retrieve_doc_v_span_set', site: {}, body: { error: a } } };
   }
@@ -3126,6 +3128,8 @@ async function within(/** @type {number} */ ms, /** @type {() => boolean} */ hol
 }
 /** the board's name as the one line names it, on the board these tests open */
 const BOARD_NAME = () => t('L.mirror.board.name', { node: '1', origin: '' });
+/** pane B's line saying why it shows another state than the one asked, as its corner draws it where it names pane B's region: its string, its own element's id and its words heard as an image of them */
+const whyDrawn = (/** @type {string} */ id, /** @type {string} */ words, /** @type {string} */ inner = esc(words)) => `<span class="why" data-string="${id}" id="sceneB-why" role="img" aria-label="${esc(heard(words))}">${inner}</span>`;
 
 test('the runs a derived pane shares with the other are read off the two records\' images by their bytes\' identity — never asked of the board — each run of runs adjoining in both one (skep-frontend #617)', () => {
   const image = (/** @type {Array<[number, number]>} */ runs) => { let pos = 1; return runs.map(([ordinal, width]) => { const r = { pos, width, prefix: PASTD + '.0.1', ordinal }; pos += width; return r; }); };
@@ -3340,7 +3344,7 @@ test('where the board will not read the state before the newest change — recla
       'the newest kept state in the place of the one asked, the line naming the board and the time it stood — a substitution, nothing reading');
     assert.ok(SCENE.panes()?.b.blocks.map((b) => b.text).join('') === PAST_TEXT, 'pane B the newest kept state');
     const row = /^<div class="hrow" data-row="0" data-held="1"[^>]*>(.*?)<\/div>/.exec(p.cornerB.innerHTML);
-    assert.ok(row && row[1].includes('data-string="B3.history.row"') && row[1].includes(`<span class="why" data-string="B3.history.reclaimed">${esc(words)}</span>`) && (SCENE.panes()?.b.heldRows ?? 0) >= 2,
+    assert.ok(row && row[1].includes('data-string="B3.history.row"') && row[1].includes(whyDrawn('B3.history.reclaimed', words)) && (SCENE.panes()?.b.heldRows ?? 0) >= 2,
       `its line and the substitution's words after it on the held rows, two at the least: ${p.cornerB.innerHTML}`);
     assert.ok(!p.cornerB.innerHTML.includes('⟨') && !p.cornerB.innerHTML.includes('aria-busy'), `no token left in pane B's corner, nothing busy: ${p.cornerB.innerHTML}`);
     const list = String(p.afterB[0].innerHTML);
@@ -3380,7 +3384,7 @@ test('a state refused as reclaimed whose last position before the draft\'s next 
   } finally { restore(); WRITE.setKept(PASTD, null); }
 }, { acts: true }));
 
-test('a past state the board is busy on is reissued as the scene stands — the in-flight clause "reading ⟨time⟩" after the title and ahead of the chip, held at the pane\'s top, carrying the one running mark on its own busy element, never the line\'s nor the pane\'s; pane B described by the line then the clause; the asked row reading — and lands: pane B set to it in one step, the line, the clause and the reading gone, the line said once with the clause after it and the landing once; the pauses double to two seconds at the most (issues #688, #696; B3-S7; FP-23, FP-36)', () => onPage(async (p) => {
+test('a past state the board is busy on is reissued as the scene stands — the in-flight clause "reading ⟨time⟩" after the title and ahead of the chip, held at the pane\'s top, carrying the one running mark on its own busy element, never the line\'s nor the pane\'s; pane B named by its title, then the line, then its address, and described by the clause; the asked row reading — and lands: pane B set to it in one step, the line, the clause and the reading gone, pane B named by its title and its address again, the line said once with the clause after it and the landing once; the pauses double to two seconds at the most (issues #688, #696, #702; B3-S7; FP-23, FP-36)', () => onPage(async (p) => {
   assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 9].map(SCENE.reissueGap), [PUMP.RETRY_MS, 240, 480, 960, 1920, 2000, 2000, 2000], 'RETRY_MS first, then each pause twice the last, two seconds at the most');
   await onTrail(p);
   let restore = pastAnswering({ [PAST_AT]: 'history_busy' });
@@ -3391,11 +3395,11 @@ test('a past state the board is busy on is reissued as the scene stands — the 
     assert.deepEqual([SCENE.past()?.at, SCENE.past()?.met, SCENE.past()?.running, SCENE.past()?.why?.id, SCENE.past()?.inFlight], [48, 'history_busy', true, 'B3.history.busy', asking],
       'the newest kept state in its place, the line saying the board is busy, the state asked read again — its time the asked row\'s, in the title\'s form');
     const corner = p.cornerB.innerHTML, inflight = `<span class="inflight" data-string="B3.history.in-flight" aria-busy="true">${esc(clause)}${runningHTML()}</span>`;
-    assert.ok(corner.includes(`<span class="why" data-string="B3.history.busy">${esc(t('B3.history.busy'))}</span>`) && corner.includes(inflight) && corner.split('class="running"').length === 2 && p.paneB.attrs['aria-busy'] === undefined,
+    assert.ok(corner.includes(whyDrawn('B3.history.busy', t('B3.history.busy'))) && corner.includes(inflight) && corner.split('class="running"').length === 2 && p.paneB.attrs['aria-busy'] === undefined,
       `the line's words alone; the clause after them, its element busy, the one running mark after its words; pane B never busy: ${corner}`);
     const heldRows = [...corner.matchAll(/<div class="hrow" data-row="\d+" data-held="1"[^>]*>(.*?)<\/div>(?=<div|$)/g)].map((m) => m[1]).join('');
     assert.ok(heldRows.includes(inflight) && corner.indexOf(inflight) < corner.indexOf('data-chip'), `the clause on the rows held at the pane's top, ahead of the chip: ${corner}`);
-    assert.equal(p.paneB.attrs['aria-description'], busy, 'pane B described by the line, then the clause, as fields, heard');
+    assert.deepEqual([p.paneB.attrs['aria-labelledby'], p.paneB.attrs['aria-description']], ['sceneB-title sceneB-why sceneB-name', heard(clause)], 'pane B named by its title, then the line by its own element, then its address; described by the clause, heard');
     assert.ok(String(p.afterB[0].innerHTML).includes(`<div class="pl-row reading" data-row="${PAST_AT}">`) && String(p.afterB[0].innerHTML).includes(`<span class="pl-reading" data-string="B3.history.reading">${esc(t('B3.history.reading'))}</span>`),
       `the asked row says "reading": ${p.afterB[0].innerHTML}`);
     const asked = pastAsks(PAST_AT);
@@ -3405,8 +3409,8 @@ test('a past state the board is busy on is reissued as the scene stands — the 
     restore(); restore = () => {};
     const n = p.said.length;
     assert.ok(await within(2500, () => SCENE.past()?.at === PAST_AT), 'the asked state lands');
-    assert.deepEqual([SCENE.past()?.why, SCENE.past()?.running, SCENE.past()?.met, SCENE.past()?.inFlight, p.cornerB.innerHTML.includes('class="why"'), p.cornerB.innerHTML.includes('class="inflight"'), p.cornerB.innerHTML.includes('aria-busy'), String(p.afterB[0].innerHTML).includes('pl-reading'), p.paneB.attrs['aria-description']],
-      [null, false, null, null, false, false, false, false, undefined], 'the line and the clause gone from the corner and the description, nothing reading');
+    assert.deepEqual([SCENE.past()?.why, SCENE.past()?.running, SCENE.past()?.met, SCENE.past()?.inFlight, p.cornerB.innerHTML.includes('class="why"'), p.cornerB.innerHTML.includes('class="inflight"'), p.cornerB.innerHTML.includes('aria-busy'), String(p.afterB[0].innerHTML).includes('pl-reading'), p.paneB.attrs['aria-description'], p.paneB.attrs['aria-labelledby']],
+      [null, false, null, null, false, false, false, false, undefined, 'sceneB-title sceneB-name'], 'the line and the clause gone from the corner, the name and the description, nothing reading');
     assert.ok(SCENE.panes()?.b.blocks.map((b) => b.text).join('') === PAST_OLD && String(p.afterB[0].innerHTML).includes(`<div class="pl-row" data-row="${PAST_AT}" data-shown="1"`), 'pane B set to the state asked, its row marked');
     const landing = heard(t('B3.history.row', { time: lastRead(PAST_T0 + 2 * 60000), hand: t('F.slot.unsigned') }));
     assert.deepEqual([p.said.slice(n).filter((w) => w === landing).length, p.said.slice(said).filter((w) => w === busy).length], [1, 1], 'the landing said once, in the words pane B\'s title names it by; the line once in all');
@@ -3427,7 +3431,7 @@ test('a reissue answered by a refusal the board does not class as retry ends: th
     const n = p.said.length, words = t('B3.history.reclaimed', { board: BOARD_NAME(), time: timeOf(PAST_T0 + 5 * 60000) });
     assert.ok(await within(1500, () => SCENE.past()?.met === 'history_reclaimed'), 'the reissue answered reclaimed, where it stood last too');
     assert.deepEqual([SCENE.past()?.why?.text, SCENE.past()?.running, SCENE.past()?.at, p.said.slice(n).filter((w) => w === heard(words)).length], [words, false, 48, 1], 'the line the latest answer\'s, said once, nothing running');
-    assert.ok(p.cornerB.innerHTML.includes(`<span class="why" data-string="B3.history.reclaimed">${esc(words)}</span>`) && String(p.afterB[0].innerHTML).includes('class="pl-floor"'), `the line and the floor mark, its words: ${p.cornerB.innerHTML}`);
+    assert.ok(p.cornerB.innerHTML.includes(whyDrawn('B3.history.reclaimed', words)) && String(p.afterB[0].innerHTML).includes('class="pl-floor"'), `the line and the floor mark, its words: ${p.cornerB.innerHTML}`);
     const asked = pastAsks(PAST_AT);
     await new Promise((r) => setTimeout(r, 400));
     assert.equal(pastAsks(PAST_AT), asked, 'reissued no more');
@@ -3439,6 +3443,152 @@ test('a reissue answered by a refusal the board does not class as retry ends: th
     const closed = pastAsks(PAST_AT);
     await new Promise((r) => setTimeout(r, 400));
     assert.equal(pastAsks(PAST_AT), closed, 'no reissue outlives its scene');
+  } finally { restore(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+/** the stopped line's words as stretches (`L.history.unread`): the state asked could not be read as it stood — its row's time, as a sentence names a time — and why */
+const unreadRuns = (/** @type {import('../strings.js').Run[]} */ cause) => tRuns('L.history.unread', { time: lastRead(PAST_T0 + 2 * 60000), cause });
+/** a cause's words with the refusal's name after them, a field, in the identifier's face — set as code */
+const codedRuns = (/** @type {string} */ words, /** @type {string} */ name) => [{ text: words, face: /** @type {const} */ ('client') }, { text: FIELD, face: /** @type {const} */ ('client') }, { text: name, face: /** @type {const} */ ('ident') }];
+/** stretches as the line's own element draws them: the client's with each address the identifier's, a refusal's name set as code */
+const codeDrawn = (/** @type {import('../strings.js').Run[]} */ runs) => runs.map((r) => (r.face === 'client' ? addressedHTML(r.text) : `<span class="code id">${esc(r.text)}</span>`)).join('');
+/** pane B's "read it again" as its corner stands it, where it does: its button */
+const againIn = (/** @type {ReturnType<typeof page>} */ p) => p.acts.b.find((b) => LAYER.cornerAct(b) === 'again') ?? null;
+/** a frame of the platform's, which the status region's words said again land in */
+const aFrame = () => new Promise((r) => setTimeout(r, 5));
+
+test('a refusal of the asked state that is not reclaimed and that the scene does not read again stops the line in a read\'s words — "could not read it as it stood ⟨time⟩ — ⟨cause⟩", that state\'s time; the board refusing the read, its refusal\'s name after it as code, at `internal_panic`, at `not_a_position` naming no position and at any other; a fault in this client at `malformed`, its name too; the board\'s silence where it did not answer; the draft\'s withheld words where it is withheld — never "nothing was written", the sign-in\'s or the one line\'s words; "read it again" beneath it but beside `withheld`; the asked row "not read"; pane B named by its title, the line, then its address; the line said once, and nothing asked again by the scene (issue #702\'s design decision; FP-34)', () => onPage(async (p) => {
+  await onTrail(p);
+  const refused = t('L.history.unread.refused', { board: BOARD_NAME() });
+  /** @type {Array<[string | {unanswered: true}, string, import('../strings.js').Run[]]>} each answer the asked state's read meets, the refusal's name the list keeps, and the line's cause */
+  const cases = [
+    ['internal_panic', 'internal_panic', codedRuns(refused, 'internal_panic')],
+    ['not_a_position', 'not_a_position', codedRuns(refused, 'not_a_position')],
+    ['beyond_head', 'beyond_head', codedRuns(refused, 'beyond_head')],
+    ['malformed', 'malformed', codedRuns(t('L.history.unread.fault'), 'malformed')],
+    [{ unanswered: true }, 'unreachable', asRuns(t('L.history.unread.unanswered', { board: BOARD_NAME() }))],
+    ['withheld', 'withheld', asRuns(FACES.withheldWords(PASTD).text)],
+  ];
+  try {
+    for (const [answer, name, cause] of cases) {
+      const restore = pastAnswering({ [PAST_AT]: answer }), said = p.said.length;
+      try {
+        assert.equal(await pastOpened(p), true, `${name}: the scene shows`);
+        const runs = unreadRuns(cause), words = runsText(runs), withheld = name === 'withheld';
+        assert.deepEqual([SCENE.past()?.at, SCENE.past()?.met, SCENE.past()?.running, SCENE.past()?.why], [48, name, false, { id: 'L.history.unread', text: words, runs, substituted: true, ...(withheld ? {} : { again: { inert: null } }) }],
+          `${name}: the newest kept state in its place, the line saying the state asked could not be read and why, nothing reading`);
+        const corner = p.cornerB.innerHTML, list = String(p.afterB[0].innerHTML);
+        assert.ok(corner.includes(`<span class="why" data-string="L.history.unread" id="sceneB-why" role="img" aria-label="${esc(heard(runs))}">${codeDrawn(runs)}</span>`),
+          `${name}: the line in pane B's corner, each stretch in its face, its own element naming pane B's region: ${corner}`);
+        assert.equal(corner.includes('data-again'), !withheld, `${name}: "read it again" ${withheld ? 'never beside the draft\'s withheld words' : 'beneath the line'}: ${corner}`);
+        assert.ok(list.includes(`<div class="pl-row unread" data-row="${PAST_AT}">`) && list.includes(`<span class="pl-unread" data-string="L.history.not-read">${esc(t('L.history.not-read'))}</span>`) && !list.includes('pl-reading') && !list.includes('pl-floor'),
+          `${name}: the asked row says "not read", where "reading" stands while the scene reads it again: ${list}`);
+        assert.deepEqual([p.paneB.attrs['aria-labelledby'], p.paneB.attrs['aria-description']], ['sceneB-title sceneB-why sceneB-name', undefined], `${name}: pane B named by its title, then the line, then its address`);
+        const told = p.said.slice(said);
+        assert.deepEqual(told.filter((w) => w === heard(runs)), [heard(runs)], `${name}: the line said once`);
+        for (const s of [corner, words, ...told]) {
+          assert.ok(!s.includes('written') && !s.includes(t('C-138.busy')) && !s.includes(t('F.daemon.unreachable')) && !s.includes('⟨'), `${name}: no write's words, no sign-in's, no board status's and no token: ${s}`);
+        }
+        const asked = pastAsks(PAST_AT);
+        await new Promise((r) => setTimeout(r, 300));
+        assert.equal(pastAsks(PAST_AT), asked, `${name}: nothing asks the state again by itself`);
+      } finally { SCENE.close(); restore(); }
+    }
+  } finally { WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('a refusal of the asked state the board classes as retry, `busy` and `scan_busy` among them, says only that the draft\'s history is busy while the scene reads it again — never the sign-in\'s words, nor the link scan\'s — and lands as the board reads it (issue #702\'s design decision)', () => onPage(async (p) => {
+  await onTrail(p);
+  try {
+    for (const name of ['busy', 'scan_busy']) {
+      const restore = pastAnswering({ [PAST_AT]: name });
+      try {
+        assert.equal(await pastOpened(p), true, `${name}: the scene shows`);
+        const why = SCENE.past()?.why;
+        assert.deepEqual([SCENE.past()?.met, SCENE.past()?.running, why?.id, why?.text], [name, true, 'B3.history.busy', t('B3.history.busy')], `${name}: the line says the history is busy while the scene reads the state again`);
+        assert.ok(!p.cornerB.innerHTML.includes(esc(t('C-138.busy'))) && !p.cornerB.innerHTML.includes(esc(t('B1.scan_busy'))), `${name}: neither the sign-in's words nor the link scan's: ${p.cornerB.innerHTML}`);
+      } finally { restore(); }
+      assert.ok(await within(2500, () => SCENE.past()?.at === PAST_AT), `${name}: the state asked lands once the board reads it`);
+      SCENE.close();
+    }
+  } finally { WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('"read it again" beneath the stopped line asks the state as a return asks it, one read at each press, and says each press\'s answer in the status region, changed or not: the same refusal said again; a reclaimed answer its own line, the act standing; inert while the board is not answering, saying why at every press and asking nothing; a retry-class answer the busy line, the act inert, the scene reading the state again until it lands; a landing in the title\'s words, the line, the act and "not read" gone — in a slot of one width whether it acts or not, beneath the line, its stops a line of its own (issue #702\'s design decision; FP-41, FP-20, FP-36)', () => onPage(async (p) => {
+  await onTrail(p);
+  let restore = pastAnswering({ [PAST_AT]: 'internal_panic' });
+  const daemon = REC.daemon();
+  try {
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    // a frame of the app's loop once the history stands, which marks each pane's corner as its items read
+    SCENE.markKept();
+    const line = unreadRuns(codedRuns(t('L.history.unread.refused', { board: BOARD_NAME() }), 'internal_panic'));
+    let act = againIn(p);
+    assert.ok(act && act.getAttribute('aria-disabled') === null && act.dataset.string === 'L.history.read-again' && /<div class="hrow" data-row="\d+"[^>]* role="toolbar"[^>]*>(?:(?!<div class="hrow").)*data-again/.test(p.cornerB.innerHTML),
+      `the act, live, its words the strings table's, on a row of the head that is a line of acts of its own: ${p.cornerB.innerHTML}`);
+    const slot = /<span class="again-slot" style="width:([\d.]+)em"><button type="button" class="again" data-again data-string="L.history.read-again" tabindex="-1">([^<]*)<\/button><\/span>/.exec(p.cornerB.innerHTML);
+    assert.ok(slot && slot[2] === esc(t('L.history.read-again')) && p.cornerB.innerHTML.indexOf('again-slot') > p.cornerB.innerHTML.indexOf('id="sceneB-why"'), `in a slot of its own width, beneath the line: ${p.cornerB.innerHTML}`);
+    // the same refusal: asked once at the press, said again
+    let asked = pastAsks(PAST_AT), said = p.said.length;
+    clickIn(p, 'b', act, false);
+    assert.ok(await within(1500, () => pastAsks(PAST_AT) > asked && SCENE.past()?.asking === false), 'the press asks the state');
+    await aFrame();
+    assert.deepEqual([pastAsks(PAST_AT) - asked, SCENE.past()?.why?.text, p.said.slice(said).filter((w) => w === heard(line)).length], [1, runsText(line), 1], 'one read, the same line, said again at the press though it did not change');
+    // reclaimed at its row and where it last stood: the reclaimed line, the act standing beneath it
+    restore(); restore = pastAnswering({ [PAST_AT]: 'history_reclaimed', 47: 'history_reclaimed' });
+    act = againIn(p); said = p.said.length;
+    clickIn(p, 'b', act, true);
+    const reclaimed = t('B3.history.reclaimed', { board: BOARD_NAME(), time: timeOf(PAST_T0 + 5 * 60000) });
+    assert.ok(await within(1500, () => SCENE.past()?.met === 'history_reclaimed'), 'the press answered reclaimed');
+    await aFrame();
+    assert.deepEqual([SCENE.past()?.why?.id, SCENE.past()?.why?.again, p.said.slice(said).includes(heard(reclaimed)), p.cornerB.innerHTML.includes('data-again')], ['B3.history.reclaimed', { inert: null }, true, true], 'the reclaimed line, said; the act, once drawn, standing beneath it');
+    // the board not answering, by the shell's verdict: inert, its reason said at every press, nothing asked
+    restore(); restore = pastAnswering({ [PAST_AT]: 'internal_panic' });
+    REC.setDaemon('unreachable'); SCENE.markKept();
+    act = againIn(p);
+    const reason = sentence('L.history.unanswered', { board: BOARD_NAME() });
+    assert.ok(act && act.getAttribute('aria-disabled') === 'true' && act.dataset.inert === 'L.history.unanswered' && act.getAttribute('title') === reason, `inert in its place, focusable, its reason its title: ${p.cornerB.innerHTML}`);
+    const inert = /<span class="again-slot" style="width:([\d.]+)em">/.exec(p.cornerB.innerHTML);
+    assert.equal(inert?.[1], slot?.[1], 'the slot one width whether the act acts or not');
+    asked = pastAsks(PAST_AT); said = p.said.length;
+    clickIn(p, 'b', act, true); await aFrame();
+    clickIn(p, 'b', againIn(p), false); await aFrame();
+    assert.deepEqual([p.said.slice(said).filter((w) => w === heard(reason)).length, pastAsks(PAST_AT) - asked], [2, 0], 'each press says why, again where the region holds it already; nothing asked');
+    REC.setDaemon(daemon); SCENE.markKept();
+    // a retry-class answer: the busy line, the act inert while the scene reads the state again, then the landing
+    restore(); restore = pastAnswering({ [PAST_AT]: 'scan_busy' });
+    said = p.said.length;
+    clickIn(p, 'b', againIn(p), false);
+    assert.ok(await within(1500, () => SCENE.past()?.running === true), 'the press answered busy: the scene reads the state again');
+    SCENE.markKept();
+    const busyLine = heard(fields(t('B3.history.busy'), t('B3.history.in-flight', { time: lastRead(PAST_T0 + 2 * 60000) })));
+    assert.deepEqual([SCENE.past()?.why?.id, SCENE.past()?.why?.again, p.said.slice(said).includes(busyLine)], ['B3.history.busy', { inert: { id: 'B3.history.busy', text: sentence('B3.history.busy') } }, true], 'the busy line, said; the act inert, saying the scene reads it again');
+    assert.equal(againIn(p)?.dataset.inert, 'B3.history.busy', 'drawn inert');
+    restore(); restore = () => {};
+    said = p.said.length;
+    assert.ok(await within(2500, () => SCENE.past()?.at === PAST_AT), 'the state asked lands');
+    SCENE.markKept();
+    const landing = heard(t('B3.history.row', { time: lastRead(PAST_T0 + 2 * 60000), hand: t('F.slot.unsigned') }));
+    assert.deepEqual([SCENE.past()?.why, p.cornerB.innerHTML.includes('data-again'), String(p.afterB[0].innerHTML).includes('pl-unread'), p.said.slice(said).filter((w) => w === landing).length, p.paneB.attrs['aria-labelledby']],
+      [null, false, false, 1, 'sceneB-title sceneB-name'], 'landed: no line, no act, no "not read", the landing said once in the title\'s words, pane B named by its title and its address');
+  } finally { REC.setDaemon(daemon); restore(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('a press of "read it again" the board answers with the state lands it at once — pane B set to it, the landing said, the act gone — and one made while another\'s read is out asks nothing more (issue #702\'s design decision)', () => onPage(async (p) => {
+  await onTrail(p);
+  const restore = pastAnswering({ [PAST_AT]: 'internal_panic' });
+  try {
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    SCENE.markKept();
+    restore();
+    const asked = pastAsks(PAST_AT), said = p.said.length;
+    const act = againIn(p);
+    clickIn(p, 'b', act, false);
+    clickIn(p, 'b', act, false);
+    assert.ok(await within(1500, () => SCENE.past()?.at === PAST_AT), 'the state asked lands');
+    const landing = heard(t('B3.history.row', { time: lastRead(PAST_T0 + 2 * 60000), hand: t('F.slot.unsigned') }));
+    assert.deepEqual([pastAsks(PAST_AT) - asked, SCENE.past()?.why, SCENE.past()?.met, p.said.slice(said).filter((w) => w === landing).length], [1, null, null, 1], 'one read for the two presses; pane B on the state asked, no line, the landing said once');
+    assert.ok(SCENE.panes()?.b.blocks.map((b) => b.text).join('') === PAST_OLD, 'pane B the state as asked');
   } finally { restore(); WRITE.setKept(PASTD, null); }
 }, { acts: true }));
 
@@ -3485,7 +3635,7 @@ test('where no state before the newest is readable — reclaimed at its row and 
     script[rowKey] = answer;
     assert.equal(await pastOpened(p), true, 'the scene shows');
     const why = SCENE.past()?.why, list = String(p.afterB[0].innerHTML);
-    assert.ok(why && p.cornerB.innerHTML.includes(`<span class="why" data-string="${why.id}">${esc(why.text)}</span>`) && list.includes(`<div class="pl-floor" data-string="${why.id}">${esc(why.text)}</div>`),
+    assert.ok(why && p.cornerB.innerHTML.includes(whyDrawn(why.id, why.text)) && list.includes(`<div class="pl-floor" data-string="${why.id}">${esc(why.text)}</div>`),
       `the corner's line and the floor mark the same words: ${p.cornerB.innerHTML} ${list}`);
     return why;
   };
@@ -3566,7 +3716,7 @@ test('the held version\'s pane carries no kind at any fit — beside its column,
   }
 }, { acts: true }));
 
-test('a past state\'s pane carries no kind at any fit — at its document\'s head side by side and stacked, beside its column stacked — its title leading its corner, named by its title\'s own element, then its address, the same at every fit; described by the line saying why it shows that state — a substitution\'s words, else that the state is how the draft stands now — rendered for the ear and no part of its name, at every fit (issue #687; FP-26, FP-39; B3-S7)', () => onPage(async (p) => {
+test('a past state\'s pane carries no kind at any fit — at its document\'s head side by side and stacked, beside its column stacked — its title leading its corner, named by its title\'s own element, then, standing in the place of the state asked, the substitution\'s words by their own element, then its address, the same at every fit and with no description; where it shows the state asked as how the draft stands now, named by its title then its address and described by those words, rendered for the ear (issues #687, #702; FP-26, FP-39; B3-S7)', () => onPage(async (p) => {
   await onTrail(p);
   const reclaimed = pastAnswering({ [PAST_AT]: 'history_reclaimed', 47: 'history_reclaimed' });
   const width = stackedBeside(SCENE.listPx(0));
@@ -3575,16 +3725,17 @@ test('a past state\'s pane carries no kind at any fit — at its document\'s hea
     assert.equal(await pastOpened(p), true, 'the scene shows');
     const why = /** @type {import('../text/article.js').PastWhy} */ (SCENE.past()?.why), time = lastRead(PAST_T0 + 5 * 60000);
     assert.equal(why.id, 'B3.history.reclaimed', 'the newest kept state in the place of the one asked, reclaimed');
-    const named = { labelledby: 'sceneB-title sceneB-name', name: esc(heard(t('B3.history.row', { time, hand: t('F.slot.unsigned') }))), kind: false, lead: '', description: heard(why.text) };
-    assert.deepEqual([why.substituted, paneBNamed(p)], [true, { corner: 'head', stacked: false, ...named }], 'side by side, at its document\'s head: named by its line, described by the substitution\'s words');
+    const named = { labelledby: 'sceneB-title sceneB-why sceneB-name', name: esc(heard(t('B3.history.row', { time, hand: t('F.slot.unsigned') }))), kind: false, lead: '', description: undefined };
+    assert.deepEqual([why.substituted, paneBNamed(p)], [true, { corner: 'head', stacked: false, ...named }], 'side by side, at its document\'s head: named by its line, then the substitution\'s words, then its address; no description');
+    assert.ok(p.cornerB.innerHTML.includes(whyDrawn(why.id, why.text)), `the substitution's words' own element the one its name refers to, named by them as an image: ${p.cornerB.innerHTML}`);
     assert.ok(width, 'a width at which the panes stack, their corners beside their columns');
     restore = fitAt(p, /** @type {number} */ (width));
     SCENE.refaced(); SCENE.draw();
     const { corner, stacked, ...beside } = paneBNamed(p);
     assert.ok(corner !== 'head' && stacked, `the scene stacked, the corners beside their columns — ${corner}`);
     assert.deepEqual(beside, named, 'stacked, beside its column: no kind\'s slot, named and described as at its head');
-    assert.ok(p.cornerB.innerHTML.startsWith('<span class="title"><span class="past" data-string="B3.history.row" id="sceneB-title"') && p.cornerB.innerHTML.includes(`<span class="why" data-string="${why.id}">`),
-      `its title first, the substitution's words held in it after its line's own element: ${p.cornerB.innerHTML}`);
+    assert.ok(p.cornerB.innerHTML.startsWith('<span class="title"><span class="past" data-string="B3.history.row" id="sceneB-title"') && p.cornerB.innerHTML.includes(whyDrawn(why.id, why.text)),
+      `its title first, the substitution's words held in it after its line's own element, named by them: ${p.cornerB.innerHTML}`);
     restore(); restore = fitAt(p, 390);
     SCENE.refaced(); SCENE.draw();
     assert.deepEqual(paneBNamed(p), { corner: 'head', stacked: true, ...named }, 'stacked, at its document\'s head: the same');

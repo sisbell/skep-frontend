@@ -2192,6 +2192,9 @@ test('a title\'s lines at a width: its line whole where the width holds it; else
   const busy = { id: 'B3.history.busy', text: t('B3.history.busy'), substituted: true };
   assert.equal(LAYER.titleLines({ ...PAST_TITLE, substituted: busy }, w(all)).count, 2, 'a substitution\'s words on a line of their own after the line');
   assert.equal(LAYER.titleLines({ ...PAST_TITLE, substituted: busy }, w(busy.text)).count, LAYER.titleLines(PAST_TITLE, w(busy.text)).count + 1, 'at the width its words take: one line of them — no running mark among them, which is the in-flight clause\'s');
+  const offered = { ...busy, again: { inert: null } }, again = t('L.history.read-again');
+  assert.equal(LAYER.titleLines({ ...PAST_TITLE, substituted: offered }, w(all)).count, 3, '"read it again" on a line of its own beneath the substitution\'s words (issue #702)');
+  assert.equal(LAYER.titleLines({ ...PAST_TITLE, substituted: offered }, w(again.slice(0, again.indexOf(' again')))).count - LAYER.titleLines({ ...PAST_TITLE, substituted: busy }, w(again.slice(0, again.indexOf(' again')))).count, 2, 'narrower than its words: wrapped between them inside its slot, each of its lines counted');
 });
 
 test('at a pane\'s head a past state\'s clauses stand on rows held with its title, after it, the chip after them, none folded however narrow the head — "one of ⟨n⟩ changes that minute, not the last", then "reading ⟨time⟩" with the running mark; the floor handed in sizes the title alone, the rows it took handed back, so the clauses held after it never deepen it; beside its column, whole and compact, the clauses after the title, none folded (issue #696; FP-26, FP-34)', () => {
@@ -2615,6 +2618,11 @@ test('the corner\'s items are made again as the face\'s own facts move with no o
 test('each of the face\'s acts bears its key on the face, its compact form\'s apart from a glyph\'s, so a rewrite puts a focus back on the act it stood on (issue #598; FP-20)', () => {
   const el = (/** @type {Record<string, string>} */ dataset) => /** @type {any} */ ({ dataset, classList: { contains: () => false } });
   assert.deepEqual([LAYER.cornerAct(el({ face: 'discard' })), LAYER.cornerAct(el({ face: 'held' })), LAYER.cornerAct(el({ face: 'whole', whole: '' })), LAYER.cornerAct(el({ whole: '' }))], ['face:discard', 'face:held', 'face:whole', 'whole']);
+});
+
+test('a past state\'s "read it again" bears its key, inert or not, so a rewrite of its corner — its line changing as each answer lands — puts a focus back on it (issue #702; FP-20)', () => {
+  const el = (/** @type {Record<string, string>} */ dataset) => /** @type {any} */ ({ dataset, classList: { contains: () => false } });
+  assert.deepEqual([LAYER.cornerAct(el({ again: '', string: 'L.history.read-again' })), LAYER.cornerAct(el({ again: '', inert: 'B3.history.busy' }))], ['again', 'again']);
 });
 
 test('at its document\'s head the face stands compact in the rows — its compact form an act naming its hand — the band its fold reserves holding its row; its act opens the corner whole, the face whole beneath the rows with its acts, and a press answered at it opens it so too, its words said (issue #598; B3-S2; FP-26; D6 BM-45)', () => onHead(({ said }) => {

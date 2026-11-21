@@ -78,8 +78,12 @@ frame (`now-moved`; skep-frontend #697); `changes` armed with the draft's rows u
 signed hand's row in that line's minute above them, pane B's corner saying after its title that its state is not its
 minute's last, its count in its box, on a held row, and pane B described so (`not-last`); `op` armed to refuse the state
 before the newest change as `scan_busy`, pane B's corner read in the frame the in-flight clause first stands — "reading
-⟨time⟩", the one running mark on its own busy element, pane B described by the line then the clause — and again as the state
-asked lands, the clause gone (`in-flight`; skep-frontend #696); and a held line,
+⟨time⟩", the one running mark on its own busy element, the line saying the history is busy, pane B named by its title, the
+line and its address and described by the clause — and again as the state asked lands, the clause gone (`in-flight`;
+skep-frontend #696, #702); `op` armed to refuse that state as `internal_panic`, the line saying it could not be read as it
+stood and that the board refused the read, the refusal's name set as code, "read it again" beneath it, the asked row "not
+read", pane B named by the line too — then the act pressed, the test board reading the state (`unread`; skep-frontend
+#702); and a held line,
 the act opening on the newest kept state under "now — not yet kept" (`unkept`) — every word of both panes' corners inside
 the box it stands in at each (issue #678).
 The editor pane follows them (`pane_rows`; skep-frontend #556, B3-S1's scene rule, B3-S13): a reading scene's pane holding
@@ -370,8 +374,11 @@ STATES = [
          how="`changes` armed, once the page is quiet, with the draft's own rows up to the line typed before its newest change and, above them, a signed hand's row in that line's minute, then the act clicked (skep-frontend #696)",
          claim='the history opens on the earlier line\'s state, pane B\'s corner saying after its title that it is not its minute\'s last — "one of ⟨n⟩ changes that minute, not the last" (B3.history.not-last), its count the rows of that minute in its box — on a row held at the pane\'s top at its document\'s head, before the chip, nothing folded and no words saying it is how the draft stands now; pane B named by its title then its address and described by the clause, as the AX tree computes them; every word of both panes\' corners inside the box it stands in'),
     dict(screen='B3-S7', state='in-flight', walk='W-08', step=8, drawn=True,
-         how="once the page is quiet, `op` armed to refuse the read of the state before the newest change as `scan_busy`, then the act clicked, pane B's corner read in the frame the clause first stands (skep-frontend #696)",
-         claim='while the scene reissues the state asked, the newest kept state standing in its place, pane B\'s corner carries "reading ⟨time⟩" (B3.history.in-flight), the asked row\'s time, after its title and before the chip, on a row held at the pane\'s top at its document\'s head, the one running mark on its own busy element and none on the line saying why; pane B described by that line then the clause, and never busy itself; once the state asked lands the clause, the busy element and the description are gone; every word of both panes\' corners inside the box it stands in'),
+         how="once the page is quiet, `op` armed to refuse the read of the state before the newest change as `scan_busy`, then the act clicked, pane B's corner read in the frame the clause first stands (skep-frontend #696, #702)",
+         claim='while the scene reissues the state asked, the newest kept state standing in its place, pane B\'s corner carries "reading ⟨time⟩" (B3.history.in-flight), the asked row\'s time, after its title and before the chip, on a row held at the pane\'s top at its document\'s head, the one running mark on its own busy element and none on the line saying why, which says the history is busy (B3.history.busy) and never the link scan\'s words; pane B named by its title, then that line, then its address, described by the clause, and never busy itself; once the state asked lands the clause, the busy element and the description are gone; every word of both panes\' corners inside the box it stands in'),
+    dict(screen='B3-S7', state='unread', walk='W-08', step=8, drawn=True,
+         how="once the page is quiet, `op` armed to refuse the read of the state before the newest change as `internal_panic`, then the act clicked; after the shots, the corner's \"read it again\" clicked, the arm spent (skep-frontend #702)",
+         claim='the state asked refused and not read again, the newest kept state stands in its place under the line saying it could not be read as it stood at that state\'s time and that the board refused the read, the refusal\'s name after it set as code (L.history.unread, L.history.unread.refused) — no word of a write — on rows held at the pane\'s top; beneath it "read it again" (L.history.read-again), live, in a slot of its own width; the asked row "not read" (L.history.not-read); pane B named by its title, the line, then its address as the AX tree computes them, with no description; the state asked once and never again by the scene; every word of both panes\' corners inside the box it stands in; the act\'s press asks the state again, which the test board reads: pane B on the state asked, the line, the act and "not read" gone'),
     dict(screen='B3-S7', state='unkept', walk='W-08', step=8, drawn=True,
          how="a line of the case's own draft held (`op` armed to answer `held`), then the act clicked (skep-frontend #661)",
          claim='the history opens on the newest kept state, the held words standing in the current pane alone, the list\'s top line "now — not yet kept" (L.history.unkept)'),
@@ -1468,7 +1475,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
         for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'now-moved', 'not-last', 'in-flight', 'unkept',
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'now-moved', 'not-last', 'in-flight', 'unread', 'unkept',
                       'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal', 'pane-refused', 'pane-held-bars'):
             red(state, 'the machine\'s page did not open')
         return
@@ -1583,7 +1590,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
         for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'now-moved', 'not-last', 'in-flight', 'unkept',
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'now-moved', 'not-last', 'in-flight', 'unread', 'unkept',
                       'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal', 'pane-refused', 'pane-held-bars'):
             red(st, 'the case\'s own draft did not mount')
         return
@@ -2930,8 +2937,8 @@ NOT_LAST_SEEN = '''(() => { const c = document.querySelector("#sceneB > .corner"
 # frame it first stands (skep-frontend #696), by an observer the click is made under: its words and its string, whether its
 # element is busy and carries the one running mark, the running marks pane B's corner holds, the line saying why pane B shows
 # its state — its words, whether it is busy and whether it carries a mark — whether the clause stands on a row held at the
-# pane's top at its document's head, after the title and before the chip, pane B's description and whether pane B is busy,
-# and the history as the scene holds it then; `timedOut` where no clause stood within 15 s
+# pane's top at its document's head, after the title and before the chip, pane B's name's references, its description and
+# whether pane B is busy, and the history as the scene holds it then; `timedOut` where no clause stood within 15 s
 IN_FLIGHT_SEEN = '''(async (sel) => { const b = document.querySelector(sel); if (!b) return {clicked: false};
   const read = () => { const c = document.querySelector("#sceneB > .corner"), e = c && c.querySelector(".inflight"); if (!e) return null;
     const pane = document.getElementById("sceneB"), why = c.querySelector(".why"), t = c.querySelector('[data-string="B3.history.row"]'), chip = c.querySelector("[data-chip]"), row = e.closest(".hrow");
@@ -2939,7 +2946,7 @@ IN_FLIGHT_SEEN = '''(async (sel) => { const b = document.querySelector(sel); if 
     const words = [...e.childNodes].filter((n) => !(n.classList && n.classList.contains("running"))).map((n) => n.textContent).join("");
     return {clicked: true, head: c.classList.contains("head"), words, id: e.dataset.string || null, busy: e.getAttribute("aria-busy"), mark: !!e.querySelector('.running[data-string="L.running"]'),
             marks: c.querySelectorAll(".running").length, why: why ? {words: why.textContent, busy: why.getAttribute("aria-busy"), mark: !!why.querySelector(".running")} : null,
-            held: !!row && row.dataset.held === "1", after_title: before(t, e), before_chip: before(e, chip), description: pane.getAttribute("aria-description"), pane_busy: pane.getAttribute("aria-busy"),
+            held: !!row && row.dataset.held === "1", after_title: before(t, e), before_chip: before(e, chip), labelled: pane.getAttribute("aria-labelledby"), description: pane.getAttribute("aria-description"), pane_busy: pane.getAttribute("aria-busy"),
             past: p ? {at: p.at, asked: p.asked, met: p.met, running: p.running, inFlight: p.inFlight} : null}; };
   return await new Promise((res) => {
     let timer = 0;
@@ -2947,6 +2954,18 @@ IN_FLIGHT_SEEN = '''(async (sel) => { const b = document.querySelector(sel); if 
     obs.observe(document.body, {subtree: true, childList: true, attributes: true, characterData: true});
     timer = setTimeout(() => { obs.disconnect(); res({clicked: true, timedOut: true}); }, 15000);
     b.click(); }); })(%s)'''
+# pane B's line where its asked state's read stopped, as a person meets it (skep-frontend #702): the corner's words; the line's
+# words, its string, the id its own element carries and the refusal's name it sets as code; "read it again" — its words,
+# whether it stands inert, its slot's width, whether it follows the line and whether its row at the head is a line of acts
+# of its own; the asked row's mark, its words and its row; and pane B's name's references and its description
+UNREAD_SEEN = '''(() => { const pane = document.getElementById("sceneB"), c = pane && pane.querySelector(":scope > .corner"); if (!c) return null;
+  const why = c.querySelector(".why"), code = why && why.querySelector(".code"), act = c.querySelector("button[data-again]"), slot = act && act.closest(".again-slot"), row = act && act.closest(".hrow");
+  const l = document.getElementById("scenepast"), mark = l && l.querySelector(".pl-unread"), marked = mark && mark.closest(".pl-row");
+  const before = (a, z) => !!a && !!z && !!(a.compareDocumentPosition(z) & Node.DOCUMENT_POSITION_FOLLOWING);
+  return {corner: c.textContent, why: why ? {words: why.textContent, id: why.dataset.string || null, own: why.id || null, code: code ? code.textContent : null} : null,
+          act: act ? {words: act.textContent, inert: act.getAttribute("aria-disabled"), width: slot ? slot.style.width : null, after: before(why, act), toolbar: !row || row.getAttribute("role") === "toolbar"} : null,
+          mark: mark ? {words: mark.textContent, id: mark.dataset.string || null, row: marked ? Number(marked.dataset.row) : null} : null,
+          labelled: pane.getAttribute("aria-labelledby"), description: pane.getAttribute("aria-description")}; })()'''
 
 
 def past_rows(ctx, r, shoot, red, ops_allowed, m):
@@ -3009,10 +3028,18 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     `scan_busy`, then the act clicked under an observer that reads pane B's corner in the frame the in-flight clause first
     stands (`IN_FLIGHT_SEEN`): the newest kept state in the place of the one asked, the scene reissuing it, "reading ⟨time⟩"
     after the title and before the chip on a held row, the one running mark on its own busy element and none on the line
-    saying why, pane B described by the line then the clause and never busy; then, the board answering the reissue, the
-    state asked landing and the clause, the busy element and the description gone (skep-frontend #696).
+    saying why, which says the draft's history is busy and never the link scan's words, pane B named by its title, the line
+    and its address, described by the clause and never busy; then, the board answering the reissue, the state asked landing
+    and the clause, the busy element and the description gone (skep-frontend #696, #702).
+    `unread`, at each width afresh: `op` armed, once the page is quiet, to refuse the state before the newest change as
+    `internal_panic`, then the act — the newest kept state in the place of the one asked, the state asked once and never
+    again by the scene, pane B's line saying it could not be read as it stood at its row's time and that the board refused
+    the read, the refusal's name after it set as code, no word of a write, "read it again" live beneath it in a slot of its
+    own width, the asked row "not read" (`UNREAD_SEEN`), pane B named by its title, the line and its address as the AX tree
+    computes them, with no description; then, after the shots, the act pressed with the arm spent — the state asked asked
+    again at its row and read by the test board, pane B on it, the line, the act and the mark gone (skep-frontend #702).
     `unkept`: a line held, then the act — the newest kept state, the list's top line saying so. At `read`, `reclaimed`,
-    `now`, `now-moved`, `not-last`, `in-flight` and `unkept`, at both widths, every word of both panes' corners stands inside
+    `now`, `now-moved`, `not-last`, `in-flight`, `unread` and `unkept`, at both widths, every word of both panes' corners stands inside
     the box it is set in, 1 px either way, the worst excess a figure (`fit_part`; issue #678). No `history.past` is called; the
     rows' writes are the two typed lines and the held line's drop."""
     mine, corner, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'corner', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
@@ -3515,11 +3542,12 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     shoot('not-last', not_last_check)
     close_scene()
 
-    # ---- `in-flight`: the state asked read again while the board is busy on it (skep-frontend #696) ------------------------------
+    # ---- `in-flight`: the state asked read again while the board is busy on it (skep-frontend #696, #702) ------------------------
     # `op` armed, once the page is quiet, to refuse the read of the state before the newest change as `scan_busy`, which the board
     # classes as retry and the history read takes no second attempt at: the newest kept state stands in its place while the scene
-    # reissues the state asked, which the board then answers. The clause is read in the frame it first stands, by an observer the
-    # act's click is made under, and again once the asked state lands. Each width opens the history afresh
+    # reissues the state asked, which the board then answers, the line saying the draft's history is busy whatever the refusal's
+    # name. The clause is read in the frame it first stands, by an observer the act's click is made under, and again once the
+    # asked state lands. Each width opens the history afresh
     def in_flight_check(w):
         close_scene(); recentre(); ctx.settle(10); ctx.frames(2); quiet()
         seq_f = ctx.editor_seq()
@@ -3530,9 +3558,10 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         taken_f = ctx.consumed('op', seq_f)
         want = ctx.js('''(async () => { const T = await import("./strings.js"), p = window.__skep.scene.past(); if (!p) return null;
           const asked = p.days.flatMap((d) => d.rows).find((r) => r.positions.includes(p.asked));
-          return {clause: asked ? T.t("B3.history.in-flight", {time: asked.time == null ? T.t("L.history.floor.untimed") : T.stoodAt(asked.time)}) : null, busy: T.t("B1.scan_busy")}; })()''') or {}
+          return {clause: asked ? T.t("B3.history.in-flight", {time: asked.time == null ? T.t("L.history.floor.untimed") : T.stoodAt(asked.time)}) : null, busy: T.t("B3.history.busy")}; })()''') or {}
         clause, busy = want.get('clause'), want.get('busy')
-        described = ctx.js('(async () => { const T = await import("./strings.js"); return T.heard(T.fields(%s, %s)); })()' % (json.dumps(busy), json.dumps(clause))) if clause and busy else None
+        # the line names pane B after its title; the clause alone describes it
+        described = heard(ctx, clause) if clause else None
         after = ctx.js('''(() => { const c = document.querySelector("#sceneB > .corner"), pane = document.getElementById("sceneB"), l = document.getElementById("scenepast");
           return {inflight: !!c && !!c.querySelector(".inflight"), busy: !!c && !!c.querySelector("[aria-busy]"), description: pane ? pane.getAttribute("aria-description") : null, reading: !!l && !!l.querySelector(".pl-reading")}; })()''') or {}
         past0 = seen.get('past') or {}
@@ -3540,7 +3569,7 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
                     and past0.get('at') != past0.get('asked') and bool(clause) and past0.get('inFlight') and clause.endswith(past0['inFlight']))
         clause_ok = (seen.get('words') == clause and seen.get('id') == 'B3.history.in-flight' and seen.get('busy') == 'true' and seen.get('mark') and seen.get('marks') == 1
                      and seen.get('why') == {'words': busy, 'busy': None, 'mark': False} and seen.get('pane_busy') is None and seen.get('after_title') and seen.get('before_chip')
-                     and (seen.get('held') or not seen.get('head')) and seen.get('description') == described)
+                     and (seen.get('held') or not seen.get('head')) and seen.get('labelled') == 'sceneB-title sceneB-why sceneB-name' and seen.get('description') == described)
         gone_ok = landed_f and after == {'inflight': False, 'busy': False, 'description': None, 'reading': False}
         end = ctx.js('window.__skep.scene.past()') or {}
         return {'the state asked, read again': (state_ok, {'armed': armed_f, 'consumed': taken_f, 'past': past0, 'clause': clause, 'timed_out': seen.get('timedOut')}),
@@ -3548,6 +3577,60 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
                 'the clause gone as the state lands': (gone_ok, dict(after, landed=landed_f, past={k: end.get(k) for k in ('at', 'asked', 'met', 'running', 'inFlight')})),
                 "the corners' words in their boxes": fit_part(ctx, figures, 'in-flight', w, *pane_corners)}
     shoot('in-flight', in_flight_check)
+    close_scene()
+
+    # ---- `unread`: the state asked refused and not read again, then read again by its act (skep-frontend #702) --------------------
+    # `op` armed, once the page is quiet, to refuse the read of the state before the newest change as `internal_panic`, which the
+    # board does not class as retry: the newest kept state stands in its place under the line saying the state could not be read
+    # as it stood and why, "read it again" beneath it, nothing asking the state again by itself. Each width opens the history
+    # afresh; after the shots the act is pressed, the arm spent, and the test board reads the state asked
+    def unread_check(w):
+        close_scene(); recentre(); ctx.settle(10); ctx.frames(2); quiet()
+        seq_u, calls_u = ctx.editor_seq(), ctx.js('window.__skep.bridge.calls().length') or 0
+        armed_u = ctx.arm('op', refusal={'kind': 'refused', 'name': 'internal_panic', 'status': 500, 'code': 'internal_panic', 'detail': None, 'op': 'retrieve_doc_v_span_set', 'site': {}, 'body': {'error': 'internal_panic'}})
+        clicked_u = ctx.js('((s) => { const b = document.querySelector(s); if (b) b.click(); return !!b; })(%s)' % json.dumps(act_sel))
+        opened_u = clicked_u and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return window.__skep.scene.isOpen() && !!p && p.draft === %s; })()' % json.dumps(mine), 30)
+        ctx.settle(20); ctx.frames(3)
+        taken_u = ctx.consumed('op', seq_u)
+        P = ctx.js('window.__skep.scene.past()') or {}
+        rows = [row for dd in P.get('days') or [] for row in dd['rows']]
+        # the line as the page's strings make it: the asked row's time as a sentence names a time, the board refusing the read,
+        # the refusal's name after it as a field in the identifier's face — and its words heard, the act's and the mark's words
+        want = ctx.js('''(async () => { const T = await import("./strings.js"), p = window.__skep.scene.past(); if (!p) return null;
+          const asked = p.days.flatMap((d) => d.rows).find((r) => r.positions.includes(p.asked)), board = T.t("L.mirror.board.name", {node: "1", origin: window.__skep.model.board().origin});
+          const runs = T.tRuns("L.history.unread", {time: asked && asked.time != null ? T.stoodAt(asked.time) : T.t("L.time.at", {time: T.t("L.history.floor.untimed")}),
+            cause: [{text: T.t("L.history.unread.refused", {board}), face: "client"}, {text: T.FIELD, face: "client"}, {text: "internal_panic", face: "ident"}]});
+          return {text: T.runsText(runs), heard: T.heard(runs), act: T.t("L.history.read-again"), mark: T.t("L.history.not-read")}; })()''') or {}
+        seen, lead, got_as = ctx.js(UNREAD_SEEN) or {}, ctx.js(PAST_LEAD) or {}, named_as(ctx, '#sceneB') or {}
+        # a beat past the scene's first reissue pause: nothing asks the state again by itself
+        time.sleep(0.6)
+        reads_u = ctx.js(STATE_READS % calls_u) or []
+        why, act = P.get('why') or {}, seen.get('act') or {}
+        state_ok = ((armed_u.get('result') or {}).get('armed') == 'op' and opened_u and taken_u and len(rows) >= 2 and P.get('at') == rows[0]['last'] and P.get('asked') == rows[1]['last']
+                    and P.get('met') == 'internal_panic' and P.get('running') is False and why.get('id') == 'L.history.unread' and why.get('text') == want.get('text') and why.get('again') == {'inert': None}
+                    and len(reads_u) == 1 and (reads_u[0]['at'], reads_u[0]['outcome'], reads_u[0]['refused']) == (P.get('asked'), 'refused', 'internal_panic') and flat(pane_text('b')) == flat(text2))
+        line_ok = (seen.get('why') == {'words': want.get('text'), 'id': 'L.history.unread', 'own': 'sceneB-why', 'code': 'internal_panic'} and 'written' not in (seen.get('corner') or '') and no_token_in(seen)
+                   and act.get('words') == want.get('act') and act.get('inert') is None and bool(act.get('width')) and act.get('after') and act.get('toolbar')
+                   and seen.get('mark') == {'words': want.get('mark'), 'id': 'L.history.not-read', 'row': P.get('asked')})
+        named_ok = (seen.get('labelled') == 'sceneB-title sceneB-why sceneB-name' and not seen.get('description')
+                    and got_as.get('name') == '%s %s %s' % (heard(ctx, lead.get('words') or ''), want.get('heard'), lead.get('address')) and not got_as.get('description'))
+        return {'the newest kept state in the place of the one asked, not read again': (state_ok, {'armed': armed_u, 'opened': opened_u, 'consumed': taken_u, 'reads': reads_u[:4], 'at': P.get('at'), 'asked': P.get('asked'), 'met': P.get('met'),
+                                                                                                 'running': P.get('running'), 'why': why, 'want': want.get('text'), 'rows': [(x['first'], x['last']) for x in rows[:3]], 'b': pane_text('b')[-40:]}),
+                'its line, its act and the asked row\'s mark': (line_ok, dict(seen, want=want)),
+                'its name and description': (named_ok, dict(got_as, lead=lead, labelled=seen.get('labelled'), want_heard=want.get('heard'))),
+                "the corners' words in their boxes": fit_part(ctx, figures, 'unread', w, *pane_corners)}
+    if shoot('unread', unread_check):
+        # the act pressed, the arm spent: the state asked asked again as a return asks it, at the row it ends at, and the test
+        # board reading it — pane B set to it, the line, the act and the mark gone, pane B named by its title and its address
+        calls_p = ctx.js('window.__skep.bridge.calls().length') or 0
+        pressed = ctx.js('(() => { const b = document.querySelector("#sceneB > .corner button[data-again]"); if (b) b.click(); return !!b; })()')
+        landed_p = bool(pressed) and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.at === p.asked && !p.why; })()', 20)
+        ctx.settle(10); ctx.frames(3)
+        reads_p, P_p, seen_p = ctx.js(STATE_READS % calls_p) or [], ctx.js('window.__skep.scene.past()') or {}, ctx.js(UNREAD_SEEN) or {}
+        r.check(landed_p and bool(reads_p) and reads_p[0]['at'] == P_p.get('asked') and reads_p[-1]['outcome'] == 'result' and seen_p.get('why') is None and seen_p.get('act') is None
+                and seen_p.get('mark') is None and seen_p.get('labelled') == 'sceneB-title sceneB-name' and flat(pane_text('b')) == flat(text1),
+                "B3-S7 · unread: \"read it again\" pressed, the arm spent — the state asked asked again at the row it ends at and read by the test board: pane B on the state asked, the line, the act and \"not read\" gone, pane B named by its title and its address (skep-frontend #702)",
+                {'pressed': pressed, 'landed': landed_p, 'reads': reads_p[:4], 'at': P_p.get('at'), 'asked': P_p.get('asked'), 'why': P_p.get('why'), 'seen': seen_p, 'b': pane_text('b')[-40:]})
     close_scene()
 
     # ---- `unkept`: a line held, the act opening on the newest kept state, "now — not yet kept" at the top ---------------------------

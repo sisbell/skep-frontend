@@ -191,15 +191,20 @@
 // slot standing (`cornerTitle`): its parts and the joiners its holder breaks
 // it at (`Title`) — the time and the hand, the hand's label and its cue, the
 // held words to their dash and after it — a substitution's words held after
-// it, drawn on the lines its holder gives it, the line's own element carrying
-// the id and the words its holder names the pane's region by (`titleHTML`);
+// it, each stretch in its face, a refusal's name set as code (`whyHTML`), and
+// beneath them, where its holder offers it, "read it again" in a slot of
+// fixed width, its words' at the corner's size, a native button that, where
+// it cannot act, stands in its place, focusable, marked inert and described
+// by its reason (FP-41; `againHTML`), all drawn on the lines its holder gives
+// them, the line's own element and the substitution's carrying the ids and
+// the words its holder names the pane's region by (`titleHTML`);
 // after it, items of their own: the words saying the state is how the draft
 // stands now, or the clause saying it is not its minute's last, its count in
 // a slot of fixed width, an empty box named as being read while the count is
 // not known (`notLastHTML`; FP-34); the clause saying the state its act asked
 // is read again, its element busy and the one running mark after its words
 // (`inFlightHTML`); and the chip — the clauses never yielding, and its pane
-// described by them in that order (`pastClauses`). Its line is the corner's
+// described by those after its title in that order (`pastClauses`). Its line is the corner's
 // first item in words (`cornerLead`), and as stretches in their faces a
 // device's label in it the person's own words (`cornerLeadRuns`). Each item
 // says whether it holds at a reading scene's pane's top at its document's
@@ -338,7 +343,14 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @typedef {Object} PastWhy — why a past state's pane shows another state than its act asked (`PastLine.why`; B3-S7; SC's `pastWhyOf`)
  * @property {string} id its string's id
  * @property {string} text its words
+ * @property {import('../strings.js').Run[]} [runs] its words as stretches in their faces where one stands in another face than the client's — a refusal's name, set as code, the identifier's (`whyHTML`); absent, its words the client's
  * @property {boolean} substituted the state its act asked could not be read and the newest kept one stands in its place, these the refusal's words: a substitution, held in the title after its line (`cornerTitle`); false for the words saying the state shown is how the draft stands now, an item of their own after the title
+ * @property {AgainAct | null} [again] "read it again" beneath a substitution's words, where its holder offers it (SC's `readAgain`); absent or null, none
+ */
+
+/**
+ * @typedef {Object} AgainAct — a past state's "read it again" as its holder offers it (`PastWhy.again`; B3-S7)
+ * @property {{id: string, text: string} | null} inert why it cannot act now, said at every press (FP-41); null where it acts
  */
 
 /**
@@ -354,6 +366,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @typedef {Object} TitleName — what a title's line's own element carries where its holder names a region by it (`titleHTML`; SC's `namePane`)
  * @property {string} id the element's id, which the region's name refers to
  * @property {import('../strings.js').Run[]} words the words the element names the region by, as stretches in their faces (`titleRuns`), rendered for the ear where it carries them (ST's `heard`)
+ * @property {string} [why] the id a substitution's words' own element carries where the region's name refers to them after the line's, with those words, rendered for the ear, as an image of them (`whyHTML`); absent, that element carries neither
  */
 
 /**
@@ -1596,16 +1609,17 @@ export const notLastWords = (n) => t(NOT_LAST, { n: n == null ? t('L.slot.readin
 export const inFlightWords = (time) => t(IN_FLIGHT, { time });
 
 /**
- * A past state's clauses in words, in the order its corner draws them
- * (`stateItems`; B3-S7): the line saying why its pane shows the state — a
- * substitution's words, held in its title, or that it is how the draft stands
- * now — then the clause saying it is not its minute's last, then the clause
- * saying the state its act asked is read again; each where it stands. What its
- * pane is described by (SC's `namePane`).
+ * A past state's clauses after its title in words, in the order its corner
+ * draws them (`stateItems`; B3-S7): the words saying the state is how the
+ * draft stands now, then the clause saying it is not its minute's last, then
+ * the clause saying the state its act asked is read again; each where it
+ * stands. What its pane is described by (SC's `namePane`) — a substitution's
+ * words, held in its title, name that pane's region after the title's line,
+ * and are no clause of these.
  * @param {PastLine} p
  * @returns {string[]}
  */
-export const pastClauses = (p) => [p.why ? p.why.text : '', p.notLast ? notLastWords(p.notLast.n) : '', p.reading != null ? inFlightWords(p.reading) : ''].filter((s) => s !== '');
+export const pastClauses = (p) => [p.why && !p.why.substituted ? p.why.text : '', p.notLast ? notLastWords(p.notLast.n) : '', p.reading != null ? inFlightWords(p.reading) : ''].filter((s) => s !== '');
 
 /**
  * The not-last clause as markup (FP-34): its words, carrying their string,
@@ -1906,36 +1920,70 @@ const HOLDING = new Set(['kind', 'version', 'st', 'kept', 'face', 'held', 'past'
 /**
  * A title as markup (`Title`; FP-26): its line in its class, carrying its
  * string, then a substitution's words in the why's class, carrying theirs
- * (`whyHTML`), each beginning a line of its own; its line on the lines `lines`
+ * (`whyHTML`), each beginning a line of its own, and "read it again" beneath
+ * them where its holder offers it (`againHTML`); its line on the lines `lines`
  * breaks it into, each a line of its own — a line whose words are wider than
  * the width marked so, the platform wrapping it between its words — else
  * whole. The
  * lines read together are the line's words, each joiner it breaks at at the
  * end of its line. Where its holder names a region by it (`named`), the
- * line's own element — never the substitution's words — carries the id the
- * region's name refers to and, as an image of its words, the words that name
- * it, rendered for the ear (ST's `heard`); elsewhere it carries neither, so
- * the id stands once.
+ * line's own element carries the id the region's name refers to and, as an
+ * image of its words, the words that name it, rendered for the ear (ST's
+ * `heard`) — and the substitution's words' own element the id the name refers
+ * to after it, where `named.why` gives one, so the name follows those words as
+ * they change; elsewhere neither carries any, so each id stands once.
  * @param {Title} title
  * @param {Array<{words: string, wraps: boolean}> | null} [lines] its line's lines as its holder breaks them (T-LAYER's `titleLines`); null, whole
- * @param {TitleName | null} [named] the id and the words its holder names a region by; null, none
+ * @param {TitleName | null} [named] the ids and the words its holder names a region by; null, none
+ * @param {Pick<ArticleView, 'acts' | 'measure'> | null} [v] the view it stands in: "read it again" its words alone where the view asks no act (`ArticleView.acts`), its slot's width its words' as the view measures them; null, an act in a slot of no set width
  * @returns {string}
  */
-export function titleHTML(title, lines = null, named = null) {
+export function titleHTML(title, lines = null, named = null, v = null) {
   const line = lines ? lines.map((l) => `<span class="tl${l.wraps ? ' wraps' : ''}">${esc(l.words)}</span>`).join('') : esc(runsText(titleRuns(title)));
-  const sub = title.substituted ? whyHTML(title.substituted) : '';
+  const s = title.substituted, sub = s ? whyHTML(s, named && named.why ? named.why : null) + (s.again ? againHTML(s.again, v) : '') : '';
   const as = named ? ` id="${esc(named.id)}" role="img" aria-label="${esc(heard(named.words))}"` : '';
   return `<span class="title"><span class="${title.cls}" data-string="${esc(title.id)}"${as}>${line}</span>${sub}</span>`;
 }
 
 /**
  * A substitution's words as markup (`PastWhy`): its words in the why's class,
- * carrying their string — the state its act asked being read again is its
- * corner's in-flight clause's to say (`inFlightHTML`).
+ * carrying their string, each stretch in its face — the client's with every
+ * address in them the identifier's (ST's `addressedHTML`), a refusal's name
+ * the identifier's, set as code; where `id` is given, carrying it and, as an
+ * image of its words, those words rendered for the ear, a refusal's name
+ * kept as written (ST's `heard`) — the state its act asked being read again
+ * is its corner's in-flight clause's to say (`inFlightHTML`).
  * @param {PastWhy} w
+ * @param {string | null} id the id its holder's region's name refers to it by; null, none
  * @returns {string}
  */
-const whyHTML = (w) => `<span class="why" data-string="${esc(w.id)}">${esc(w.text)}</span>`;
+function whyHTML(w, id) {
+  const inner = w.runs ? w.runs.map((r) => (r.face === 'client' ? addressedHTML(r.text) : `<span class="code id">${esc(r.text)}</span>`)).join('') : esc(w.text);
+  const as = id ? ` id="${esc(id)}" role="img" aria-label="${esc(heard(w.runs ?? w.text))}"` : '';
+  return `<span class="why" data-string="${esc(w.id)}"${as}>${inner}</span>`;
+}
+
+/** "read it again"'s string (B3-S7) */
+const AGAIN_ID = 'L.history.read-again';
+
+/**
+ * A past state's "read it again" as markup (`AgainAct`; B3-S7; FP-41): in a
+ * slot of its own, as wide as its words at the corner's size as the view
+ * measures them, so it stands at one width whether it acts or not; a native
+ * button (`actHTML`) keyed on the act (`data-again`), its words the strings
+ * table's; where it cannot act, standing in its place, focusable, marked
+ * inert, titled and described by its reason; its words alone where the view
+ * asks no act (`ArticleView.acts`).
+ * @param {AgainAct} a
+ * @param {Pick<ArticleView, 'acts' | 'measure'> | null} v
+ * @returns {string}
+ */
+function againHTML(a, v) {
+  const words = esc(t(AGAIN_ID)), width = v ? ` style="width:${v.measure(t(AGAIN_ID), 'client')}em"` : '';
+  if (v && v.acts === false) return `<span class="again-slot"${width}><span class="again" data-string="${AGAIN_ID}">${words}</span></span>`;
+  const inert = a.inert ? ` aria-disabled="true" data-inert="${esc(a.inert.id)}" title="${esc(a.inert.text)}" aria-description="${esc(heard(a.inert.text))}"` : '';
+  return `<span class="again-slot"${width}>${actHTML(`again${a.inert ? ' inert' : ''}`, ` data-again data-string="${AGAIN_ID}"${inert}`, words)}</span>`;
+}
 
 /**
  * The corner's items in foundations' one order (§3.1): its document's kind,
@@ -1978,7 +2026,7 @@ export function cornerItems(d, v, compact = false, statement = true) {
     }
     if (i.title) {
       const sub = i.title.substituted, said = fields(runsText(titleRuns(i.title)), sub && sub.text);
-      return { cls: i.cls, html: titleHTML(i.title), words: said, em: v.measure(said, 'client'), yields: false, holds: true, title: i.title };
+      return { cls: i.cls, html: titleHTML(i.title, null, null, v), words: said, em: v.measure(said, 'client'), yields: false, holds: true, title: i.title };
     }
     const words = i.cls === 'kind' ? (v.kind === 'reading' ? '' : t(i.id)) : i.cls === 'kept' ? (i.id ? (v.history ? fields(t(i.id), t(HISTORY_ID)) : t(i.id)) : '') : i.words ?? t(i.id, i.vals), glyph = compact && i.glyph ? t(i.glyph) : null;
     const em = i.cls === 'kind' ? kindSlotEm(v.measure) : i.cls === 'kept' ? keptLineEm(v) : i.cls === 'not-last' ? notLastEm(i.count ?? null, v.measure)

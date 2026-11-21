@@ -54,7 +54,10 @@
 // words stand whole the first time
 // a face shows them in the page's session, compact after (FP-26): the
 // address and the head, the head a disclosure whose act opens the rest, and
-// folds it again. Never C-39, whose words are a link address's alone;
+// folds it again. The words those faces name a withheld document's state by —
+// the ending's where its cover's face says them, else the withheld box's —
+// are the cause a past state's line gives for a read withheld from the reader
+// (`withheldWords`; SC's `pastWhyOf`). Never C-39, whose words are a link address's alone;
 // `not_a_link`, C-39 at a link address inside a withheld document with the
 // entitlement arm the run's placeholder
 // carries beneath it (T-ARTICLE's one rule, by the reader),
@@ -686,6 +689,21 @@ function ownHTML(w, open, clause) {
 export function withheldText(addr) {
   const ending = accessChanged(addr) ? endingWords() : null, w = ownWords(addr, { span: { addr, pos: 1 } });
   return [w.head.text, ending ? ending.text : w.arm.text, ...(w.clause && w.clause !== CLAUSE_READING ? [w.clause.text] : [])].join(' ');
+}
+
+/**
+ * The words a withheld document's faces name its state by (see the head):
+ * the one line's words for the session's ending where one stands and its
+ * text was on screen as the session ended (`accessChanged`, `endingWords`) —
+ * the words its cover's face says in the arm's place — else the withheld
+ * box's words, "withheld · ⟨owner⟩" (T-LAYER's `withheldBox`), its own
+ * words' head.
+ * @param {string} addr
+ * @returns {{id: string, text: string}}
+ */
+export function withheldWords(addr) {
+  const ending = accessChanged(addr) ? endingWords() : null;
+  return ending || { id: 'F.corner.withheld', text: LAYER.withheldBox(REC.doc(addr)) };
 }
 
 /**
