@@ -65,11 +65,14 @@
 // segment, which says a mint); O-SELECTION's and O-HOST's (each reading
 // scene's pane as it stands, SC's `siteOf` — a site whose selection the
 // overlay owns and an overlay may stand at — and, O-SELECTION's alone, the
-// pane holding the platform's focus, SC's `focusedPane`, Q4);
+// pane holding the platform's focus, SC's `focusedPane`, Q4, and the reason a
+// slot that sends gives at the moved scene's held version, SC's
+// `heldReasonAt`);
 // LK's (the links lit, P-RENDER's `drawsDoc`, T-LAYER's
 // owner rule, `shownIn`, and a far document's first line, T-LAYER's
 // `firstOfFar` by T-ARTICLE's one rule); N-WALK's (Back's light, what a landing says,
-// `shownIn`, why no board is held); L-LINE's acts and readers (the LEAP box,
+// `shownIn`, why no board is held, and the plane's selection, O-SELECTION's
+// `selected`, which describes each span item it holds, Q6); L-LINE's acts and readers (the LEAP box,
 // Back, Forward, the trail's list, sign-in, the board list's retry, a
 // jump's face out of view — O-HOST's `aside`, FP-25 — the runs of an arrival
 // in several, the walks' folded moments with the act that unfolds each —
@@ -79,8 +82,9 @@
 // of its acts ends, O-HINT's `show`, `act`); N-WALK's Enter at the walk's
 // element, an activation reaching a mirror item made as the line's and a
 // hint's next act and as N-KEYS' `activate`; SC's own end, a Back from its entry
-// (N-GO's `closeScene`), a click on a pane's text made as the line's and a
-// hint's next act, and
+// (N-GO's `closeScene`), a draft's history opened from a pane's corner — N-GO's
+// `history`, the pane named, at whose selection its panes level — a click on
+// a pane's text made as the line's and a hint's next act, and
 // the faces a stop the reader returned to shows at its site (O-FACES'
 // `reaching`, `floating`, `held`); O-LAND's hand-off and its pieces' element;
 // O-HINT's hand-off;
@@ -375,16 +379,16 @@ async function boot() {
   HINT.attach(el('hint'), { handOff: () => WALK.focusItem() });
   DELETION.attach(el('removed'));
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')), stop: /** @type {HTMLButtonElement} */ (el('scenestop')), strokes: el('scenestrokes') },
-    { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held, words: (r, ctx) => FACES.wordsFor(r, ctx), withheldOf: FACES.withheldWords }, history: (addr) => { void GO.history(addr); }, acted: () => { LINE.act(); HINT.act(); } });
+    { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held, words: (r, ctx) => FACES.wordsFor(r, ctx), withheldOf: FACES.withheldWords }, history: (addr, _byKey, side) => { void GO.history(addr, { side }); }, acted: () => { LINE.act(); HINT.act(); } });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote'), foot: el('leapfoot') }, () => LINE.currentAddress(), reading, (words, id) => LINE.transient(words, id));
   FIND.attach({ box: el('find'), input: /** @type {HTMLInputElement} */ (el('findq')), count: el('findcount'), prev: /** @type {HTMLButtonElement} */ (el('findprev')), next: /** @type {HTMLButtonElement} */ (el('findnext')), note: el('findnote') });
   LINE.attach(el('line'), { open: (byKey, at) => LEAP.open(at), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed(), panes: SCENE.keptPanes, paneLift: SCENE.paneLift, asOf: SCENE.pastAsOf, hint: (id, at) => HINT.show(id, null, { at }), acted: () => HINT.act() });
   LAYER.readers({ selection: () => SEL.selected('plane'), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished, atop: FIND.atop, newer: GO.newerAt, face: FACES.cornerFace, panes: SCENE.editorPanes, covered: (words, id) => LINE.transient(words, id) });
   // each reading scene's pane a site of its own: its selection O-SELECTION's, an overlay at it O-HOST's
-  SEL.readers({ pane: SCENE.siteOf, focused: SCENE.focusedPane });
+  SEL.readers({ pane: SCENE.siteOf, focused: SCENE.focusedPane, heldReason: SCENE.heldReasonAt });
   HOST.readers({ pane: SCENE.siteOf });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null), first: LAYER.firstOfFar });
-  WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords(), enter: () => { LINE.act(); HINT.act(); return KEYS.activate(); } });
+  WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords(), enter: () => { LINE.act(); HINT.act(); return KEYS.activate(); }, selection: () => SEL.selected('plane') });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', () => { resize(); LINE.fit(); }); resize();
   const motion = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;

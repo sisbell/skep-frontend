@@ -16,11 +16,12 @@
 // by its side, showing a document, a draft's past state or held text — and
 // each site holds a selection of its own, in the positions of the text it
 // shows, read by naming its site (`selected`, `backward`); a read naming none
-// gets the focused site's (`focusedSite`): the pane whose text, corner or
-// list of past states holds the platform's focus, else, while the focus
-// stands at the scene's acts, the one line or an overlay, the last such pane
-// — pane B until one has held it, where a scene puts the focus — and the
-// plane where no scene stands or the focus stands on the plane's acts row.
+// gets the focused site's (`focusedSite`): the plane where no scene stands;
+// while one stands, the pane whose text, corner or list of past states holds
+// the platform's focus, else the site the acts row or the "which" list
+// holding the focus stands at (`rowSite`), else, while the focus stands at
+// the scene's acts, the one line or another overlay, the last such pane —
+// pane B until one has held it, where a scene puts the focus.
 // The focused site's selection is the platform's live one; every other
 // stands, the page drawing it as the platform draws an inactive selection
 // (`drawPanes`, `selections`): a custom highlight over the ranges its own
@@ -47,7 +48,28 @@
 // — never the plane's acts, its walk or its caret. SC
 // sets a pane's selection by its own acts (`setPane`, `clear`), and as a
 // pane closes, stands anew, or is taken down to its cover its selection ends
-// with it (`endPanes`). The rest of this head is the plane's selection.
+// with it (`endPanes`). A pane's selection has the acts of the plane's, on
+// its own words: the focused site holds the one acts row (`render` at its
+// site) — drawn at a take that says the selection and at the page's own act
+// that selects there (`holdPane`, `select`, `setPane` as an act, K-8 and
+// Shift with ← or → at a pane's span focus: `selectFocused`,
+// `extendFromFocus`), moved to the pane the focus comes into where that pane
+// holds a selection and nothing else stands, taken down, ending nothing,
+// where it holds none or its selection ends (`focusIn`, `rowOff`), and never
+// drawn by a reader's read; the focus on the row counts as the focus on its
+// site (`focusedSite`), and its dismissal ends that site's selection, as the
+// plane's card's does. A slot at a pane acts on the pane's selection, else on
+// the span its span focus stands on, whole, in the pane's own record
+// (`actedOn`), never the plane's text: its links are those the pane's
+// article draws (LK's `shownAt` over the pane's marks), its sources read over
+// its record, O-PROV asks over the pane's text — a past state's as of the
+// position it stands at, the held version's words not on the board answered
+// by the page — the links card lists the pane's marks, follow's faces stand
+// at the pane, a carry names its bytes by identity through the pane's image
+// (N-GO's `Carry.ids`), and read side by side opens the pane's record with
+// the selection carried into it (FP-10, FP-41). The slots that send give
+// their reason at a pane at once, the held version's where it holds one
+// (`Readers.heldReason`). The rest of this head is the plane's selection.
 // The selection is the span (R11; foundations §3.1): a byte range of one
 // document, `{addr, pos, width}` in V-positions of the text the page shows of
 // it (T-LAYER's `shownOf`) — a draft's with its page-local edits applied —
@@ -209,7 +231,7 @@ import { drawChord, keyShortcut } from '../nav/keys.js';
 /** @typedef {import('../model/records.js').ISpan} ISpan */
 /** @typedef {import('../text/layer.js').SelectionEnd} SelectionEnd */
 
-/** @typedef {{kind: 'selection', at?: Left} | {kind: 'which', what: 'follow' | 'scene', at?: Left}} About what the acts card and the "which" list are about (O-HOST's): the selection, which a departure keeps by its bytes (`asLeft`); else the span a slot's act was made over, which the card or the list holds alone (`at`; see the head) */
+/** @typedef {{kind: 'selection', at?: Left, site?: Side} | {kind: 'which', what: 'follow' | 'scene', at?: Left, site?: Side}} About what the acts card and the "which" list are about (O-HOST's): the selection, which a departure keeps by its bytes (`asLeft`); else the span a slot's act was made over, which the card or the list holds alone (`at`; see the head); `site` the reading scene's pane it stands at, none on the plane — a pane's surfaces are the scene's, which N-GO keeps no place of */
 
 /**
  * @typedef {Object} Left — a span by its bytes (see the head): the selection as the reader leaves its place (`asLeft`), or the span a card or a list holds (`About.at`)
@@ -279,13 +301,24 @@ function carry() {
  */
 
 /**
+ * @typedef {Object} PaneAt — a reading scene's pane as O-SELECTION reads it (SC's `PaneSite`)
+ * @property {HTMLElement | null} article the article it shows: where its selection is read, placed and drawn; null where none stands yet
+ * @property {'editor' | 'past' | 'held' | 'read'} kind what text it holds: its draft's editor, a past state of a draft, the held version, else a text it reads
+ * @property {string} names the address its acts name, its positions measured against (T-LAYER's `Made.addr`)
+ * @property {import('../model/records.js').Doc} d the record its text was made from: what its span focus walks and its acts read
+ * @property {number | null} focus its span focus, the first position of the span it stands on; null where it stands on none
+ * @property {Shown[]} marks the links its article draws, as it was set: the links a slot at it reads
+ */
+
+/**
  * @typedef {Object} Readers — what O-SELECTION reads of the reading scene, the app's to hand in (SC's)
- * @property {(side: Side) => ({article: HTMLElement | null} | null)} pane a pane as it stands, its article the one it shows; null where no scene stands (SC's `siteOf`)
+ * @property {(side: Side) => (PaneAt | null)} pane a pane as it stands; null where no scene stands (SC's `siteOf`)
  * @property {() => Side | null} focused the pane whose text, corner or list of past states holds the platform's focus; null anywhere else (SC's `focusedPane`)
+ * @property {(side: Side) => (string | null)} heldReason the reason a key at the held version gives, by its string's id (SC's `heldReasonAt`): what a slot that sends gives there; null where the pane holds none
  */
 
 /** @type {Readers} */
-const NO_READERS = { pane: () => null, focused: () => null };
+const NO_READERS = { pane: () => null, focused: () => null, heldReason: () => null };
 /** @type {Readers} */
 let read = NO_READERS;
 
@@ -327,17 +360,62 @@ const typing = () => typeof document !== 'undefined' && FOCUS.isField(document.a
  * The site whose selection the platform's live one is (see the head; Q4):
  * the plane where no reading scene stands; while one stands, the pane whose
  * text, corner or list of past states holds the platform's focus — kept as
- * the last such pane — else the plane where the focus stands on the plane's
- * acts row, else the last such pane.
+ * the last such pane — else, where the focus stands on the acts row or the
+ * "which" list, the site it stands at (`rowSite`), else the last such pane.
  * @returns {Site}
  */
 export function focusedSite() {
   if (!sceneStands()) return 'plane';
   const side = read.focused();
   if (side) { lastPane = side; return side; }
-  const host = HOST.element(), at = typeof document !== 'undefined' ? document.activeElement : null;
-  if (HOST.currentIs('selection') && host && at && host.contains(at)) return 'plane';
+  const host = HOST.element(), at = typeof document !== 'undefined' ? document.activeElement : null, row = rowSite();
+  if (row && host && at && host.contains(at)) { if (row !== 'plane') lastPane = row; return row; }
   return lastPane;
+}
+
+/** the site the acts row or the "which" list stands at, by its anchor's site — the plane's where it names none; null where neither stands */
+function rowSite() {
+  const o = HOST.currentIs('selection') || HOST.currentIs('which') ? HOST.currentState() : null, s = o && o.anchor ? o.anchor.span : null;
+  return o ? (s && s.site) || 'plane' : null;
+}
+
+/** does the acts row stand at a pane — `side`, or any where none is named */
+const rowAtPane = (/** @type {Side | null} */ side = null) => { const s = HOST.currentIs('selection') ? rowSite() : null; return !!s && s !== 'plane' && (!side || s === side); };
+
+/** @type {boolean} the acts row is being taken down by a move of the focus, or as its selection ends (`rowOff`): its dismissal ends nothing */
+let moving = false;
+
+/**
+ * The acts row at a pane taken down with nothing ended (see the head): no
+ * act on the chrome (O-HOST's `complete`), its selection standing; nothing
+ * where it stands at none, or at another than `side`.
+ * @param {Side | null} [side] the pane whose row goes; any where none is named
+ */
+function rowOff(side = null) {
+  if (!rowAtPane(side)) return;
+  moving = true;
+  try { HOST.complete('selection'); } finally { moving = false; }
+}
+
+/**
+ * The acts row drawn at a pane's selection (see the head): at a take that
+ * says it and at the page's own act that selects there, in the place of what
+ * stands (`over`); as the focus comes into the pane, only where nothing but
+ * the row stands and no card the reader asked for still reads (O-HOST's
+ * `pending`), and never again over the same span. Nothing where the pane
+ * holds no selection.
+ * @param {Side} side
+ * @param {boolean} over the person's act drew it: it takes the place of what stands
+ */
+function rowAt(side, over) {
+  const e = paneSel[side];
+  if (!e) return;
+  if (!over) {
+    if (HOST.pending() || (HOST.hasCurrent() && !HOST.currentIs('selection'))) return;
+    const o = HOST.currentState(), s = o && o.anchor ? o.anchor.span : null;
+    if (s && s.site === side && s.addr === e.span.addr && s.pos === e.span.pos && s.width === e.span.width) return;
+  }
+  render(null, null, null, side);
 }
 
 /**
@@ -437,7 +515,8 @@ function fromPlatform(side, how) {
 /**
  * A pane's selection set, its blocks marked in place (`markPane`): where it
  * already reads so, said where a gesture's take finds it unsaid — a reader
- * read it from the platform first — else nothing.
+ * read it from the platform first — else nothing; a take that says it draws
+ * its acts row (`rowAt`), a reader's read never.
  * @param {Side} side
  * @param {Span} span
  * @param {'start' | 'end'} moves
@@ -445,18 +524,19 @@ function fromPlatform(side, how) {
  */
 function holdPane(side, span, moves, how) {
   const e = paneSel[side];
-  if (e && sameSpan(e.span, span) && e.moves === moves) { if (how === 'say' && !e.told) { e.told = true; tell(span); } return; }
+  if (e && sameSpan(e.span, span) && e.moves === moves) { if (how === 'say' && !e.told) { e.told = true; tell(span); rowAt(side, true); } return; }
   paneSel[side] = { span: { addr: span.addr, pos: span.pos, width: span.width }, moves, told: how !== 'later' };
   markPane(side);
   markDirty();
-  if (how === 'say') tell(span);
+  if (how === 'say') { tell(span); rowAt(side, true); }
 }
 
-/** a pane's selection ended, its blocks unmarked, its range owed no more */
+/** a pane's selection ended, its blocks unmarked, its range owed no more, its acts row taken down where it stands there (`rowOff`) */
 function endPane(/** @type {Side} */ side) {
   if (owed === side) owed = null;
   if (!paneSel[side]) return;
   paneSel[side] = null;
+  rowOff(side);
   markPane(side);
   markDirty();
 }
@@ -557,29 +637,52 @@ export function clickedIn(side) {
 
 /**
  * A pane's selection set by the scene's own act (SC's: a setting carrying it
- * by its bytes, a return putting it back, a step at a pane's caret,
- * select-all): its blocks marked, and placed as the platform's live one where
- * that pane is the focused site (`placePane`), nothing said; null ends it
- * (`clear`).
+ * by its bytes, a return putting it back, the selection a scene opens
+ * holding, a step at a pane's caret, select-all): its blocks marked, and
+ * placed as the platform's live one where that pane is the focused site
+ * (`placePane`), nothing said; its acts row drawn where the person's act
+ * selected it, and moved onto it where it stands at the pane — a setting
+ * carrying the selection into the text the pane shows now (`rowAt`); null
+ * ends it (`clear`).
  * @param {Side} side
  * @param {Span | null} span in the positions of the article the pane shows now
  * @param {boolean} [back] its anchor stands at its end: Shift with an arrow moves its start
+ * @param {boolean} [act] the person's act selected it — a step at a pane's caret, select-all — rather than a setting, a return or an opening carrying it
  */
-export function setPane(side, span, back = false) {
+export function setPane(side, span, back = false, act = false) {
   if (!span) { clear(side); return; }
   holdPane(side, span, back ? 'start' : 'end', 'page');
   if (side === focusedSite()) placePane(side);
+  if (act || rowAtPane(side)) rowAt(side, act);
+}
+
+/**
+ * A site's selection placed as the platform's live one, under a copy the
+ * platform holds no range for (N-KEYS' `copyAsDrawn`; FP-24): the plane's in
+ * the mounted text (T-LAYER's `placeSelection`), a pane's in its article
+ * (`placePane`). False where the site holds none: nothing placed.
+ * @param {Site} site
+ * @returns {boolean}
+ */
+export function placeLive(site) {
+  const s = selected(site);
+  if (!s) return false;
+  if (site === 'plane') LAYER.placeSelection(s); else placePane(site);
+  return true;
 }
 
 /**
  * The focus come into a pane — its text, its corner or its list of past
- * states (SC's): that pane the last the focus stood in (`focusedSite`), and
- * the selections set right with it (`drawPanes`).
+ * states (SC's): that pane the last the focus stood in (`focusedSite`), the
+ * selections set right with it (`drawPanes`), and the acts row moved there
+ * where the pane holds a selection and nothing else stands, else taken down
+ * from the other pane, ending nothing (`rowAt`, `rowOff`).
  * @param {Side} side
  */
 export function focusIn(side) {
   lastPane = side;
   drawPanes();
+  if (paneSel[side]) rowAt(side, false); else rowOff(side === 'a' ? 'b' : 'a');
 }
 
 /**
@@ -631,11 +734,12 @@ function undraw() {
 
 /**
  * Every reading scene's pane's selection ended, with what the page drew of
- * them — as a scene closes, and as one stands anew over a standing one (SC's;
- * see the head) — the last pane the focus stood in pane B again, and no press
- * standing.
+ * them and an acts row standing at one (`rowOff`) — as a scene closes, and as
+ * one stands anew over a standing one (SC's; see the head) — the last pane
+ * the focus stood in pane B again, and no press standing.
  */
 export function endPanes() {
+  rowOff();
   paneSel.a = null; paneSel.b = null;
   lastPane = 'b';
   pressed = null;
@@ -647,11 +751,29 @@ export function endPanes() {
 /** does the selection standing reach past its document into another document's text (`Ends.across`): N-KEYS' reading, no key at a caret replacing it */
 export const reachesPast = () => !!sel && ends.across;
 
-/** a span by its bytes as the page shows them now (`Left`): every byte named, one the page made by the page's own identity until the board mints it */
-const bytesOf = (/** @type {Span} */ s) => ({ addr: s.addr, pos: s.pos, width: s.width, ids: LAYER.shownIdentity(s.addr, s.pos, s.width) });
+/**
+ * A span of a site's text by its bytes as the page shows them now (`Left`):
+ * on the plane through the text shown, every byte named, one the page made by
+ * the page's own identity until the board mints it; at a pane through the
+ * image its article was made from (M-REC's `identityIn`).
+ * @param {Span} s
+ * @param {Site} [site]
+ * @returns {Left}
+ */
+function bytesOf(s, site = 'plane') {
+  const p = site === 'plane' ? null : read.pane(site), made = p && p.article ? LAYER.madeOf(p.article) : null;
+  const ids = site === 'plane' ? LAYER.shownIdentity(s.addr, s.pos, s.width) : REC.identityIn(made ? made.image : p ? p.d.image : [], s.pos, s.width);
+  return { addr: s.addr, pos: s.pos, width: s.width, ids };
+}
 
-/** the plane's selection as the reader leaves its place (see the head): by its bytes' identity; null where none stands */
-export const asLeft = () => (selected('plane') ? bytesOf(/** @type {Span} */ (sel)) : null);
+/**
+ * A site's selection by its bytes' identity (see the head): the plane's as the
+ * reader leaves its place, naming no site; a pane's as an act carries it into
+ * the place it opens (N-GO's `toScene`, `history`). Null where none stands.
+ * @param {Site} [site]
+ * @returns {Left | null}
+ */
+export const asLeft = (site = 'plane') => { const s = selected(site); return s ? bytesOf(s, site) : null; };
 
 /**
  * The selection put back over the span its bytes hold in the text now — on
@@ -682,15 +804,17 @@ export function restore(span, left, say = true) {
  * now — on the reader's return to its place, or once its box shows another
  * version (N-GO's) — nothing selected: the list over its targets counted
  * again there (`targetsAt`), where they are two or more, else the card; each
- * taking the focus on the control it was left holding it on.
+ * taking the focus on the control it was left holding it on, at the site it
+ * stood at — a reading scene's pane where it names one (`About.site`), as
+ * N-GO's moves it with the person's edits at a draft's editor pane.
  * @param {{about: About, focus: string | null}} left
  * @param {Span} span where its bytes stand now
  */
 export function reopen(left, span) {
-  const a = left.about;
-  if (a.kind !== 'which') { render(left.focus, null, span); return; }
-  const tg = targetsAt(a.what, span);
-  if (countOf(tg) > 1) which_(tg, a.what, span, false, left.focus); else render(null, null, span);
+  const a = left.about, site = a.site ?? 'plane';
+  if (a.kind !== 'which') { render(left.focus, null, span, site); return; }
+  const tg = targetsAt(a.what, span, site);
+  if (countOf(tg) > 1) which_(tg, a.what, span, false, left.focus, site); else render(null, null, span, site);
 }
 
 /** the block of the text shown holding a position of it, whole (T-LAYER's `blockAt`) — the walk's focused span, which at a live caret is the block the caret is in: what a slot acts on (`actedOn`), a click and Enter select; a position in no block of it names one position */
@@ -811,10 +935,13 @@ export function anchorIn(addr) {
  * nothing where the text shown holds no block there; each further press extends
  * the selection by a span of the text shown in the direction pressed, that
  * end the one the press moved (`select`). The focus stays on the walk's
- * element (rule 15).
+ * element (rule 15). At a reading scene's pane the same, over the pane's own
+ * record from its span focus, the selection the pane's (`selectFocusedIn`).
  * @param {'down' | 'up'} [dir]
+ * @param {Site} [site] the plane's where none is named
  */
-export function selectFocused(dir = 'down') {
+export function selectFocused(dir = 'down', site = 'plane') {
+  if (site !== 'plane') { selectFocusedIn(site, dir); return; }
   const f = WALK.current(), moved = dir === 'up' ? 'start' : 'end';
   if (!f || f.kind !== 'block' || f.pos == null) return;
   if (!sel || sel.addr !== f.addr) {
@@ -824,6 +951,28 @@ export function selectFocused(dir = 'down') {
   }
   const e = extended(LAYER.shownOf(sel.addr).blocks, sel, dir);
   select(e.addr, e.pos, e.width, moved);
+}
+
+/**
+ * K-8 at a reading scene's pane (`selectFocused`): the first press selects
+ * the span its span focus stands on whole, a block of the pane's own record;
+ * each further press extends the pane's selection by a span of that record in
+ * the direction pressed — each the pane's selection, said, its acts row drawn
+ * (`selectIn`). Nothing where the pane stands on no span.
+ * @param {Side} side
+ * @param {'down' | 'up'} dir
+ */
+function selectFocusedIn(side, dir) {
+  const p = read.pane(side), moved = dir === 'up' ? 'start' : 'end';
+  if (!p || !p.article) return;
+  const e = paneNow(side);
+  if (!e || e.span.addr !== p.names) {
+    const b = p.focus != null ? p.d.blocks.find((x) => x.pos === p.focus) : null;
+    if (b) { const s = spanOfBlock(p.names, b); select(s.addr, s.pos, s.width, moved, side); }
+    return;
+  }
+  const x = extended(p.d.blocks, e.span, dir);
+  select(x.addr, x.pos, x.width, moved, side);
 }
 
 /**
@@ -893,11 +1042,15 @@ function edgeOf(/** @type {import('../model/records.js').Block} */ b, /** @type 
  * ←, never the newline after it — a selection in another document replaced,
  * as K-8's first press replaces it (`selectFocused`). Where the step brings
  * the moving end back to the anchor, no selection stands (`clear`). The focus
- * stays on the walk's element (rule 15).
+ * stays on the walk's element (rule 15). At a reading scene's pane the same,
+ * from its span focus over the pane's own record, the selection the pane's
+ * (`extendFromFocusIn`).
  * @param {import('../text/layer.js').ArrowStep} dir
+ * @param {Site} [site] the plane's where none is named
  * @returns {boolean} false where the walk stands on no span, or the text holds nothing that way: nothing changes
  */
-export function extendFromFocus(dir) {
+export function extendFromFocus(dir, site = 'plane') {
+  if (site !== 'plane') return extendFromFocusIn(site, dir);
   const f = WALK.current();
   if (!f || f.kind !== 'block' || f.pos == null) return false;
   if (sel && (sel.addr === f.addr || ends.platform)) {
@@ -912,6 +1065,39 @@ export function extendFromFocus(dir) {
 }
 
 /**
+ * Shift with ← or → at a reading scene's pane's span focus (`extendFromFocus`):
+ * where the pane holds a selection its moving end is stepped that way in the
+ * pane's own record, its anchor standing; else one step is selected from the
+ * span's edge; each the pane's selection, said, its acts row drawn
+ * (`selectIn`), none standing where the step brings the moving end back to
+ * the anchor.
+ * @param {Side} side
+ * @param {import('../text/layer.js').ArrowStep} dir
+ * @returns {boolean} false where the pane stands on no span, or its text holds nothing that way
+ */
+function extendFromFocusIn(side, dir) {
+  const p = read.pane(side);
+  if (!p || !p.article) return false;
+  const e = paneNow(side), runs = p.d.runs;
+  /** the pane's selection made to run from an anchor to where a step reached: none where the two meet */
+  const runIn = (/** @type {number} */ anchor, /** @type {number | null} */ to) => {
+    if (to == null) return false;
+    if (to === anchor) { clear(side); return true; }
+    select(p.names, Math.min(anchor, to), Math.abs(to - anchor), to < anchor ? 'start' : 'end', side);
+    return true;
+  };
+  if (e && e.span.addr === p.names) {
+    const { pos, width } = e.span, end = pos + width;
+    const [anchor, moving] = e.moves === 'end' ? [pos, end] : [end, pos];
+    return runIn(anchor, stepFrom(p.names, moving, dir, anchor, runs));
+  }
+  const b = p.focus != null ? p.d.blocks.find((x) => x.pos === p.focus) : null;
+  if (!b) return false;
+  const edge = edgeOf(b, dir);
+  return runIn(edge, stepFrom(p.names, edge, dir, null, runs));
+}
+
+/**
  * The position a step from `pos` reaches in a document's text shown: a
  * character that way, an item whole (M-DERIVE's `boundaries`), or a word, no
  * further than the anchor (M-DERIVE's `wordStop`); null where it holds
@@ -920,10 +1106,10 @@ export function extendFromFocus(dir) {
  * @param {number} pos
  * @param {import('../text/layer.js').ArrowStep} dir
  * @param {number | null} anchor the anchor of the selection the step extends; null where it extends none
+ * @param {import('../model/records.js').Run[]} [runs] the text's runs: a reading scene's pane's own record's where given, else the text the page shows of the document
  * @returns {number | null}
  */
-function stepFrom(addr, pos, dir, anchor) {
-  const runs = LAYER.shownOf(addr).runs;
+function stepFrom(addr, pos, dir, anchor, runs = LAYER.shownOf(addr).runs) {
   if (dir === 'wordLeft' || dir === 'wordRight') return wordStop(runs, pos, dir === 'wordLeft' ? -1 : 1, anchor);
   const b = boundaries(runs, pos);
   return dir === 'left' ? b.before : b.after;
@@ -959,7 +1145,7 @@ export function clear(site = 'plane') {
   if (!sel) return;
   hold(null);
   LAYER.placeSelection(null);
-  if (HOST.currentIs('selection')) HOST.dismiss();
+  if (HOST.currentIs('selection') && rowSite() === 'plane') HOST.dismiss();
   markDirty();
 }
 
@@ -1021,20 +1207,46 @@ function heldReason(addr) {
 /**
  * The reason a slot gives over a span; null where the slot acts. A slot that
  * sends a name for characters (`InertSlot`): under a hold the row rule's
- * (`heldReason`), else its own. Follow and read side by side (`FarSlot`)
+ * (`heldReason`), else its own — at a reading scene's pane, the held
+ * version's reason where the pane holds it (`Readers.heldReason`), the row
+ * rule's at a draft's editor alone. Follow and read side by side (`FarSlot`)
  * where the span's words lead nowhere (`targetsAt`): `NEW_WORDS` over a span
- * wholly of words the page made (T-LAYER's `madeHere`), else `NO_LINK`.
+ * wholly of words the page made (`madeAt`), else `NO_LINK`.
  * @param {string} slot
  * @param {Span} span
  * @param {number} [n] the slot's targets at the span, where the caller has counted them (`countOf`)
+ * @param {Site} [site] the site the span is of: the plane's where none is named
  * @returns {Reason | null}
  */
-function reasonAt(slot, span, n) {
-  if (slot in INERT_REASON) { const id = INERT_REASON[/** @type {InertSlot} */ (slot)]; return heldReason(span.addr) || { id, text: t(id) }; }
+function reasonAt(slot, span, n, site = 'plane') {
+  const p = site === 'plane' ? null : read.pane(site);
+  if (slot in INERT_REASON) {
+    const id = INERT_REASON[/** @type {InertSlot} */ (slot)], own = { id, text: t(id) };
+    if (!p) return heldReason(span.addr) || own;
+    const held = p.kind === 'held' ? read.heldReason(/** @type {Side} */ (site)) : null;
+    return held ? { id: held, text: t(held) } : p.kind === 'editor' ? heldReason(span.addr) || own : own;
+  }
   if (slot !== 'follow' && slot !== 'scene') return null;
-  if (n ?? countOf(targetsAt(slot, span))) return null;
-  const id = LAYER.madeHere(span.addr, span.pos, span.width) ? NEW_WORDS : NO_LINK;
+  if (n ?? countOf(targetsAt(slot, span, site))) return null;
+  const id = madeAt(span, site) ? NEW_WORDS : NO_LINK;
   return { id, text: t(id) };
+}
+
+/**
+ * Is every byte of a span one the page made (see the head): on the plane and
+ * at a draft's editor, of the text shown (T-LAYER's `madeHere`); at the held
+ * version, every byte its record's image names by the page's own identity
+ * (M-REC's `isPage`); at any other pane none, its text the board's.
+ * @param {Span} span
+ * @param {Site} site
+ * @returns {boolean}
+ */
+function madeAt(span, site) {
+  const p = site === 'plane' ? null : read.pane(site);
+  if (!p || p.kind === 'editor') return LAYER.madeHere(span.addr, span.pos, span.width);
+  if (p.kind !== 'held') return false;
+  const ids = REC.identityIn(p.d.image, span.pos, span.width);
+  return ids.length > 0 && ids.every((i) => REC.isPage(i.prefix));
 }
 
 /**
@@ -1049,12 +1261,20 @@ function reasonAt(slot, span, n) {
  * documents' material it meets, once, in reading order — a withheld run's
  * among them, read over the text the page shows of the span's document
  * (T-LAYER's `shownOf`), none where the model holds no record of it; for
- * read side by side, the links drawn there alone.
+ * read side by side, the links drawn there alone. At a reading scene's pane,
+ * the links its article draws where they meet the span (LK's `shownAt` over
+ * `PaneAt.marks`), the sources read over its own record; none where no scene
+ * stands to hold it.
  * @param {FarSlot} slot
  * @param {Span} span
+ * @param {Site} [site] the site the span is of: the plane's where none is named
  * @returns {Targets}
  */
-function targetsAt(slot, span) {
+function targetsAt(slot, span, site = 'plane') {
+  if (site !== 'plane') {
+    const p = read.pane(site);
+    return p ? { links: LK.shownAt(span.addr, span, p.marks), sources: slot === 'follow' ? sourcesIn(p.d, span) : [] } : { links: [], sources: [] };
+  }
   const sources = slot === 'follow' && REC.has(span.addr) ? sourcesIn(LAYER.shownOf(span.addr), span) : [];
   return { links: LK.shownAt(span.addr, span), sources };
 }
@@ -1117,51 +1337,71 @@ function inertAct(el, reason) {
  * reason its title — follow and read side by side where the span's words
  * lead nowhere (`targetsAt`), each else naming its one target or the count
  * of several (`targetLabel`); a slot that sends a name for characters takes
- * effect through `send`.
+ * effect through `send` — at a reading scene's pane it gives its reason at
+ * once (`reasonAt`). At a pane the card is that pane's acts row: anchored in
+ * the pane's article, naming the pane in what it is about (`About.site`), its
+ * slots acting there, its dismissal ending the pane's selection where it
+ * stands at it — never where the focus moved off the pane (`rowOff`).
  * @param {string | null} [focus] that control's key (O-HOST's `keyOf`)
  * @param {InertSlot | FarSlot | null} [told] the inert slot whose reason the card gives
- * @param {Span | null} [at] the span a slot's act was made over (`actedOn`); none draws the card at the selection
+ * @param {Span | null} [at] the span a slot's act was made over (`actedOn`); none draws the card at the site's selection
+ * @param {Site} [site] the site the card stands at: the plane's where none is named
  */
-export function render(focus = null, told = null, at = null) {
-  const span = at || sel;
+export function render(focus = null, told = null, at = null, site = 'plane') {
+  const own = site === 'plane' ? sel : paneSel[site] ? /** @type {PaneSel} */ (paneSel[site]).span : null;
+  const span = at || own;
   if (!span) return;
-  const { addr, pos } = span, atSelection = sameSpan(span, sel);
-  const follows = targetsAt('follow', span);
+  const { addr, pos } = span, atSelection = sameSpan(span, own), pane = site === 'plane' ? null : site;
+  const follows = targetsAt('follow', span, site);
   /** @type {Record<FarSlot, Targets>} where follow and read side by side go from the span: the links drawn there, and for follow the sources after them */
   const far = { follow: follows, scene: { links: follows.links, sources: [] } };
   /** the targets a slot counts: a far slot's, none for any other */
   const counted = (/** @type {string} */ id) => (id === 'follow' || id === 'scene' ? countOf(far[id]) : undefined);
   const buttons = SLOTS.map(([id, strId, chord]) => {
-    const reason = reasonAt(id, span, counted(id)), target = id === 'follow' || id === 'scene' ? far[id] : null;
+    const reason = reasonAt(id, span, counted(id), site), target = id === 'follow' || id === 'scene' ? far[id] : null;
     const label = esc(t(strId)) + (target ? targetLabel(target) : '');
     const why = reason ? ` title="${esc(reason.text)}" aria-description="${esc(heard(reason.runs || reason.text))}"` : '';
     return `<button data-run="${id}" class="${reason ? 'inert' : ''}" aria-label="${esc(heard(t(strId) + (target ? targetWords(target) : '')))}" aria-keyshortcuts="${esc(keyShortcut(chord))}"${why}${id === told ? ' data-inert="1"' : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
   }).join('');
-  const said = told ? reasonAt(told, span, counted(told)) : null;
+  const said = told ? reasonAt(told, span, counted(told), site) : null;
   const reasonLine = said ? `<div class="note reason" data-string="${esc(said.id)}">${esc(said.text)}</div>` : '<div class="note reason" hidden></div>';
   const html = `<div class="selection-card"><span class="label"><span class="id">${esc(addr)}</span> · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div>${reasonLine}</div>`;
+  /** an inert slot pressed: at a pane its reason at once, else through `send` */
+  const sends = (/** @type {InertSlot} */ slot) => (/** @type {HTMLElement} */ el) => { if (pane) inertAct(el, /** @type {Reason} */ (reasonAt(slot, span, undefined, site))); else void send(slot, span, el); };
   HOST.show({
-    kind: 'card', id: 'selection', anchor: { span }, html, takeFocus: focus != null, first: focus != null ? HOST.controlOf(focus) : undefined,
-    about: atSelection ? { kind: 'selection' } : { kind: 'selection', at: bytesOf(span) },
+    kind: 'card', id: 'selection', anchor: { span: pane ? { ...span, site: pane } : span }, html, takeFocus: focus != null, first: focus != null ? HOST.controlOf(focus) : undefined,
+    about: { kind: 'selection', ...(atSelection ? {} : { at: bytesOf(span, site) }), ...(pane ? { site: pane } : {}) },
     acts: {
-      annotate: (el) => { void send('annotate', span, el); },
-      quote: (el) => { void send('quote', span, el); },
-      linkto: (el) => { void send('linkto', span, el); },
-      wrote: (_el, byKey) => act('wrote', byKey, span), uses: (_el, byKey) => act('uses', byKey, span), links: (_el, byKey) => act('links', byKey, span),
-      follow: (el, byKey) => { const r = reasonAt('follow', span); if (r) inertAct(el, r); else act('follow', byKey, span); }, scene: (el, byKey) => { const r = reasonAt('scene', span); if (r) inertAct(el, r); else act('scene', byKey, span); },
+      annotate: sends('annotate'), quote: sends('quote'), linkto: sends('linkto'),
+      wrote: (_el, byKey) => act('wrote', byKey, span, site), uses: (_el, byKey) => act('uses', byKey, span, site), links: (_el, byKey) => act('links', byKey, span, site),
+      follow: (el, byKey) => { const r = reasonAt('follow', span, undefined, site); if (r) inertAct(el, r); else act('follow', byKey, span, site); },
+      scene: (el, byKey) => { const r = reasonAt('scene', span, undefined, site); if (r) inertAct(el, r); else act('scene', byKey, span, site); },
     },
-    onDismiss: (replaced) => { if (!replaced && atSelection && sameSpan(sel, span)) { hold(null); LAYER.placeSelection(null); markDirty(); } },
+    onDismiss: (replaced) => {
+      if (replaced || moving || !atSelection) return;
+      if (pane) { if (paneSel[pane] && sameSpan(/** @type {PaneSel} */ (paneSel[pane]).span, span)) clear(pane); return; }
+      if (sameSpan(sel, span)) { hold(null); LAYER.placeSelection(null); markDirty(); }
+    },
   });
 }
 
 /**
- * The span a slot acts on: the selection, else the walk's focused span whole
- * (D5 §1.6) — a block of the text shown, at a live caret the one the caret is
- * in, the block T-LAYER draws lit — which nothing selects: the card or the
- * list the act opens holds it (see the head); null where no span is in focus.
+ * The span a slot acts on (see the head): on the plane the selection, else
+ * the walk's focused span whole (D5 §1.6) — a block of the text shown, at a
+ * live caret the one the caret is in, the block T-LAYER draws lit; at a
+ * reading scene's pane its selection, else the span its span focus stands on
+ * whole, a block of the pane's own record — which nothing selects: the card
+ * or the list the act opens holds it; null where no span is in focus.
+ * @param {Site} [site] the focused site's where none is named (`focusedSite`)
  * @returns {Span | null}
  */
-function actedOn() {
+function actedOn(site = focusedSite()) {
+  if (site !== 'plane') {
+    const e = paneNow(site), p = read.pane(site);
+    if (e) return { ...e.span };
+    const b = p && p.focus != null ? p.d.blocks.find((x) => x.pos === p.focus) : null;
+    return p && b ? spanOfBlock(p.names, b) : null;
+  }
   if (sel) return sel;
   const f = WALK.current();
   return f && f.kind === 'block' && f.pos != null ? wholeShown(f.addr, f.pos) : null;
@@ -1181,15 +1421,20 @@ function actedOn() {
  * status region; at one target follow goes there — a link followed, a source
  * reached (`toSource`) — and read side by side opens its link's scene; at
  * several they ask which (`which_`). The act's card takes the focus where a
- * key made the act (rule 16).
+ * key made the act (rule 16). At a reading scene's pane each acts in the
+ * pane's own text (see the head; `actedOn`), O-PROV told the pane
+ * (`provPane`), the links card its marks, follow its site, and nothing acts
+ * off a span there.
  * @param {LiveSlot} which
  * @param {boolean} [byKey] a key made the act: the card takes the focus
  * @param {Span | null} [at] the span the card whose slot made the act stands at; none for a chord, which acts on the span in focus
+ * @param {Site} [site] the site the act is made at: the focused site's where none is named (`focusedSite`)
  * @returns {boolean} false where nothing in focus is what the slot acts on — no span, no link's stop for follow and read side by side, and for "see the links" no document: nothing is shown, and the caller gives the reason where the focus is (D5 §1.6)
  */
-export function act(which, byKey = false, at = null) {
-  const span = at || actedOn();
+export function act(which, byKey = false, at = null, site = focusedSite()) {
+  const span = at || actedOn(site), pane = site === 'plane' ? null : site, p = pane ? read.pane(pane) : null;
   if (!span) {
+    if (pane) return false;
     const f = WALK.current(), end = f && f.kind === 'link' ? f.link : null;
     if (which === 'links' && f && (f.kind === 'document' || end)) LINKS.show(f.addr, byKey);
     else if (which === 'follow' && end) GO.follow(end, byKey);
@@ -1197,17 +1442,41 @@ export function act(which, byKey = false, at = null) {
     else return false;
     return true;
   }
-  const { addr, pos, width } = span;
-  if (which === 'wrote') { PROV.wrote(addr, pos, width, byKey, sameSpan(span, sel)); return true; }
-  if (which === 'uses') { PROV.uses(addr, pos, width, byKey, sameSpan(span, sel)); return true; }
-  if (which === 'links') { LINKS.show(addr, byKey); return true; }
-  const tg = targetsAt(which, span), n = countOf(tg), reason = reasonAt(which, span, n), [one] = tg.links;
-  if (reason) { render(null, which, span); sayReason(reason); }
-  else if (n > 1) which_(tg, which, span, byKey);
-  else if (!one) toSource(span, tg.sources[0], byKey);
-  else if (which === 'follow') GO.follow(one, byKey);
-  else sceneFrom(one, span);
+  const { addr, pos, width } = span, own = pane ? (paneSel[pane] ? /** @type {PaneSel} */ (paneSel[pane]).span : null) : sel, selected = sameSpan(span, own);
+  if (which === 'wrote') { PROV.wrote(addr, pos, width, byKey, selected, provPane(pane)); return true; }
+  if (which === 'uses') { PROV.uses(addr, pos, width, byKey, selected, provPane(pane)); return true; }
+  if (which === 'links') { LINKS.show(addr, byKey, pane && p ? { site: pane, span, marks: p.marks, kind: p.kind, d: p.d } : null); return true; }
+  const tg = targetsAt(which, span, site), n = countOf(tg), reason = reasonAt(which, span, n, site), [one] = tg.links;
+  if (reason) { render(null, which, span, site); sayReason(reason); }
+  else if (n > 1) which_(tg, which, span, byKey, null, site);
+  else if (!one) toSource(span, tg.sources[0], byKey, undefined, site);
+  else if (which === 'follow') GO.follow(one, byKey, endAt(one, span, pane));
+  else sceneFrom(one, span, site);
   return true;
+}
+
+/**
+ * Where a follow made at a reading scene's pane stands its faces (N-GO's
+ * `follow` at a site): the link's own bytes in that pane's article, named as
+ * the pane's acts name the span the act was made over (T-LAYER's
+ * `Made.addr`); null on the plane, where the follow stands them itself.
+ * @param {Shown} end the link's end drawn there
+ * @param {Span} span the span the act was made over
+ * @param {Side | null} pane
+ * @returns {import('../nav/trail.js').Site | null}
+ */
+const endAt = (end, span, pane) => (pane ? { span: { addr: span.addr, pos: end.pos, width: end.width, site: pane } } : null);
+
+/**
+ * The pane O-PROV asks a card at (O-PROV's `Pane`): its side, what text it
+ * holds and the record it shows; null on the plane, and where no scene
+ * stands to hold it.
+ * @param {Side | null} side
+ * @returns {import('./provenance.js').Pane | null}
+ */
+function provPane(side) {
+  const p = side ? read.pane(side) : null;
+  return side && p ? { side, kind: p.kind, d: p.d } : null;
 }
 
 /**
@@ -1216,15 +1485,21 @@ export function act(which, byKey = false, at = null) {
  * alone — `parts`, the span's positions its runs hold, joined (N-GO's
  * `Carry.parts`; foundations §2.3) — named as what the reader selected where
  * the span is the selection, else as the text they were reading, made at the
- * span, where the face of a failure known at the act stands.
+ * span, where the face of a failure known at the act stands. From a reading
+ * scene's pane the carry names its parts' bytes by identity through the
+ * pane's image (N-GO's `Carry.ids`), its positions the pane's own, and the
+ * face stands at the pane.
  * @param {Span} span
  * @param {Source} src
  * @param {boolean} byKey a key made the act
  * @param {Array<{pos: number, width: number}>} [parts] the source's parts where its bytes stand as the act is made; its own where none are handed in
+ * @param {Site} [site] the site the span is of: the plane's where none is named
  */
-function toSource(span, src, byKey, parts = src.parts) {
-  const first = parts[0], last = parts[parts.length - 1];
-  void GO.leapTo(src.origin, { how: 'leap', byKey, source: true, carry: { addr: span.addr, pos: first.pos, width: last.pos + last.width - first.pos, parts, selected: sameSpan(span, sel) }, site: { span } });
+function toSource(span, src, byKey, parts = src.parts, site = 'plane') {
+  const first = parts[0], last = parts[parts.length - 1], pane = site === 'plane' ? null : site;
+  const own = pane ? (paneSel[pane] ? /** @type {PaneSel} */ (paneSel[pane]).span : null) : sel;
+  const ids = pane ? { ids: parts.map((x) => bytesOf({ addr: span.addr, pos: x.pos, width: x.width }, pane).ids) } : {};
+  void GO.leapTo(src.origin, { how: 'leap', byKey, source: true, carry: { addr: span.addr, pos: first.pos, width: last.pos + last.width - first.pos, parts, selected: sameSpan(span, own), ...ids }, site: { span: pane ? { ...span, site: pane } : span } });
 }
 
 /**
@@ -1233,25 +1508,44 @@ function toSource(span, src, byKey, parts = src.parts) {
  * on what the page shows of the passage's document (T-LAYER's `paneSource`),
  * beside the document LK names for it (`besideAt`), the passage set level with where the
  * far end stands there (`farPos`) — or, where the far end names its document
- * whole, with nothing of it (SC's `Held.wholeB`; FP-30). Nothing where the
- * far end names no document.
+ * whole, with nothing of it (SC's `Held.wholeB`; FP-30). From a reading
+ * scene's pane its first pane is the text that pane shows (`paneText`), the
+ * passage held by its bytes through the pane's image (SC's `Held.ids`).
+ * Nothing where the far end names no document.
  * @param {import('../links/links.js').Shown} s the link's end drawn at the passage
  * @param {Span} span the passage held: the selection, or the end's own bytes
+ * @param {Site} [site] the site the passage is of: the plane's where none is named
  */
-function sceneFrom(s, span) {
-  if (s.far) void GO.toScene(LAYER.paneSource(span.addr), LK.besideAt(s), { posA: span.pos, widthA: span.width, posB: LK.farPos(s), wholeB: s.farWhole }, { from: { shown: s }, site: { span } });
+function sceneFrom(s, span, site = 'plane') {
+  if (!s.far) return;
+  const pane = site === 'plane' ? null : site, ids = pane ? { ids: bytesOf(span, pane).ids } : {};
+  void GO.toScene(pane ? paneText(pane, span.addr) : LAYER.paneSource(span.addr), LK.besideAt(s), { posA: span.pos, widthA: span.width, posB: LK.farPos(s), wholeB: s.farWhole, ...ids }, { from: { shown: s }, site: { span: pane ? { ...span, site: pane } : span } });
+}
+
+/**
+ * The text a reading scene opened from a pane opens its first pane on (SC's
+ * `Source`): a record the page derived — a past state, the held version, a
+ * draft's text with its page-local edits — as the pane shows it; else the
+ * document the pane's acts name, read from the board.
+ * @param {Side} side
+ * @param {string} addr the address the pane's acts name
+ * @returns {string | import('../model/records.js').Doc}
+ */
+function paneText(side, addr) {
+  const p = read.pane(side);
+  return p && p.d.derived ? p.d : addr;
 }
 
 /**
  * The chord of a slot that sends a name for characters (D5 K-45, K-46,
- * K-100; P47): made on the span the slots act on (`actedOn`), selecting
- * nothing, through `send`. False where no span is in focus: nothing is shown,
- * and the caller gives the reason where the focus is.
+ * K-100; P47): made on the span the slots act on on the plane (`actedOn`),
+ * selecting nothing, through `send`. False where no span is in focus: nothing
+ * is shown, and the caller gives the reason where the focus is.
  * @param {InertSlot} slot
  * @returns {boolean}
  */
 export function inertChord(slot) {
-  const span = actedOn();
+  const span = actedOn('plane');
   if (!span) return false;
   void send(slot, span);
   return true;
@@ -1312,26 +1606,31 @@ function send(slot, span, el = null) {
  * reading order (`sourceRowHTML`), its act the follow to that source with its
  * parts placed where their bytes stand as the act is made (`heldParts`); it
  * takes the focus on its first row where a key asked, and on the control a
- * return reopens it holding it on.
+ * return reopens it holding it on. At a reading scene's pane it stands in the
+ * pane's article, its rows acting there (see the head), a source's parts as
+ * the act found them, the pane's text moving under no edit of the person's
+ * but an editor's.
  * @param {Targets} tg
  * @param {'follow' | 'scene'} what
  * @param {Span} span the span the act was made over
  * @param {boolean} byKey
  * @param {string | null} [focus] the reopened list's control's key
+ * @param {Site} [site] the site the span is of: the plane's where none is named
  */
-function which_(tg, what, span, byKey, focus = null) {
+function which_(tg, what, span, byKey, focus = null, site = 'plane') {
+  const pane = site === 'plane' ? null : site, p = pane ? read.pane(pane) : null, own = pane ? (paneSel[pane] ? /** @type {PaneSel} */ (paneSel[pane]).span : null) : sel;
   /** a link's row's name as stretches: its type, its linker and its far document, the link's symbol kept out (patterns K1) */
   const linkRuns = (/** @type {Shown} */ s) => /** @type {import('../strings.js').Run[]} */ ([{ text: `${typeName(s.link.type)} · `, face: 'client' }, { text: s.link.owner || '', face: 'ident' }, { text: ' · ', face: 'client' }, ...LK.farLabelRuns(s)]);
   const links = tg.links.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}" aria-label="${esc(heard(linkRuns(s)))}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · <span class="id">${esc(s.link.owner || '')}</span> · ${LK.farLabelHTML(s)}</button></li>`);
-  const sources = tg.sources.map((src, i) => `<li><button data-run="s${i}" aria-label="${esc(heard(sourceRowRuns(span.addr, src)))}">${sourceRowHTML(span.addr, src)}</button></li>`);
+  const sources = tg.sources.map((src, i) => `<li><button data-run="s${i}" aria-label="${esc(heard(sourceRowRuns(span.addr, src, p)))}">${sourceRowHTML(span.addr, src, p)}</button></li>`);
   const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${[...links, ...sources].join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  tg.links.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else sceneFrom(s, span); }; });
-  tg.sources.forEach((src, i) => { const parts = heldParts(span.addr, src); acts['s' + i] = (_el, byKey) => toSource(span, src, byKey, parts()); });
+  tg.links.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey, endAt(s, span, pane)); else sceneFrom(s, span, site); }; });
+  tg.sources.forEach((src, i) => { const parts = p && p.kind !== 'editor' ? () => src.parts : heldParts(span.addr, src); acts['s' + i] = (_el, byKey) => toSource(span, src, byKey, parts(), site); });
   HOST.show({
-    kind: 'list', id: 'which', anchor: { span }, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : undefined,
-    about: sameSpan(span, sel) ? { kind: 'which', what } : { kind: 'which', what, at: bytesOf(span) },
+    kind: 'list', id: 'which', anchor: { span: pane ? { ...span, site: pane } : span }, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : undefined,
+    about: { kind: 'which', what, ...(sameSpan(span, own) ? {} : { at: bytesOf(span, site) }), ...(pane ? { site: pane } : {}) },
   });
 }
 
@@ -1346,12 +1645,18 @@ function which_(tg, what, span, byKey, focus = null) {
  * the one owner rule (T-LAYER's `originOwner`).
  * @param {string} addr the span's document
  * @param {Source} src
+ * @param {PaneAt | null} [p] the reading scene's pane the span is of, whose own record its words are read from; none on the plane
  * @returns {string} markup, each address in the identifier's face
  */
-function sourceRowHTML(addr, src) {
+function sourceRowHTML(addr, src, p = null) {
   if (src.withheld) return facedHTML([{ text: src.origin, face: 'ident' }, { text: ' · ', face: 'client' }, ...withheldLine(LAYER.originOwner(src.origin))]);
-  const [first] = src.parts, words = LAYER.firstWords(addr, first.pos, first.width) || t('F.position', { p: first.pos });
+  const [first] = src.parts, words = wordsIn(addr, first, p) || t('F.position', { p: first.pos });
   return fill(esc(t('L.run.named')), { words: esc(words), answer: `${esc(t('L.origin-mark'))} <span class="id">${esc(src.origin)}</span>` });
+}
+
+/** the first words of a stretch of a site's text (T-LAYER's `firstWords`): a reading scene's pane's own record's where it is of one; '' where it holds none */
+function wordsIn(/** @type {string} */ addr, /** @type {{pos: number, width: number}} */ at, /** @type {PaneAt | null} */ p) {
+  return p ? LAYER.firstWordsOf(REC.textOf(p.d.runs, at.pos, at.pos + at.width)) : LAYER.firstWords(addr, at.pos, at.width);
 }
 
 /**
@@ -1360,11 +1665,12 @@ function sourceRowHTML(addr, src) {
  * name (ST's `heard`); its origin's address the identifier's.
  * @param {string} addr the span's document
  * @param {Source} src
+ * @param {PaneAt | null} [p] the reading scene's pane the span is of (`wordsIn`); none on the plane
  * @returns {import('../strings.js').Run[]}
  */
-function sourceRowRuns(addr, src) {
+function sourceRowRuns(addr, src, p = null) {
   if (src.withheld) return [{ text: src.origin, face: 'ident' }, { text: ' · ', face: 'client' }, ...withheldLine(LAYER.originOwner(src.origin))];
-  const [first] = src.parts, words = LAYER.firstWords(addr, first.pos, first.width);
+  const [first] = src.parts, words = wordsIn(addr, first, p);
   return tRuns('L.run.named', { words: words ? [{ text: words, face: 'reading' }] : t('F.position', { p: first.pos }), answer: [{ text: `${t('L.origin-mark')} `, face: 'client' }, { text: src.origin, face: 'ident' }] });
 }
 

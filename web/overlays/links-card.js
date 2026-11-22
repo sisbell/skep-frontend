@@ -33,8 +33,14 @@
 // (FP-36): it shows naming what it is about (O-HOST's `about`) — its
 // document, the chain's stage and the pages it shows — and a return reopens
 // it from that (`reopen`), the chain raised to its stage again, taking the
-// focus on the control it was left holding it on. Figures: twelve rows a
-// page.
+// focus on the control it was left holding it on. Asked at a reading scene's
+// pane (O-SELECTION's; `PaneAt`), the card lists the links that pane's
+// article draws, as it was set — a past state's those read at its position —
+// standing in the pane's article at the span asked, its caption and its rows
+// as above — each row's card asked at that pane (O-ANATOMY's `Pane`) — the
+// chain, the toggle and the lenses the plane's and so not drawn there, and
+// what it is about naming the pane, which N-GO keeps no place of.
+// Figures: twelve rows a page.
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-36.
 
 import * as HOST from './host.js';
@@ -54,24 +60,39 @@ const PAGE = 12;
  * @property {string} addr its document: the version its box showed
  * @property {1 | 2 | 3} stage the chain's stage there (LK's)
  * @property {number} page the pages of rows it showed
+ * @property {'a' | 'b'} [site] the reading scene's pane it was asked at (`PaneAt`); none on the plane
  */
 
-/** @type {{addr: string, page: number} | null} */
+/**
+ * @typedef {Object} PaneAt — a reading scene's pane the card is asked at (O-SELECTION's; see the head)
+ * @property {'a' | 'b'} site its side
+ * @property {{addr: string, pos: number, width: number}} span the span the act was made over: where the card stands in the pane's article, named as the pane's acts name it
+ * @property {import('../links/links.js').Shown[]} marks the links its article draws, as it was set: the card's rows
+ * @property {'editor' | 'past' | 'held' | 'read'} kind what text it holds (SC's `PaneSite.kind`): what a row's card reads its near end's words in
+ * @property {import('../model/records.js').Doc} d the record its text was made from
+ */
+
+/** the pane a row's card is asked at (O-ANATOMY's `Pane`): the one the card was asked at, none on the plane */
+const rowPane = (/** @type {PaneAt | null} */ at) => (at ? { side: at.site, names: at.span.addr, kind: at.kind, d: at.d } : null);
+
+/** @type {{addr: string, page: number, at: PaneAt | null} | null} */
 let open = null;
 
-/** is the card open at a document? */
-export const isOpen = (/** @type {string} */ addr) => !!open && open.addr === addr;
+/** is the card open at a document on the plane? */
+export const isOpen = (/** @type {string} */ addr) => !!open && !open.at && open.addr === addr;
 
 /**
  * Ask to see the links at a document: the card conjured at the document's
- * corner; the chain moves to stage 2 (the symbols at their spans).
+ * corner; the chain moves to stage 2 (the symbols at their spans). At a
+ * reading scene's pane, the card at the span asked, listing the pane's
+ * marks, the chain untouched (see the head).
  * @param {string} addr
  * @param {boolean} [byKey]
+ * @param {PaneAt | null} [at] the pane it is asked at; none on the plane
  */
-export function show(addr, byKey = false) {
-  const r = LK.state(addr);
-  if (r.stage < 2) LK.reveal(addr, 2);
-  open = { addr, page: 1 };
+export function show(addr, byKey = false, at = null) {
+  if (!at && LK.state(addr).stage < 2) LK.reveal(addr, 2);
+  open = { addr, page: 1, at };
   LAYER.bump(); markDirty();
   render(byKey);
 }
@@ -122,7 +143,7 @@ function lensHTML(lens, label, chips) {
  */
 export function reopen(left, addr) {
   LK.reveal(addr, left.about.stage >= 3 ? 3 : 2);
-  open = { addr, page: left.about.page };
+  open = { addr, page: left.about.page, at: null };
   LAYER.bump(); markDirty();
   render(false, left.focus);
 }
@@ -134,16 +155,15 @@ export function reopen(left, addr) {
  */
 export function render(byKey = false, focus = null) {
   if (!open) return;
-  const addr = open.addr;
+  const addr = open.addr, at = open.at;
   const r = LK.state(addr);
-  const shown = LK.shown(addr);
+  const shown = at ? at.marks : LK.shown(addr);
   const others = LK.othersTouching(addr);
   const rows = LK.lensRows(addr);
-  const box = docBox(addr);
   const listed = shown.slice(0, open.page * PAGE);
   const more = shown.length > listed.length;
-  const html =
-    `<span class="label cased">${ANATOMY.linksOnHTML(addr)}</span>` +
+  // the chain, the toggle and the lenses are the plane's: a pane's card lists what its article draws, and draws none of them
+  const plane = at ? '' :
     `<div class="stage">${r.stage >= 3 ? `<button data-run="stage2">${esc(t('B1.links.hide-where'))}</button>` : `<button data-run="stage3">${esc(t('B1.links.show-where'))}</button>`}</div>` +
     `<div class="toggle">${othersSwitch(r.others, others.length)}</div>` +
     `<div class="lenses">` +
@@ -151,7 +171,9 @@ export function render(byKey = false, focus = null) {
       lensHTML('type', 'F.lens.type', rows.types.map((ty) => ({ run: 'type:' + ty, html: esc(typeName(ty)), pressed: r.lens.types ? r.lens.types.has(ty) : false }))) +
       `<button data-run="endorsed" aria-pressed="${r.lens.endorsed}">${esc(t('F.lens.endorsed'))}</button>` +
       `${r.lens.owners || r.lens.types || r.lens.endorsed ? `<button data-run="clear">${esc(t('F.lens.clear'))}</button>` : ''}` +
-    `</div>` +
+    `</div>`;
+  const html =
+    `<span class="label cased">${ANATOMY.linksOnHTML(addr)}</span>` + plane +
     `<ul class="rows">${listed.map((s, i) => `<li><button data-run="row:${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}" aria-label="${esc(heard(LK.endRuns(s)))}"><span class="sym-mark">⟡</span> ${ANATOMY.rowHTML(s)}</button></li>`).join('')}</ul>` +
     (more ? `<button data-run="more">${esc(t('B1.show-more'))}</button>` : shown.length ? `<span class="end" data-string="B1.links.end">${esc(t('B1.links.end'))}</span>` : '') +
     `<div class="clause" data-string="F.card-clause">${esc(t('F.card-clause'))}</div>`;
@@ -166,16 +188,23 @@ export function render(byKey = false, focus = null) {
   };
   for (const o of rows.owners) acts['owner:' + o] = () => { const cur = LK.state(addr).lens.owners; const set = new Set(cur || []); if (set.has(o)) set.delete(o); else set.add(o); LK.lens(addr, { owners: set.size ? set : null }); LAYER.bump(); markDirty(); render(); };
   for (const ty of rows.types) acts['type:' + ty] = () => { const cur = LK.state(addr).lens.types; const set = new Set(cur || []); if (set.has(ty)) set.delete(ty); else set.add(ty); LK.lens(addr, { types: set.size ? set : null }); LAYER.bump(); markDirty(); render(); };
-  listed.forEach((s, i) => { acts['row:' + i] = (_el, byKey) => ANATOMY.open(s, null, byKey); });
+  listed.forEach((s, i) => { acts['row:' + i] = (_el, byKey) => ANATOMY.open(s, null, byKey, rowPane(at)); });
   HOST.show({
-    kind: 'card', id: 'links:' + addr, anchor: { world: { x: box.x + box.w, y: box.y } }, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : undefined,
-    about: { kind: 'links', addr, stage: r.stage, page: open.page },
+    kind: 'card', id: 'links:' + addr, anchor: at ? { span: { ...at.span, site: at.site } } : cornerOf(addr), html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : undefined,
+    about: { kind: 'links', addr, stage: r.stage, page: open.page, ...(at ? { site: at.site } : {}) },
     onDismiss: (replaced) => {
       if (!open || open.addr !== addr) return;
+      const plane = !open.at;
       open = null;
-      if (!replaced) { LK.hide(addr); LAYER.bump(); markDirty(); }
+      if (!replaced && plane) { LK.hide(addr); LAYER.bump(); markDirty(); }
     },
   });
+}
+
+/** where the card stands on the plane: at its document's box's corner, a world point (O-HOST's `Anchor.world`) */
+function cornerOf(/** @type {string} */ addr) {
+  const box = docBox(addr);
+  return { world: { x: box.x + box.w, y: box.y } };
 }
 
 /** close the card (a dismissal: the chain returns to hidden) */

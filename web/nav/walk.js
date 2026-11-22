@@ -10,9 +10,9 @@
 // shows (`panel`); the mirror's element; and the readers the app hands in
 // (`readers`; FP-11): where Back's light stands and what a landing says
 // (N-GO's `backLight` and `described`), the version each box shows (N-GO's
-// `shownIn`), why no board is held (O-FACES' `noBoardWords`) and Enter's act
-// on the walk's element (N-KEYS' `activate`). The walk is always live: it
-// has no toggle.
+// `shownIn`), why no board is held (O-FACES' `noBoardWords`), Enter's act
+// on the walk's element (N-KEYS' `activate`) and the plane's selection
+// (O-SELECTION's `selected`). The walk is always live: it has no toggle.
 // The order of moves: every move — a walk key, a landing, a re-take — counts
 // itself as it starts, and one whose reads a later move overtook sets
 // nothing when they answer and flies the camera nowhere, so the walk stands
@@ -267,7 +267,12 @@
 // nothing more, and while a draft holds a line the board has not kept an item
 // holding words the board has not minted, or a held removal, is described
 // "held on this device" (`isHeld`; T-LAYER's `heldIn`, read from the held
-// lines alone). The
+// lines alone). A span item is described "selected" where the plane's
+// selection holds every one of its own characters, the separator after a
+// line's text aside, and "partly selected" where it holds some (`selectedId`;
+// Q6), each a hidden description written once at the rebuild and named in
+// place each dirty frame (`markDescribed`); `aria-selected` stays the walk's
+// own row. The
 // mirror is rebuilt whole on every move (`render`), and its Tab stop with it:
 // the plane is one stop (D5 §4 rule 5) — the current item, while the tree's
 // container stands out of the order; the container is the stop only where
@@ -299,7 +304,7 @@ import { docBox, accountCell, boardCell, accountAt, clearLeftOf, continuationCel
 import { lodOf, residueDepth, markScale } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
 import { touches, isElement, elementIn } from '../text/span.js';
-import { esc, fill, numeral } from '../util.js';
+import { esc, fill, numeral, byteLength } from '../util.js';
 import { t, tRuns, addressedHTML, facedHTML, markCount, counted, plural, sentence, sentenceHTML, sentenceRuns, opening, openingHTML, openingRuns, asSentence, ended, endedHTML, endedRuns, sentences, fields, list, joinRuns, asRuns, heard } from '../strings.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -338,6 +343,7 @@ import { t, tRuns, addressedHTML, facedHTML, markCount, counted, plural, sentenc
  * @property {(addr: string) => string} shown the version a document's box shows (N-GO's `shownIn`): the one the walk stands on and lists there
  * @property {() => ({id: string, text: string} | null)} noBoard why no board is held, the words the root says in the board's place (O-FACES' `noBoardWords`); null where a board is held, or the list has not answered
  * @property {() => (void | Promise<void>)} enter Enter's act on the walk's element (K-7; N-KEYS' `activate`), made where an activation reaches a mirror item (`activate`)
+ * @property {() => ({addr: string, pos: number, width: number} | null)} selection the plane's selection (O-SELECTION's `selected` of the plane), which a span item it holds all or part of is described by (`selectedId`); null where none stands
  */
 
 /** @type {Node | null} */
@@ -362,8 +368,8 @@ let panel = false;
 let mirrorEl = null;
 /** @type {Array<(n: Node | null) => void>} */
 const watchers = [];
-/** @returns {Readers} the readers before the app hands its owner's in: no light stands, no landing says anything, every box shows its plain address, no board's absence is told, and an activation makes no act */
-const noReaders = () => ({ located: () => null, described: () => null, shown: (/** @type {string} */ addr) => documentOf(addr) || addr, noBoard: () => null, enter: () => {} });
+/** @returns {Readers} the readers before the app hands its owner's in: no light stands, no landing says anything, every box shows its plain address, no board's absence is told, an activation makes no act, and nothing is selected */
+const noReaders = () => ({ located: () => null, described: () => null, shown: (/** @type {string} */ addr) => documentOf(addr) || addr, noBoard: () => null, enter: () => {}, selection: () => null });
 /** @type {Readers} */
 let read = noReaders();
 
@@ -378,6 +384,8 @@ const KIND = 'walk-landing-kind';
 const pieceId = (/** @type {number} */ i) => 'walk-piece-' + i;
 /** the id of the mirror's hidden description of an item holding what a hold keeps from the board, "held on this device" (see the head) */
 const HELD = 'walk-held';
+/** the ids of the mirror's hidden descriptions of a span item the plane's selection holds whole, "selected", and in part, "partly selected" (see the head; `selectedId`) */
+const SELECTED = 'walk-selected', PARTLY = 'walk-partly';
 /** the id of the hidden description of a link item's far end the board will say nothing of, item i's (see the head) */
 const farId = (/** @type {number} */ i) => 'walk-far-' + i;
 /** the id of the hidden description of a withheld origin, which every run of it the mirror holds names (see the head) */
@@ -911,7 +919,8 @@ export function render() {
     const o = originWords(n);
     if (o && !origins.has(o.origin)) { origins.add(o.origin); pieces += `<div id="${originId(o.origin)}" hidden>${esc(spoken(o.words))}</div>`; }
   }
-  html += `</ul><div id="${KIND}" hidden>${esc(spoken(said && said.kind ? said.kind : ''))}</div><div id="${DESCRIPTION}" hidden>${esc(spoken(said ? said.words : ''))}</div><div id="${HELD}" hidden>${esc(spoken(t('L.held.device')))}</div>${pieces}`;
+  html += `</ul><div id="${KIND}" hidden>${esc(spoken(said && said.kind ? said.kind : ''))}</div><div id="${DESCRIPTION}" hidden>${esc(spoken(said ? said.words : ''))}</div><div id="${HELD}" hidden>${esc(spoken(t('L.held.device')))}</div>` +
+    `<div id="${SELECTED}" hidden>${esc(spoken(t('L.mirror.selected')))}</div><div id="${PARTLY}" hidden>${esc(spoken(t('L.mirror.selected.part')))}</div>${pieces}`;
   mirrorEl.innerHTML = html;
   mirrorEl.tabIndex = idx >= lo && idx < hi ? -1 : 0;
 }
@@ -1116,13 +1125,32 @@ function isHeld(/** @type {Node} */ n) {
 }
 
 /**
+ * How much of a span node's own characters the plane's selection holds (see
+ * the head; Q6): its description's id — "selected" where it holds every one
+ * of them, the separator after a line's text aside, "partly selected" where it
+ * holds some — or null where it holds none, or the node is no span. The
+ * walk's own state, `aria-selected`, is never it.
+ * @param {Node} n
+ * @returns {string | null}
+ */
+function selectedId(n) {
+  const s = n.kind === 'block' ? read.selection() : null, b = s && s.addr === n.addr ? blockOf(n) : null;
+  if (!s || !b || s.width < 1) return null;
+  const own = b.kind === 'para' ? byteLength(b.text) : b.width, end = b.pos + (own > 0 ? own : b.width);
+  const lo = Math.max(s.pos, b.pos), hi = Math.min(s.pos + s.width, end);
+  if (lo >= hi) return null;
+  return s.pos <= b.pos && s.pos + s.width >= end ? SELECTED : PARTLY;
+}
+
+/**
  * The descriptions a node names (see the head): the landing's, where it
  * stands on it — the kind of the document it crossed into first, save at the
  * document's own item, whose name leads with it, then its line where it says
- * one; "held on this device", where it holds what a hold keeps from
- * the board; its other runs' labels, where it holds any; its far end's
- * whole form, where the board will say nothing of its far document; null
- * where it names none.
+ * one; "selected" or "partly selected", where the plane's selection holds all
+ * or part of a span's own characters (`selectedId`); "held on this device",
+ * where it holds what a hold keeps from the board; its other runs' labels,
+ * where it holds any; its far end's whole form, where the board will say
+ * nothing of its far document; null where it names none.
  * @param {Node} n
  * @param {number} i its index among its siblings
  * @param {Described | null} at
@@ -1135,6 +1163,8 @@ function describedBy(n, i, at) {
     if (at.kind && n.kind !== 'document') ids.push(KIND);
     if (at.words) ids.push(DESCRIPTION);
   }
+  const chosen = selectedId(n);
+  if (chosen) ids.push(chosen);
   if (isHeld(n)) ids.push(HELD);
   if (otherRuns(n, at)) ids.push(pieceId(i));
   if (farWhole(n)) ids.push(farId(i));

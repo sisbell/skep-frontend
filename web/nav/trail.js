@@ -171,7 +171,7 @@
 
 /**
  * @typedef {Object} Site — where a notice stands, as data: O-HOST's anchor without an element, so an entry is read by value
- * @property {{addr: string, pos: number, width?: number}} [span] a span of a document — a block by its first position, or the bytes a width names
+ * @property {{addr: string, pos: number, width?: number, site?: 'plane' | 'a' | 'b'}} [span] a span of a document — a block by its first position, or the bytes a width names — at its site, a reading scene's pane where one is named (O-HOST's `Anchor.span`)
  * @property {{x: number, y: number}} [world] a world point
  * @property {string} [sign] the document a jump's face stands at (FP-25): out of the visible view, the one line carries its words in its place
  */

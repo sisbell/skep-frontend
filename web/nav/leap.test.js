@@ -512,7 +512,7 @@ test('the selection standing in the document in view is held as the scene opens 
     LEAP.open();
     type(FAR);
     besideKey();
-    assert.deepEqual(scene(), { a: D, b: FAR, held: { posA: 3, widthA: 5, posB: null } }, 'the selection\'s positions held, set level in the first pane');
+    assert.deepEqual(scene(), { a: D, b: FAR, held: { posA: 3, widthA: 5, posB: null, sel: [{ prefix: D + '.0.1', ordinal: 3, width: 5 }] } }, 'the selection\'s positions held, set level in the first pane, and its bytes carried for the scene to open holding (issue #734; Q1)');
     assert.deepEqual(TRAIL.all()[TRAIL.cursorIndex() - 1].step, { kind: 'scene', near: D, link: null, key: null, spans: [{ prefix: D + '.0.1', ordinal: 3, width: 5 }] }, 'the entry it departs records the passage it is opened from, by its bytes');
     await settled();
     SEL.select(FAR, 2, 4);

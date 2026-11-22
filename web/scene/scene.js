@@ -577,7 +577,10 @@
 // being the scene's: `placeSelBoxes`), the focus come into a pane — its
 // text, its corner, its list of past states (`focusedPane`) — making its
 // selection the live one (its `focusIn`; Q4), and ended as the scene stands
-// anew or closes (its `endPanes`); each article made with
+// anew or closes (its `endPanes`); the selection the act that opens a scene
+// was made over is set, by its bytes, as the selection of the first pane —
+// pane A, else pane B — whose text places all of them in one stretch, once
+// both panes stand level (`carrySel`; `Held.sel`; Q1); each article made with
 // where its pane's words are read (`whereIn`), so a copy from a pane names
 // its words as one from the plane's box names the same words (FP-27); the
 // scene keeps no DOM text of its own. Each pane carries its own document's
@@ -775,6 +778,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {boolean} [heldB] the scene is the moved scene (D6 BM-14): the second pane is the held version (`Pane.heldVersion`; see the head) — derived as the scene opens where the second document is named by its address (`heldSource`), else the derived record handed in
  * @property {string | null} [link] the address of the link the scene is opened from, where it is opened from one: the tie drawn whole between the stacked panes where none holds the pointer or the focus (`crossingOf`)
  * @property {PastHeld | null} [past] the scene is a draft's history (B3-S7; N-GO's `history`), opened on the draft's address: pane B the state these name (`pastSource`), beside it the list of the draft's past states made from these rows (`PastList`)
+ * @property {ISpan[]} [sel] the selection the act was made over, by its bytes (N-GO's `toScene`; Q1): the scene opens holding it in the first pane — pane A, else pane B — whose text places all of them in one stretch (`carrySel`), none where neither does
  */
 
 /**
@@ -1203,8 +1207,8 @@ let ending = (/** @type {boolean} */ _byKey) => close();
 let faces = null;
 /** the pause before the scene's next reissue of a past state the board was busy on (`reissue`), by its handle; 0 where none waits — the scene's close and the next scene standing let it go unrun */
 let reissuing = 0;
-/** a draft's history opened from a pane's corner — its kept line's second act (N-GO's `history`), the app's to hand in (`attach`); nothing until it does */
-let history = (/** @type {string} */ _addr, /** @type {boolean} */ _byKey) => {};
+/** a draft's history opened from a pane's corner — its kept line's second act (N-GO's `history`), the pane named, the app's to hand in (`attach`); nothing until it does */
+let history = (/** @type {string} */ _addr, /** @type {boolean} */ _byKey, /** @type {'a' | 'b'} */ _side) => {};
 /** the reader's next act, a click on a pane's text being one — what stands on the one line and a hint taken down (L-LINE's `act`, O-HINT's `act`), the app's to hand in (`attach`); nothing until it does */
 let acted = () => {};
 /** @type {Record<'a' | 'b', Map<string, string>>} the run each origin's statement stands beside in each pane, by origin: the run's identity, kept while a line of that run is in view (`placeStatements`) */
@@ -1297,7 +1301,7 @@ function namePanes(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} *
  * draws the ties at once and marks the frame, so what stands over the panes
  * — a face at an editor pane's line (`editorLine`) — is placed again.
  * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement, strokes: HTMLElement}} e `strokes` the gutter's layer the strokes' buttons stand in
- * @param {{end?: (byKey: boolean) => void, faces?: Faces, history?: (addr: string, byKey: boolean) => void, acted?: () => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it; `faces` the faces a returned stop shows at its site (O-FACES'); `history` a draft's history opened from a pane's corner (N-GO's `history`); `acted` the reader's next act, which a click on a pane's text is (L-LINE's and O-HINT's `act`)
+ * @param {{end?: (byKey: boolean) => void, faces?: Faces, history?: (addr: string, byKey: boolean, side: 'a' | 'b') => void, acted?: () => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it; `faces` the faces a returned stop shows at its site (O-FACES'); `history` a draft's history opened from a pane's corner (N-GO's `history`), the pane named; `acted` the reader's next act, which a click on a pane's text is (L-LINE's and O-HINT's `act`)
  */
 export function attach(e, acts = {}) {
   els = e;
@@ -2586,6 +2590,7 @@ export async function open(a, b, held = {}, as = {}) {
     const S = sceneOf(pa, pb, between.pairs, held, past);
     stand(E, S, between.refused ? between.refused.name : null);
     relevel();
+    carrySel(S, held.sel ?? null);
     FOCUS.open('scene', { el: E.root, from, byKey: true, first: E.paneB });
     if (S.past) pastStood(S, null);
     out.shown = true;
@@ -2641,6 +2646,30 @@ function placedHeld(P, held) {
   if (!at.length) return held;
   const first = at[0], last = at[at.length - 1];
   return { ...held, posA: first.pos, widthA: last.pos + last.width - first.pos };
+}
+
+/**
+ * The selection an opening carries set in the scene as it stands (see the
+ * head; `Held.sel`; Q1), once both panes stand and are set level: as the
+ * selection of the first pane — pane A, the upper one where they stack, else
+ * pane B — whose text places every one of its bytes in one stretch (M-REC's
+ * `placedIn`, through the image the pane's article was made from), set by the
+ * scene (O-SELECTION's `setPane`) — the live one where that pane is the
+ * focused site, drawn inactive until the focus comes to it where it is not;
+ * nothing where neither pane holds all of it in one stretch, or none is
+ * carried.
+ * @param {Scene} S
+ * @param {ISpan[] | null} ids
+ */
+function carrySel(S, ids) {
+  const want = ids ? ids.reduce((n, i) => n + i.width, 0) : 0;
+  if (!ids || !want) return;
+  for (const side of SIDES) {
+    const P = S[side], made = P.el ? LAYER.madeOf(P.el) : null, at = REC.placedIn(made ? made.image : imageOf(P), ids);
+    if (at.length !== 1 || at[0].width !== want) continue;
+    SEL.setPane(side, { addr: P.names, pos: at[0].pos, width: at[0].width });
+    return;
+  }
 }
 
 /**
@@ -4728,7 +4757,8 @@ function keptAct(side) {
 /**
  * A draft's kept line's second act in a pane's corner, "show its history"
  * (B3-S7): the history of the draft the pane holds opened
- * as the app hands it in (`attach`; N-GO's `history`) — which, in the draft's
+ * as the app hands it in (`attach`; N-GO's `history`), the pane named, whose
+ * selection the history's panes level at — which, in the draft's
  * own history scene, moves the focus into the history pane (`focusPast`), and
  * where the act stands inert says its reason (FP-41). Nothing where the pane
  * holds no draft's current text (`current`). An act in the scene (`actedIn`).
@@ -4739,7 +4769,7 @@ function historyAct(side, byKey) {
   const S = scene;
   if (!S || !current(S[side])) return;
   actedIn(S);
-  history(S[side].names, byKey);
+  history(S[side].names, byKey, side);
 }
 
 /** set the two ends level — each pane's matched line at one height, the bands' and lines' ends measured anew — once no pane is being set again (`whenSet`); an act in the scene (`actedIn`) */
@@ -7158,7 +7188,7 @@ export function pageCaret(dir) {
  * K-71): the caret moved a step that way (T-LAYER's `caretMove`) and the
  * pane's selection (O-SELECTION's) made to run from its anchor — the other
  * end of the pane's selection where it ends at the caret, else the caret — to
- * the caret, the caret's span the focus; where the step brings the caret back
+ * the caret, its acts row with it, the caret's span the focus; where the step brings the caret back
  * to its anchor, none standing there (O-SELECTION's `clear`). False where no
  * live caret stands in an editor pane, or it cannot move that way.
  * @param {import('../text/layer.js').CaretStep} dir
@@ -7173,14 +7203,14 @@ export function extendFromCaret(dir) {
   if (!LAYER.caretMove(dir, anchor)) return false;
   const to = /** @type {import('../text/layer.js').Caret} */ (LAYER.caret()).pos;
   if (to === anchor) SEL.clear(side);
-  else SEL.setPane(side, { addr: c.addr, pos: Math.min(anchor, to), width: Math.abs(to - anchor) }, to < anchor);
+  else SEL.setPane(side, { addr: c.addr, pos: Math.min(anchor, to), width: Math.abs(to - anchor) }, to < anchor, true);
   followCaret();
   return true;
 }
 
 /**
- * Select-all in a pane (D5 K-93; B3-S8): its text whole the pane's selection
- * (O-SELECTION's `setPane`) — at an editor pane's live caret the caret live
+ * Select-all in a pane (D5 K-93; B3-S8): its text whole the pane's selection,
+ * its acts row with it (O-SELECTION's `setPane`) — at an editor pane's live caret the caret live
  * at its end, the run of typing open there ended (T-LAYER's `placeCaret`); at
  * a past state's, read only, no caret (B3-S8). False where its text holds
  * none.
@@ -7194,7 +7224,7 @@ export function selectAll(side) {
   if (end <= 1) return false;
   const c = LAYER.caret();
   if (editor(P) && c && c.live && c.addr === P.names) LAYER.placeCaret(P.names, end, true);
-  SEL.setPane(side, { addr: P.names, pos: 1, width: end - 1 }, false);
+  SEL.setPane(side, { addr: P.names, pos: 1, width: end - 1 }, false, true);
   return true;
 }
 
@@ -7248,6 +7278,7 @@ export function toCaret(addr) {
  * @property {number | null} focus
  * @property {HTMLElement} el
  * @property {HTMLElement | null} article the article it shows, T-LAYER's mount (`sceneArticle`): where its selection is read, placed and drawn (O-SELECTION's) and an overlay at it stands (O-HOST's); null where none stands yet
+ * @property {Shown[]} marks the links its article draws, as it was set (`Pane.view`): what a slot of the selection's acts at it reads (O-SELECTION's)
  */
 
 /**
@@ -7260,7 +7291,7 @@ export function siteOf(side) {
   if (!S || !E) return null;
   const P = S[side], d = P.d.derived;
   const kind = editor(P) ? 'editor' : d && d.at != null ? 'past' : P.heldVersion || (d && d.rows.length) ? 'held' : 'read';
-  return { side, kind, names: P.names, shows: P.shows, d: P.d, focus: P.focus, el: paneEl(E, side), article: P.el };
+  return { side, kind, names: P.names, shows: P.shows, d: P.d, focus: P.focus, el: paneEl(E, side), article: P.el, marks: P.view.marks };
 }
 
 /**

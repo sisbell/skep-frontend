@@ -811,6 +811,56 @@ test('the item a landing stands on takes its line as its description — aria-de
 });
 
 // placed with the test above: it attaches a mirror of its own
+test('a span item the plane\'s selection holds every own character of is described "selected", one it holds some of "partly selected" — each a hidden description written at the rebuild and named in place as the selection changes — the separator after a line\'s text aside, and `aria-selected` the walk\'s own row whatever is selected (issue #734; #94\'s design decision: Q6)', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @type {Array<{attrs: Record<string, string>, dataset: {i?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void, removeAttribute: (k: string) => void}>} the items the last rebuild wrote */
+  let items = [];
+  /** @type {Record<string, string>} the words of each hidden description the last rebuild wrote, by its id */
+  let hidden = {};
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      items = [...html.matchAll(/<li\b[^>]*>/g)].map((m) => {
+        /** @type {Record<string, string>} */
+        const attrs = Object.fromEntries([...m[0].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+        return { attrs, dataset: { i: attrs['data-i'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; }, removeAttribute: (k) => { delete attrs[k]; } };
+      });
+      hidden = Object.fromEntries([...html.matchAll(/<div id="([\w-]+)" hidden>([^<]*)<\/div>/g)].map((m) => [m[1], m[2]]));
+    },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
+    querySelector: () => null,
+  };
+  /** each of D's span items' place — its links' stops, which earlier tests may have left in the model, apart — the description of a selection it names, and whether the walk stands on it */
+  const marked = () => items.flatMap((i) => { const n = WALK.siblingsNow()[Number(i.attrs['data-i'])], by = (i.attrs['aria-describedby'] || '').split(' '); return n.addr === D && n.kind === 'block' ? [[n.pos, by.includes('walk-selected') ? 'selected' : by.includes('walk-partly') ? 'partly' : null, i.attrs['aria-selected']]] : []; });
+  /** @type {{addr: string, pos: number, width: number} | null} the plane's selection, as O-SELECTION answers it */
+  let sel = { addr: D, pos: 1, width: 8 };
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    WALK.readers({ selection: () => sel });
+    await WALK.focusTo(D, 11);
+    assert.deepEqual([hidden['walk-selected'], hidden['walk-partly']], [t('L.mirror.selected'), t('L.mirror.selected.part')], 'the two descriptions written at the rebuild, in their words');
+    assert.deepEqual(marked(), [[1, 'selected', 'false'], [11, null, 'true'], [27, null, 'false']], '"Tumbler." selected, its separator aside: its item described selected; the walk\'s own row the one marked aria-selected');
+    sel = { addr: D, pos: 3, width: 12 };
+    WALK.markDescribed();
+    assert.deepEqual(marked(), [[1, 'partly', 'false'], [11, 'partly', 'true'], [27, null, 'false']], 'a selection across two spans\' characters: each partly selected, marked in place');
+    sel = { addr: D, pos: 9, width: 2 };
+    WALK.markDescribed();
+    assert.deepEqual(marked(), [[1, null, 'false'], [11, null, 'true'], [27, null, 'false']], 'a selection of a separator alone: no span\'s own characters, none described');
+    sel = { addr: E, pos: 3, width: 7 };
+    WALK.markDescribed();
+    assert.deepEqual(marked().map((m) => m[1]), [null, null, null], 'a selection in another document: none described here');
+    sel = null;
+    WALK.markDescribed();
+    assert.deepEqual(marked().map((m) => m[1]), [null, null, null], 'nothing selected: none described');
+  } finally {
+    globalThis.document = platform;
+    WALK.readers({});
+  }
+});
+
+// placed with the test above: it attaches a mirror of its own
 test('a landing that crossed into its document from another says that document\'s kind first in the item\'s one announcement — a hidden description of its own, named before the line\'s, written at the rebuild and marked again in place — and its kind alone where the line says nothing; never on the document\'s own item, whose name leads with it (issue #423\'s design decision: "a landing into another document says that document\'s kind first in its one announcement")', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });

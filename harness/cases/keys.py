@@ -95,8 +95,11 @@ pane B; Mod+0 from it pushing WHOLE BOARD after its entry, Back from there
 reopening it and a second Back ending it; no key reaching
 what the scene covers (D5 M-4) — → and Enter in a pane, the walk on the
 document under it, moving neither the camera nor the walk's focus nor the
-trail; Enter, Shift+↓ and Mod+Shift+O there, the walk on a block, making no
-selection and no card; ↓ with the focus on nothing walking nothing — and
+trail; Enter there, the walk on a block, making no selection and no card
+under it; Shift+↓ and Mod+Shift+O there acting at the pane on its own words
+(issue #734) — K-8 selecting pane B's span focus whole, its acts row at pane
+B, "who wrote this?" asked over that span, its card standing — nothing under
+the scene moving; ↓ with the focus on nothing walking nothing — and
 Enter on the scene's acts pressing them: the re-level setting the two ends
 level again, the × the scene's Back, the focus on the walk's item at the
 entry it opened over (K-62, K-63); K-8's select and extend by span; a links card
@@ -240,8 +243,12 @@ that pane's selection and a caret alone there gives the page's selection its
 highlight back. Each pane a site of its own (issue #94): a drag in each pane
 leaves both panes' selections standing, the platform's range the focused
 pane's and the other's the page's custom highlight in its inactive look, the
-live one following the focus to a pane's text and to its corner, and no acts
-row standing at a pane. Mod+[ to the entry the reader left at an edition's plain
+live one following the focus to a pane's text and to its corner, and the one
+acts row standing at the focused pane, in its box beneath its selection
+(issue #734). The selection's own "read side by side", the one link drawn at
+a citation's own bytes, opens the scene holding those bytes selected in pane
+A, the plane holding none under it, and the scene's close brings the plane's
+selection back with its acts row (issue #734, settling #311). Mod+[ to the entry the reader left at an edition's plain
 address, after a `publish` row naming the member past its newest is handed to
 the page through the gate's feed door — reads alone — shows the member read
 there: the entry and the trail list's row name it, the paragraph read
@@ -2175,6 +2182,11 @@ INACTIVE_RULES = """(() => { const out = [];
   return out; })()"""
 # every site's selection as the gate's door reads it, where the platform's range stands, and the overlay standing
 SITES = '({sites: window.__skep.selections(), platform: window.__skep.platformSelection().site, overlay: window.__skep.overlay().id})'
+# where the selection card stands against pane B's box: whether its left edge lies across pane B, as the row at a selection
+# of pane B's stands, beneath its first line; null where no card stands
+ROW_IN_B = """(() => { const o = document.querySelector('#overlay .selection-card'), b = document.getElementById('sceneB'); if (!o || !b) return null;
+  const q = o.getBoundingClientRect(), v = b.getBoundingClientRect();
+  return {inB: q.left >= v.left - 1 && q.left < v.right, left: q.left, top: q.top, paneB: [v.left, v.right]}; })()"""
 # the focus put on the first stop of pane B's corner — the corner itself where it holds no act — and whether it took it
 CORNER_B = """(() => { const c = document.querySelector('#sceneB > .corner'); if (!c) return false;
   const t = c.matches('[tabindex="0"]') ? c : c.querySelector('[tabindex="0"]'); if (!t) return false;
@@ -2193,7 +2205,8 @@ def pane_selections(ctx, r):
     (c) the focus moves the live one: pane A's text given the focus, its selection the platform's range and pane B's
         drawn by the page;
     (d) a corner counts (Q4): pane B's corner given the focus, pane B's the platform's range again and pane A's drawn;
-    (e) no acts row stands at either pane, the row at a pane being #734's.
+    (e) the one acts row stands at the focused pane (#734): pane B's corner holding the focus, the selection card stands in
+        pane B, beneath its selection.
     The scene is closed and the selection cleared after"""
     figures = {}
     ctx.leap(DOC, WINDOW[0])
@@ -2239,15 +2252,66 @@ def pane_selections(ctx, r):
         r.check(on and site(corner, 'b') == dict(want['b'], inactive=False) and site(corner, 'a') == dict(want['a'], inactive=True) and corner['platform'] == 'b',
                 '(d) the focus put on pane B\'s corner: pane B\'s the platform\'s range again, pane A\'s drawn by the page (Q4)', dict(corner, focused=on))
         figures['d'] = corner
-        # (e) no acts row at either pane
-        r.check(corner['overlay'] != 'selection' and ctx.js('document.querySelector(".selection-card") === null'),
-                '(e) no acts row stands at either pane: the row at a pane is #734\'s', {'overlay': corner['overlay']})
+        # (e) the one acts row at the focused pane: the selection card in pane B's box, where its selection stands
+        row = ctx.js(ROW_IN_B)
+        r.check(corner['overlay'] == 'selection' and bool(row) and row['inB'],
+                '(e) the one acts row stands at the focused pane, pane B, in its box beneath its selection (#734; Q4)', {'overlay': corner['overlay'], 'row': row})
+        figures['e'] = row
     ctx.js('window.__skep.scene.close()')
     ctx.settle()
     ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
     r.figures['pane_selections'] = figures
+
+
+def side_by_side_direct(ctx, r):
+    """THE SELECTION'S OWN "READ SIDE BY SIDE" LEAVES ITS PLACE, AND THE SCENE OPENS HOLDING IT (issue #734; issue #94's
+    design decision Q1, settling #311): at BEAMED, a citer of the far edition — the first edition's every citation reaching
+    a ghost — the own bytes of a citation of an edition the board registers, the far edition's first, where no other
+    link's end meets them, selected as the page selects them, the selection's acts row standing over them; then
+    Mod+Shift+Enter, the one link drawn there: the scene opens, the plane holding no selection under it, and pane A,
+    BEAMED's text, holds those bytes selected; then Esc — the scene's close, a Back — brings the plane's selection back
+    with its acts row over it. The selection cleared after"""
+    figures = {}
+    ctx.leap(BEAMED)
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(BEAMED)) or []
+    meets = lambda a, b: a['pos'] < b['pos'] + b['width'] and b['pos'] < a['pos'] + a['width']
+    # the editions BEAMED's citations reach, which the board registers (the seed's fixed points): never a ghost
+    reached = (FAR_LEAP, '1.0.1.0.946', '1.0.1.0.931', '1.0.1.0.999')
+    alone = [x for x in shown if x['far'] in reached and x['width'] > 0 and not any(y is not x and meets(x, y) for y in shown)]
+    one = next((x for x in alone if x['far'] == FAR_LEAP), None) or (alone[0] if alone else None)
+    r.check(one is not None, 'BEAMED draws a citation of an edition the board registers where no other link\'s end meets its bytes',
+            [(x['far'], x['pos'], x['width']) for x in shown])
+    if one:
+        S = {'addr': BEAMED, 'pos': one['pos'], 'width': one['width']}
+        ctx.leap(BEAMED, one['pos'])
+        ctx.js('window.__skep.select(%s, %d, %d)' % (json.dumps(BEAMED), one['pos'], one['width']))
+        ctx.frames(2)
+        before = {'sel': ctx.js('window.__skep.selection("plane")'), 'overlay': ctx.js('window.__skep.overlay().id')}
+        r.check(before == {'sel': S, 'overlay': 'selection'}, 'the citation\'s own bytes selected, the selection\'s acts row standing over them', dict(before, want=S))
+        chord(ctx, 'Enter', mods=('Meta', 'Shift'))
+        ctx.settle()
+        ctx.frames(2)
+        pair = ctx.js('window.__skep.scene.pair()') or {}
+        opened = {'scene': ctx.js('window.__skep.scene.isOpen()'), 'plane': ctx.js('window.__skep.selection("plane")'), 'a': ctx.js('window.__skep.selection("a")'), 'pair': pair}
+        r.check(bool(opened['scene']) and opened['plane'] is None and opened['a'] == dict(S, addr=pair.get('a')),
+                'Mod+Shift+Enter, the one link drawn there: the scene opens, the plane holding no selection under it, and pane A, BEAMED\'s text, holds the selected bytes (Q1; #311)',
+                dict(opened, want=S))
+        chord(ctx, 'Escape')
+        ctx.settle()
+        ctx.frames(2)
+        back = {'scene': ctx.js('window.__skep.scene.isOpen()'), 'sel': ctx.js('window.__skep.selection("plane")'), 'overlay': ctx.js('window.__skep.overlay().id')}
+        r.check(not back['scene'] and back['sel'] == S and back['overlay'] == 'selection',
+                'Esc, the scene\'s close — a Back onto the place it left: the plane\'s selection back, its acts row over it (#311)', dict(back, want=S))
+        figures = {'link': {k: one[k] for k in ('link', 'pos', 'width', 'far')}, 'opened': opened, 'back': back}
+    ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    r.figures['side_by_side_direct'] = figures
+
 
 def ax_expanded(ctx, name):
     """the `expanded` state the AX tree gives the treeitem of an accessible name — where CDP answers the tree, else its
@@ -2822,8 +2886,8 @@ def held_version(ctx, r):
                 said = told_by_hint(ctx, sid)
                 presses[name] = {'hint': said['hint'], 'live': said['live'], 'words': said['words'], 'heard': said['heard'], 'overlay': ctx.js('window.__skep.overlay().id'), 'scene': ctx.js('window.__skep.scene.isOpen()')}
             figures[what] = {'selected': selected, 'reason': reason, 'presses': presses}
-            r.check(selected and reason == sid and all(p['hint'] == p['words'] and p['live'] == p['heard'] and p['overlay'] is None and p['scene'] for p in presses.values()),
-                    '%s in pane B, the focus there: Mod+K, Mod+Shift+A and Mod+Shift+C, then a printable key, each give "%s" as its hint, said through the status region at the press, no overlay opening and the scene standing (issue #599; D6 BM-14; FP-41)' % (what, strings(ctx, sid)),
+            r.check(selected and reason == sid and all(p['hint'] == p['words'] and p['live'] == p['heard'] and p['overlay'] in (None, 'selection') and p['scene'] for p in presses.values()),
+                    '%s in pane B, the focus there: Mod+K, Mod+Shift+A and Mod+Shift+C, then a printable key, each give "%s" as its hint, said through the status region at the press, no overlay opening — the selection\'s own acts row its take draws at most (#734) — and the scene standing (issue #599; D6 BM-14; FP-41)' % (what, strings(ctx, sid)),
                     figures[what])
         # (d) Space keeps K-9's own line
         ctx.js('document.getElementById("live").textContent = ""')
@@ -4865,10 +4929,10 @@ def run(ctx):
     # the scene is a step on the trail (issue #50): its opening one entry, its own end a Back, Forward reopening it as left
     r.figures['scene_trail'] = scene_trail(ctx, r)
     # ---- the scene covers the plane (D5 M-4; K-60 … K-63): no key reaches the walk, the selection or the corner under it ----
-    # In a pane the walk's keys move that pane (K-60), ← ends the scene (K-63), → and Enter are the platform's, and the
-    # selection's chords act on nothing; with the focus on nothing the walk's keys walk nothing; on the scene's acts Enter
-    # presses the act. Each from a landing of its own, the scene opened over it — the focus in the far end's pane — and
-    # ended after it, so each step leaves the page as it found it
+    # In a pane the walk's keys move that pane (K-60), ← ends the scene (K-63), → and Enter are the platform's, and K-8 and
+    # the selection's chords act at the pane, on its own words (#734; Q5); with the focus on nothing the walk's keys walk
+    # nothing; on the scene's acts Enter presses the act. Each from a landing of its own, the scene opened over it — the
+    # focus in the far end's pane — and ended after it, so each step leaves the page as it found it
     def over(pos, focus_item=False):
         """a landing on the first edition (`pos` None: the document), the walk's current item focused where asked, and the
         scene opened over it: what stood before any key"""
@@ -4886,15 +4950,26 @@ def run(ctx):
 
     for pos, keys, what in ((None, (('ArrowRight', ()),), '→ in a pane, the walk on the document under the scene: nothing moves — not the camera, not the walk\'s focus, not the trail'),
                             (None, (('Enter', ()),), 'Enter in a pane, the walk on the document under the scene: no teleport — the scene stands, the trail and the camera as they were'),
-                            (WINDOW[0], (('Enter', ()),), 'Enter in a pane, the walk on a block under the scene: no selection and no card'),
-                            (WINDOW[0], (('ArrowDown', ('Shift',)),), 'Shift+↓ in a pane, the walk on a block under the scene: K-8 selects nothing and opens no card'),
-                            (WINDOW[0], (('O', ('Meta', 'Shift')),), 'Mod+Shift+O in a pane, the walk on a block under the scene: taken and acting on nothing — no selection, no answer\'s card')):
+                            (WINDOW[0], (('Enter', ()),), 'Enter in a pane, the walk on a block under the scene: no selection and no card')):
         before = over(pos)
         for key, mods in keys:
             chord(ctx, key, mods=mods)
         after = covered(ctx)
         r.check(before['scene'] and before['at'] == 'sceneB' and still(before, after), what,
                 {'at': before['at'], 'moved': [k for k in ('cam', 'focus', 'trail', 'sel', 'overlay') if after[k] != before[k]], 'scene': after['scene'], 'focus': [before['focus'], after['focus']], 'overlay': after['overlay']})
+        ended()
+    # K-8 and a slot's chord in a pane act there, on the pane's own words, as on the plane (#734; Q5): K-8 selects pane B's
+    # span focus whole, its acts row at pane B; Mod+Shift+O asks "who wrote this?" over that span, its card standing — and
+    # nothing under the scene moves: the camera, the walk's focus, the trail, the plane's selection
+    for key, mods, card, what in (('ArrowDown', ('Shift',), 'selection', 'Shift+↓ in a pane, the walk on a block under the scene: K-8 selects pane B\'s span focus whole, its acts row at pane B; nothing under the scene moves (#734)'),
+                                  ('O', ('Meta', 'Shift'), 'provenance:wrote', 'Mod+Shift+O in a pane, the walk on a block under the scene: "who wrote this?" asked over pane B\'s own span, its card standing; nothing under the scene moves (#734)')):
+        before = over(WINDOW[0])
+        chord(ctx, key, mods=mods)
+        overlay_up(ctx, card)
+        after, pane = covered(ctx), ctx.js('window.__skep.selection("b")')
+        r.check(before['scene'] and before['at'] == 'sceneB' and after['scene'] and same_view(before, after) and all(after[k] == before[k] for k in ('focus', 'trail', 'sel'))
+                and after['overlay'] == card and (pane is not None or key != 'ArrowDown'), what,
+                {'at': before['at'], 'moved': [k for k in ('cam', 'focus', 'trail', 'sel') if after[k] != before[k]], 'overlay': after['overlay'], 'pane': pane})
         ended()
     before = over(WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
@@ -4942,6 +5017,8 @@ def run(ctx):
     scene_versions(ctx, r)
     # ---- no remount takes a selection the person holds outside the plane's text: a card's caption, a pane ----------
     selection_held_elsewhere(ctx, r)
+    # ---- the selection's own "read side by side": the scene opens holding it, its close bringing it back (#734; #311) -
+    side_by_side_direct(ctx, r)
     # ---- each pane a site of its own: both panes' selections, the live one following the focus (issue #94) ---------
     pane_selections(ctx, r)
     # ---- the focus and keyboard rules the one-owner lane added (FP-20) --------------------------------------------

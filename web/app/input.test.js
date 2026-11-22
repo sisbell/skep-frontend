@@ -1914,7 +1914,7 @@ function scenePanes(dom, a, b) {
   scene.appendChild(/** @type {any} */ (arts.a)); scene.appendChild(/** @type {any} */ (arts.b));
   /** @type {'a' | 'b'} */
   let focused = 'b';
-  SEL.readers({ pane: (side) => ({ article: arts[side] }), focused: () => focused });
+  SEL.readers({ pane: (side) => ({ article: arts[side], kind: 'read', names: addrs[side], d: REC.doc(addrs[side]), focus: null, marks: [] }), focused: () => focused });
   /** @type {string[]} */
   const said = [];
   FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); }, get textContent() { return said[said.length - 1] ?? ''; } }) });

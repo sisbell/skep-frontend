@@ -118,7 +118,16 @@
 // reads made again: the card at the end LK draws now at that document, as the
 // version its box shows reads it (N-GO's `shownIn`), the claims listed where
 // they stood so; nothing where LK draws no end the surface named.
-// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-30, FP-33, FP-34, FP-36, FP-39.
+// Asked at a reading scene's pane — a row of the links card asked there
+// (O-LINKS') — the card is the pane's (`Pane`): it stands at the link's own
+// bytes in that pane's article, named as the pane's acts name them; its near
+// end's words are the pane's own record's, save at a draft's editor pane,
+// whose text is the text shown; its follow's faces stand at the pane (N-GO's
+// `follow` at a site); its "read side by side" opens the text that pane shows
+// — a past state, the held version, a text it reads — the passage held by its
+// bytes through the pane's image (SC's `Held.ids`); and what it is about names
+// the pane (`EndAbout.site`), which N-GO keeps no place of.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-30, FP-33, FP-34, FP-36, FP-39.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -147,8 +156,17 @@ import { accountOf, isUnder } from '../model/address.js';
  * @property {string} key its end's key there (LK's `endKey`)
  * @property {number} pos where the end's bytes stood there: its first position
  * @property {number} width its positions
- * @property {ISpan[]} ids its bytes by identity (T-LAYER's `shownIdentity`); none where the text shown holds no identity for them
+ * @property {ISpan[]} ids its bytes by identity (T-LAYER's `shownIdentity`; at a pane through its image, save a draft's editor pane's); none where the text shown holds no identity for them
  * @property {boolean} others the claims behind the lineage's line stood listed in its place
+ * @property {'a' | 'b'} [site] the reading scene's pane it stands at (`Pane`); none on the plane
+ */
+
+/**
+ * @typedef {Object} Pane — a reading scene's pane the card is asked at (see the head)
+ * @property {'a' | 'b'} side
+ * @property {string} names the address its acts name, as its article is made (T-LAYER's `Made.addr`): where the card stands
+ * @property {'editor' | 'past' | 'held' | 'read'} kind what text it holds (SC's `PaneSite.kind`)
+ * @property {import('../model/records.js').Doc} d the record its text was made from
  */
 
 /** @typedef {{kind: 'tail', docs: string[], links: string[], world: {x: number, y: number}}} TailAbout what a tail's list is about (see the head): P-RENDER's `DrawnTail` */
@@ -192,6 +210,22 @@ async function fragment(/** @type {string} */ addr, /** @type {number | null} */
 function nearWords(/** @type {Shown} */ s) {
   const held = REC.has(s.near) ? REC.textOf(LAYER.shownOf(s.near).runs, s.pos, s.pos + Math.min(s.width, 120)) : '';
   return held ? inFace('reading', held) : fragment(s.near, s.pos, s.width);
+}
+
+/**
+ * The first words of a link's near end where the card is asked (see the
+ * head): of the text the page shows of its document (`nearWords`) on the
+ * plane and at a draft's editor pane; at any other pane, of the pane's own
+ * record, which holds its text whole — a past state's or the held version's
+ * never read from the board's text now; null where it holds none there.
+ * @param {Shown} s
+ * @param {Pane | null} pane
+ * @returns {string | null | Promise<string | null>}
+ */
+function nearAt(s, pane) {
+  if (!pane || pane.kind === 'editor') return nearWords(s);
+  const held = REC.textOf(pane.d.runs, s.pos, s.pos + Math.min(s.width, 120));
+  return held ? inFace('reading', held) : null;
 }
 
 /** words as the card sets them — an end's, its home's state — each stretch in the face its marks name (P-LABEL's `runsOf`; ST's `facedHTML`): the document's own the reading face's, the client's words with each address in them the identifier's */
@@ -413,13 +447,15 @@ async function farPassage(s, runs) {
  * The card's reads: the near end's words — a withheld run's, with no read,
  * where LK draws the end at one (see the head) — where the far end's passage
  * stands now (`farPlace`) and its words, the link's lineage, and its home's
- * state (`homeRead`).
+ * state (`homeRead`) — the near end's words read where the card is asked
+ * (`nearAt`).
  * @param {Shown} s
+ * @param {Pane | null} [pane] the reading scene's pane the card is asked at; none on the plane
  * @returns {Promise<Read>}
  */
-function cardReads(s) {
+function cardReads(s, pane = null) {
   return Promise.all([
-    s.run ? withheldWords(s.run.origin) : nearWords(s),
+    s.run ? withheldWords(s.run.origin) : nearAt(s, pane),
     s.far ? farPlace(s).then(async (runs) => ({ runs, words: await farPassage(s, runs) })) : Promise.resolve({ runs: null, words: null }),
     PUMP.lineage(s.link.addr),
     homeRead(s.link.home),
@@ -453,10 +489,11 @@ const reasonWords = (/** @type {Part[]} */ parts) => parts.map((p) => p.text).jo
  * @param {Shown} s
  * @param {HTMLElement | null} anchorEl the element it stands at while that stands in the page, the link's own bytes in the near document beside it; null stands it at those bytes
  * @param {boolean} [byKey] a key opened it: the card takes the focus on its first act
+ * @param {Pane | null} [pane] the reading scene's pane it is asked at, where it stands and whose text it reads (see the head); none on the plane
  * @returns {Promise<void>} settled once the card shows, or nothing will
  */
-export function open(s, anchorEl, byKey = false) {
-  return HOST.opening(() => cardReads(s), (r) => showCard(s, r, anchorEl, byKey));
+export function open(s, anchorEl, byKey = false, pane = null) {
+  return HOST.opening(() => cardReads(s, pane), (r) => showCard(s, r, anchorEl, byKey, false, null, false, pane));
 }
 
 /**
@@ -482,14 +519,18 @@ export function open(s, anchorEl, byKey = false) {
  * @param {boolean} [others] the line's act made: the claims behind it listed in its place
  * @param {string | null} [focus] a reopened card's control the focus was left on (O-HOST's `keyOf`): it takes the focus there
  * @param {boolean} [told] "read side by side" was pressed inert: its reason given at the card
+ * @param {Pane | null} [pane] the reading scene's pane it is asked at (see the head); none on the plane
  */
-function showCard(s, read, anchorEl, byKey, others = false, focus = null, told = false) {
+function showCard(s, read, anchorEl, byKey, others = false, focus = null, told = false, pane = null) {
   const [nearText, farEnd, lineage, home] = read;
   const l = s.link;
   const near = s.near, nearPos = s.pos, nearWidth = s.width;
   const far = s.far;
-  /** the link's own bytes in the near document: where the card stands without its element */
-  const bytes = { addr: near, pos: nearPos, width: nearWidth };
+  /** the link's own bytes in the near document: where the card stands without its element — at a pane, in its article, named as its acts name them */
+  const bytes = pane ? { addr: pane.names, pos: nearPos, width: nearWidth, site: pane.side } : { addr: near, pos: nearPos, width: nearWidth };
+  /** the pane's own text, which no page-local edit of the draft moves — a past state, the held version, a text it reads — where the card is asked at one: its bytes named through its image */
+  const own = pane && pane.kind !== 'editor' ? pane : null;
+  const ids = own ? REC.identityIn(own.d.image, nearPos, nearWidth) : LAYER.shownIdentity(near, nearPos, nearWidth);
   const farText = farEnd.words, farRuns = farEnd.runs;
   const mark = LK.markOf(l, near);
   const inert = besideInert(s);
@@ -515,18 +556,20 @@ function showCard(s, read, anchorEl, byKey, others = false, focus = null, told =
     `<div class="acts"><button data-run="follow" aria-label="${esc(heard(followTo))}">${facedHTML(followTo)}</button>` +
     `<button data-run="beside"${inert ? ` class="inert" title="${esc(reasonWords(inert))}"` : ''}${told && inert ? ' data-inert="1"' : ''}>${esc(t('B1.side-by-side'))}</button></div>${given}`;
   /** @type {EndAbout} */
-  const about = { kind: 'anatomy', near, link: l.addr, key: s.key, pos: nearPos, width: nearWidth, ids: LAYER.shownIdentity(near, nearPos, nearWidth), others };
+  const about = { kind: 'anatomy', near, link: l.addr, key: s.key, pos: nearPos, width: nearWidth, ids, others, ...(pane ? { site: pane.side } : {}) };
+  /** the text "read side by side" opens its first pane on: the pane's record where the page derived it, else the address the pane's acts name, read from the board; on the plane and at a draft's editor pane the text the page shows (T-LAYER's `paneSource`) */
+  const source = own ? (own.d.derived ? own.d : own.names) : LAYER.paneSource(near);
   HOST.show({
     kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl, span: bytes } : { span: bytes }, html, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : '[data-run="follow"]', about,
     acts: {
-      follow: (_el, byKey) => GO.follow(s, byKey),
+      follow: (_el, byKey) => GO.follow(s, byKey, pane ? { span: bytes } : null),
       beside: () => {
         const why = besideInert(s);
-        if (!why) { void GO.toScene(LAYER.paneSource(near), LK.besideAt(s), { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null, wholeB: s.farWhole }, { from: { shown: s }, site: { span: bytes } }); return; }
-        showCard(s, read, anchorEl, false, others, null, true);
+        if (!why) { void GO.toScene(source, LK.besideAt(s), { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null, wholeB: s.farWhole, ...(own ? { ids } : {}) }, { from: { shown: s }, site: { span: bytes } }); return; }
+        showCard(s, read, anchorEl, false, others, null, true, pane);
         FOCUS.say(reasonWords(why), false, true);
       },
-      claims: () => showCard(s, read, anchorEl, false, true, null, told),
+      claims: () => showCard(s, read, anchorEl, false, true, null, told, pane),
     },
   });
 }

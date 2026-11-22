@@ -1008,10 +1008,10 @@ function page(as = {}) {
   const canvas = Object.assign(element('the scene\'s canvas'), { getContext: () => recorder().ctx });
   SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas, stop, strokes }), {
     end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, a, told) => FACES.floating(far, a, null, told), held: FACES.held, words: (r, ctx) => FACES.wordsFor(r, ctx), withheldOf: FACES.withheldWords },
-    history: (addr) => { void GO.history(addr); },
+    history: (addr, _byKey, side) => { void GO.history(addr, { side }); },
   });
   // each pane a site of its own, as the app hands the scene's panes to the overlays
-  SEL.readers({ pane: SCENE.siteOf, focused: SCENE.focusedPane });
+  SEL.readers({ pane: SCENE.siteOf, focused: SCENE.focusedPane, heldReason: SCENE.heldReasonAt });
   HOST.readers({ pane: SCENE.siteOf });
   /** @type {any[]} what stands after pane B in the scene: the list of a draft's past states, beside pane B's corner */
   const afterB = [];
@@ -4752,6 +4752,265 @@ test('the list of a draft\'s past states counts as pane B\'s wherever it stands:
     assert.deepEqual([SCENE.focusedPane(), SEL.focusedSite()], [null, 'b'], 'the focus at the scene\'s acts: the last pane, B');
   } finally { WRITE.setKept(PASTD, null); }
 }, { acts: true }));
+
+/** the overlay standing — its id and the span it stands at, at its site — or null */
+const standing = () => { const o = HOST.currentState(); return o ? [o.id, o.anchor && o.anchor.span ? { ...o.anchor.span } : null] : null; };
+/** a key at the element the platform's focus stands on, as the platform delivers it, with the platform's command modifier and Shift where asked */
+const chordAt = (/** @type {ReturnType<typeof page>} */ p, /** @type {string} */ key, /** @type {{mod?: boolean, shift?: boolean}} */ m = {}) =>
+  KEYS.dispatch(/** @type {any} */ ({ type: 'keydown', key, keyCode: 0, isComposing: false, repeat: false, metaKey: !!m.mod && KEYS.MAC, ctrlKey: !!m.mod && !KEYS.MAC, shiftKey: !!m.shift, altKey: false, preventDefault() {}, target: p.doc.activeElement }), { where: 'scene', byKey: true });
+
+test('a take that says a pane\'s selection draws the one acts row there, in that pane\'s article; the live slots\' chords act on that pane\'s own words — Mod+Shift+O asks "who wrote this?" over pane B\'s bytes, its card standing at pane B, the plane holding none — the row going, ending nothing, as the focus comes into a pane holding none, and coming back as the focus returns; Esc then takes the row down with pane B\'s selection, the scene standing (issue #734; #94\'s design decision: Q4, Q5)', () => onPageWithText(async (p, dom) => {
+  await SCENE.open(A, B);
+  const a = shownIn(p.paneA, 'a'), b = shownIn(p.paneB, 'b'), names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+  const inA = { addr: names.a, pos: 5, width: 6 }, inB = { addr: names.b, pos: 5, width: 6 };
+  p.paneA.focus();
+  selectWords(dom, a, 'window');
+  SEL.takePane();
+  assert.deepEqual([SEL.selected('a'), standing()], [inA, ['selection', { ...inA, site: 'a' }]], 'a take in pane A: its selection, its acts row in pane A');
+  p.paneB.focus();
+  selectWords(dom, b, 'origin');
+  SEL.takePane();
+  assert.deepEqual([SEL.selected('a'), SEL.selected('b'), standing()], [inA, inB, ['selection', { ...inB, site: 'b' }]], 'a take in pane B: its selection, the one acts row moved into pane B, pane A\'s standing');
+  p.paneA.focus();
+  assert.equal(SEL.focusedSite(), 'a', 'the focus in pane A\'s text: pane A the focused site');
+  p.doc.activeElement = /** @type {any} */ (HOST.element());
+  assert.deepEqual([SEL.focusedSite(), SEL.selected()], ['b', inB], 'the focus on the acts row standing at pane B: pane B the focused site, its selection what a read naming none gets');
+  p.paneB.focus();
+  const origin = FAKE.keyOf('op', { frame: F.showOrigin(names.b, 5, 6) });
+  script[origin] = { result: { as_of: 1, resp: 'addrs', addrs: [names.b] } };
+  try {
+    assert.equal(await chordAt(p, 'O', { mod: true, shift: true }), true, 'Mod+Shift+O at pane B: taken');
+    await answered();
+    assert.ok(fake.asked.includes(origin), 'asked over pane B\'s own bytes');
+    assert.deepEqual([standing(), SEL.selected('b'), SEL.selected('plane')], [['provenance:wrote', { ...inB, site: 'b' }], inB, null], 'its card at pane B, pane B\'s selection standing under it, the plane holding none');
+  } finally { delete script[origin]; }
+  HOST.dismiss();
+  p.paneB.focus();
+  p.paneOn.b.focusin({ target: p.paneB, relatedTarget: null });
+  assert.deepEqual(standing(), ['selection', { ...inB, site: 'b' }], 'the focus come into pane B, which holds a selection, nothing else standing: its row there');
+  SEL.clear('a');
+  p.paneA.focus();
+  p.paneOn.a.focusin({ target: p.paneA, relatedTarget: p.paneB });
+  assert.deepEqual([standing(), SEL.selected('b')], [null, inB], 'the focus come into pane A, which holds none: the row gone, pane B\'s selection standing');
+  p.paneB.focus();
+  p.paneOn.b.focusin({ target: p.paneB, relatedTarget: p.paneA });
+  assert.deepEqual(standing(), ['selection', { ...inB, site: 'b' }], 'the focus back in pane B: its row back');
+  KEYS.esc();
+  assert.deepEqual([standing(), SEL.selected('b'), SCENE.isOpen()], [null, null, true], 'Esc: the row taken down with pane B\'s selection, the scene standing');
+}));
+
+test('a card standing at a pane is the scene\'s: the frame\'s re-check of what stands across a version leaves it there — "who wrote this?" and the links card at pane B, which reads a member of B its box does not show, never reopened on the plane, nothing asked of the plane\'s B and its chain as it stood (issue #734; FP-22, FP-23)', () => onPageWithText(async (p, dom) => {
+  await SCENE.open(A, B);
+  const b = shownIn(p.paneB, 'b'), names = /** @type {{a: string, b: string}} */ (SCENE.pair()), inB = { addr: names.b, pos: 5, width: 6 };
+  assert.notEqual(names.b, GO.shownIn(B), 'pane B reads a member of B its box does not show');
+  await PUMP.loadWhole(B);
+  p.paneB.focus();
+  selectWords(dom, b, 'origin');
+  SEL.takePane();
+  const origin = FAKE.keyOf('op', { frame: F.showOrigin(names.b, 5, 6) }), plane = FAKE.keyOf('op', { frame: F.showOrigin(B, 5, 6) });
+  script[origin] = { result: { as_of: 1, resp: 'addrs', addrs: [names.b] } };
+  script[plane] = { result: { as_of: 1, resp: 'addrs', addrs: [B] } };
+  try {
+    assert.equal(await chordAt(p, 'O', { mod: true, shift: true }), true, 'Mod+Shift+O at pane B: taken');
+    await answered();
+    assert.deepEqual(standing(), ['provenance:wrote', { ...inB, site: 'b' }], 'its card at pane B');
+    GO.surfacesAcross();
+    await answered();
+    assert.deepEqual([standing(), fake.asked.includes(plane)], [['provenance:wrote', { ...inB, site: 'b' }], false], 'the frame\'s re-check: the card at pane B still, nothing asked of the plane\'s B');
+  } finally { delete script[origin]; delete script[plane]; }
+  HOST.dismiss();
+  p.paneB.focus();
+  const stage = LK.state(B).stage;
+  assert.equal(await chordAt(p, 'L', { mod: true, shift: true }), true, 'Mod+Shift+L at pane B: taken');
+  GO.surfacesAcross();
+  await answered();
+  assert.deepEqual([standing(), /** @type {any} */ (HOST.currentState()?.about)?.site, LK.state(B).stage], [[`links:${names.b}`, { ...inB, site: 'b' }], 'b', stage], 'the links card at pane B still, the plane\'s chain of B as it stood');
+  HOST.dismiss();
+}));
+
+test('at a past state\'s pane the selection\'s acts read that state\'s own text: Mod+Shift+O at its span focus asks "who wrote this?" as of the position the state stands at — never over the draft\'s current text — its card at pane B; Mod+Shift+L opens the links card at pane B on the links its article draws, the state\'s own — never a link of the draft\'s current text, though it stands on words the state holds too — the plane\'s chain of the draft untouched (issue #734; Q5; wire.md §/op-at)', () => onPage(async (p) => {
+  /** a link of the draft's current text on "first", words its state at PAST_AT holds too, whose own links read there name none */
+  const L = PASTD + '.0.2.71';
+  await onTrail(p);
+  LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
+  try {
+    await PUMP.loadWhole(PASTD);
+    REC.takeLinks(PASTD, [L]);
+    REC.takeLink({ addr: L, from: [passage(PASTD, 5, 5)], to: [passage(B, 1, 3)], type: CITE, age: { at: null, time: null, from: null } });
+    assert.deepEqual(LK.shown(PASTD).map((s) => [s.link.addr, s.pos, s.width]), [[L, 5, 5]], 'the draft\'s current text draws the link on "first"');
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    p.paneB.focus();
+    SCENE.key('↓', 'b');
+    const site = SCENE.siteOf('b'), blk = site && site.focus != null ? site.d.blocks.find((x) => x.pos === site.focus) : null;
+    assert.ok(site && site.kind === 'past' && site.d.derived?.at === PAST_AT && blk, 'pane B the state at its position, its span focus on a span of its text');
+    const span = { addr: PASTD, pos: blk.pos, width: Math.max(1, blk.width) };
+    const asOf = FAKE.keyOf('op', { frame: F.opAt(PAST_AT, F.showOrigin(PASTD, span.pos, span.width)) }), bare = FAKE.keyOf('op', { frame: F.showOrigin(PASTD, span.pos, span.width) });
+    script[asOf] = { result: { as_of: PAST_AT, resp: 'addrs', addrs: [PASTD] } };
+    try {
+      assert.equal(await chordAt(p, 'O', { mod: true, shift: true }), true, 'Mod+Shift+O at pane B: taken');
+      await answered();
+      assert.deepEqual([fake.asked.includes(asOf), fake.asked.includes(bare), standing()], [true, false, ['provenance:wrote', { ...span, site: 'b' }]], 'asked as of the state\'s position, never over the current text; its card at pane B');
+    } finally { delete script[asOf]; }
+    HOST.dismiss();
+    p.paneB.focus();
+    const stage = LK.state(PASTD).stage;
+    assert.equal(await chordAt(p, 'L', { mod: true, shift: true }), true, 'Mod+Shift+L at pane B: taken');
+    const card = HOST.currentState(), rows = (card?.html.match(/data-run="row:/g) || []).length;
+    assert.deepEqual([standing(), site.marks.length, rows, /** @type {any} */ (card?.about)?.site, LK.state(PASTD).stage], [[`links:${PASTD}`, { ...span, site: 'b' }], 0, 0, 'b', stage], 'the links card at pane B listing the links its article draws — the state\'s own, none — never the draft\'s current link on "first"; the plane\'s chain of the draft as it stood');
+    HOST.dismiss();
+  } finally { WRITE.setKept(PASTD, null); LK.readers({}); SCENE.close(); REC.invalidate(PASTD); await PUMP.loadWhole(PASTD); }
+}, { acts: true }));
+
+test('a card standing at a past state\'s pane stays on that state\'s words as the person types in the draft: words set before them in the text shown move it nowhere — a past state\'s text no edit moves (issue #734; FP-36)', () => onPage(async (p) => {
+  await onTrail(p);
+  try {
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    p.paneB.focus();
+    SCENE.key('↓', 'b');
+    const site = SCENE.siteOf('b'), blk = site && site.focus != null ? site.d.blocks.find((x) => x.pos === site.focus) : null;
+    assert.ok(site && site.kind === 'past' && blk, 'pane B the state at its position, its span focus on a span of its text');
+    const span = { addr: PASTD, pos: blk.pos, width: Math.max(1, blk.width) };
+    const asOf = FAKE.keyOf('op', { frame: F.opAt(PAST_AT, F.showOrigin(PASTD, span.pos, span.width)) });
+    script[asOf] = { result: { as_of: PAST_AT, resp: 'addrs', addrs: [PASTD] } };
+    try {
+      assert.equal(await chordAt(p, 'O', { mod: true, shift: true }), true, 'Mod+Shift+O at pane B: taken');
+      await answered();
+    } finally { delete script[asOf]; }
+    assert.deepEqual(standing(), ['provenance:wrote', { ...span, site: 'b' }], 'its card at pane B');
+    GO.surfacesAcross();
+    WRITE.addEdit(PASTD, { pos: 1, width: 0, text: 'ab' });
+    GO.surfacesAcross();
+    assert.deepEqual(standing(), ['provenance:wrote', { ...span, site: 'b' }], 'two characters typed before the draft\'s words: the card at pane B where it stood');
+    HOST.dismiss();
+  } finally { WRITE.clearEdits(PASTD); WRITE.setKept(PASTD, null); SCENE.close(); REC.invalidate(PASTD); await PUMP.loadWhole(PASTD); }
+}, { acts: true }));
+
+test('a row of the links card asked at a pane opens its link\'s anatomy card at that pane — at the link\'s own bytes in the pane\'s article, named as the pane\'s acts name them — what it is about naming the pane (issue #734; Q5)', () => onPage(async (p) => {
+  /** a link of the draft's current text on "first" */
+  const L = PASTD + '.0.2.71';
+  await onTrail(p);
+  LK.readers({ text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null) });
+  try {
+    await PUMP.loadWhole(PASTD);
+    REC.takeLinks(PASTD, [L]);
+    REC.takeLink({ addr: L, from: [passage(PASTD, 5, 5)], to: [passage(B, 1, 3)], type: CITE, age: { at: null, time: null, from: null } });
+    assert.equal(await pastOpened(p), true, 'the scene shows');
+    const names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+    p.paneA.focus();
+    SCENE.key('↓', 'a');
+    const site = SCENE.siteOf('a');
+    assert.ok(site && site.kind === 'editor' && site.marks.some((s) => s.link.addr === L), 'pane A the draft\'s current text, its article drawing the link on "first"');
+    assert.equal(await chordAt(p, 'L', { mod: true, shift: true }), true, 'Mod+Shift+L at pane A: taken');
+    assert.equal(HOST.currentState()?.id, `links:${names.a}`, 'the links card at pane A');
+    HOST.currentState()?.acts?.['row:0'](/** @type {any} */ (p.doc.body), false);
+    await answered();
+    assert.deepEqual([standing(), /** @type {any} */ (HOST.currentState()?.about)?.site], [[`anatomy:${L}`, { addr: names.a, pos: 5, width: 5, site: 'a' }], 'a'], 'its row\'s anatomy card at pane A, at the link\'s own bytes there, about the pane');
+    HOST.dismiss();
+  } finally { WRITE.setKept(PASTD, null); LK.readers({}); SCENE.close(); REC.invalidate(PASTD); await PUMP.loadWhole(PASTD); }
+}, { acts: true }));
+
+test('a scene opens holding the selection its act was made over, by its bytes, in the first pane that shows them all — pane A, else pane B — the plane\'s ending with the place it leaves and coming back at the scene\'s close (issue #734; Q1)', () => onPageWithText(async (p) => {
+  await onTrail(p);
+  try {
+    SEL.select(A, 5, 6);
+    const S = /** @type {import('../text/span.js').Span} */ (SEL.selected('plane'));
+    assert.deepEqual(S, { addr: A, pos: 5, width: 6 }, '"window" selected on the plane');
+    assert.equal(await GO.toScene(A, B, { posA: 5, widthA: 6 }), true, 'a scene opened over it');
+    const ab = /** @type {{a: string, b: string}} */ (SCENE.pair());
+    assert.deepEqual([SEL.selected('plane'), SEL.selected('a'), SEL.selected('b')], [null, { addr: ab.a, pos: 5, width: 6 }, null], 'pane A shows its words and holds them selected; the plane\'s ended with the place it left; pane B none');
+    KEYS.esc(); await flown();
+    assert.deepEqual([SCENE.isOpen(), SEL.selected('plane')], [false, S], 'the scene\'s close, a Back: the plane\'s selection back');
+    assert.equal(await GO.toScene(B, A), true, 'a scene over it whose pane B shows its words');
+    const ba = /** @type {{a: string, b: string}} */ (SCENE.pair());
+    assert.deepEqual([SEL.selected('a'), SEL.selected('b')], [null, { addr: ba.b, pos: 5, width: 6 }], 'pane A shows none of them: pane B holds them');
+    KEYS.esc(); await flown();
+  } finally { SCENE.close(); HOST.dismiss(); SEL.clear(); }
+}));
+
+test('where both panes show the words a scene opens holding, pane A alone holds them; where neither holds them all in one stretch, none does (issue #734; Q1)', () => onPage(async (p) => {
+  p.item.focus();
+  await SCENE.open(A, A, { posA: 5, widthA: 6, sel: [{ prefix: A + '.0.1', ordinal: 5, width: 6 }] });
+  const names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+  assert.deepEqual([SEL.selected('a'), SEL.selected('b')], [{ addr: names.a, pos: 5, width: 6 }, null], 'one document in both panes: pane A alone');
+  SCENE.close();
+  await SCENE.open(A, B, { sel: [{ prefix: A + '.0.1', ordinal: 5, width: 6 }, { prefix: B + '.0.1', ordinal: 5, width: 6 }] });
+  assert.deepEqual([SEL.selected('a'), SEL.selected('b')], [null, null], 'bytes of two documents, which neither pane holds all of: none');
+}));
+
+test('"show its history" at a pane\'s corner opens the draft\'s history level at the selection standing in that pane, by its bytes, and holding it in the history\'s pane A — the act taking no focus, never the plane\'s or the focused pane\'s (issue #734; Q1)', () => onPage(async (p) => {
+  await onTrail(p);
+  await PUMP.loadWhole(PASTD);
+  WRITE.setKept(PASTD, { word: 'kept', reason: null });
+  pastRows();
+  try {
+    assert.equal(await GO.toScene(PASTD, B), true, 'a scene on the draft and another document');
+    const names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+    SEL.setPane('a', { addr: names.a, pos: 5, width: 5 });
+    assert.deepEqual([p.at(), SEL.selected('a')], ['pane B', { addr: names.a, pos: 5, width: 5 }], '"first" selected in pane A, the focus in pane B');
+    const target = { closest: (/** @type {string} */ s) => (s === '.corner' || s === '[data-history]' ? {} : null) };
+    p.paneOn.a.click({ type: 'click', detail: 0, target, currentTarget: p.paneA });
+    await flown();
+    assert.deepEqual([SCENE.pastOf(), SCENE.pairs()?.level.a, SEL.selected('a')], [PASTD, 5, { addr: PASTD, pos: 5, width: 5 }], 'the history opened level at pane A\'s selection, its pane A holding it');
+  } finally { WRITE.setKept(PASTD, null); }
+}));
+
+test('"show its history" at the corner of a pane holding no selection opens the history holding none — never the focused pane\'s selection, though that pane shows the same draft\'s words (issue #734; Q1)', () => onPage(async (p) => {
+  await onTrail(p);
+  await PUMP.loadWhole(PASTD);
+  WRITE.setKept(PASTD, { word: 'kept', reason: null });
+  pastRows();
+  try {
+    assert.equal(await GO.toScene(PASTD, PASTD), true, 'a scene on the draft in both panes');
+    const names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+    SEL.setPane('b', { addr: names.b, pos: 5, width: 5 });
+    assert.deepEqual([p.at(), SEL.selected('a'), SEL.selected('b')], ['pane B', null, { addr: names.b, pos: 5, width: 5 }], '"first" selected in pane B, the focus there; pane A holding none');
+    const target = { closest: (/** @type {string} */ s) => (s === '.corner' || s === '[data-history]' ? {} : null) };
+    p.paneOn.a.click({ type: 'click', detail: 0, target, currentTarget: p.paneA });
+    await flown();
+    assert.deepEqual([SCENE.pastOf(), SEL.selected('a'), SEL.selected('b')], [PASTD, null, null], 'the history from pane A\'s corner holds nothing selected: the focused pane B\'s selection not carried');
+  } finally { WRITE.setKept(PASTD, null); }
+}));
+
+test('K-8, Enter and Shift with ← or → at a pane\'s span focus make that pane\'s selection in its own text, as on the plane: Shift+↓ its span whole, its acts row with it; Enter its span whole; Shift+→ one character from its start — the plane holding none (issue #734; Q5; D5 K-7, K-8, K-70)', () => onPageWithText(async (p) => {
+  await SCENE.open(A, B);
+  const names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+  p.paneB.focus();
+  SCENE.key('↓', 'b');
+  const site = SCENE.siteOf('b'), blk = site && site.focus != null ? site.d.blocks.find((x) => x.pos === site.focus) : null;
+  assert.ok(site && site.kind === 'read' && blk, 'pane B a text it reads, its span focus on a span of it');
+  const whole = { addr: names.b, pos: blk.pos, width: Math.max(1, blk.width) };
+  assert.equal(await chordAt(p, 'ArrowDown', { shift: true }), true, 'Shift+↓ at pane B: taken');
+  assert.deepEqual([SEL.selected('b'), standing(), SEL.selected('plane')], [whole, ['selection', { ...whole, site: 'b' }], null], 'Shift+↓: pane B\'s span whole its selection, its acts row there');
+  SEL.clear('b');
+  assert.equal(await chordAt(p, 'Enter'), true, 'Enter at pane B: taken');
+  assert.deepEqual(SEL.selected('b'), whole, 'Enter: pane B\'s span whole');
+  SEL.clear('b');
+  assert.equal(await chordAt(p, 'ArrowRight', { shift: true }), true, 'Shift+→ at pane B: taken');
+  assert.deepEqual([SEL.selected('b'), SEL.selected('plane')], [{ addr: names.b, pos: blk.pos, width: 1 }, null], 'Shift+→: one character from the span\'s start');
+}));
+
+test('Esc at a pane\'s corner ends that pane\'s selection, the scene standing — the corner counted the pane\'s, as its text is (issue #734; Q4; D5 K-63, K-77)', () => onPageWithText(async (p) => {
+  await SCENE.open(A, B);
+  const names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+  SEL.setPane('b', { addr: names.b, pos: 5, width: 6 });
+  p.cornerB.closest = (/** @type {string} */ s) => (s.includes('.corner') ? p.cornerB : null);
+  p.doc.activeElement = p.cornerB;
+  assert.deepEqual([SCENE.textPane(), SCENE.focusedPane(), SEL.selected('b')], [null, 'b', { addr: names.b, pos: 5, width: 6 }], 'the focus on pane B\'s corner, pane B holding a selection');
+  KEYS.esc();
+  assert.deepEqual([SEL.selected('b'), SCENE.isOpen()], [null, true], 'Esc: pane B\'s selection ended, the scene standing');
+}));
+
+test('a copy where the platform holds no range copies the focused pane\'s selection: placed as the platform\'s live range in that pane\'s article, the copy then the platform\'s (issue #734; D5 K-92; FP-24)', () => onPageWithText(async (p, dom) => {
+  await SCENE.open(A, B);
+  const b = shownIn(p.paneB, 'b'), names = /** @type {{a: string, b: string}} */ (SCENE.pair());
+  p.paneB.focus();
+  selectWords(dom, b, 'origin');
+  SEL.takePane();
+  dom.document.selection.removeAllRanges();
+  let prevented = false;
+  const ran = KEYS.copyAsDrawn({ preventDefault() { prevented = true; }, target: p.paneB }, { where: 'scene', byKey: true });
+  assert.deepEqual([ran, prevented, liveIn(b)], [false, false, { addr: names.b, pos: 5, width: 6 }], 'pane B\'s selection placed under the copy, which runs as the platform\'s');
+}));
 
 // a draft of another account's, read again whole as a row names it, its second text minting words before its old ones
 const SD = '1.0.2.0.171', SD_HEAD = 'A scene draft.\n\n', SD_OLD = 'Its first words.', SD_NEW = 'Words set before them.\n\n';

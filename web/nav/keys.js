@@ -190,7 +190,9 @@
 // in — set aside by a key's Esc alone, its line taken down — a jump
 // reaching, the find — its current
 // match left selected with the focus on it (N-FIND's `close`; FP-20) — in the
-// scene the selection standing in the text of the pane the focus is at, then
+// scene the selection of the pane the focus is at, its corner and its list
+// of past states among it, the other pane's standing — its acts row the
+// overlay before it, whose dismissal ends that selection with it — then
 // a live caret in an editor pane, the text left and the caret kept there
 // (`paneEsc`; K-77), then the scene — its close a Back from its entry (N-GO's
 // `closeScene`), which re-takes an editor pane's caret — the
@@ -253,8 +255,13 @@
 // nothing under it takes one: at a live caret in an editor pane every caret
 // key is the plane's (`caretKey`); at a pane's text where none is live the
 // pane's moves move its span focus (SC's `key`), Enter at an editor pane's
-// span places the caret (SC's `enterSpan`; K-70), and a printable key at the
-// span its kept caret stands in returns it and types there; a pane's corner
+// span places the caret (SC's `enterSpan`; K-70), K-8 — and at a span of a
+// text the pane reads, Enter and Shift with ← or → — make the pane's own
+// selection in its own record (`readSpan`; O-SELECTION's `selectFocused`,
+// `select`, `extendFromFocus` at the pane), and a printable key at the
+// span its kept caret stands in returns it and types there; every live
+// slot's chord makes its act at the focused pane, on that pane's selection,
+// else its span focus, in its own text (`paneSlot`); a pane's corner
 // is routed as a corner, by its pane's test (`cornerKey`); and every key the
 // scene swallows is answered by the line of the pane it is pressed at
 // (`paneSays`) — at the scene's acts by their own (`actsSays`), never by
@@ -1680,9 +1687,11 @@ async function replay() {
  * (Mod+Shift+R would reload), as F5 is (K-94): at a selection standing in the
  * moved scene's held version while the focus stands in it, an inert slot's
  * chord gives the reason that selection keys as its hint (`heldSaid`; SC's
- * `heldVersionReason`; D6 BM-14); anywhere else in the scene, which holds
- * nothing for the slots to act on, an inert slot's chord gives its slot's
- * reason as its hint (`inertSaid`); every other slot's chord does nothing. On
+ * `heldVersionReason`; D6 BM-14); anywhere else in the scene an inert slot's
+ * chord gives its slot's reason as its hint (`inertSaid`); every other slot's
+ * chord makes its slot's act at the focused pane, on that pane's selection,
+ * else its span focus, in its own text, "select a passage first" where it
+ * holds neither (`paneSlot`; O-SELECTION's `act`, `focusedSite`; Q5). On
  * the one line or a standing overlay every other key is that control's own.
  * Select-all at a pane's text selects its text whole where the page selects
  * it there (`wholeAt`). A pane's corner is routed as a corner, never as its
@@ -1699,7 +1708,11 @@ async function replay() {
  * move its span focus or the pane (SC's `key`; K-60), Enter at an editor
  * pane's span places the caret there (SC's `enterSpan`; K-70), Shift with ←
  * or → at the span its kept caret stands in returns it and extends a
- * selection from it (`extendAtKept`), and a printable key is typed at the kept
+ * selection from it (`extendAtKept`), K-8 selects and extends the pane's own
+ * selection from its span focus, and at a span of a text the pane reads Enter
+ * selects it whole and Shift with ← or → extends the pane's selection from the
+ * focus's edge (O-SELECTION's `selectFocused`, `select`, `extendFromFocus`
+ * with the pane; `readSpan`), and a printable key is typed at the kept
  * caret's span, else answered by the pane's own line (`typeAt`), Space by K-9's.
  * In a draft's history scene (SC's `pastOf`; B3-S7), with no caret holding the
  * focus — a pane's walk, a corner, the list, the scene's acts — Alt with ↓ or
@@ -1721,6 +1734,10 @@ function sceneKey(e, chord, ctx) {
   if (chord === 'Mod+-') return () => { GO.closeScene(ctx.byKey); return true; };
   const inert = INERT_CHORDS.get(chord);
   if (inert) return () => { if (!heldSaid(e, ctx)) inertSaid(inert, e, ctx); return true; };
+  // the live slots' chords at the focused pane, on its selection, else its span focus, as on the plane (Q5) — Mod+Enter at a
+  // live caret following from a selection drawn in the caret's own text alone
+  const live = LIVE_CHORDS.get(chord);
+  if (live) return () => { paneSlot(live, e, ctx); return true; };
   if (SLOT_CHORDS.has(chord) || e.key === 'F5') return () => true;
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (ctx.where === 'overlay' || ctx.where === 'line') return null; // the overlay's or the line's own keys
@@ -1745,11 +1762,52 @@ function sceneKey(e, chord, ctx) {
     // the pane's own moves where no caret is live (K-60), the span focus with them
     if (PANE_MOVES.has(chord)) return () => { e.preventDefault(); SCENE.key(chord, side); return true; };
     if (chord === 'Enter' && draftSpan(ctx)) return () => { SCENE.enterSpan(side); return true; };
+    // K-8 at the pane's span focus, and Enter at a span of a text the pane reads: the pane's selection, in its own record (K-7, K-8)
+    if (chord === 'Shift+↓' || chord === 'Shift+↑') return () => { e.preventDefault(); SEL.selectFocused(chord === 'Shift+↑' ? 'up' : 'down', side); return true; };
+    const read = readSpan(ctx);
+    if (chord === 'Enter' && read && read.selects) return () => { SEL.select(read.addr, read.pos, null, null, side); return true; };
     const kept = chord === 'Shift+←' || chord === 'Shift+→' ? keptSpan(ctx) : null;
     if (kept) return async () => { await extendAtKept(e, arrowStep(e), kept.addr); return true; };
+    // Shift with ← or → at a span of a text the pane reads: the pane's selection extended from the focus's edge (K-70)
+    if ((chord === 'Shift+←' || chord === 'Shift+→') && read) return () => { e.preventDefault(); SEL.extendFromFocus(arrowStep(e), side); return true; };
   }
   if (printable(e)) return async () => { await typeAt(e, ctx); return true; };
   return null;
+}
+
+/**
+ * A live slot's chord in a reading scene (see `sceneKey`; Q5): the slot's act
+ * at the focused pane — its selection, else the span its span focus stands
+ * on, in its own text (O-SELECTION's `act`, `focusedSite`) — and where it
+ * holds neither, the slot's reason, "select a passage first", as its hint
+ * (`selectFirst`); at a live caret in an editor pane Mod+Enter follows from a
+ * selection drawn in the caret's own text alone, else gives the caret's
+ * follow line (`followAtCaret`), as on the plane.
+ * @param {LiveSlot} live
+ * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
+ */
+function paneSlot(live, e, ctx) {
+  if (live === 'follow' && ctx.where === 'caret' && !selectedAtCaret()) { followAtCaret(e, ctx); return; }
+  const site = SEL.focusedSite();
+  if (site === 'plane' || !SEL.act(live, ctx.byKey, null, site)) selectFirst(e, ctx);
+}
+
+/**
+ * The span focus of the reading scene's pane a key is at, where that pane
+ * holds no draft's editor — a past state, the held version, a text it reads
+ * (SC's `siteOf`): where Shift with ← or → extends the pane's selection from
+ * the focus's edge (K-70), and Enter selects the span whole where it is no
+ * withheld run (`selects`; K-7, D8), in the pane's own record; null anywhere
+ * else.
+ * @param {Ctx} ctx
+ * @returns {{addr: string, pos: number, selects: boolean} | null}
+ */
+function readSpan(ctx) {
+  const p = ctx.where === 'scene' && ctx.pane ? SCENE.siteOf(ctx.pane) : null;
+  if (!p || p.kind === 'editor' || p.focus == null) return null;
+  const b = p.d.blocks.find((x) => x.pos === p.focus);
+  return { addr: p.names, pos: p.focus, selects: !!b && b.kind !== 'withheld' };
 }
 
 /**
@@ -1814,12 +1872,14 @@ const actKey = () => ({ 'act key': drawChord('Enter') });
 
 /**
  * A copy outside a field where the platform holds no selection with extent
- * (see the head; D5 K-92; FP-24, FP-27): the selection the page draws placed
- * under the copy again (T-LAYER's `placeSelection`), which then runs as the
- * platform's; with nothing selected, the platform's copy prevented, the
- * clipboard left as it is, and the line its hint at the focus, said in the
- * status region, the act that selects there the sentence it ends on while it
- * stands whole (`selectsHere`; O-HINT's `ending`).
+ * (see the head; D5 K-92; FP-24, FP-27): the selection the page draws at the
+ * focused site — the plane's, or a reading scene's focused pane's
+ * (O-SELECTION's `focusedSite`) — placed under the copy again
+ * (O-SELECTION's `placeLive`), which then runs as the platform's; with
+ * nothing selected, the platform's copy prevented, the clipboard left as it
+ * is, and the line its hint at the focus, said in the status region, the act
+ * that selects there the sentence it ends on while it stands whole
+ * (`selectsHere`; O-HINT's `ending`).
  * @param {{preventDefault(): void, repeat?: boolean, target: EventTarget | null}} e Mod+C's keydown, or a copy event T-LAYER took nothing from
  * @param {Ctx} ctx where the focus is
  * @param {EventTarget | null} [at] the element the focus is on: the event's target where none is given
@@ -1827,8 +1887,7 @@ const actKey = () => ({ 'act key': drawChord('Enter') });
  */
 export function copyAsDrawn(e, ctx, at = e.target) {
   if (ctx.where === 'field' || LAYER.platformSelects()) return false;
-  const drawn = SEL.selected('plane');
-  if (drawn) { LAYER.placeSelection(drawn); return false; }
+  if (SEL.placeLive(SEL.focusedSite())) return false;
   e.preventDefault();
   HINT.show('L.copy.nothing', null, { ...hinted(e, ctx, at), ending: selectsHere(ctx) });
   return true;
@@ -2106,8 +2165,8 @@ function followAtCaret(/** @type {KeyboardEvent} */ e, /** @type {Ctx} */ ctx) {
  * the place of, set aside, a key's Esc alone, then a jump
  * reaching whose face another overlay took the place of (FP-25; N-GO's
  * `abandon`), the find — its current match left selected, the focus on it
- * (N-FIND's `close`; FP-20) — in the scene the selection standing in the
- * text of the pane the focus is at, then a live caret standing in an editor
+ * (N-FIND's `close`; FP-20) — in the scene the selection of the pane the
+ * focus is at, its corner and its list among it, then a live caret standing in an editor
  * pane — the text left, the caret kept and its span the pane's focus
  * (`paneEsc`; K-77, K-61) — then the scene — its close a Back from its entry
  * (N-GO's `closeScene`), which brings back the selection the place it opened
@@ -2146,15 +2205,16 @@ export function esc(landed = false, pointer = false) {
 
 /**
  * Esc's steps inside a reading scene before its close (see `esc`; D5 K-77,
- * K-61, K-63): the selection standing in the text of the pane the focus is at
- * ended (SC's `unselect`); else a live caret standing in an editor pane left
- * — kept where it stood, its burst committed, its span the pane's focus, so
- * Tab then moves on round the ring (T-LAYER's `leaveCaret`; SC's
- * `followCaret`). False where neither stands: the scene closes.
+ * K-61, K-63): the selection of the pane the focus is at — its text, its
+ * corner or its list of past states (SC's `focusedPane`) — ended (SC's
+ * `unselect`), the other pane's standing; else a live caret standing in an
+ * editor pane left — kept where it stood, its burst committed, its span the
+ * pane's focus, so Tab then moves on round the ring (T-LAYER's `leaveCaret`;
+ * SC's `followCaret`). False where neither stands: the scene closes.
  * @returns {boolean} a step was taken
  */
 function paneEsc() {
-  const side = SCENE.textPane(), c = LAYER.caret();
+  const side = SCENE.focusedPane(), c = LAYER.caret();
   if (side && SCENE.unselect(side)) return true;
   if (!c || !c.live || !LAYER.caretPane()) return false;
   LAYER.leaveCaret('esc');

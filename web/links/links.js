@@ -596,9 +596,19 @@ export function shown(addr, over = textOf(addr)) {
 /** does a stretch of the text meet a span? */
 const meets = (/** @type {Stretch} */ r, /** @type {{pos: number, width: number}} */ span) => r.pos < span.pos + span.width && span.pos < r.pos + r.width;
 
-/** the links drawn at a span — a block's, or the selection's bytes (what a click there lists; the selection's slots count these alone): each end standing in a stretch the span meets */
-export function shownAt(/** @type {string} */ addr, /** @type {{pos: number, width: number}} */ span) {
-  return shown(addr).filter((s) => s.runs.some((r) => meets(r, span)));
+/**
+ * The links drawn at a span — a block's, or the selection's bytes (what a
+ * click there lists; the selection's slots count these alone): each end
+ * standing in a stretch the span meets, of the links drawn in the text the
+ * span is of — the text the page shows of the document, or a reading scene's
+ * pane's own record, its marks as it was set (O-SELECTION's).
+ * @param {string} addr
+ * @param {{pos: number, width: number}} span
+ * @param {Shown[]} [drawn] the links drawn in the text the span is of: the plane's (`shown`) where none are given
+ * @returns {Shown[]}
+ */
+export function shownAt(addr, span, drawn = shown(addr)) {
+  return drawn.filter((s) => s.runs.some((r) => meets(r, span)));
 }
 
 /** does a drawn link's far end float — the current text of the version its far box shows holding none of its passage (foundations §2.3)? */

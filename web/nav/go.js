@@ -67,7 +67,9 @@
 // (`dismissChrome`; FP-25): the arrival and the surfaces standing as the act
 // was made (`nextAct`) — the selection by its bytes, the card or the list by
 // what it is about and the control the focus stood on in it (O-SELECTION's
-// and O-HOST's `asLeft`) — kept by value in the entry left for a return
+// and O-HOST's `asLeft`), save a card or a list standing at a reading scene's
+// pane, which the scene's own record of its panes stands for (`surfacesNow`)
+// — kept by value in the entry left for a return
 // (`leaveHere`; N-TRAIL's `keep`); the standing overlay — save one whose
 // field holds the caret, which stands through the jump (FP-20; O-HOST's
 // `typing`) — the selection, and the scene, which its departure has
@@ -271,7 +273,9 @@
 // placed again by their identity as one step (`putBack`; O-FACES' `removed`).
 // A card or a list standing over a span of its own moves with that span's
 // bytes as the person types (`throughEdits`). A passage of a draft holding
-// such edits is named to the board by nothing of its positions there: its
+// such edits, or one a carry names by identity itself — a carry from a
+// reading scene's pane, whose positions are that pane's text's
+// (`Carry.ids`) — is named to the board by nothing of its positions there: its
 // bytes are placed through the other text's image (`heldByBytes`), and a far
 // end landing in such a draft is placed by its slot's bytes (`followed`).
 // The reading scene is a step on the trail (`toScene`; FP-25): its opening
@@ -282,7 +286,11 @@
 // address the document opened beside the reader's, holding the pair it opens
 // on and the passage held (N-TRAIL's `Opened`), the entry it departs
 // recording the step it is opened from — a link's end, or a passage by
-// identity (`sceneStep`; N-TRAIL's `SceneStep`). It reaches as a jump only a
+// identity (`sceneStep`; N-TRAIL's `SceneStep`). The selection of the site
+// the act is made at — the plane's, or a reading scene's pane's — goes with
+// it by its bytes, which the scene opens holding (SC's `Held.sel`), the
+// plane's ending with the place it leaves (`dismissChrome`) and coming back
+// with the entry the close lands on. It reaches as a jump only a
 // read can place does: the camera still while SC's reads are out, Esc, Back
 // and every later act abandoning it, its entry given back, a refusal its
 // reads met faced at the act's site, the entry given back too; the chrome of
@@ -318,7 +326,9 @@
 // draft as the board holds it, where words not kept yet stand, or where the
 // board reads not the one asked, a substitution its corner holds with its
 // line (T-ARTICLE's `PastWhy`) — then the scene opened on the draft's current
-// text and that state, levelled at the selection standing in the draft, else
+// text and that state, levelled at the selection standing in the draft — the
+// plane's, or that of the pane whose corner made the act, by its bytes, which
+// the scene opens holding — else
 // at the newest change's place nearest the caret (`changeNear`), its entry
 // keeping the state asked, so a return asks it again (SC's `Held.past`);
 // where no state is read, or the history read is refused, nothing opens and
@@ -572,14 +582,17 @@ import { esc, byteLength } from '../util.js';
  * @property {number} width its positions, from `pos` to the end of its last part
  * @property {Run[]} [parts] the stretches of the span it carries, in the text's order, joined into one passage — a source's words in a span holding other words beside them (O-SELECTION's); absent, the span whole (`partsOf`)
  * @property {boolean} [selected] it is the reader's selection — "what you selected"; else "the text you were reading"
+ * @property {ISpan[][]} [ids] each part's bytes by identity, in the parts' order, where the carry names them itself: a carry from a reading scene's pane, whose positions are the pane's text's and never the text the page shows of the document (O-SELECTION's, O-PROV's); absent, read through the text shown (`carriedIds`)
  */
 
 /** the stretches a carry carries, in the text's order (`Carry.parts`): its span whole where it names none */
 const partsOf = (/** @type {Carry} */ c) => (c.parts && c.parts.length ? c.parts : [{ pos: c.pos, width: Math.max(1, c.width) }]);
 /** the positions of the passage a carry carries: its parts' together */
 const carriedWidth = (/** @type {Carry} */ c) => partsOf(c).reduce((n, p) => n + p.width, 0);
-/** the passage a carry carries by identity, its parts' bytes joined in order, as the text shown names them now (T-LAYER's `shownIdentity`) */
-const carriedIds = (/** @type {Carry} */ c) => partsOf(c).flatMap((p) => LAYER.shownIdentity(c.addr, p.pos, p.width));
+/** each part of a carry by identity, in order: as the carry names them (`Carry.ids`), else as the text shown names them now (T-LAYER's `shownIdentity`) */
+const partIds = (/** @type {Carry} */ c) => partsOf(c).map((p, i) => (c.ids ? c.ids[i] ?? [] : LAYER.shownIdentity(c.addr, p.pos, p.width)));
+/** the passage a carry carries by identity, its parts' bytes joined in order (`partIds`) */
+const carriedIds = (/** @type {Carry} */ c) => partIds(c).flat();
 /** a position of the text a carry is carried from as its offset into the passage carried, its parts joined in order; null where no part holds it */
 function offsetIn(/** @type {Carry} */ c, /** @type {number} */ pos) {
   let off = 0;
@@ -1205,15 +1218,30 @@ function currentByte(m) {
 /**
  * The surfaces standing at the place the reader stands at now (see the
  * head): the selection and the card or the list standing — or the one an
- * opening still reading reopens (O-HOST's `asLeft`) — and what a return still
- * owes the place of either; null where none stands.
+ * opening still reading reopens (O-HOST's `asLeft`), save one at a reading
+ * scene's pane, which the scene's own record of its panes stands for — and
+ * what a return still owes the place of either; null where none stands.
  * @returns {Surfaces | null}
  */
 function surfacesNow() {
-  const o = owed && owed.entry === here ? owed : null;
-  const selection = SEL.asLeft() || (o ? o.selection : null), overlay = HOST.asLeft() || (o ? o.overlay : null);
+  const o = owed && owed.entry === here ? owed : null, standing = HOST.asLeft();
+  // a card or a list at a reading scene's pane is the scene's, which keeps its panes as left: no place of the plane's keeps it
+  const own = standing && !paneOf(standing.about) ? standing : null;
+  const selection = SEL.asLeft() || (o ? o.selection : null), overlay = own || (o ? o.overlay : null);
   return selection || overlay ? { selection, overlay } : null;
 }
+
+/**
+ * The reading scene's pane a card or a list stands at, by its side (what it
+ * is about names it: O-SELECTION's, O-PROV's, O-LINKS' and O-ANATOMY's
+ * `About.site`): a surface the scene's, which no place of the plane's keeps,
+ * no box's version bounds and the person's edits move only at a draft's
+ * editor pane (`surfacesNow`, `standsOn`, `throughEdits`); null for a surface
+ * on the plane.
+ * @param {import('../overlays/host.js').About} a
+ * @returns {'a' | 'b' | null}
+ */
+const paneOf = (a) => ('site' in a && a.site ? a.site : null);
 
 /**
  * Esc ends the arrival (FP-21; N-KEYS' one order, once nothing nearer
@@ -1898,8 +1926,8 @@ async function land(at, byKey, ms) {
 export async function heldIn(c, into, extent) {
   const w = carriedWidth(c);
   if (extent <= 0) return { held: HELD.heldOf([], w), counterparts: [] };
-  // a passage of a draft holding the person's page-local edits is named to the board by nothing of its positions there: its bytes by identity, placed in the other text through that text's image
-  if (REC.has(c.addr) && textOf(c.addr).derived) return heldByBytes(c, into, extent);
+  // a passage of a draft holding the person's page-local edits, or one a carry names by identity, is named to the board by nothing of its positions there: its bytes by identity, placed in the other text through that text's image
+  if (c.ids || (REC.has(c.addr) && textOf(c.addr).derived)) return heldByBytes(c, into, extent);
   const span = Math.max(1, c.width);
   const out = await PUMP.compareParts({ doc: c.addr, pos: c.pos, width: span }, { doc: into, pos: 1, width: extent });
   if ('refused' in out) return out;
@@ -1936,9 +1964,10 @@ function inParts(c, found) {
 
 /**
  * What a text holds of a passage of a draft holding the person's page-local
- * edits (`heldIn`), read by the passage's bytes alone: their identity through
- * the image of the text shown — a byte the page made and the board has not
- * minted standing in no other text — placed through the other text's image,
+ * edits, or one a carry names by identity (`heldIn`), read by the passage's
+ * bytes alone: their identity as the carry names them (`Carry.ids`), else
+ * through the image of the text shown — a byte the page made and the board
+ * has not minted standing in no other text — placed through the other text's image,
  * the one the page holds where it covers that text, else read then, in parts
  * where the board refuses it for its size (M-PUMP's `imageParts`). The
  * refusal that read met; where the image of the text shown does not name the
@@ -1949,7 +1978,7 @@ function inParts(c, found) {
  * @returns {Promise<{held: Held, counterparts: Counterpart[]} | {refused: Refusal}>}
  */
 async function heldByBytes(c, into, extent) {
-  const w = carriedWidth(c), parts = partsOf(c).map((p) => ({ ...p, ids: LAYER.shownIdentity(c.addr, p.pos, p.width) }));
+  const ids = partIds(c), w = carriedWidth(c), parts = partsOf(c).map((p, i) => ({ ...p, ids: ids[i] }));
   if (!parts.some((p) => p.ids.length)) return { refused: PUMP.NOT_ANSWERED };
   const d = REC.has(into) ? REC.doc(into) : null;
   /** @type {import('../model/records.js').ImageRun[]} */
@@ -2797,16 +2826,19 @@ export function arrived(member, at = null, newest = null) {
  * read, it goes on nowhere, faces nothing and lights nothing: its read fills
  * its entry alone. The entry it departs records the follow (see the head):
  * the link, the end it was made at, and the far end by identity — its slot's
- * stored spans.
+ * stored spans. Made from a reading scene's pane, its site is the link's own
+ * bytes in that pane's article (`at`), where its faces stand, and its
+ * departure records the scene as left, which Back reopens.
  * @param {Shown} s the link as drawn at its near document
  * @param {boolean} [byKey] a key made the follow
+ * @param {Site | null} [at] where the follow is made, where it is a reading scene's pane (O-SELECTION's): the link's own bytes there; on the plane none
  */
-export async function follow(s, byKey = false) {
+export async function follow(s, byKey = false, at = null) {
   const act = nextAct();
   const l = s.link;
   const far = s.far;
   /** @type {Site} where the follow is made — the link's own bytes: a face known at the act, and a reaching face, stand there */
-  const site = { span: { addr: s.near, pos: s.pos, width: s.width }, sign: s.near };
+  const site = at ?? { span: { addr: s.near, pos: s.pos, width: s.width }, sign: s.near };
   if (!far) { FACES.invalidFollow(site); return; }
   const fails = known(far, true, { link: l.addr, slot: s.farSlot });
   if (fails) {
@@ -2883,8 +2915,13 @@ const addrOf = (/** @type {string | import('../model/records.js').Doc} */ x) => 
  * that end is faced. Opened from a link's end the page knows the board will
  * say nothing of (LK's `farEmpty`), it never leaves: no entry, no read, that
  * face at the act's site in the place of what stands there, as a follow known
- * to fail at the act is. Where no board is held, the act answered where it
- * was made (FP-35).
+ * to fail at the act is. The selection of the site the act is made at — the
+ * plane's, or a reading scene's pane's (O-SELECTION's `focusedSite`) — is
+ * carried by its bytes (O-SELECTION's `asLeft`): the scene opens holding it in
+ * the first pane that shows them all in one stretch (SC's `Held.sel`), while
+ * the plane's ends with the place it leaves, kept by the entry left
+ * (`dismissChrome`). Where no board is held, the act answered where it was
+ * made (FP-35).
  * @param {string | import('../model/records.js').Doc} a the document its first pane opens on: the reader's, save at a landing's line, the source of the passage landed; or the record the page shows of it (T-LAYER's `paneSource`), where the opener's positions are that text's
  * @param {string} b the document its second pane opens on — at a draft's history the draft, its past state the one `held.past` asks (SC's `Held.past`) — which the trail entry keeps, so a return reads it again
  * @param {import('../scene/scene.js').Held} [held] the passage the opener holds, which the scene sets level — with the link a link's end `from` names, where `held` names none (SC's `Held.link`)
@@ -2896,8 +2933,12 @@ export async function toScene(a, b, held = {}, opts = {}) {
   if (!REC.board()) { FACES.noBoard(opts.site ?? null); return false; }
   const end = opts.from && 'shown' in opts.from ? opts.from.shown : null, site = signed(opts.site ?? null);
   if (end && LK.farEmpty(end)) { FACES.unregistered(end.far, site, { far: true }); return false; }
+  // the selection of the site the act is made at, by its bytes as the act finds them, which the scene opens holding in the
+  // first pane that shows them (SC's `Held.sel`; Q1) — the plane's own ending as the scene shows, kept by the entry it leaves;
+  // an opener that names the selection it carries itself — a pane's corner's act, which takes no focus — names it so
+  const carried = held.sel ? null : SEL.asLeft(SEL.focusedSite());
   // the link the scene is opened from, kept with the passage held, so its entry and a reopening keep it (SC's `Held.link`)
-  const kept = end && held.link == null ? { ...held, link: end.link.addr } : held;
+  const kept = { ...held, ...(end && held.link == null ? { link: end.link.addr } : {}), ...(carried && carried.ids.length ? { sel: carried.ids } : {}) };
   // a departure: a live caret kept where it stands, its burst committed, before the departure records it — no live caret stands under a scene
   LAYER.leaveCaret('teleport', false);
   const departed = departure(), addr = addrOf(opts.beside === 'a' ? a : b);
@@ -3004,13 +3045,19 @@ export function changeNear(past, now, near) {
  * or the history read is refused, nothing opens, and every press says why in
  * the status region (FP-41; `historyRefused`); where it reads no row, the
  * status region says the draft stands as it is. The panes
- * level at a selection standing in the draft, else at the newest change's
+ * level at a selection standing in the draft — the plane's, or, where the act
+ * is made at a reading scene's pane's corner, that pane's, held by its bytes
+ * through the pane's image (O-SELECTION's `asLeft`; SC's `Held.ids`), the
+ * scene opening holding it (SC's `Held.sel`) — else at the newest change's
  * place nearest the caret, else the walk's span in the draft (`changeNear`).
+ * Made at a pane's corner, which takes no focus, the act names the selection
+ * it carries itself — that pane's, none where it holds none — never the
+ * focused site's (`toScene`).
  * A later act made while the reads are out — this one again among them —
  * leaves it opening nothing. Where no board is held, the act answered where
  * it was made (FP-35).
  * @param {string} addr the draft
- * @param {{site?: Site | null}} [opts] `site` where the act was made
+ * @param {{site?: Site | null, side?: 'a' | 'b' | null}} [opts] `site` where the act was made; `side` the reading scene's pane whose corner it was made at, whose selection the panes level at — the plane's where none is named
  * @returns {Promise<boolean>} the scene shows, or the focus went into its history pane
  */
 export async function history(addr, opts = {}) {
@@ -3036,11 +3083,12 @@ export async function history(addr, opts = {}) {
   const got = await SCENE.pastState(addr, rows, asked, read.head);
   if (!stands()) return false;
   if ('refused' in got) { FOCUS.say(historyRefused(got.refused, addr), false, true); return false; }
-  const sel = SEL.selected('plane'), caret = LAYER.caretIn(addr), f = WALK.focusedSpan();
+  const sel = SEL.asLeft(opts.side ?? 'plane'), caret = LAYER.caretIn(addr), f = WALK.focusedSpan();
   const near = caret ? caret.pos : f && f.addr === addr ? f.pos : null;
   const change = sel && sel.addr === addr ? null : changeNear(got.state.image, LAYER.shownOf(addr).image, near);
   /** @type {import('../scene/scene.js').Held} */
-  const held = sel && sel.addr === addr ? { posA: sel.pos, widthA: sel.width } : change ? { posA: change.a, widthA: 1, posB: change.b } : {};
+  const held = sel && sel.addr === addr ? { posA: sel.pos, widthA: sel.width, ...(sel.ids.length ? { sel: sel.ids, ...(opts.side ? { ids: sel.ids } : {}) } : {}) } : change ? { posA: change.a, widthA: 1, posB: change.b } : {};
+  if (opts.side && !held.sel) held.sel = [];
   held.past = { draft: addr, entries: read.rows, from: read.from, bottom: read.from === 0 || read.floor, head: read.head, asked: asked.last, unkept, figures: { pages: read.pages, read: read.read, readMs } };
   return toScene(LAYER.paneSource(addr), addr, held, { site: opts.site ?? null, past: got });
 }
@@ -4379,11 +4427,16 @@ let placedFor = null;
  * the acts card and the "which" list drawn again at it, their slots and rows
  * acting there (O-SELECTION's `reopen`), every other card's anchor and what it
  * is about moved in place, nothing asked again (O-HOST's `moveTo`). A subject
- * none of whose bytes stand leaves its surface where it stood.
+ * none of whose bytes stand leaves its surface where it stood. A surface at a
+ * reading scene's pane (`paneOf`) moves so only where that pane is its
+ * draft's editor, whose text is the text shown, and stands at that pane; at
+ * any other pane — a past state, the held version, a text it reads — no edit
+ * of the person's moves it.
  */
 function throughEdits() {
-  const o = HOST.currentState(), a = o && !o.notice ? o.about : undefined, subject = a ? subjectOf(a) : null;
-  if (!o || !a || !subject || !subject.ids.length || shownIn(subject.addr) !== subject.addr) { placedFor = null; return; }
+  const o = HOST.currentState(), a = o && !o.notice ? o.about : undefined, subject = a ? subjectOf(a) : null, pane = a ? paneOf(a) : null;
+  const moves = !pane || SCENE.siteOf(pane)?.kind === 'editor';
+  if (!o || !a || !subject || !moves || !subject.ids.length || shownIn(subject.addr) !== subject.addr) { placedFor = null; return; }
   const rev = WRITE.editRev(subject.addr);
   if (!placedFor || placedFor.overlay !== o) { placedFor = { overlay: o, rev }; return; }
   if (placedFor.rev === rev) return;
@@ -4448,13 +4501,15 @@ function acrossSelection() {
  * The documents a card or a list stands on, each the version its box showed
  * as it was shown (see the head): the acts card's and the "which" list's
  * where they hold a span of their own (O-SELECTION's `About.at`); none for a
- * surface no box's version bounds — a mark's list — and none for the
- * selection's own card and list, which stand and move with it
- * (`acrossSelection`).
+ * surface no box's version bounds — a mark's list, and any surface at a
+ * reading scene's pane, whose version is the scene's own (`paneOf`; FP-22,
+ * FP-23) — and none for the selection's own card and list, which stand and
+ * move with it (`acrossSelection`).
  * @param {import('../overlays/host.js').About} a
  * @returns {string[]}
  */
 function standsOn(a) {
+  if (paneOf(a)) return [];
   if (a.kind === 'anatomy' || a.kind === 'ends') return [a.near];
   if (a.kind === 'wrote' || a.kind === 'uses' || a.kind === 'versions' || a.kind === 'links' || a.kind === 'withheld') return [a.addr];
   if (a.kind === 'tail') return a.docs;
