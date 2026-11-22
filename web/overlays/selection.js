@@ -308,8 +308,37 @@ function hold(/** @type {Span | null} */ span, /** @type {Ends} */ how = AT_STAR
 const textIn = (/** @type {Text} */ d) => ({ runs: d.runs, image: d.image, blocks: d.blocks });
 /** do two texts hold one text as the page took it: the same runs, image and blocks */
 const sameText = (/** @type {Text} */ x, /** @type {Text} */ y) => x.runs === y.runs && x.image === y.image && x.blocks === y.blocks;
-/** do two texts' runs stand in the same places, each of the same kind and words — the text unmoved, whatever its image names */
-const sameRuns = (/** @type {Doc['runs']} */ a, /** @type {Doc['runs']} */ b) => a === b || (a.length === b.length && a.every((r, i) => r.pos === b[i].pos && r.width === b[i].width && r.kind === b[i].kind && r.text === b[i].text));
+/**
+ * Do an earlier text's runs stand unmoved in a later one — each held there at
+ * its positions, of its kind and words, however much more the later holds
+ * before, after or between them: the text read further, whatever its image
+ * names? A later run a delivery joined to one read beside it (M-REC's
+ * `takeDelivery`) holds the earlier run where it holds that run's bytes at
+ * its positions, for content, or its origin, for withheld text; a run of any
+ * other kind stands only as itself.
+ * @param {Doc['runs']} a the earlier text's runs, in position order
+ * @param {Doc['runs']} b the later text's runs, in position order
+ * @returns {boolean}
+ */
+function unmovedIn(a, b) {
+  if (a === b) return true;
+  let j = 0;
+  for (const r of a) {
+    while (j < b.length && b[j].pos + b[j].width <= r.pos) j++;
+    const s = b[j];
+    if (!s || s.kind !== r.kind || s.pos > r.pos || s.pos + s.width < r.pos + r.width) return false;
+    if (s.pos === r.pos && s.width === r.width) { if (s.text !== r.text || s.ref !== r.ref || s.origin !== r.origin) return false; }
+    else if (r.kind === 'withheld') { if (s.origin !== r.origin) return false; }
+    else if (r.kind !== 'content' || !bytesAt(s, r)) return false;
+  }
+  return true;
+}
+
+/** does a content run hold a narrower one's bytes at that one's positions: the characters before them as wide as the positions between, then its words */
+function bytesAt(/** @type {Doc['runs'][number]} */ s, /** @type {Doc['runs'][number]} */ r) {
+  const before = REC.textOf([s], s.pos, r.pos);
+  return byteLength(before) === r.pos - s.pos && s.text.startsWith(r.text, before.length);
+}
 /** does a text show withheld text, under which the rest of a passage may stand */
 const showsWithheld = (/** @type {Text} */ d) => d.blocks.some((b) => b.kind === 'withheld');
 
@@ -355,10 +384,11 @@ function carry() {
  * any of them holds — all of them, else the part that stands (BM-HELD's
  * `onePiece`); else pieces, or none. Couldn't tell where the text's read was
  * refused, or its bytes were not named and the text moved; bytes not named
- * over a text whose runs stand unmoved stand where they stood. An empty text
- * holds none of them. The text still being read waits: none of it delivered,
- * or an image placing less than all of it where no stretch holds all of the
- * words — a read must bring the rest first.
+ * over a text whose runs stand unmoved in it (`unmovedIn`) — the same text,
+ * or the text they stood in read further around them — stand where they
+ * stood. An empty text holds none of them. The text still being read waits:
+ * none of it delivered, or an image placing less than all of it where no
+ * stretch holds all of the words — a read must bring the rest first.
  * @param {{pos: number, width: number}} span where the selection stood
  * @param {ISpan[]} ids its bytes by identity in the text it stood in, in its order; none where that text's image did not name them
  * @param {Text | null} was the text it stood in, where known
@@ -369,7 +399,7 @@ export function placing(span, ids, was, now) {
   if (now.refused) return { state: 'ended', why: 'unknown', met: { kind: 'refused', name: now.refused === 'unregistered' ? 'doc_not_registered' : now.refused } };
   if (now.extent === 0) return { state: 'ended', why: 'none', met: null };
   if (now.from < 0) return { state: 'wait' };
-  if (!ids.length) return was && sameRuns(was.runs, now.runs) ? { state: 'one', pos: span.pos, width: span.width, all: true } : { state: 'ended', why: 'unknown', met: null };
+  if (!ids.length) return was && unmovedIn(was.runs, now.runs) ? { state: 'one', pos: span.pos, width: span.width, all: true } : { state: 'ended', why: 'unknown', met: null };
   const width = ids.reduce((n, s) => n + s.width, 0);
   const st = HELD.stretchesOf(ids, now.image, now.image.map((r) => [{ prefix: r.prefix, ordinal: r.ordinal, width: r.width }]));
   const one = HELD.onePiece(st, width);

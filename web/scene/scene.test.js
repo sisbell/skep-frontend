@@ -3125,9 +3125,9 @@ const pastAsks = (/** @type {number} */ at) => fake.asked.filter((k) => k === pa
 /**
  * The board refusing the draft's state at each position given, by the refusal's name — as the board answers `/op-at`,
  * naming no floor — or as reclaimed naming the floor given; or, the position lying inside a commit, `not_a_position`
- * naming the committed one below it; or not answering it; or answering it, a number of its bytes; what puts the script
- * back as it stood
- * @param {Record<number, string | number | {nearest: number} | {floor: number} | {unanswered: true}>} at
+ * naming the committed one below it; or the shell refusing the read before it reaches the board, by its refusal's name;
+ * or not answering it; or answering it, a number of its bytes; what puts the script back as it stood
+ * @param {Record<number, string | number | {nearest: number} | {floor: number} | {shell: string} | {unanswered: true}>} at
  */
 function pastAnswering(at) {
   /** @type {Record<string, unknown>} */
@@ -3136,6 +3136,7 @@ function pastAnswering(at) {
     if (typeof a === 'number') Object.assign(set, pastAt(Number(p), a));
     else if (typeof a === 'object' && 'floor' in a) set[pastKey(Number(p))] = { refused: { kind: 'refused', name: 'history_reclaimed', status: 410, code: 'history_reclaimed', detail: null, op: 'retrieve_doc_v_span_set', site: {}, body: { error: 'history_reclaimed', floor: a.floor } } };
     else if (typeof a === 'object' && 'unanswered' in a) set[pastKey(Number(p))] = { refused: { kind: 'unreachable', name: 'unreachable', text: '' } };
+    else if (typeof a === 'object' && 'shell' in a) set[pastKey(Number(p))] = { refused: { kind: 'shell', name: a.shell, what: 'frame' } };
     else if (typeof a === 'object') set[pastKey(Number(p))] = { refused: { kind: 'refused', name: 'not_a_position', status: 409, code: 'not_a_position', detail: null, op: 'retrieve_doc_v_span_set', site: {}, body: { error: 'not_a_position', nearest: a.nearest } } };
     else set[pastKey(Number(p))] = { refused: { kind: 'refused', name: a, status: a === 'history_busy' ? 503 : 410, code: a, detail: null, op: 'retrieve_doc_v_span_set', site: {}, body: { error: a } } };
   }
@@ -3481,15 +3482,24 @@ const againIn = (/** @type {ReturnType<typeof page>} */ p) => p.acts.b.find((b) 
 /** a frame of the platform's, which the status region's words said again land in */
 const aFrame = () => new Promise((r) => setTimeout(r, 5));
 
-test('a refusal of the asked state that is not reclaimed and that the scene does not read again stops the line in a read\'s words — "could not read it as it stood ⟨time⟩ — ⟨cause⟩", that state\'s time; the board refusing the read, its refusal\'s name after it as code, at `internal_panic`, at `not_a_position` naming no position and at any other; a fault in this client at `malformed`, its name too; the board\'s silence where it did not answer; the draft\'s withheld words where it is withheld — never "nothing was written", the sign-in\'s or the one line\'s words; "read it again" beneath it but beside `withheld`; the asked row "not read"; pane B named by its title, the line, then its address; the line said once, and nothing asked again by the scene (issue #702\'s design decision; FP-34)', () => onPage(async (p) => {
+test('a refusal of the asked state that is not reclaimed and that the scene does not read again stops the line in a read\'s words — "could not read it as it stood ⟨time⟩ — ⟨cause⟩", that state\'s time; the board refusing the read, its refusal\'s name after it as code, at `internal_panic`, at `not_a_position` naming no position and at any other, an unknown code among them; a fault in this client at each code saying the request itself was ill-formed, whichever of the shell and the board refused it, its name too; the board\'s silence where it did not answer; the draft\'s withheld words where it is withheld — never "nothing was written", the sign-in\'s or the one line\'s words; "read it again" beneath it but beside `withheld`; the asked row "not read"; pane B named by its title, the line, then its address; the line said once, and nothing asked again by the scene (issues #702, #722; FP-34)', () => onPage(async (p) => {
   await onTrail(p);
-  const refused = t('L.history.unread.refused', { board: BOARD_NAME() });
-  /** @type {Array<[string | {unanswered: true}, string, import('../strings.js').Run[]]>} each answer the asked state's read meets, the refusal's name the list keeps, and the line's cause */
+  const refused = t('L.history.unread.refused', { board: BOARD_NAME() }), fault = t('L.history.unread.fault');
+  /** @type {Array<[string | {shell: string} | {unanswered: true}, string, import('../strings.js').Run[]]>} each answer the asked state's read meets, the refusal's name the list keeps, and the line's cause */
   const cases = [
     ['internal_panic', 'internal_panic', codedRuns(refused, 'internal_panic')],
     ['not_a_position', 'not_a_position', codedRuns(refused, 'not_a_position')],
     ['beyond_head', 'beyond_head', codedRuns(refused, 'beyond_head')],
-    ['malformed', 'malformed', codedRuns(t('L.history.unread.fault'), 'malformed')],
+    ['malformed_future', 'malformed_future', codedRuns(refused, 'malformed_future')],
+    ['malformed', 'malformed', codedRuns(fault, 'malformed')],
+    ['malformed_op_at', 'malformed_op_at', codedRuns(fault, 'malformed_op_at')],
+    [{ shell: 'malformed_args' }, 'malformed_args', codedRuns(fault, 'malformed_args')],
+    ['malformed_http', 'malformed_http', codedRuns(fault, 'malformed_http')],
+    ['method_not_allowed', 'method_not_allowed', codedRuns(fault, 'method_not_allowed')],
+    ['malformed_span', 'malformed_span', codedRuns(fault, 'malformed_span')],
+    ['no_such_subspace', 'no_such_subspace', codedRuns(fault, 'no_such_subspace')],
+    ['depth_incompatible', 'depth_incompatible', codedRuns(fault, 'depth_incompatible')],
+    ['bad_region', 'bad_region', codedRuns(fault, 'bad_region')],
     [{ unanswered: true }, 'unreachable', asRuns(t('L.history.unread.unanswered', { board: BOARD_NAME() }))],
     ['withheld', 'withheld', asRuns(FACES.withheldWords(PASTD).text)],
   ];

@@ -443,7 +443,9 @@
 // another state is asked; any other, that it could not be read as it stood
 // at the asked row's time and why — the board's silence, the words the
 // draft's other faces name it by where the reader may not read it
-// (`Faces.withheldOf`), a fault in this client, else the board's refusal, the
+// (`Faces.withheldOf`), a fault in this client where its code says the
+// request itself was ill-formed, whichever of the shell and the board refused
+// it (`ILL_FORMED`), else the board's refusal, an unknown code among them, the
 // last two naming the refusal as code (`unreadOf`) — the state asked again
 // by nothing but a press of "read it again" beneath the line, drawn as that
 // line first stands and standing until pane B shows the state asked, never
@@ -5990,6 +5992,9 @@ function metBy(L, met, floor) {
   if (stopped(L) && !withholds(met)) L.again = true;
 }
 
+/** the refusals whose code says the request itself was ill-formed, whichever of the shell and the board refused it: a past state's line calls each a fault in this client (`unreadOf`; FP-34) */
+const ILL_FORMED = new Set(['malformed', 'malformed_op_at', 'malformed_args', 'malformed_http', 'method_not_allowed', 'malformed_span', 'no_such_subspace', 'depth_incompatible', 'bad_region']);
+
 /**
  * The line saying the asked state's read stopped (see the head;
  * `PastList.met`): "could not read it as it stood ⟨time⟩ — ⟨cause⟩", ⟨time⟩
@@ -5997,10 +6002,11 @@ function metBy(L, met, floor) {
  * recorded" where its row holds none; the cause the board's silence where it
  * did not answer (M-PUMP's `unanswered`); the words the draft's other faces
  * name it by where the reader may not read it (`withholds`; `Faces.withheldOf`);
- * a fault in this client at `malformed`; else the board's refusal of the read
- * — each of the last two with the refusal's name after it, a field, set as
- * code in the identifier's face. Each stretch in its face; none where the
- * faces are not handed in and the reader may not read the draft.
+ * a fault in this client where its code says the request itself was
+ * ill-formed (`ILL_FORMED`); else, an unknown code among them, the board's
+ * refusal of the read — each of the last two with the refusal's name after
+ * it, a field, set as code in the identifier's face. Each stretch in its face;
+ * none where the faces are not handed in and the reader may not read the draft.
  * @param {PastList} L
  * @returns {{id: string, text: string, runs: import('../strings.js').Run[]} | null}
  */
@@ -6013,7 +6019,7 @@ function unreadOf(L) {
   let cause;
   if (PUMP.unanswered(r)) cause = asRuns(t('L.history.unread.unanswered', { board: boardName() }));
   else if (withholds(r)) { if (!faces) return null; cause = asRuns(faces.withheldOf(L.draft).text); }
-  else if (r.name === 'malformed') cause = coded(t('L.history.unread.fault'));
+  else if (ILL_FORMED.has(r.name)) cause = coded(t('L.history.unread.fault'));
   else cause = coded(t('L.history.unread.refused', { board: boardName() }));
   const runs = tRuns('L.history.unread', { time, cause });
   return { id: 'L.history.unread', text: runsText(runs), runs };

@@ -46,8 +46,9 @@
 // bytes, and a text
 // set again under the reader — an arrival placed again by its runs' bytes
 // and read again by the landing rule, its runs labelled and its landing kept
-// at the run it stood at, and the passage being read gone from it — and the
-// surfaces standing
+// at the run it stood at, the passage being read gone from it, and the
+// selection following its words, standing where its text is only read
+// further around them — and the surfaces standing
 // through a version move or a newer version's arrival, the selection, a card
 // and a list re-checked against the version their box shows then, and a
 // draft holding typed words — the walk, the trail and a landing in the
@@ -4801,6 +4802,36 @@ test('the plane\'s selection over words no image named stands where it stood whi
     plainSeta('A new lead.\n' + SETA_TEXT);
     assert.equal(SEL.selected(), null, 'its text moved under it, its words never named: ended');
     assert.ok(said.includes(heard(sentences(sentence('L.selection.ended'), sentence('L.held.unknown', { where: t('L.held.current', { D: nameIn(SETA) }), subject: t('L.held.selected'), reason: t('L.held.why.unread') })))), `that it ended, couldn't tell, said: ${said}`);
+  } finally { SEL.clear(); HOST.dismiss(); GO.endArrival(); placeSeta([[1, SETA_TEXT.length]]); globalThis.window = platform.window; }
+});
+
+/** SETA's positions [from, to) as a read of them answers: their runs, and the image naming their bytes over that window alone */
+const setaPart = (/** @type {number} */ from, /** @type {number} */ to) => ({
+  runs: [{ pos: from, width: to - from, kind: /** @type {const} */ ('content'), text: SETA_TEXT.slice(from - 1, to - 1), ref: null, origin: null }],
+  image: { from, runs: [{ iStart: `${SETA}.0.1.${from}`, width: to - from }] },
+});
+
+test('the plane\'s selection over the whole of a text held in part, its bytes named by no image, stands where it stood as the rest of that text is read — a part read after the runs it stood in and joined to them, and one read before them — the text read further, never moved, nothing said (issue #735; FP-21)', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const said = statusSaid(), n = SETA_TEXT.length, k = SETA_TEXT.indexOf('Its passage') + 1;
+  /** SETA held as its positions [from, to) alone, its extent the whole text's */
+  const heldOnly = (/** @type {number} */ from, /** @type {number} */ to) => { const p = setaPart(from, to); REC.setAgain(SETA, { spans: [{ subspace: 1, ordinal: 1, positions: n }], text: { runs: p.runs, asOf: 9 }, image: p.image }); };
+  try {
+    await leapToSeta();
+    GO.endArrival();
+    heldOnly(1, k);
+    SEL.select(SETA, 1, n);
+    said.length = 0;
+    const after = setaPart(k, n + 1);
+    REC.takeDelivery(SETA, after.runs, 9, after.image);
+    assert.deepEqual([LAYER.shownOf(SETA).runs.length, SEL.selected(), said], [1, { addr: SETA, pos: 1, width: n }, []], 'the rest read after the part it stood in, joined to it: the whole text where it stood, nothing said');
+    heldOnly(k, n + 1);
+    SEL.select(SETA, 1, n);
+    said.length = 0;
+    const before = setaPart(1, k);
+    REC.takeDelivery(SETA, before.runs, 9, before.image);
+    assert.deepEqual([LAYER.shownOf(SETA).runs.length, SEL.selected(), said], [1, { addr: SETA, pos: 1, width: n }, []], 'the part before the one it stood in read, joined to it: where it stood, nothing said');
   } finally { SEL.clear(); HOST.dismiss(); GO.endArrival(); placeSeta([[1, SETA_TEXT.length]]); globalThis.window = platform.window; }
 });
 
