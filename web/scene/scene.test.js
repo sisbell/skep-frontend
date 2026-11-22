@@ -89,7 +89,10 @@
 // the link's whole end and current, its `compare` answering after it shows
 // and adding bands alone, moving no pane and no focus (FP-20, FP-30), and so
 // again as Back returns to it left from a pane or a pane's corner, the focus
-// on the stop it was left from (FP-25); and a stop only that `compare` draws,
+// on the stop it was left from (FP-25); a refusal of the panes' `compare`,
+// at the opening or after it shows, said in the bar as a read's — its own
+// words where it asks for parts, else the one read cause, its code in the
+// identifier's face, never a write's words; and a stop only that `compare` draws,
 // left from and returned to — standing with the landing and taking the focus,
 // its count being read, recorded again by what it stood for; answered all,
 // part, none, refused or with no text to read, the focus kept and its words
@@ -210,7 +213,7 @@ import * as TRAIL from '../nav/trail.js';
 import * as PAST from '../model/past.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
-import { t, tHTML, tRuns, lastRead, addressedHTML, sentence, sentences, asSentence, hintSentences, heard, runsText, asRuns, fields, runningHTML, FIELD } from '../strings.js';
+import { t, tHTML, tRuns, lastRead, addressedHTML, facedHTML, sentence, sentences, asSentence, hintSentences, heard, runsText, asRuns, fields, runningHTML, FIELD } from '../strings.js';
 import { esc, fingerprintCue, timeOf, dayOf } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
@@ -1008,8 +1011,8 @@ function page(as = {}) {
   LAYER.attach(/** @type {any} */ (element('the text layer')), /** @type {any} */ (corners));
   const canvas = Object.assign(element('the scene\'s canvas'), { getContext: () => recorder().ctx });
   SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas, stop, strokes }), {
-    end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, a, told) => FACES.floating(far, a, null, told), held: FACES.held, words: (r, ctx) => FACES.wordsFor(r, ctx), withheldOf: FACES.withheldWords },
-    history: (addr, _byKey, side) => { void GO.history(addr, { side }); },
+    end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, a, told) => FACES.floating(far, a, null, told), held: FACES.held, words: (r, ctx) => FACES.wordsFor(r, 'read', ctx), cause: FACES.readCause },
+    history: (addr, _byKey, side, at) => { void GO.history(addr, { side, at }); },
   });
   // each pane a site of its own, as the app hands the scene's panes to the overlays
   SEL.readers({ pane: SCENE.siteOf, focused: SCENE.focusedPane, heldReason: SCENE.heldReasonAt });
@@ -2018,6 +2021,34 @@ test('a scene opened on a document a far end names whole shows without waiting o
     assert.deepEqual([p.paneB.scrollTop, p.at(), SCENE.updating(), SCENE.pairs()?.level], [77, 'pane A\'s corner', false, { a: 14, b: null }], 'pane B where the reader scrolled it, the focus where they put it, nothing set level with pane B');
   } finally { release(); Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('a refusal of the panes\' `compare` — a read of both texts — is said in the bar as a read\'s, at the opening and where its answer comes after the scene shows: its own words where it asks for the texts compared in parts, else the one read cause — the board refusing the read, its code after it in the identifier\'s face; the board\'s silence — never a write\'s words (issue #723\'s design decision: "Any case not listed"; FP-34, FP-36)', () => onPage(async (p) => {
+  const key = FAKE.keyOf('op', { frame: BOTH }), was = script[key], board = t('L.mirror.board.name', { node: '1', origin: '' });
+  const refusal = (/** @type {string} */ name) => ({ refused: name === 'unreachable' ? { kind: 'unreachable', name, text: '' } : { kind: 'refused', name, status: 500, code: name, detail: null, op: 'compare', site: {}, body: null } });
+  /** @type {Array<[string, import('../strings.js').Run[]]>} each refusal the `compare` meets, and the bar's words for it */
+  const cases = [
+    ['internal_panic', [{ text: t('L.history.unread.refused', { board }), face: 'client' }, { text: FIELD, face: 'client' }, { text: 'internal_panic', face: 'ident' }]],
+    ['malformed', [{ text: t('L.history.unread.fault'), face: 'client' }, { text: FIELD, face: 'client' }, { text: 'malformed', face: 'ident' }]],
+    ['unreachable', asRuns(t('L.history.unread.unanswered', { board }))],
+    ['too_many_pairs', asRuns(t('B1.too_many_pairs'))],
+  ];
+  try {
+    for (const [name, words] of cases) {
+      Object.assign(script, { [key]: refusal(name) });
+      assert.equal((await SCENE.open(A, B, NEAR)).shown, true, `${name}: the scene shows`);
+      const bar = p.bar.innerHTML;
+      assert.ok(bar.includes(` <span class="face-text">${facedHTML(words)}</span>`) && p.bar.dataset.face === name, `${name}: at the opening, the bar says it — ${bar}`);
+      assert.ok(!bar.includes('written') && !bar.includes(esc(t('L.refused', { name }))), `${name}: never a write's words — ${bar}`);
+      SCENE.close();
+      const from = p.said.length;
+      assert.equal((await SCENE.open(A, B, { ...NEAR, wholeB: true })).shown, true, `${name}, a far end naming pane B whole: the scene shows without waiting on its \`compare\``);
+      for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+      assert.ok(p.said.slice(from).includes(heard(words)) && p.bar.dataset.face === name, `${name}: its answer, after the scene shows, said in the status region in the same words — ${p.said.slice(from)}`);
+      assert.ok(!p.said.slice(from).some((w) => w.includes('written')), `${name}: never a write's words`);
+      SCENE.close();
+    }
+  } finally { Object.assign(script, { [key]: was }); }
 }));
 
 test('a scene on a document a far end names whole, left from a pane or a pane\'s corner by WHOLE BOARD and returned to by Back with its `compare` held, shows again without waiting on it, the focus on the stop it was left from; answered, its band the scene\'s alone — the panes where the reader scrolled them, the focus where it stood', () => onPage(async (p) => {

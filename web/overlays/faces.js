@@ -8,7 +8,23 @@
 // A face is keyed on the refusal's one `name` — the board's token (the
 // `detail` of a `credential_refused`, else the `code`) or the shell's own —
 // and its `kind` (the halt's, the block's, `unreachable`), never on prose;
-// the disposition shapes the offered act. The name keys the face and names
+// the disposition shapes the offered act. Its words are keyed, too, on the
+// class of the request refused, read or write, which every caller names and
+// none defaults (`wordsFor`) — the request's and never the act's: a press
+// that commits a burst and then reads makes two requests. A write keeps
+// every name's words below, a name with none "⟨name⟩ — refused; nothing was
+// written"; a read keeps each name's whose words do not speak of writing,
+// and a name whose words do — the editor's, a link's write, a quote — or
+// that has none takes the one read cause (`readCause`): the board's silence
+// where it did not answer; the words a withheld document's faces name its
+// state by, of the document the board names, where the reader may not read
+// it; a fault in this client where the code says the request itself was
+// ill-formed (`ILL_FORMED`); else the board's refusal of the read, an unknown
+// code among them — each of the last two with the refusal's code after it, a
+// field, in the identifier's face, which the face draws and says as written.
+// The surfaces that say a refused read with words of their own — a past
+// state's line, the history act's line (SC's, N-GO's) — set this cause after
+// them. The name keys the face and names
 // the overlay (`face:⟨name⟩`, the gate's reading); a person meets the words
 // alone, never the token, which reads as a claim the words may refuse to
 // make; every address a face's words, arm or clause name stands in the
@@ -56,8 +72,8 @@
 // address and the head, the head a disclosure whose act opens the rest, and
 // folds it again. The words those faces name a withheld document's state by —
 // the ending's where its cover's face says them, else the withheld box's —
-// are the cause a past state's line gives for a read withheld from the reader
-// (`withheldWords`; SC's `pastWhyOf`). Never C-39, whose words are a link address's alone;
+// are the read cause for a read withheld from the reader (`withheldWords`,
+// `readCause`). Never C-39, whose words are a link address's alone;
 // `not_a_link`, C-39 at a link address inside a withheld document with the
 // entitlement arm the run's placeholder
 // carries beneath it (T-ARTICLE's one rule, by the reader),
@@ -66,7 +82,8 @@
 // `endsets_too_large`, `too_many_blocks`, `too_many_pairs`,
 // `too_much_coverage`, the session's `no_key` (C-136 with this version's
 // limit), `unreachable`; the editor's refusal names (B3; D6), each its
-// entry's words and no act, for the acts are the editor's screens' —
+// entry's words — a write's, and a read's where they do not speak of
+// writing — and no act, for the acts are the editor's screens' —
 // `out_of_bounds`, `empty_content` and `not_content_subspace` the one own-bug
 // entry (B3-S2), `arrangement_moved` the moved face, `held_full` the held
 // store's bound, `store_halted` the halt in one of two forms by the
@@ -123,7 +140,7 @@
 // reading face is, its words then the one running mark, its overlay named
 // `undoing:⟨address⟩` (`undoReading`); and that step not taken, its read
 // failed or the board already not answering, in its cause's words — the
-// board not answering, else the refusal's own — said at every press, its
+// board not answering, else the refusal's as a read's — said at every press, its
 // overlay `face:not-undone`, a redo's `face:not-redone` (`notUndone`;
 // FP-34, FP-41). A face
 // never takes the focus (D5 §4 rule 4; K-58): it is heard through the one
@@ -230,7 +247,7 @@ import { below, spoken } from './statement.js';
 import { entitlementArm, placeholderOf, faceRuns, CLAUSE_READING } from '../text/article.js';
 import { retries, lineOf, floatingSaid } from '../beams/held.js';
 import { drawChord } from '../nav/keys.js';
-import { t, tRuns, addressedHTML, endingOf, opening, sentence, sentences, heard, duration, runningHTML } from '../strings.js';
+import { t, tRuns, addressedHTML, facedHTML, endingOf, opening, sentence, sentences, heard, duration, runningHTML, runsText, asRuns, FIELD } from '../strings.js';
 import { esc, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -249,6 +266,16 @@ import { esc, fingerprintCue } from '../util.js';
  * @property {string} text
  * @property {Array<{label: string, run?: () => void, inert?: boolean}>} acts
  * @property {{id: string, text: string}} [head] the face's head, above its words: "not kept" at a face saying words were lost (D6 BM-10)
+ * @property {import('../strings.js').Run[]} [runs] its words as stretches in their faces, where a stretch of them is no client's word — the read cause's code, in the identifier's face (`readCause`): what the face draws, and so what is said of it
+ */
+
+/** @typedef {'read' | 'write'} RequestClass the class of the request a refusal answers (see the head): a read, or a write */
+
+/**
+ * @typedef {Object} Cause — the one read cause (see the head; `readCause`)
+ * @property {string} id its string
+ * @property {string} text its words
+ * @property {import('../strings.js').Run[]} runs its words as stretches in their faces: a refusal's code after them in the identifier's
  */
 
 /**
@@ -288,7 +315,7 @@ const claimReads = new Map();
  * rejection the shell hands up
  * whole as the refusal's `body`; the document the refused act named where
  * the body names none.
- * @param {Refusal} r
+ * @param {{kind: string, body?: unknown}} r the refusal, whole or as its reason is read (BM-HELD's `Met`, which carries no body)
  * @param {string} addr the document the act named
  * @returns {string}
  */
@@ -403,8 +430,9 @@ function clauseFace(c, follow) {
 }
 
 /**
- * The words for a refusal, by its name (see the head). A `withheld` refusal
- * is not among them: its face names the document it withholds (`withheld`).
+ * The words for a refusal, by its name and the class of the request refused
+ * (see the head). A `withheld` refusal a face answers is not among them: its
+ * face names the document it withholds (`showRefusal`, `withheld`).
  * The editor's names show their entries alone, no act: a token the entry
  * carries that the refusal does not — the board's name, the time elapsed — is
  * the caller's to fill through `ctx`, and stands as the design writes it
@@ -417,11 +445,17 @@ function clauseFace(c, follow) {
  * A face saying words were lost — the own-bug entry, the held store's
  * bound, the hand-over's — stands under the head "not kept" and offers the
  * act that copies the unkept words out, which the caller hands in (`ctx.copy`).
+ * A read keeps a name's words only where they do not speak of writing:
+ * every other name's, and a name with none, answering a read, are the one
+ * read cause's (`readCause`), with no head and no act. Throws where the class
+ * named is neither, so no caller words a refusal without naming it.
  * @param {Refusal} r
+ * @param {RequestClass} cls the class of the request the refusal answers — never the act's
  * @param {{addr?: string, board?: string, time?: string, date?: string, copy?: () => void}} [ctx] `addr` the document the act named; `board` the board's name as the line names it; `time` the time elapsed, in words — at `history_reclaimed`, the time the state shown stood (SC's `pastWhyOf`); `date` at `history_reclaimed`, the date the board keeps states back to, the day of the feed's row at the refusal's floor (SC's `floorOf`); `copy` what "copy these words out" does at a loss face
  * @returns {Face}
  */
-export function wordsFor(r, ctx = {}) {
+export function wordsFor(r, cls, ctx = {}) {
+  if (cls !== 'read' && cls !== 'write') throw new Error('a refusal is worded by the class of the request refused, read or write: ' + String(cls));
   const name = r.name;
   const addr = ctx.addr || '';
   const f = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ v = {}) => /** @type {Face} */ ({ id, text: t(id, v), acts: /** @type {Face['acts']} */ ([]) });
@@ -431,6 +465,12 @@ export function wordsFor(r, ctx = {}) {
   const lost = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ v = {}) => /** @type {Face} */ ({ ...f(id, v), head: { id: 'B3.not-kept', text: t('B3.not-kept') }, acts: [{ label: t('B3.copy-words-out'), run: ctx.copy }] });
   /** the tokens an entry carries that its refusal does not, filled where the caller hands them in */
   const given = /** @type {Record<string, string>} */ (Object.fromEntries(Object.entries({ board: ctx.board, time: ctx.time }).filter(([, v]) => typeof v === 'string')));
+  /** a name whose words speak of writing: those words answering a write, the read cause answering a read */
+  const writing = (/** @type {() => Face} */ words) => {
+    if (cls === 'write') return words();
+    const c = readCause(r, addr);
+    return /** @type {Face} */ ({ id: c.id, text: c.text, runs: c.runs, acts: [] });
+  };
   switch (name) {
     case 'doc_not_registered': return f('B1.doc_not_registered', { address: addr });
     case 'not_a_link': return said('B1.not_a_link');
@@ -447,24 +487,57 @@ export function wordsFor(r, ctx = {}) {
     case 'no_adapter': return f('L.no-adapter');
     case 'bad_port': return f('L.bad-port');
     // the editor's refusals (B3; D6), each its entry and no act
-    case 'out_of_bounds': case 'empty_content': case 'not_content_subspace': return lost('B3.own-bug');
-    case 'arrangement_moved': return f('B3.moved');
-    case 'held_full': return lost('B3.held_full.line', given);
-    case 'store_halted': return f(/** @type {{why?: unknown}} */ (r).why === 'damaged' ? 'B3.store_halted.damaged' : 'B3.store_halted.newer');
-    case 'another_window': return f('B3.another_window');
-    case 'answers_lost': return lost('B3.answers_lost', given);
-    case 'write_in_bare_session': return f('B3.keyless');
+    case 'out_of_bounds': case 'empty_content': case 'not_content_subspace': return writing(() => lost('B3.own-bug'));
+    case 'arrangement_moved': return writing(() => f('B3.moved'));
+    case 'held_full': return writing(() => lost('B3.held_full.line', given));
+    case 'store_halted': return writing(() => f(/** @type {{why?: unknown}} */ (r).why === 'damaged' ? 'B3.store_halted.damaged' : 'B3.store_halted.newer'));
+    case 'another_window': return writing(() => f('B3.another_window'));
+    case 'answers_lost': return writing(() => lost('B3.answers_lost', given));
+    case 'write_in_bare_session': return writing(() => f('B3.keyless'));
     case 'history_busy': return f('B3.history.busy');
     case 'history_reclaimed': return ctx.date != null ? f('L.history.floor', { board: ctx.board ?? boardName(), date: ctx.date })
       : f('B3.history.reclaimed', { board: ctx.board ?? boardName(), time: ctx.time ?? t('L.history.floor.untimed') });
-    case 'slot_too_large': return f('B3.slot_too_large');
+    case 'slot_too_large': return writing(() => f('B3.slot_too_large'));
     case 'source_not_registered': return f('B3.source_not_registered', { address: addr });
-    case 'dangling_source': return f('B3.dangling_source');
-    case 'bad_target': return f('B3.bad_target');
+    case 'dangling_source': return writing(() => f('B3.dangling_source'));
+    case 'bad_target': return writing(() => f('B3.bad_target'));
     case 'original_not_resident': return f('B3.original_not_resident');
-    case 'published_target': return f('C-45', { D: addr });
-    default: return f('L.refused', { name });
+    case 'published_target': return writing(() => f('C-45', { D: addr }));
+    default: return writing(() => f('L.refused', { name }));
   }
+}
+
+/** the refusals whose code says the request itself was ill-formed, whichever of the shell and the board refused it: the read cause calls each a fault in this client (`readCause`; FP-34) */
+const ILL_FORMED = new Set(['malformed', 'malformed_op_at', 'malformed_args', 'malformed_http', 'method_not_allowed', 'malformed_span', 'no_such_subspace', 'depth_incompatible', 'bad_region']);
+
+/**
+ * The one read cause (see the head): why a read was refused, in the words
+ * every surface answering a refused read says it by — the board's silence
+ * where it did not answer (M-PUMP's `unanswered`); the words a withheld
+ * document's faces name its state by (`withheldWords`) where the reader may
+ * not read the document the board names (`refusedDocument`); a fault in this
+ * client where the code says the request itself was ill-formed
+ * (`ILL_FORMED`); else the board's refusal of the read, an unknown code among
+ * them — each of the last two with the refusal's code after it, a field, in
+ * the identifier's face. A `withheld` refusal naming no document, nor the
+ * read one, takes the last.
+ * @param {{kind: string, name: string, body?: unknown}} r the refusal, whole or as its reason is read (BM-HELD's `Met`)
+ * @param {string} [addr] the document the read named
+ * @returns {Cause}
+ */
+export function readCause(r, addr = '') {
+  const board = boardName();
+  /** the cause's words, then the refusal's code as a field in the identifier's face */
+  const coded = (/** @type {string} */ id, /** @type {string} */ words) => {
+    /** @type {import('../strings.js').Run[]} */
+    const runs = [{ text: words, face: 'client' }, { text: FIELD, face: 'client' }, { text: r.name, face: 'ident' }];
+    return { id, text: runsText(runs), runs };
+  };
+  if (PUMP.unanswered(r)) { const text = t('L.history.unread.unanswered', { board }); return { id: 'L.history.unread.unanswered', text, runs: asRuns(text) }; }
+  const withheldDoc = r.name === 'withheld' ? refusedDocument(r, addr) : '';
+  if (withheldDoc) { const w = withheldWords(withheldDoc); return { id: w.id, text: w.text, runs: asRuns(w.text) }; }
+  if (ILL_FORMED.has(r.name)) return coded('L.history.unread.fault', t('L.history.unread.fault'));
+  return coded('L.history.unread.refused', t('L.history.unread.refused', { board }));
 }
 
 /**
@@ -499,9 +572,9 @@ export function pasteWords(name, doc) {
   }
 }
 
-/** the face's HTML: its words, each address in them in the identifier's face (ST's `addressedHTML`), what stands beneath them, its acts — and no token */
+/** the face's HTML: its words — each stretch in its face where it carries them (ST's `facedHTML`), else each address in them in the identifier's face (ST's `addressedHTML`) — what stands beneath them, its acts — and no token */
 function faceHTML(/** @type {Face} */ face, extra = '') {
-  return headHTML(face.head) + `<div class="face-text" data-string="${esc(face.id)}">${addressedHTML(face.text)}</div>` + (extra || '') +
+  return headHTML(face.head) + `<div class="face-text" data-string="${esc(face.id)}">${face.runs ? facedHTML(face.runs) : addressedHTML(face.text)}</div>` + (extra || '') +
     (face.acts.length ? `<div class="acts">${face.acts.map((a, i) => `<button data-run="a${i}" class="${a.inert ? 'inert' : ''}">${esc(a.label)}</button>`).join('')}</div>` : '');
 }
 
@@ -525,17 +598,18 @@ const armHTML = (/** @type {{id: string, text: string}} */ arm) => `<div class="
 /**
  * Show a refusal's face at an anchor: a `withheld` refusal as the
  * document-level withheld face (`withheld`) of the document the board names
- * (`refusedDocument`); every other by its name (`wordsFor`), with the acts
- * given. Either carries the caption of the act it answers, where one is
- * handed in (see the head).
+ * (`refusedDocument`); every other by its name and the class of the request
+ * refused (`wordsFor`), with the acts given. Either carries the caption of
+ * the act it answers, where one is handed in (see the head).
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor
  * @param {Refusal} r
  * @param {string} addr the document the refused act named
+ * @param {RequestClass} cls the class of the request refused (`wordsFor`)
  * @param {Asked & {acts?: Array<{label: string, run?: () => void, inert?: boolean}>}} [asked]
  */
-export function showRefusal(anchor, r, addr, asked = {}) {
+export function showRefusal(anchor, r, addr, cls, asked = {}) {
   if (r.name === 'withheld') { withheld(refusedDocument(r, addr), anchor, asked); return; }
-  const face = wordsFor(r, { addr });
+  const face = wordsFor(r, cls, { addr });
   face.acts.push(...(asked.acts || []));
   /** @type {Record<string, import('./host.js').Act>} */
   const handlers = {};
@@ -575,7 +649,7 @@ export function unregistered(addr, anchor = null, asked = {}) {
   }
   /** @type {RefusedByBoard} the board's `doc_not_registered`, as the shell hands it up: no site named */
   const answer = { kind: 'refused', name: 'doc_not_registered', status: 200, code: 'doc_not_registered', detail: null, op: 'doc_metadata', body: null, site: {} };
-  showRefusal(anchor, answer, addr, asked);
+  showRefusal(anchor, answer, addr, 'read', asked);
 }
 
 /**
@@ -748,7 +822,7 @@ export function signIn(anchor) {
 export function noBoardWords() {
   if (REC.board()) return null;
   const unreached = PORT.noAdapter();
-  if (unreached) { const w = wordsFor(unreached); return { id: w.id, text: w.text, again: false, doors: false }; }
+  if (unreached) { const w = wordsFor(unreached, 'read'); return { id: w.id, text: w.text, again: false, doors: false }; }
   const why = REC.noBoard();
   if (!why) return null;
   if (why === 'none') return { id: 'F.unclaimed', text: t('F.unclaimed'), again: false, doors: true };
@@ -890,8 +964,8 @@ export function endUndoReading(/** @type {string} */ addr) { HOST.complete(UNDOI
  * answering, as it already did not at the press or as the read met it
  * (M-PUMP's `unanswered`): "not undone — ⟨board⟩ is not answering", then
  * that the change is still the next to undo and the chord again once the
- * board answers, each a sentence, a redo's its own; any other refusal its own
- * words (`wordsFor`) — and said through the status region at every press,
+ * board answers, each a sentence, a redo's its own; any other refusal its
+ * words as a read's (`wordsFor`) — and said through the status region at every press,
  * though it holds those words already (O-HOST's `again`). A notice
  * (O-HOST's), standing below a card, a list or a moment the reader opened
  * (FP-36). It offers no act.
@@ -902,10 +976,11 @@ export function endUndoReading(/** @type {string} */ addr) { HOST.complete(UNDOI
  */
 export function notUndone(addr, anchor, r, redo) {
   const board = boardName(), id = redo ? 'L.redo.unanswered' : 'L.undo.unanswered';
+  /** @type {Face} */
   const words = !r || PUMP.unanswered(r)
-    ? { id, text: sentences(sentence(id, { board }), redo ? sentence('L.redo.unanswered.next', { 'redo chord': drawChord('Mod+Shift+Z') }) : sentence('L.undo.unanswered.next', { 'undo chord': drawChord('Mod+Z') })) }
-    : wordsFor(r, { addr, board });
-  HOST.show({ kind: 'face', id: 'face:' + (redo ? 'not-redone' : 'not-undone'), anchor: toAnchor(anchor), notice: true, again: true, html: faceHTML({ id: words.id, text: words.text, acts: [] }) });
+    ? { id, text: sentences(sentence(id, { board }), redo ? sentence('L.redo.unanswered.next', { 'redo chord': drawChord('Mod+Shift+Z') }) : sentence('L.undo.unanswered.next', { 'undo chord': drawChord('Mod+Z') })), acts: [] }
+    : wordsFor(r, 'read', { addr, board });
+  HOST.show({ kind: 'face', id: 'face:' + (redo ? 'not-redone' : 'not-undone'), anchor: toAnchor(anchor), notice: true, again: true, html: faceHTML({ ...words, acts: [] }) });
 }
 
 /** the reading face ends where it still stands — in the overlay's place, or below it as a notice — its jump's read answered, its own completion (O-HOST's `complete`): an overlay shown since stands, and a card asked since still opens */
@@ -1091,12 +1166,13 @@ export function c39(owner, reader, anchor) {
 /**
  * The session's refusal at the line's sign-in act — the boot's, or the
  * re-acquire's of a session a restart lost: `no_key` → C-136 with this
- * version's limit; any other by its name.
+ * version's limit; any other by its name, as a read's — opening a session
+ * writes nothing (`wordsFor`).
  * @param {Refusal} r
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor
  */
 export function sessionFace(r, anchor) {
-  const face = wordsFor(r);
+  const face = wordsFor(r, 'read');
   const extra = r.name === 'no_key' ? `<div class="note" data-string="F.keyless-limit">${esc(t('F.keyless-limit'))}</div>` : '';
   HOST.show({ kind: 'face', id: 'face:session:' + r.name, anchor: toAnchor(anchor), html: faceHTML(face, extra) });
 }
@@ -1290,7 +1366,8 @@ async function reply(w, call, value) {
     CAM.markDirty();
     return;
   }
-  const r = out.refused, said = wordsFor(r);
+  // the moment's answer and its cancel each tell the shell the reader's act: a write's words
+  const r = out.refused, said = wordsFor(r, 'write');
   if (r.name === 'no_such_moment') w.ended = true;
   w.note = w.ended ? gone() : { id: said.id, text: said.text };
   noted(w);
@@ -1531,7 +1608,7 @@ export function unkeptFace(addr) {
       return discardFace('handed', { lines: [entry('B3.answers_lost', { board, time: typeof ms === 'number' ? duration(ms) : '' })], acts: [again(), copyRun(words)] }, { id: 'B3.answers_lost.discard', values: { board } }, drop);
     }
     const own = OWN_BUG.includes(r.name);
-    return discardFace(own ? 'own-bug' : 'refused', { lines: [own ? entry('B3.own-bug') : wordsFor(r, { addr })], acts: [again(own ? entry('B3.own-bug.send-again') : null), copyRun(words)] }, NEVER_KEPT, drop);
+    return discardFace(own ? 'own-bug' : 'refused', { lines: [own ? entry('B3.own-bug') : wordsFor(r, 'write', { addr })], acts: [again(own ? entry('B3.own-bug.send-again') : null), copyRun(words)] }, NEVER_KEPT, drop);
   }
   const island = islands[0];
   if (island) {

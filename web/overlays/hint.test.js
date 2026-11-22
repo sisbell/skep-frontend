@@ -18,6 +18,8 @@
 // offers, each on a line of its own, says the statement after the notice, a
 // draft's name in it as written, and leaves the act apart, whose press —
 // inert — shows and says its reason at every press, the focus kept on it;
+// a notice a press composed of several entries' sentences stands whole at
+// every press, drawn in its stretches' faces and spoken as written;
 // the next act takes it down, handing a focus its button
 // held to the walk's element; and it stands beside the element its press was
 // made at — at its right, else its left, else below, below first where the
@@ -31,7 +33,7 @@ import * as HINT from './hint.js';
 import * as HOST from './host.js';
 import * as FOCUS from '../nav/focus.js';
 import * as CAM from '../plane/camera.js';
-import { addressedHTML, hintSentences, sentence, sentences, sentenceRuns, sentenceHTML, joinRuns, heard } from '../strings.js';
+import { addressedHTML, facedHTML, hintSentences, sentence, sentences, sentenceRuns, sentenceHTML, joinRuns, runsText, heard } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {{tag: string, attrs: Record<string, string>, text: string, focus: () => void, blur: () => void, getAttribute: (k: string) => string | null}} Kid */
@@ -311,6 +313,26 @@ test('beside a box means at its right, its tops level, else at its left, else be
   assert.deepEqual(HINT.besideBox({ x: 300, y: 4, w: 120, h: 18 }, size, seen), { x: 300, y: 30 }, 'a box above the view, as the one line\'s act stands: below it');
   assert.deepEqual(HINT.besideBox({ x: 1300, y: 880, w: 100, h: 20 }, size, seen), { x: 1092, y: 880 }, 'at its left, its tops level, the view holding its height after');
   assert.deepEqual(HINT.besideBox({ x: 20, y: 40, w: 1400, h: 850 }, size, seen), { x: 28, y: 860 }, 'a box the view holds no room beside, as a pane: inside it at its foot');
+});
+
+test('a notice a press composed of several entries\' sentences, as stretches in their faces, stands whole at every press beside the element the press was made at — each stretch drawn in its face, a draft\'s name in the reading face and a code in the identifier\'s — its button named and described by it and the status region told it, the name\'s own dash and the code kept as written; its string its first entry\'s, which the table must mark a hint (issue #723\'s design decision; style S22)', () => {
+  /** a draft's name as the status region names its box: its first line quoted, a dash of its own among it, then its address */
+  const named = /** @type {import('../strings.js').Run[]} */ ([{ text: '"', face: 'client' }, { text: 'Field notes — draft', face: 'reading' }, { text: '" ', face: 'client' }, { text: '1.0.1.0.2', face: 'ident' }]);
+  /** the read cause, a sentence: the board refusing the read, its code after it */
+  const cause = /** @type {import('../strings.js').Run[]} */ ([{ text: 'board 1 refused the read', face: 'client' }, { text: ' · ', face: 'client' }, { text: 'internal_panic', face: 'ident' }, { text: '.', face: 'client' }]);
+  const notice = joinRuns(' ', [sentenceRuns('L.history.unshown', { draft: named }), cause]), words = runsText(notice), spoken = heard(notice);
+  HINT.show('L.history.unshown', null, { notice, at: atRect(100, 200, 80, 20) });
+  HINT.render();
+  assert.deepEqual([HINT.standing(), said.at(-1)], [{ id: 'L.history.unshown', words, whole: words, open: true, writing: null }, spoken], 'whole, its words the stretches\', said as heard');
+  assert.equal(spoken, 'Could not show Field notes — draft 1.0.1.0.2’s history. board 1 refused the read, internal_panic.', 'the name\'s own dash kept and its quotation marks silent, the code kept, the line around them heard by S22\'s table');
+  assert.equal(el.innerHTML, `<button type="button" data-hint="L.history.unshown" data-string="L.history.unshown" aria-label="${esc(spoken)}" aria-describedby="hint-whole">${facedHTML(notice)}</button><span id="hint-whole" hidden>${esc(spoken)}</span>`,
+    'one button, drawn in its stretches\' faces, named and described by the notice as heard, neither opening nor folding');
+  assert.ok(el.innerHTML.includes('<span class="reading">Field notes — draft</span>') && el.innerHTML.includes('<span class="id">internal_panic</span>'), `the draft's words in the reading face, the code in the identifier's: ${el.innerHTML}`);
+  assert.deepEqual([el.style.left, el.style.top], ['188px', '200px'], 'beside the element the press was made at');
+  HINT.act();
+  HINT.show('L.history.unshown', null, { notice });
+  assert.deepEqual([HINT.standing()?.words, HINT.standing()?.open, said.at(-1)], [words, true, spoken], 'a later press: whole again, said again');
+  assert.throws(() => HINT.show('L.history.unread', null, { notice }), /no hint/, 'a composed notice\'s first entry the table marks no hint: refused');
 });
 
 test('the hint stands beside the element its press was made at, below the overlay standing where it would meet it, inside the visible view (D5 §4 rule 5; FP-26)', () => {

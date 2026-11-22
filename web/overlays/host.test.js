@@ -105,7 +105,7 @@ test('a face that answers an act is named by the act\'s caption and described by
   HOST.attach(/** @type {any} */ (el));
   try {
     const caption = `${t('B1.who-wrote')} · 1.0.1.0.3 · ${t('F.position', { p: 11 })}`, words = t('B1.too_much_coverage');
-    FACES.showRefusal(null, /** @type {any} */ ({ kind: 'refused', name: 'too_much_coverage', code: 'too_much_coverage', detail: null, op: 'show_origin', body: null }), '1.0.1.0.3', { caption });
+    FACES.showRefusal(null, /** @type {any} */ ({ kind: 'refused', name: 'too_much_coverage', code: 'too_much_coverage', detail: null, op: 'show_origin', body: null }), '1.0.1.0.3', 'read', { caption });
     const label = parts.find((p) => p.classes.includes('label')), text = parts.find((p) => p.classes.includes('face-text'));
     assert.deepEqual([attrs['aria-label'], label?.id, attrs['aria-description'], text?.id], [heard(caption), 'overlay-name', heard(words), 'overlay-said-0'], 'named by the act\'s caption, described by its words, each rendered for the ear');
     assert.equal(heard(caption), 'who wrote this? 1.0.1.0.3, position 11', 'the caption\'s middle dots a pause');

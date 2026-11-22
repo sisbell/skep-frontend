@@ -584,7 +584,7 @@ export async function start(byKey = false) {
   const out = await MACHINE.start(line);
   starting = false;
   if ('refused' in out) {
-    if (els && openState) HINT.show(refused = 'L.start.refused', { why: FACES.wordsFor(out.refused).text }, { at: els.box });
+    if (els && openState) HINT.show(refused = 'L.start.refused', { why: FACES.wordsFor(out.refused, 'write').text }, { at: els.box });
     return;
   }
   const first = mints++ === 0;

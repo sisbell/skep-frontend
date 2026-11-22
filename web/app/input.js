@@ -382,7 +382,7 @@ export function attach(els) {
   // an act of the face standing beneath a draft's kept word makes that act (O-FACES' `faceAct`; B3-S2); one on a draft's
   // kept word opens the face of the words the board has not kept where its state has one an overlay shows (O-FACES'
   // `unkept`; D5 K-57), else opens its statement or closes it; one on its kept line's second act opens the draft's history
-  // (N-GO's `history`; B3-S7), or says why it cannot; one on a compact corner's glyph, on the face's compact form,
+  // (N-GO's `history`; B3-S7), or says why it cannot beside that act; one on a compact corner's glyph, on the face's compact form,
   // or on a head's count of the items it folds, opens it whole, and one on the corner opened — the words its glyph opened
   // among it — closes it again (FP-26); each
   // the pointer's, or the one the platform makes from Enter or Space at the act (D5 K-57). A pointer's — every one but the
@@ -403,7 +403,7 @@ export function attach(els) {
     else if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected('plane'), byKey); }
     else if (holder && face) { e.stopPropagation(); FACES.faceAct(addr, face.dataset.face || ''); }
     else if (holder && target.closest('.kept-word[data-kept]')) { e.stopPropagation(); if (!FACES.unkept(addr, /** @type {HTMLElement} */ (target.closest('.kept-word')), byKey)) LAYER.openStatement(addr); }
-    else if (holder && target.closest('[data-history]')) { e.stopPropagation(); void GO.history(addr); }
+    else if (holder && target.closest('[data-history]')) { e.stopPropagation(); void GO.history(addr, { at: target.closest('[data-history]') }); }
     else if (holder && (target.closest('.glyph, [data-more], [data-whole]') || LAYER.cornerAt(addr)?.opened)) { e.stopPropagation(); LAYER.openCorner(addr); }
     const label = /** @type {HTMLElement | null} */ (holder ? null : target.closest('[data-held]'));
     if (label && label.dataset.held) followPointer(label.dataset.held, at);

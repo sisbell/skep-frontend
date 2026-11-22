@@ -33,7 +33,12 @@
 // entry, the face and every call's answer (FP-35); and the editor's refusal
 // names each mapped to their entry's words with no act — `history_reclaimed`
 // to the floor's own where the date its floor names is handed in (FP-34) — a
-// name no document drafts words for kept on the generic refusal line; the face of a
+// name no document drafts words for kept on the generic refusal line; each
+// refusal worded by the class of the request refused, named by every caller
+// and never defaulted — a write's every word kept, a read's where they do not
+// speak of writing, every other name and a name with none answering a read
+// in the one read cause, a face of it drawing its code in the identifier's
+// face, no "not kept" head and no act; the face of a
 // passage the person's own removal took, its act the put-back; and the moved
 // document's face standing at its corner and never as an overlay — its
 // words, its hands and its acts, its compact form naming its one device's
@@ -71,7 +76,7 @@ import * as LK from '../links/links.js';
 import { accountCell } from '../plane/projection.js';
 import { entitlementArm, faceWords, faceRuns } from '../text/article.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
-import { STRINGS, t, tRuns, addressedHTML, sentence, sentences, heard, runningHTML, opening } from '../strings.js';
+import { STRINGS, t, tRuns, addressedHTML, sentence, sentences, heard, runningHTML, opening, runsText, asRuns, FIELD } from '../strings.js';
 import { esc, byteLength, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -175,7 +180,7 @@ test('a `withheld` refusal of a read\'s document consult shows the document-leve
   for (const reader of READERS) {
     readAs(reader);
     FACES.classChanged();
-    FACES.showRefusal(null, refusal('show_origin'), X);
+    FACES.showRefusal(null, refusal('show_origin'), X, 'read');
     heldToTheFace(reader, 'the refusal', { whole: true, away: true });
     HOST.dismiss();
     FACES.withheld(X);
@@ -192,7 +197,7 @@ test('the face of a `withheld` refusal is the document the board names in the re
   const Y = '1.0.3.0.4', caption = `${t('B1.who-wrote')} · ${X} · ${t('F.position', { p: 1 })}`;
   REC.takeRefused(Y, 'withheld'); REC.takeEditionClaims(Y, []);
   readAs(READERS[0]);
-  FACES.showRefusal({ span: { addr: X, pos: 1, width: 1 } }, { ...refusal('show_origin'), body: { code: 'withheld', disposition: 'reorder', op: 'show_origin', resp: 'rejected', site: { addr: Y } } }, X, { caption });
+  FACES.showRefusal({ span: { addr: X, pos: 1, width: 1 } }, { ...refusal('show_origin'), body: { code: 'withheld', disposition: 'reorder', op: 'show_origin', resp: 'rejected', site: { addr: Y } } }, X, 'read', { caption });
   const f = faceShown();
   assert.ok(f && f.html.startsWith(`<span class="label">${esc(caption)}</span><div class="face-addr code id">${Y}</div>`), `the act's caption, then the document the board named — never ${X}, the face standing at ${X}'s own bytes: ${f && f.html}`);
   assert.deepEqual(f && f.words, ['F.corner.withheld', t('F.corner.withheld', { owner: '1.0.3' })], 'its words naming the owner of the document the board named');
@@ -402,7 +407,7 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
   const LOSS = ['out_of_bounds', 'empty_content', 'not_content_subspace', 'held_full', 'answers_lost'];
   for (const [r, id, values] of cases) {
     let copied = 0;
-    const face = FACES.wordsFor(r, { addr: '1.0.2.0.9', board: 'board 1', time: '2 minutes', copy: () => { copied++; } });
+    const face = FACES.wordsFor(r, 'write', { addr: '1.0.2.0.9', board: 'board 1', time: '2 minutes', copy: () => { copied++; } });
     assert.deepEqual([face.id, face.text], [id, t(id, values || {})], `${r.name}: its entry's words, filled from the caller`);
     assert.ok(!face.text.includes('⟨'), `${r.name}: no token left unfilled where the caller fills them: ${face.text}`);
     if (!LOSS.includes(r.name)) { assert.deepEqual([face.acts, face.head], [[], undefined], `${r.name}: no head and no act`); continue; }
@@ -410,30 +415,86 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
     /** @type {() => void} */ (face.acts[0].run)();
     assert.equal(copied, 1, `${r.name}: the act copies as its caller hands it in`);
   }
-  const bare = FACES.wordsFor(shell('answers_lost', [{ last: 'unreachable', elapsed_ms: 120480 }]));
+  const bare = FACES.wordsFor(shell('answers_lost', [{ last: 'unreachable', elapsed_ms: 120480 }]), 'write');
   assert.equal(bare.text, STRINGS['B3.answers_lost'].text, 'a token the refusal does not carry and no caller fills stands as the design writes it');
   // history_reclaimed's tokens never stand unfilled: the board as the line names it, a time not recorded — never the floor's position
-  const reclaimed = FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), { addr: '1.0.2.0.9' });
+  const reclaimed = FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), 'read', { addr: '1.0.2.0.9' });
   assert.deepEqual([reclaimed.id, reclaimed.text], ['B3.history.reclaimed', t('B3.history.reclaimed', { board: t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), time: t('L.history.floor.untimed') })],
     'history_reclaimed with no board and no time handed in: the board this page holds, "a time not recorded" (issue #688)');
   assert.ok(!reclaimed.text.includes('⟨') && !reclaimed.text.includes('2048'), `no token and no log position: ${reclaimed.text}`);
-  assert.equal(FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed' } }]), { time: '09:05' }).text, t('B3.history.reclaimed', { board: t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), time: '09:05' }),
+  assert.equal(FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed' } }]), 'read', { time: '09:05' }).text, t('B3.history.reclaimed', { board: t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), time: '09:05' }),
     'a refusal naming no floor, the time the state shown stood handed in: the same words, that time in them');
   // the date the refusal's floor names handed in: no earlier state readable, the board keeping states back to it — never the floor's position
   for (const date of ['16 November 2026', t('L.history.floor.untimed')]) {
-    const floored = FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), { board: 'board 1', time: '09:05', date });
+    const floored = FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), 'read', { board: 'board 1', time: '09:05', date });
     assert.deepEqual([floored.id, floored.text, floored.acts], ['L.history.floor', t('L.history.floor', { board: 'board 1', date }), []], `the date its floor names handed in, ${date}: the floor's own words, no act (issue #700)`);
     assert.ok(!floored.text.includes('⟨') && !floored.text.includes('2048') && !floored.text.includes('09:05'), `no token, no log position and not the time the state shown stood: ${floored.text}`);
   }
-  assert.equal(FACES.wordsFor(board('history_reclaimed'), { date: '16 November 2026' }).text, t('L.history.floor', { board: t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), date: '16 November 2026' }),
+  assert.equal(FACES.wordsFor(board('history_reclaimed'), 'read', { date: '16 November 2026' }).text, t('L.history.floor', { board: t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), date: '16 November 2026' }),
     'no board handed in: the board this page holds');
-  assert.equal(FACES.wordsFor(board('published_target')).text, t('C-45', { D: '' }), 'C-45 at a target the act did not name');
+  assert.equal(FACES.wordsFor(board('published_target'), 'write').text, t('C-45', { D: '' }), 'C-45 at a target the act did not name');
   for (const name of ['empty_source', 'frame_too_large', 'attest_not_composed', 'self_supersession', 'ill_formed_successor', 'head_unreadable', 'session_died', 'nothing_to_undo', 'no_merge', 'not_followed']) {
-    assert.deepEqual(FACES.wordsFor(shell(name)), { id: 'L.refused', text: t('L.refused', { name }), acts: [] }, `${name}: no entry drafted for it — the generic refusal line`);
+    assert.deepEqual(FACES.wordsFor(shell(name), 'write'), { id: 'L.refused', text: t('L.refused', { name }), acts: [] }, `${name}: no entry drafted for it — the generic refusal line`);
   }
   // the editor's faces shown at an act's site are named by the refusal, carry its entry and offer nothing
-  FACES.showRefusal(null, board('arrangement_moved'), '1.0.2.0.9');
+  FACES.showRefusal(null, board('arrangement_moved'), '1.0.2.0.9', 'write');
   assert.deepEqual([faceShown()?.id, faceShown()?.words, faceShown()?.acts], ['face:arrangement_moved', ['B3.moved', t('B3.moved')], []]);
+  HOST.dismiss();
+});
+
+test('a refusal is worded by the class of the request refused, which every caller names and none defaults: a write keeps every name\'s words, its fallback "⟨name⟩ — refused; nothing was written"; a read keeps each name\'s whose words do not speak of writing, and a name whose words do, or that has none, takes the one read cause — the board\'s silence, a withheld document\'s words of the document the board names, a fault in this client at a request the code calls ill-formed, else the board\'s refusal of the read, the last two with the code after them in the identifier\'s face — with no "not kept" head and no act; a face answering a read, the sign-in\'s and an undo\'s among them, draws and says it, never a write\'s words (issue #723\'s design decision; FP-34)', () => {
+  const board = (/** @type {string} */ name, /** @type {object} */ more = {}) => /** @type {Refusal} */ ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'retrieve_v', site: {}, body: null, ...more });
+  const BOARD = t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), D = '1.0.2.0.9';
+  /** the read cause's stretches where it names a code: its words, then the code as a field in the identifier's face */
+  const coded = (/** @type {string} */ id, /** @type {string} */ name) => [{ text: id === 'L.history.unread.fault' ? t(id) : t(id, { board: BOARD }), face: 'client' }, { text: FIELD, face: 'client' }, { text: name, face: 'ident' }];
+  /** a read's face in the read cause's place: the board refusing the read, the code after it */
+  const refusedRead = (/** @type {string} */ name) => ({ id: 'L.history.unread.refused', text: runsText(coded('L.history.unread.refused', name)), runs: coded('L.history.unread.refused', name), acts: [] });
+  assert.throws(() => FACES.wordsFor(board('internal_panic'), /** @type {any} */ (undefined)), /read or write/, 'no class named: refused, never defaulted');
+  assert.throws(() => FACES.wordsFor(board('internal_panic'), /** @type {any} */ ({ addr: D })), /read or write/, 'a context in the class\'s place: refused');
+  // the two fallbacks
+  assert.deepEqual(FACES.wordsFor(board('internal_panic'), 'write'), { id: 'L.refused', text: t('L.refused', { name: 'internal_panic' }), acts: [] }, 'a write\'s name with no words of its own: the generic refusal line');
+  assert.deepEqual(FACES.wordsFor(board('internal_panic'), 'read'), refusedRead('internal_panic'), 'a read\'s: the board refused the read, its code after it');
+  // each name whose words do not speak of writing: the same words for a read as for a write
+  const KEPT = ['doc_not_registered', 'not_a_link', 'range_not_present', 'scan_busy', 'endsets_too_large', 'too_many_blocks', 'too_many_pairs', 'too_much_coverage', 'empty_subspace', 'no_key', 'busy', 'unreachable', 'no_adapter', 'bad_port', 'history_busy', 'history_reclaimed', 'source_not_registered', 'original_not_resident'];
+  for (const name of KEPT) {
+    const read = FACES.wordsFor(board(name), 'read', { addr: D });
+    assert.deepEqual(read, FACES.wordsFor(board(name), 'write', { addr: D }), `${name}: a read keeps its words`);
+    assert.ok(!read.text.includes('written') && read.id !== 'L.history.unread.refused', `${name}: its own words, none of a write's: ${read.text}`);
+  }
+  // each name whose words speak of writing: its own for a write, the read cause for a read — no head, no act
+  const WRITING = ['out_of_bounds', 'empty_content', 'not_content_subspace', 'arrangement_moved', 'held_full', 'store_halted', 'another_window', 'answers_lost', 'write_in_bare_session', 'slot_too_large', 'dangling_source', 'bad_target', 'published_target'];
+  for (const name of WRITING) {
+    const write = FACES.wordsFor(board(name), 'write', { addr: D, copy: () => {} }), read = FACES.wordsFor(board(name), 'read', { addr: D, copy: () => {} });
+    assert.ok(!write.id.startsWith('L.history.unread') && write.id !== 'L.refused', `${name}: a write keeps its own words — ${write.id}`);
+    assert.deepEqual(read, refusedRead(name), `${name}: a read — the read cause, no "not kept" head and no act`);
+  }
+  // the read cause's other arms
+  const silent = FACES.wordsFor(/** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreachable', text: '' }), 'read');
+  assert.deepEqual(FACES.readCause({ kind: 'unreachable', name: 'unreachable' }, D), { id: 'L.history.unread.unanswered', text: t('L.history.unread.unanswered', { board: BOARD }), runs: asRuns(t('L.history.unread.unanswered', { board: BOARD })) }, 'the board\'s silence: it did not answer, no code');
+  assert.equal(silent.id, 'F.daemon.unreachable', 'a face answering a read the board did not answer keeps its own words');
+  for (const name of ['malformed', 'malformed_op_at', 'malformed_args', 'malformed_http', 'method_not_allowed', 'malformed_span', 'no_such_subspace', 'depth_incompatible', 'bad_region']) {
+    assert.deepEqual(FACES.readCause(board(name), D).runs, coded('L.history.unread.fault', name), `${name}: a fault in this client, its code after it`);
+  }
+  const withheldBy = (/** @type {string | null} */ named) => board('withheld', { body: named ? { code: 'withheld', site: { addr: named } } : null });
+  assert.deepEqual(FACES.readCause(withheldBy(X), D), { ...FACES.withheldWords(X), runs: asRuns(FACES.withheldWords(X).text) }, 'withheld: the words its faces name the document the board names by');
+  assert.deepEqual(FACES.readCause(withheldBy(null), X), { ...FACES.withheldWords(X), runs: asRuns(FACES.withheldWords(X).text) }, 'withheld naming none: the document the read named');
+  assert.deepEqual(FACES.readCause(withheldBy(null)).runs, coded('L.history.unread.refused', 'withheld'), 'withheld naming no document, nor the read one: the board refused the read');
+  assert.deepEqual(FACES.wordsFor(withheldBy(X), 'read').text, FACES.withheldWords(X).text, 'a read refused `withheld` worded outside the withheld face: the withheld document\'s words');
+  // a face answering a read: drawn and said in the read cause, its code in the identifier's face, never a write's head or act
+  for (const name of ['internal_panic', 'out_of_bounds']) {
+    live.textContent = '';
+    FACES.showRefusal(null, board(name), D, 'read');
+    const f = faceShown(), words = refusedRead(name);
+    assert.deepEqual([f?.id, f?.words, f?.acts], ['face:' + name, [words.id, words.text], []], `${name}: the read cause's face, named by the refusal, no act`);
+    assert.ok(f && f.html.includes(`<span class="id">${name}</span>`) && !f.html.includes('face-head') && !f.html.includes(esc(t('B3.copy-words-out'))) && !f.html.includes('written'), `${name}: its code in the identifier's face, no "not kept" head, no copy act: ${f && f.html}`);
+    assert.equal(live.textContent, heard(words.text), `${name}: said`);
+    HOST.dismiss();
+  }
+  FACES.sessionFace(board('internal_panic'), null);
+  assert.deepEqual(faceShown()?.words, ['L.history.unread.refused', refusedRead('internal_panic').text], 'the sign-in\'s refusal: opening a session writes nothing — the read cause');
+  HOST.dismiss();
+  FACES.notUndone(D, { span: { addr: D, pos: 1, width: 1 } }, board('out_of_bounds'), false);
+  assert.deepEqual(faceShown()?.words, ['L.history.unread.refused', refusedRead('out_of_bounds').text], 'the undo chord\'s read refused: the read cause, never the own-bug face');
   HOST.dismiss();
 });
 
@@ -511,7 +572,7 @@ test('the undo chord reading where its step stands says so at the act\'s site in
 
 test('a refusal whose entry stands alone at its face is set as a sentence — no link at the address, the passage no longer where it was — and the fifth cell\'s words stand as written, a sentence of their own, the address filled (style S1, S2)', () => {
   const board = (/** @type {string} */ name) => /** @type {Refusal} */ ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'project', site: {}, body: null });
-  assert.deepEqual(['not_a_link', 'range_not_present', 'doc_not_registered'].map((name) => FACES.wordsFor(board(name), { addr: '1.0.2.0.9' })), [
+  assert.deepEqual(['not_a_link', 'range_not_present', 'doc_not_registered'].map((name) => FACES.wordsFor(board(name), 'read', { addr: '1.0.2.0.9' })), [
     { id: 'B1.not_a_link', text: 'There\'s no link at this address, or none you can see.', acts: [] },
     { id: 'B1.range_not_present', text: 'The text there has moved, so that passage is no longer where it was.', acts: [] },
     { id: 'B1.doc_not_registered', text: 'This board says nothing about 1.0.2.0.9: not even whether a document is there, published, or withheld from you.', acts: [] },
@@ -600,7 +661,7 @@ test('at the line\'s sign-in act a death\'s face says its arm\'s words — the m
     FACES.deathFace(reason, null);
     assert.deepEqual([FACES.deathWords(reason), HOST.currentState()], [null, null], `the ${reason.arm} arm: no words, so no face — never the sign-out's`);
   }
-  for (const name of ['session_ended', 'session_died']) assert.notEqual(FACES.wordsFor(/** @type {Refusal} */ ({ kind: 'shell', name })).id, 'C-137.signed-out', `${name}: a session the shell no longer holds is not the person's sign-out`);
+  for (const name of ['session_ended', 'session_died']) assert.notEqual(FACES.wordsFor(/** @type {Refusal} */ ({ kind: 'shell', name }), 'read').id, 'C-137.signed-out', `${name}: a session the shell no longer holds is not the person's sign-out`);
 });
 
 /**
@@ -1085,7 +1146,7 @@ test('where the page URL\'s `port` names no port, why no board is held is the po
     REC.takeBoards(answer);
     assert.ok('refused' in answer && answer.refused.name === 'bad_port', `the list answered the port's own refusal: ${JSON.stringify(answer)}`);
     assert.deepEqual(FACES.noBoardWords(), { id: words[0], text: words[1], again: false, doors: false }, 'the one entry: the port must be a number — no retry tells, no doors');
-    assert.deepEqual(FACES.wordsFor(answer.refused), { id: words[0], text: words[1], acts: [] }, 'every call\'s answer in the same words, no act');
+    for (const cls of /** @type {const} */ (['read', 'write'])) assert.deepEqual(FACES.wordsFor(answer.refused, cls), { id: words[0], text: words[1], acts: [] }, `every call's answer in the same words, no act — a ${cls}'s`);
     live.textContent = '';
     FACES.noBoard(at);
     const f = faceShown();
@@ -1093,7 +1154,7 @@ test('where the page URL\'s `port` names no port, why no board is held is the po
     assert.ok(f && !f.html.includes('L.no-notebook-yet') && !f.html.includes('L.no-adapter'), `naming no notebook, and not as no shell and no provider: ${f && f.html}`);
     assert.equal(live.textContent, words[1], 'said through the status region');
     HOST.dismiss();
-    FACES.showRefusal(at, answer.refused, '');
+    FACES.showRefusal(at, answer.refused, '', 'read');
     assert.deepEqual([faceShown()?.id, faceShown()?.words, faceShown()?.acts], ['face:bad_port', words, []], 'a call it answers shown at the act: the same words, named by the refusal');
   } finally {
     HOST.dismiss();

@@ -221,6 +221,9 @@
 // neither pane was set again meanwhile, adds the bands, says a refusal in
 // the bar and the status region and answers a stop the reader returned to —
 // moving no pane and no focus, and holding no act of the panes' (`addBands`).
+// The bar says a refusal of the `compare`, at the opening or after it, as a
+// read's: its own words where it asks for the texts compared in parts, else
+// the one read cause O-FACES words every refused read by (`barWords`).
 // The scene is a step on
 // the trail, which N-GO keeps (`toScene`, `closeScene`): its own end —
 // zoom-out, Esc, ←, the bar's × — is a Back from its entry, the bar's handed
@@ -441,12 +444,8 @@
 // most (`reissueGap`), and only while its answer is one the board classes as
 // retry (BM-HELD's `busy`) — until it lands, the scene closes or reopens, or
 // another state is asked; any other, that it could not be read as it stood
-// at the asked row's time and why — the board's silence, the words the
-// draft's other faces name it by where the reader may not read it
-// (`Faces.withheldOf`), a fault in this client where its code says the
-// request itself was ill-formed, whichever of the shell and the board refused
-// it (`ILL_FORMED`), else the board's refusal, an unknown code among them, the
-// last two naming the refusal as code (`unreadOf`) — the state asked again
+// at the asked row's time and why, the one read cause O-FACES words every
+// refused read by (`Faces.cause`; `unreadOf`) — the state asked again
 // by nothing but a press of "read it again" beneath the line, drawn as that
 // line first stands and standing until pane B shows the state asked, never
 // beside the reader's not being let read the draft, inert with its reason
@@ -755,7 +754,7 @@ import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../
 import { applyHeld, recordAt, withLinks } from '../model/derive.js';
 import { elementIn, isElement } from '../text/span.js';
 import * as PAST from '../model/past.js';
-import { t, tHTML, tRuns, plural, joinRuns, runsText, asRuns, heard, asHeard, sentence, sentences, asSentence, fields, stoodAt, FIELD } from '../strings.js';
+import { t, tHTML, tRuns, plural, joinRuns, runsText, asRuns, facedHTML, heard, asHeard, sentence, sentences, asSentence, fields, stoodAt, FIELD } from '../strings.js';
 import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../model/frames.js').ComparePair} ComparePair */
@@ -1152,12 +1151,12 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  */
 
 /**
- * @typedef {Object} Faces — the faces a returned stop shows at its site, and the words a refusal is said in (O-FACES', the app's to hand in: O-FACES imports this module)
+ * @typedef {Object} Faces — the faces a returned stop shows at its site, and the words a refused read is said in (O-FACES', the app's to hand in: O-FACES imports this module)
  * @property {(addr: string, anchor: Anchor, abandon: () => void) => void} reaching an act on it waiting for the answer, which the face's dismissal abandons (FP-25)
  * @property {(far: string, anchor: Anchor, told: boolean) => void} floating the texts hold none of what it stood for, in the dead end's words; `told` its name says them where the focus lands
  * @property {(said: Said, anchor: Anchor, again: (() => void) | null, told: boolean) => void} held the line's words (FP-21), "try again" where a retry may tell; `told` as `floating`'s
- * @property {(r: Refusal, ctx: {time?: string, date?: string}) => {id: string, text: string}} words a refusal's words by its name (O-FACES' `wordsFor`): a past state's line where its asked state was refused as reclaimed (`pastWhyOf`); `time` the time the state shown stood; `date` the date the board keeps states back to (`PastList.floor`)
- * @property {(addr: string) => {id: string, text: string}} withheldOf the words a withheld document's faces name its state by (O-FACES' `withheldWords`): the session's ending's where one stands, else the withheld box's — the cause a past state's line gives for a read withheld (`unreadOf`)
+ * @property {(r: Refusal, ctx: {time?: string, date?: string}) => {id: string, text: string}} words a refused read's words by its name (O-FACES' `wordsFor`, a read's): a past state's line where its asked state was refused as reclaimed (`pastWhyOf`); `time` the time the state shown stood; `date` the date the board keeps states back to (`PastList.floor`)
+ * @property {(r: Refusal | Met, addr: string) => {id: string, text: string, runs: import('../strings.js').Run[]}} cause the one read cause (O-FACES' `readCause`), `addr` the document read: the cause a past state's line gives after its words (`unreadOf`), and the bar's words where the panes' `compare` was refused (`barWords`)
  */
 
 /** @typedef {{key: string, focus: boolean}} Listed a stroke's list standing as the reader left the scene (`Left.list`): the stroke's key (`strokeKey`), and whether the platform's focus stood in the list */
@@ -1226,8 +1225,8 @@ let ending = (/** @type {boolean} */ _byKey) => close();
 let faces = null;
 /** the pause before the scene's next reissue of a past state the board was busy on (`reissue`), by its handle; 0 where none waits — the scene's close and the next scene standing let it go unrun */
 let reissuing = 0;
-/** a draft's history opened from a pane's corner — its kept line's second act (N-GO's `history`), the pane named, the app's to hand in (`attach`); nothing until it does */
-let history = (/** @type {string} */ _addr, /** @type {boolean} */ _byKey, /** @type {'a' | 'b'} */ _side) => {};
+/** a draft's history opened from a pane's corner — its kept line's second act (N-GO's `history`), the pane named and the act's element, which a refusal's line stands beside — the app's to hand in (`attach`); nothing until it does */
+let history = (/** @type {string} */ _addr, /** @type {boolean} */ _byKey, /** @type {'a' | 'b'} */ _side, /** @type {Element | null} */ _at) => {};
 /** the reader's next act, a click on a pane's text being one — what stands on the one line and a hint taken down (L-LINE's `act`, O-HINT's `act`), the app's to hand in (`attach`); nothing until it does */
 let acted = () => {};
 /** @type {Record<'a' | 'b', Map<string, string>>} the run each origin's statement stands beside in each pane, by origin: the run's identity, kept while a line of that run is in view (`placeStatements`) */
@@ -1320,7 +1319,7 @@ function namePanes(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} *
  * draws the ties at once and marks the frame, so what stands over the panes
  * — a face at an editor pane's line (`editorLine`) — is placed again.
  * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement, strokes: HTMLElement}} e `strokes` the gutter's layer the strokes' buttons stand in
- * @param {{end?: (byKey: boolean) => void, faces?: Faces, history?: (addr: string, byKey: boolean, side: 'a' | 'b') => void, acted?: () => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it; `faces` the faces a returned stop shows at its site (O-FACES'); `history` a draft's history opened from a pane's corner (N-GO's `history`), the pane named; `acted` the reader's next act, which a click on a pane's text is (L-LINE's and O-HINT's `act`)
+ * @param {{end?: (byKey: boolean) => void, faces?: Faces, history?: (addr: string, byKey: boolean, side: 'a' | 'b', at: Element | null) => void, acted?: () => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it; `faces` the faces a returned stop shows at its site and the words a refused read is said in (O-FACES'); `history` a draft's history opened from a pane's corner (N-GO's `history`), the pane named and the act's element; `acted` the reader's next act, which a click on a pane's text is (L-LINE's and O-HINT's `act`)
  */
 export function attach(e, acts = {}) {
   els = e;
@@ -1366,7 +1365,7 @@ export function attach(e, acts = {}) {
     // a click on a corner's act takes it; one on the pane's text, or a drag's release there, is the pointer's act on the text (`textAct`)
     p.addEventListener('click', (ev) => {
       const on = onCorner(ev), side = p === e.paneB ? 'b' : 'a';
-      if (on === 'act') act(side); else if (on === 'kept') keptAct(side); else if (on === 'history') historyAct(side, FOCUS.byKey(ev)); else if (on === 'again') void readAgain(side);
+      if (on === 'act') act(side); else if (on === 'kept') keptAct(side); else if (on === 'history') historyAct(side, FOCUS.byKey(ev), /** @type {HTMLElement} */ (ev.target).closest('[data-history]')); else if (on === 'again') void readAgain(side);
       else if (on === 'earlier' || on === 'later') { if (side === 'b') void step(on === 'later' ? 1 : -1); } else if (on === 'whole') openWhole(side);
       else if (onText(ev.target)) textAct(e, side);
     });
@@ -2078,7 +2077,7 @@ async function pastSource(h, got, stands) {
  * @typedef {Object} Compared — the two texts' `compare` (`compareBetween`), with the reads made beside it (`readBetween`)
  * @property {ComparePair[]} pairs the runs of shared identity between them (`merged`); none where it told nothing
  * @property {boolean} told it answered
- * @property {Met | null} refused the refusal it met, by its kind and its name, which the bar says; null where it answered or was not asked
+ * @property {Refusal | null} refused the refusal it met, whole, which the bar says (`barWords`); null where it answered or was not asked
  * @property {Met | null} why where it told nothing, the refusal that kept it from telling — its own, or the one a pane's text was refused for, which asks none; null where it told, or where a pane's text could not be read and no refusal was met
  * @property {Refusal | null} unheard the first of the reads the board did not answer — the `compare`, a far end's projection (`placeBetween`) — whose silence teaches nothing; null where it answered every one
  */
@@ -2101,7 +2100,7 @@ async function compareBetween(A, B) {
   const whole = (/** @type {Pick<Text, 'src' | 'd'>} */ x) => [{ doc: x.src, spans: [{ ordinal: 1, positions: Math.max(1, x.d.extent || 1) }] }];
   if (!holds(A.d) || !holds(B.d)) return { pairs: [], told: false, refused: null, why: metOf(!holds(A.d) ? A.d : B.d), unheard: null };
   const cmp = await PUMP.read(F.compare(whole(A), whole(B)));
-  if ('refused' in cmp) { const r = { kind: cmp.refused.kind, name: cmp.refused.name }; return { pairs: [], told: false, refused: r, why: r, unheard: PUMP.unanswered(cmp.refused) ? cmp.refused : null }; }
+  if ('refused' in cmp) return { pairs: [], told: false, refused: cmp.refused, why: { kind: cmp.refused.kind, name: cmp.refused.name }, unheard: PUMP.unanswered(cmp.refused) ? cmp.refused : null };
   return { pairs: merged(F.decodeCompare(cmp.answer)), told: true, refused: null, why: null, unheard: null };
 }
 
@@ -2608,7 +2607,7 @@ export async function open(a, b, held = {}, as = {}) {
     // scene shown over one standing keeps that one's (the controller's one memory)
     const from = document.activeElement;
     const S = sceneOf(pa, pb, between.pairs, held, past);
-    stand(E, S, between.refused ? between.refused.name : null);
+    stand(E, S, between.refused);
     relevel();
     carrySel(S, held.sel ?? null);
     FOCUS.open('scene', { el: E.root, from, byKey: true, first: E.paneB });
@@ -2716,15 +2715,29 @@ async function addBands(S) {
   const E = els;
   if (scene !== S || !E || S.a.sets !== sets[0] || S.b.sets !== sets[1]) return;
   S.pairs = got.pairs;
-  if (got.refused) sayFace(E, got.refused.name);
+  if (got.refused) sayFace(E, S, got.refused);
   measure();
   answer(S, got);
   draw();
   relisted(S);
 }
 
-/** the bar's words for the refusal the panes' `compare` met, by its name */
-const faceWords = (/** @type {string} */ face) => t(face === 'too_many_pairs' ? 'B1.too_many_pairs' : face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: face });
+/**
+ * The bar's words for the refusal the panes' `compare` met, as stretches in
+ * their faces: its own where it asks for the texts compared in parts — too
+ * much shared, too many blocks — else, the `compare` a read of both panes'
+ * texts, the one read cause, a withheld one naming the document the board
+ * names, else pane B's (`Faces.cause`), a code in it in the identifier's
+ * face; none where the faces are not handed in.
+ * @param {Scene} S
+ * @param {Refusal} r
+ * @returns {import('../strings.js').Run[]}
+ */
+function barWords(S, r) {
+  if (r.name === 'too_many_pairs') return asRuns(t('B1.too_many_pairs'));
+  if (r.name === 'too_many_blocks') return asRuns(t('B1.too_many_blocks'));
+  return faces ? faces.cause(r, S.b.src).runs : [];
+}
 
 /**
  * A refusal the `compare` met after the scene showed (`addBands`), said where
@@ -2732,12 +2745,14 @@ const faceWords = (/** @type {string} */ face) => t(face === 'too_many_pairs' ? 
  * one stays — and in the status region, for it changed away from the focus
  * without the reader's act (FP-36).
  * @param {NonNullable<typeof els>} E
- * @param {string} face the refusal, by its name
+ * @param {Scene} S
+ * @param {Refusal} r the refusal
  */
-function sayFace(E, face) {
-  const words = faceWords(face), acts = E.bar.querySelector('[data-relevel]');
-  E.bar.dataset.face = face;
-  if (acts) acts.insertAdjacentHTML('beforebegin', `<span class="face-text">${esc(words)}</span> `);
+function sayFace(E, S, r) {
+  const words = barWords(S, r), acts = E.bar.querySelector('[data-relevel]');
+  E.bar.dataset.face = r.name;
+  if (!words.length) return;
+  if (acts) acts.insertAdjacentHTML('beforebegin', `<span class="face-text">${facedHTML(words)}</span> `);
   FOCUS.say(words);
 }
 
@@ -2761,9 +2776,9 @@ function sayFace(E, face) {
  * (`placeMargin`).
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
- * @param {string | null} face the refusal the `compare` met, by its name
+ * @param {Refusal | null} met the refusal the `compare` met, whose words the bar says (`barWords`)
  */
-function stand(E, S, face) {
+function stand(E, S, met) {
   SEL.endPanes();
   scene = S;
   stopReissue();
@@ -2775,10 +2790,10 @@ function stand(E, S, face) {
   S.fit = fitOf(E, S);
   for (const side of SIDES) { S[side].view = { ...S[side].view, cpl: S.fit.cpl }; nameTitle(S[side]); }
   E.strokes.innerHTML = '';
-  if (face) E.bar.dataset.face = face; else delete E.bar.dataset.face;
-  const asOf = S.past ? pastAsOf() : null;
+  if (met) E.bar.dataset.face = met.name; else delete E.bar.dataset.face;
+  const asOf = S.past ? pastAsOf() : null, words = met ? barWords(S, met) : [];
   E.bar.innerHTML = `<b class="id" data-name="a">${esc(S.a.shows)}</b> │ <b class="id" data-name="b">${esc(S.b.shows)}</b>${asOf ? ` <span class="as-of" data-string="${asOf.id}">${esc(asOf.text)}</span>` : ''} <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
-    (face ? ` <span class="face-text">${esc(faceWords(face))}</span>` : '') +
+    (words.length ? ` <span class="face-text">${facedHTML(words)}</span>` : '') +
     SIDES.map((side) => `<span id="${leadId(side)}" hidden>${esc(heard(paneLead(S[side])))}</span>`).join('') +
     (S.whole ? `<span id="${WHOLE_ID}" data-string="L.scene.whole-end" hidden>${esc(heard(t('L.scene.whole-end')))}</span>` : '') +
     ` <button data-relevel="1" aria-label="${esc(heard(t('F.scene.relevel')))}" aria-keyshortcuts="${esc(keyShortcut('Mod+R'))}">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button>` +
@@ -2845,7 +2860,7 @@ export async function reopen(o, as = {}) {
     const from = document.activeElement, spots = was.spots;
     for (const P of [pa, pb]) P.lacks = spots && P.src === was.panes[P.side].src ? spots[P.side].lacks : null;
     const S = sceneOf(pa, pb, between.pairs, held, past);
-    stand(E, S, between.refused ? between.refused.name : null);
+    stand(E, S, between.refused);
     if (spots) {
       for (const side of SIDES) {
         const lv = spots[side].level, at = lv ? REC.placedIn(S[side].d.image, lv.ids) : [];
@@ -4816,16 +4831,19 @@ function keptAct(side) {
  * as the app hands it in (`attach`; N-GO's `history`), the pane named, whose
  * selection the history's panes level at — which, in the draft's
  * own history scene, moves the focus into the history pane (`focusPast`), and
- * where the act stands inert says its reason (FP-41). Nothing where the pane
- * holds no draft's current text (`current`). An act in the scene (`actedIn`).
+ * where the act stands inert says its reason (FP-41); where its read was
+ * refused, the line saying why stands beside the act's element. Nothing where
+ * the pane holds no draft's current text (`current`). An act in the scene
+ * (`actedIn`).
  * @param {'a' | 'b'} side
  * @param {boolean} byKey
+ * @param {Element | null} at the act's element
  */
-function historyAct(side, byKey) {
+function historyAct(side, byKey, at) {
   const S = scene;
   if (!S || !current(S[side])) return;
   actedIn(S);
-  history(S[side].names, byKey, side);
+  history(S[side].names, byKey, side, at);
 }
 
 /** set the two ends level — each pane's matched line at one height, the bands' and lines' ends measured anew — once no pane is being set again (`whenSet`); an act in the scene (`actedIn`) */
@@ -5992,36 +6010,22 @@ function metBy(L, met, floor) {
   if (stopped(L) && !withholds(met)) L.again = true;
 }
 
-/** the refusals whose code says the request itself was ill-formed, whichever of the shell and the board refused it: a past state's line calls each a fault in this client (`unreadOf`; FP-34) */
-const ILL_FORMED = new Set(['malformed', 'malformed_op_at', 'malformed_args', 'malformed_http', 'method_not_allowed', 'malformed_span', 'no_such_subspace', 'depth_incompatible', 'bad_region']);
-
 /**
  * The line saying the asked state's read stopped (see the head;
  * `PastList.met`): "could not read it as it stood ⟨time⟩ — ⟨cause⟩", ⟨time⟩
  * the asked row's as a sentence names a time (ST's `stoodAt`), "at a time not
- * recorded" where its row holds none; the cause the board's silence where it
- * did not answer (M-PUMP's `unanswered`); the words the draft's other faces
- * name it by where the reader may not read it (`withholds`; `Faces.withheldOf`);
- * a fault in this client where its code says the request itself was
- * ill-formed (`ILL_FORMED`); else, an unknown code among them, the board's
- * refusal of the read — each of the last two with the refusal's name after
- * it, a field, set as code in the identifier's face. Each stretch in its face;
- * none where the faces are not handed in and the reader may not read the draft.
+ * recorded" where its row holds none; the cause the one read cause of the
+ * refusal met, the draft the document read (`Faces.cause`) — a refusal's code
+ * in it set in the identifier's face. Each stretch in its face; none where the
+ * faces are not handed in.
  * @param {PastList} L
  * @returns {{id: string, text: string, runs: import('../strings.js').Run[]} | null}
  */
 function unreadOf(L) {
+  if (!faces) return null;
   const r = /** @type {Refusal} */ (L.met), row = PAST.rowHolding(L.rows, L.asked);
   const time = row && row.time != null ? stoodAt(row.time) : t('L.time.at', { time: t('L.history.floor.untimed') });
-  /** the refusal's name after the cause's words, as a field, in the identifier's face */
-  const coded = (/** @type {string} */ words) => [{ text: words, face: /** @type {const} */ ('client') }, { text: FIELD, face: /** @type {const} */ ('client') }, { text: r.name, face: /** @type {const} */ ('ident') }];
-  /** @type {import('../strings.js').Run[]} */
-  let cause;
-  if (PUMP.unanswered(r)) cause = asRuns(t('L.history.unread.unanswered', { board: boardName() }));
-  else if (withholds(r)) { if (!faces) return null; cause = asRuns(faces.withheldOf(L.draft).text); }
-  else if (ILL_FORMED.has(r.name)) cause = coded(t('L.history.unread.fault'));
-  else cause = coded(t('L.history.unread.refused', { board: boardName() }));
-  const runs = tRuns('L.history.unread', { time, cause });
+  const runs = tRuns('L.history.unread', { time, cause: faces.cause(r, L.draft).runs });
   return { id: 'L.history.unread', text: runsText(runs), runs };
 }
 

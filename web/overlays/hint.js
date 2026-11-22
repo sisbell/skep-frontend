@@ -31,9 +31,15 @@
 // or compact, where the person was writing, the ending, the statement beneath
 // — so a notice reads in one form however many of them stand; what the
 // status region says is the same line, the offered act apart.
+// A press may hand in its notice composed already of several entries'
+// sentences, as stretches in their faces (`show`'s `notice`; N-GO's history
+// act refused): whole at every press, each stretch drawn in its face — a
+// draft's name in the reading face, a code in the identifier's — and spoken
+// as written; its string is its first entry's.
 // Raised (`show`) by the press it answers — N-KEYS' swallow, the caret's
 // lines, an inert slot's reason, "select a passage first", the caret's
-// follow line; N-FIND's chord off any document; the one line's inert act,
+// follow line; N-FIND's chord off any document; N-GO's history act where its
+// read was refused; the one line's inert act,
 // through the act the app hands the line — its notice ST's (`hintSentences`): whole
 // at its first press in the page's session, its compact form, its first
 // clause, at every later press, and a notice marked whole whole at every
@@ -108,7 +114,7 @@ import * as LAYER from '../text/layer.js';
 import { focusBox } from '../plane/render.js';
 import { pageGeometry } from '../beams/beams.js';
 import { visibleView, markDirty } from '../plane/camera.js';
-import { t, hintSentences, addressedHTML, opening, sentence, endedHTML, sentenceRuns, sentenceHTML, runsText, joinRuns, heard } from '../strings.js';
+import { t, hintSentences, addressedHTML, facedHTML, opening, sentence, endedHTML, sentenceRuns, sentenceHTML, runsText, joinRuns, heard } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
@@ -153,6 +159,7 @@ const WRITING = 'B3.undo.last-writing';
  * @property {string} id its notice's string
  * @property {string} whole the notice whole, a sentence (ST's `hintSentences`)
  * @property {string} clause its compact form, a sentence: the notice whole where it has none
+ * @property {Run[] | null} runs the notice as the press composed it, stretches in their faces — drawn so and spoken as written, whole at every press; null where the notice is the strings table's entry filled with words alone
  * @property {boolean} open it shows the notice whole
  * @property {Writing | null} writing where the person was writing, which its line ends with; null where it ends with the notice
  * @property {{id: string, text: string} | null} ending the sentence its line ends on while its notice stands whole, by its string, its words a sentence, its tokens filled (ST's `sentence`); null where it ends on none
@@ -219,6 +226,8 @@ export function attach(e, r = {}) {
 
 /** the words the hint's notice shows */
 const wordsOf = (/** @type {Hint} */ h) => (h.open ? h.whole : h.clause);
+/** the notice as it is drawn and spoken: the stretches a press composed it of, else the words it shows */
+const noticeOf = (/** @type {Hint} */ h) => h.runs || wordsOf(h);
 /** the words its line ends with where the person was writing elsewhere (`Writing`); '' where it ends with the notice */
 const endOf = (/** @type {Hint} */ h) => (h.writing ? sentence(WRITING, { label: h.writing.label }) : '');
 /** does its notice stand whole: opened, or with no compact form to fold to */
@@ -229,8 +238,8 @@ const lastOf = (/** @type {Hint} */ h) => (h.ending && wholeOf(h) ? h.ending.tex
 const namedOf = (/** @type {Writing} */ w) => w.named || w.label;
 /** does the line hold parts beneath its notice: a statement, or an act it offers */
 const partsOf = (/** @type {Hint} */ h) => !!h.beneath || !!h.offered;
-/** the words the status region says of it: the notice's, where the person was writing after them — its name as written — the sentence the line ends on, and the statement beneath, any name in it as written */
-const saidOf = (/** @type {Hint} */ h) => joinRuns(' ', [wordsOf(h), h.writing ? sentenceRuns(WRITING, { label: namedOf(h.writing) }) : '', lastOf(h), h.beneath ? h.beneath.said : '']);
+/** the words the status region says of it: the notice's — as written, where a press composed it — where the person was writing after them — its name as written — the sentence the line ends on, and the statement beneath, any name in it as written */
+const saidOf = (/** @type {Hint} */ h) => joinRuns(' ', [noticeOf(h), h.writing ? sentenceRuns(WRITING, { label: namedOf(h.writing) }) : '', lastOf(h), h.beneath ? h.beneath.said : '']);
 
 /**
  * The statement a press hands in to stand beneath the notice, made whole
@@ -274,21 +283,23 @@ function siteOf(at) {
 /**
  * A refused press answered (see the head): the hint raised beside the focus
  * the press was made at — whole at its notice's first press in the page's
- * session, compact at every later one, its line ending with where the person
+ * session, compact at every later one, a notice the press composed whole at
+ * every press, its line ending with where the person
  * was writing where the press hands that in, and holding beneath its notice
  * the statement and the act the press hands in — said in the status region,
  * and drawn on the next dirty frame (FP-9). An auto-repeat answers nothing.
- * Throws for a string the table marks no hint (ST's `hintSentences`).
- * @param {string} id
+ * Throws for a string the table marks no hint (ST's `hintSentences`), a
+ * composed notice's first entry's among them.
+ * @param {string} id the notice's string: a composed notice's first entry's
  * @param {Record<string, string | number> | null} [values]
- * @param {{repeat?: boolean, at?: Element | null, writing?: Writing | null, ending?: Ending | null, beneath?: Beneath | null, offered?: Offered | null}} [o] `repeat` the key's auto-repeat; `at` the element the press was made at, where the walk's focus is not it; `writing` where the person was writing, which the line ends with; `ending` the sentence the line ends on while its notice stands whole; `beneath` the statement beneath its notice; `offered` the act it offers beneath them
+ * @param {{repeat?: boolean, at?: Element | null, notice?: Run[] | null, writing?: Writing | null, ending?: Ending | null, beneath?: Beneath | null, offered?: Offered | null}} [o] `repeat` the key's auto-repeat; `at` the element the press was made at, where the walk's focus is not it; `notice` the notice the press composed of several entries' sentences, as stretches in their faces, `values` unread; `writing` where the person was writing, which the line ends with; `ending` the sentence the line ends on while its notice stands whole; `beneath` the statement beneath its notice; `offered` the act it offers beneath them
  */
 export function show(id, values = null, o = {}) {
   if (o.repeat) return;
-  const h = hintSentences(id, values ?? undefined), open = !seen.has(id);
+  const h = hintSentences(id, values ?? undefined), open = !seen.has(id), composed = o.notice ? runsText(o.notice) : null;
   seen.add(id);
   hint = {
-    id, whole: h.whole, clause: h.clause, open, writing: o.writing ?? null, ending: o.ending ? { id: o.ending.id, text: sentence(o.ending.id, o.ending.values) } : null,
+    id, whole: composed ?? h.whole, clause: composed ?? h.clause, runs: o.notice ?? null, open, writing: o.writing ?? null, ending: o.ending ? { id: o.ending.id, text: sentence(o.ending.id, o.ending.values) } : null,
     beneath: beneathOf(o.beneath), offered: offeredOf(o.offered), site: siteOf(o.at ?? null), plane: !SCENE.isOpen(),
   };
   presses++;
@@ -349,15 +360,15 @@ export function classChanged() {
   act();
 }
 
-/** the hint's markup: its button, named by the words it shows, described by the line whole — the notice whole, the sentence it ends on and the statement beneath — open or folded where it has a compact form; after it the ending where the person was writing, its label a button of its own, and, while the notice stands whole, the sentence the line ends on; beneath them the statement, then the act it offers (`offeredHTML`) */
+/** the hint's markup: its button, named by the words it shows, described by the line whole — the notice whole, the sentence it ends on and the statement beneath — open or folded where it has a compact form, a notice a press composed drawn in its stretches' faces; after it the ending where the person was writing, its label a button of its own, and, while the notice stands whole, the sentence the line ends on; beneath them the statement, then the act it offers (`offeredHTML`) */
 function markup(/** @type {Hint} */ h) {
   const folds = h.whole !== h.clause ? ` aria-expanded="${h.open}"` : '', last = lastOf(h);
-  return `<button type="button" data-hint="${esc(h.id)}" data-string="${esc(h.id)}" aria-label="${esc(heard(wordsOf(h)))}" aria-describedby="hint-whole"${folds}>${addressedHTML(wordsOf(h))}</button>`
+  return `<button type="button" data-hint="${esc(h.id)}" data-string="${esc(h.id)}" aria-label="${esc(heard(noticeOf(h)))}" aria-describedby="hint-whole"${folds}>${h.runs ? facedHTML(h.runs) : addressedHTML(wordsOf(h))}</button>`
     + (h.writing ? ` ${endingHTML(h.writing)}` : '')
     + (h.ending && last ? ` <span class="ending" data-string="${esc(h.ending.id)}">${addressedHTML(last)}</span>` : '')
     + (h.beneath ? `<span class="beneath" data-string="${esc(h.beneath.id)}">${h.beneath.html}</span>` : '')
     + (h.offered ? offeredHTML(h.offered) : '')
-    + `<span id="hint-whole" hidden>${esc(heard(joinRuns(' ', [h.whole, h.ending ? h.ending.text : '', h.beneath ? h.beneath.said : ''])))}</span>`;
+    + `<span id="hint-whole" hidden>${esc(heard(joinRuns(' ', [h.runs || h.whole, h.ending ? h.ending.text : '', h.beneath ? h.beneath.said : ''])))}</span>`;
 }
 
 /** the act the line offers (`Offered`): a native button on a line of its own, named by its label, its string on it — inert, drawn so and described by its reason — and that reason beside it, a sentence, once a press told it (`offeredAct`) */
@@ -382,7 +393,7 @@ function endingHTML(/** @type {Writing} */ w) {
 export function render() {
   if (!el) return;
   const host = el, h = hint;
-  const key = h ? JSON.stringify([h.id, h.whole, wordsOf(h), endOf(h), lastOf(h), h.beneath && h.beneath.html, h.offered && [h.offered.id, h.offered.told]]) : '';
+  const key = h ? JSON.stringify([h.id, h.whole, wordsOf(h), h.runs, endOf(h), lastOf(h), h.beneath && h.beneath.html, h.offered && [h.offered.id, h.offered.told]]) : '';
   if (key !== written) {
     const at = typeof document !== 'undefined' ? document.activeElement : null;
     const held = !!at && at !== host && host.contains(at);

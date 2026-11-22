@@ -427,7 +427,7 @@ function wroteOver(addr, sp, selected, how, pane = null) {
   const anchor = anchorOf(addr, sp, pane);
   const caption = `${t('B1.who-wrote')} · ${addr} · ${t('F.position', { p: sp.ordinal })}`;
   return HOST.opening(asking(addr, runsOf(addr, sp, pane), (base, width) => F.showOrigin(addr, base, width), true, pastAt(pane)), (out) => {
-    if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr, answering(caption, anchor)); return; }
+    if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr, 'read', answering(caption, anchor)); return; }
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
     const lines = (/** @type {RunAnswer} */ a, /** @type {Reach} */ reach, /** @type {string} */ key) => {
@@ -484,7 +484,7 @@ function usesOver(addr, sp, selected, how, pane = null) {
   /** is a run's answer the page's own words for none: new words the board has not minted, or minted ones the board names no other document for — the same words on both sides of the ack */
   const none = (/** @type {RunAnswer} */ a) => a.is === 'new' || (a.is === 'board' && a.run.made && !usersOf(a.answer).length);
   return HOST.opening(asking(addr, runsOf(addr, sp, pane), (base, width) => F.findDocsContaining([{ doc: addr, spans: [{ ordinal: base, positions: width }] }]), false, pastAt(pane)), (out) => {
-    if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr, answering(caption, anchor)); return; }
+    if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr, 'read', answering(caption, anchor)); return; }
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
     const lines = (/** @type {RunAnswer} */ a, /** @type {Reach} */ reach, /** @type {string} */ key) => {

@@ -47,7 +47,8 @@
 // the lane's own and the one re-worded, with a size of text in megabytes; and
 // the lines a paste at a published edition draws beneath C-45 — C-241
 // re-worded keeping its trace, the staging act, and the lane's reason it
-// stands inert.
+// stands inert; and the history act's line where no state opens, the lane's
+// own head before the one read cause, each notice it raises marked whole.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -1327,4 +1328,12 @@ test('where the read of a past state\'s asked state stopped, its line, each of i
     assert.ok(lacking().some((x) => x.id === id), `${id}: listed for the report`);
   }
   assert.equal(t('L.history.unread', { time: 'at 14:00', cause: t('L.history.unread.refused', { board: 'board 1' }) }), 'could not read it as it stood at 14:00 — board 1 refused the read', 'its two tokens filled, none left');
+});
+
+test('where a draft\'s history act opens no state, its line\'s head is the lane\'s own words as issue #723 decided them, naming B3-S7, listed for the report — a read\'s, never saying anything was written — its apostrophe the curly one, filled as the head of a sentence the read cause follows; it and each other notice that act raises at the act — the board not answering, a reclaimed history — marked whole (B3-S7; FP-34; style S12)', () => {
+  const e = STRINGS['L.history.unshown'];
+  assert.deepEqual([e.text, e.cls, e.source, e.lane, e.kind, /B3-S7/.test(e.screen ?? ''), /written/.test(e.text), e.text.includes('\'')], ['could not show ⟨draft⟩’s history', 'DRAFT', '', true, 'K6', true, false, false], 'the decision\'s words: the lane\'s own, a refusal');
+  assert.ok(lacking().some((x) => x.id === 'L.history.unshown'), 'listed for the report');
+  assert.equal(sentence('L.history.unshown', { draft: 'Field notes 1.0.1.0.2' }), 'Could not show Field notes 1.0.1.0.2’s history.', 'a sentence of its own, its token filled, none left');
+  for (const id of ['L.history.unshown', 'L.history.unanswered', 'B3.history.reclaimed']) assert.equal(STRINGS[id].hint, 'whole', `${id}: a notice the history act raises at the act, whole at every press`);
 });

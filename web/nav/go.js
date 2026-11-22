@@ -336,8 +336,13 @@
 // the scene opens holding — else
 // at the newest change's place nearest the caret (`changeNear`), its entry
 // keeping the state asked, so a return asks it again (SC's `Held.past`);
-// where no state is read, or the history read is refused, nothing opens and
-// every press says why in the status region (FP-41; `historyRefused`).
+// where no state is read, or the history read is refused, nothing opens, no
+// face rises and the focus stays: every press, which asks again, shows why at
+// the act — O-HINT's line beside the act's element — and says it in the
+// status region, a read's words and never a write's: the board not answering
+// and a reclaimed history in their own, any other refusal "could not show
+// ⟨draft⟩’s history" then the one read cause (O-FACES' `readCause`), each a
+// sentence (`historyRefused`; FP-25, FP-41).
 // HOME (the acting account's region), WHOLE BOARD (the board at the clamp)
 // and an account's region push too (foundations §2.2), and so does a walk's
 // moment unfolded where the camera stands away from the view its walk showed
@@ -536,12 +541,13 @@ import * as VERSIONS from '../overlays/versions.js';
 import * as LINKS from '../overlays/links-card.js';
 import * as PROV from '../overlays/provenance.js';
 import * as MARKLIST from '../overlays/mark-list.js';
+import * as HINT from '../overlays/hint.js';
 import * as FOCUS from './focus.js';
 import { accountCell, boardCell, continuationCell, continuationOf } from '../plane/projection.js';
 import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf, accountOf } from '../model/address.js';
 import { sameSpan } from '../text/span.js';
 import * as PAST from '../model/past.js';
-import { t, sentence, asSentence } from '../strings.js';
+import { t, sentence, asRuns, asSentenceRuns, sentenceRuns, joinRuns } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -1565,7 +1571,7 @@ function showNotice(n, told = false, caption = null, found = false) {
   if (n.face === 'reading') FACES.reading(n.addr, n.site);
   else if (n.face === 'unregistered') FACES.unregistered(n.addr, n.site, { ...asked, far: !!n.far });
   else if (n.face === 'withheld') FACES.withheld(n.addr, n.site, asked);
-  else if (n.face === 'refused' && n.refusal) FACES.showRefusal(n.site, n.refusal, n.addr, asked);
+  else if (n.face === 'refused' && n.refusal) FACES.showRefusal(n.site, n.refusal, n.addr, 'read', asked);
   else if (n.face === 'floating') FACES.floating(n.addr, n.site, floatOffer(n.addr), told, found);
   CAM.markDirty();
 }
@@ -1667,7 +1673,7 @@ async function reachFor(act, addr, entry, site, far = false) {
   if (placeable(addr) || !w.refused) return { refused: w.refused };
   if (entry) TRAIL.giveBack(entry);
   if (far && w.refused.name === 'doc_not_registered') FACES.unregistered(addr, at, { ...asNotice(act), far });
-  else FACES.showRefusal(at, w.refused, addr, asNotice(act));
+  else FACES.showRefusal(at, w.refused, addr, 'read', asNotice(act));
   return null;
 }
 
@@ -2957,7 +2963,7 @@ export async function toScene(a, b, held = {}, opts = {}) {
   if (!out.refused) return false;
   // a link's end's near pane is a document the page draws: the board saying nothing of an address names the far one
   if (end && out.refused.name === 'doc_not_registered') FACES.unregistered(end.far, site, { ...asNotice(act), far: true });
-  else FACES.showRefusal(site, out.refused, addr, asNotice(act));
+  else FACES.showRefusal(site, out.refused, addr, 'read', asNotice(act));
   return false;
 }
 
@@ -2979,18 +2985,28 @@ export function closeScene(byKey = false) {
 let histories = 0;
 
 /**
- * Why a draft's history opened nothing, as a sentence the press says in the
- * status region (FP-41; `history`): where the board did not answer, the words
- * the act stands inert by while it does not (T-LAYER's `historyAct`); else the
- * refusal's own (O-FACES' `wordsFor`).
- * @param {import('../bridge/shapes').Refusal} r
+ * Why a draft's history opened nothing, as the line its press shows at the
+ * act and says in the status region (FP-25, FP-41; `history`): its first
+ * entry's string, and its sentences as stretches in their faces. Where the
+ * board did not answer, the words the act stands inert by while it does not
+ * (T-LAYER's `historyAct`); reclaimed, the refusal's words as a read's
+ * (O-FACES' `wordsFor`); any other refusal, that the draft's history could
+ * not be shown — the draft named as the status region names its box, kept as
+ * written (T-LAYER's `boxName`), its address alone where the model holds no
+ * record of it — then why, the one read cause (O-FACES' `readCause`).
+ * @param {import('../bridge/shapes').Refusal} r the refusal a read met: the history's, or the newest kept state's
  * @param {string} addr the draft
- * @returns {string}
+ * @returns {{id: string, runs: import('../strings.js').Run[]}}
  */
 function historyRefused(r, addr) {
-  if (!PUMP.unanswered(r)) return asSentence(FACES.wordsFor(r, { addr }));
-  const b = REC.board();
-  return sentence('L.history.unanswered', { board: b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : '' });
+  if (PUMP.unanswered(r)) {
+    const b = REC.board();
+    return { id: 'L.history.unanswered', runs: asRuns(sentence('L.history.unanswered', { board: b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : '' })) };
+  }
+  if (r.name === 'history_reclaimed') { const w = FACES.wordsFor(r, 'read', { addr }); return { id: w.id, runs: asSentenceRuns(w) }; }
+  /** @type {import('../strings.js').Run[]} */
+  const draft = REC.has(addr) ? LAYER.boxName(addr).runs : [{ text: addr, face: 'ident' }];
+  return { id: 'L.history.unshown', runs: joinRuns(' ', [sentenceRuns('L.history.unshown', { draft }), asSentenceRuns(FACES.readCause(r, addr))]) };
 }
 
 /**
@@ -3047,8 +3063,10 @@ export function changeNear(past, now, near) {
  * read yields to the newest kept one, its corner saying why in the refusal's
  * words — a substitution — which the scene asks again while the board
  * classes it as retry (SC's); where the newest kept state is not read either,
- * or the history read is refused, nothing opens, and every press says why in
- * the status region (FP-41; `historyRefused`); where it reads no row, the
+ * or the history read is refused, nothing opens and no face rises: every
+ * press shows why at the act, as O-HINT's line beside the element it was made
+ * at, and says it in the status region, the focus where it stood
+ * (`historyRefused`; FP-25, FP-41); where it reads no row, the
  * status region says the draft stands as it is. The panes
  * level at a selection standing in the draft — the plane's, or, where the act
  * is made at a reading scene's pane's corner, that pane's, held by its bytes
@@ -3062,7 +3080,7 @@ export function changeNear(past, now, near) {
  * leaves it opening nothing. Where no board is held, the act answered where
  * it was made (FP-35).
  * @param {string} addr the draft
- * @param {{site?: Site | null, side?: 'a' | 'b' | null}} [opts] `site` where the act was made; `side` the reading scene's pane whose corner it was made at, whose selection the panes level at — the plane's where none is named
+ * @param {{site?: Site | null, side?: 'a' | 'b' | null, at?: Element | null}} [opts] `site` where the act was made; `side` the reading scene's pane whose corner it was made at, whose selection the panes level at — the plane's where none is named; `at` the act's element, which a refusal's line stands beside — the walk's focus where none is named
  * @returns {Promise<boolean>} the scene shows, or the focus went into its history pane
  */
 export async function history(addr, opts = {}) {
@@ -3073,6 +3091,8 @@ export async function history(addr, opts = {}) {
   if (SCENE.pastOf() === addr) { SCENE.focusPast(); return true; }
   const mine = ++histories, start = made;
   const stands = () => mine === histories && made === start;
+  /** a refused read answered at the act: its line beside the act's element and said, nothing opened (`historyRefused`) */
+  const refused = (/** @type {import('../bridge/shapes').Refusal} */ r) => { const w = historyRefused(r, addr); HINT.show(w.id, null, { notice: w.runs, at: opts.at ?? null }); };
   WRITE.commit(addr);
   await WRITE.landed(addr);
   if (!stands()) return false;
@@ -3080,14 +3100,14 @@ export async function history(addr, opts = {}) {
   const read = await PUMP.historyOf(addr, { enough: (rows) => PAST.rowsOf(rows).length >= 2 });
   const readMs = performance.now() - t0;
   if (!stands()) return false;
-  if (read.refused) { FOCUS.say(historyRefused(read.refused, addr), false, true); return false; }
+  if (read.refused) { refused(read.refused); return false; }
   const rows = PAST.rowsOf(read.rows), unkept = WRITE.unkept(addr);
   // no row read, no state to open on: the draft as it stands is all its history holds
   if (!rows.length) { FOCUS.say(sentence('B3.history.now'), false, true); return false; }
   const asked = (unkept ? null : rows[1]) ?? rows[0];
   const got = await SCENE.pastState(addr, rows, asked, read.head);
   if (!stands()) return false;
-  if ('refused' in got) { FOCUS.say(historyRefused(got.refused, addr), false, true); return false; }
+  if ('refused' in got) { refused(got.refused); return false; }
   const sel = SEL.asLeft(opts.side ?? 'plane'), caret = LAYER.caretIn(addr), f = WALK.focusedSpan();
   const near = caret ? caret.pos : f && f.addr === addr ? f.pos : null;
   const change = sel && sel.addr === addr ? null : changeNear(got.state.image, LAYER.shownOf(addr).image, near);
@@ -3636,7 +3656,7 @@ async function sceneAt(e, act, byKey, returns = false) {
   const first = leave(act, e, { ...walkOf(e, at), view: at.view, aim: at.aim, take: false, returns }, byKey, 500);
   const out = await SCENE.reopen(o);
   if (act !== made) return;
-  if (!out.shown && out.refused) FACES.showRefusal(null, out.refused, e.addr, asNotice(act));
+  if (!out.shown && out.refused) FACES.showRefusal(null, out.refused, e.addr, 'read', asNotice(act));
   endAir(act, await first);
 }
 
