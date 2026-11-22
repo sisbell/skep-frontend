@@ -167,7 +167,9 @@
 // their ties, the reader's place carried into it and the selection following
 // its words; any other taken down to its cover, its reader's place and its
 // selection kept by their bytes for its read at the new class, the selection
-// standing none meanwhile — no band standing; then each is read again
+// standing none meanwhile — no band standing; a draft's history's pane B
+// taken down to the cover of the state it stands on, which keeps its place
+// (below); then each is read again
 // at the class the page reads at then,
 // a document withheld from a guest standing as its head alone; a pane on a
 // covered draft stays open (FP-29), its head its cover, its corner saying it
@@ -410,7 +412,8 @@
 // the text the page shows of a draft, derived by its own edits alone, is the
 // draft's current text, its corner the draft's (`current`); a change of the
 // page's class sets it again from the model's record of its document, as
-// every pane (FP-29). Opened as a draft's history (`Held.past`; B3-S7; N-GO's
+// every pane but a past state's (below; FP-29). Opened as a draft's history
+// (`Held.past`; B3-S7; N-GO's
 // `history`) on the draft's address, pane B is a state of the draft derived
 // at a position (M-DERIVE's `recordAt`): the state the act asked
 // (`PastHeld.asked`) — a past one read from the board's history at the
@@ -426,7 +429,20 @@
 // (`Showing.past`), and read again as it reopens, over the rows its entry
 // keeps and those of the draft written since (`pastSince`), for its entry
 // keeps the state asked and never the record shown nor why (`pastSource`,
-// `asLeft`). Its corner is titled by what it
+// `asLeft`). A change of the page's class keeps pane B on the state it
+// stands on, its place, and the state asked (FP-29, FP-23): pane B taken
+// down at once to that state's cover, its title standing, holding nothing
+// the class it left read of it (`coverOf`), the line, the links' word and the
+// reissue that class answered gone (`PastList.cover`; `dropped`); then the
+// state asked read again at the class the page reads at then (`askPast`'s
+// `cover`) and landed in place, saying only what the selection's following
+// says — save where a read of it is out for an ask, which answers for it and
+// lands as that ask's does;
+// refused, as a return takes it (`fellBack`): the newest kept state read in
+// its place, the line saying why, else pane B standing as its cover under
+// its title with the line — `withheld`, a session's ending among them, in the
+// draft's own withheld words, with no "read it again" (`againOf`). Its
+// corner is titled by what it
 // is at every fit, in the kind's place (`titled`) — "as it stood ⟨time⟩ ·
 // ⟨hand⟩", a key of the reader's own named by its device label alone
 // (`handFields`) — with the chip after it, and where it shows another state
@@ -442,8 +458,10 @@
 // reissues the asked state (`reissue`) — a whole read at a time, the first RETRY_MS after
 // the last answer, each pause twice the one before, PAST_RETRY_MAX_MS at the
 // most (`reissueGap`), and only while its answer is one the board classes as
-// retry (BM-HELD's `busy`) — until it lands, the scene closes or reopens, or
-// another state is asked; any other, that it could not be read as it stood
+// retry (BM-HELD's `busy`) — until it lands, the scene closes or reopens,
+// another state is asked, or the page's class changes, a read of it out
+// then taking no answer (`stopReissue`); any other, that it could not be
+// read as it stood
 // at the asked row's time and why, the one read cause O-FACES words every
 // refused read by (`Faces.cause`; `unreadOf`) — the state asked again
 // by nothing but a press of "read it again" beneath the line, drawn as that
@@ -833,6 +851,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {number} asked the commit whose state was asked last — by the act (`PastHeld.asked`), a step, a row's act, "read it again" (`askPast`) — the one pane B shows where none other is asked
  * @property {number | null} out the commit whose state's read is out for an ask (`askPast`): one read at a time; null where none is
  * @property {boolean} fell pane B shows the newest kept state in the place of the state the act or a return asked, which its reads refused (`pastState`): a reclaimed answer of the scene's reissue then words the line (`reissue`); false once pane B shows a state as asked, or another is asked
+ * @property {boolean} cover pane B stands as its cover (`coverOf`): a change of the page's class took the state it showed down, and the state asked is read again at the class the page reads at now (`dropped`, `askPast`) — a refusal of it then taken as a return takes one, the newest kept state read in its place (`fellBack`); false once a state lands (`landPast`)
  * @property {Cut | null} cut where the list's floor line stands (`placeFloor`): rising only; null where no read was refused at the floor
  * @property {'unread' | 'arriving' | 'read' | 'failed'} links the links that stood on the state pane B shows (`restLinks`): not read, where it landed while a later state was asked; their read out at a rest; read; failed past the bound
  * @property {Refusal | null} met the latest refusal the asked state's reads met, where pane B shows another state in its place: why it does (`pastWhyOf`); null where it shows the one asked
@@ -1225,6 +1244,8 @@ let ending = (/** @type {boolean} */ _byKey) => close();
 let faces = null;
 /** the pause before the scene's next reissue of a past state the board was busy on (`reissue`), by its handle; 0 where none waits — the scene's close and the next scene standing let it go unrun */
 let reissuing = 0;
+/** the reissues let go (`stopReissue`): a reissue begun before the last of them makes no read and takes no answer */
+let letGo = 0;
 /** a draft's history opened from a pane's corner — its kept line's second act (N-GO's `history`), the pane named and the act's element, which a refusal's line stands beside — the app's to hand in (`attach`); nothing until it does */
 let history = (/** @type {string} */ _addr, /** @type {boolean} */ _byKey, /** @type {'a' | 'b'} */ _side, /** @type {Element | null} */ _at) => {};
 /** the reader's next act, a click on a pane's text being one — what stands on the one line and a hint taken down (L-LINE's `act`, O-HINT's `act`), the app's to hand in (`attach`); nothing until it does */
@@ -2219,8 +2240,19 @@ function paneCorner(P) {
   return { d, view: { ...P.view, members: P.n, read: P.read, lacks: P.lacks, lags: lags(), kept: now ? WRITE.keptOf(P.names) : null, history: now ? LAYER.historyAct(P.names) : null, keptOpen: now && LAYER.statementOpen(P.names), held: P.heldVersion, past, kind: LAYER.kindOf(P.d) } };
 }
 
-/** does a pane show a past state of a draft (see the head; `Held.past`): pane B of a draft's history, on a record derived at a position of the board's history */
+/** does a pane show a past state of a draft (see the head; `Held.past`): pane B of a draft's history, on a record derived at a position of the board's history — its cover among them (`coverOf`) */
 const pastShown = (/** @type {Pane} */ P) => !!scene && !!scene.past && P.side === 'b' && !!P.d.derived && P.d.derived.at != null;
+
+/**
+ * A past state's record taken down to its cover at a change of the page's
+ * class (see the head; FP-29): the state it stands on, derived at the
+ * position it was read at, holding nothing the class it left read of it — no
+ * text, image, extent, links or metadata — so its article is its head alone,
+ * no tie stands on it, and its corner keeps its title (`pastShown`).
+ * @param {Doc} d a past state's record (M-DERIVE's `recordAt`)
+ * @returns {Doc}
+ */
+const coverOf = (d) => ({ ...d, extent: null, whole: null, linkPositions: null, meta: null, runs: [], from: -1, to: -1, readAt: null, blocks: [], image: [], origins: [], imageFor: null, links: new Set(), linksRead: false });
 
 /** the clauses a pane's past state's line carries after its title, in the order its corner draws them (T-ARTICLE's `pastClauses`; B3-S7; `pastLine`): what its region is described by (`namePane`) — a substitution's words name it instead; none where none stands, or it shows no past state */
 const pastSaid = (/** @type {Pane} */ P) => (scene && scene.past && pastShown(P) ? pastClauses(pastLine(scene.past)) : []);
@@ -4655,7 +4687,11 @@ function newest(row, src) {
  * carried into it and its selection following its words (`setPanes`); one
  * the change dropped or covered taken down to its cover, its reader's place
  * and its selection kept by their bytes for that read — and read again at
- * the class the page reads at then; a
+ * the class the page reads at then; a draft's history's pane B taken down
+ * to its cover as the state it stands on (`coverOf`), the line, the links'
+ * word and the reissue the class it left answered gone, and the state asked
+ * read again at the new class as an ask reads it, a read of it out for an ask
+ * answering for it (`askPast`; FP-29); a
  * refresh reaching every pane (`refreshed`); a row naming a newer member
  * pinning an edition at its bare address at once, or counting a version's
  * chain again; any other row reaching a pane's text, and a clause decided
@@ -4678,11 +4714,17 @@ export function dropped(x) {
     if (owes(S.past)) void readOlder(S);
   }
   if (!x.addrs) {
+    const L = S.past, covers = !!L && pastShown(S.b);
+    // a draft's history's pane B keeps the state it stands on, taken down to its cover: nothing the class it left answered of
+    // it stands — its line, its links' word, its reissue — and a read of the state asked out for an ask goes on, answered at
+    // the new class
+    if (L && covers) { stopReissue(); Object.assign(L, { cover: true, fell: false, met: null, floor: null, running: false, again: false, said: null, links: 'unread' }); }
     setPanes(S, SIDES.map((side) => {
-      const P = S[side], d = REC.doc(P.src);
+      const P = S[side], d = covers && side === 'b' ? coverOf(P.d) : REC.doc(P.src);
       return { side, down: d.from < 0 || !!d.refused, next: { d, kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold: null } };
     }), []);
-    for (const side of SIDES) void update(side, { at: x.at });
+    for (const side of SIDES) if (!(covers && side === 'b')) void update(side, { at: x.at });
+    if (L && covers) void askPast(S, L.asked, { cover: true });
     return;
   }
   if (x.chains) { for (const side of SIDES) refreshed(S, side, x.chains, x.at); return; }
@@ -5859,9 +5901,10 @@ export function listHTML(L) {
  * (M-PAST's `notLastOf`), and, while the state last asked is read (`reads`),
  * when that state stood, in the title's form — "a time not recorded" where
  * its row holds none; why the links that stood on its words are not shown
- * where they are not (`PastList.links`); and its two one-state steps, each
- * inert at the end it cannot pass with its reason (`stepsOf`). Derived, never
- * kept.
+ * where they are not (`PastList.links`), none while pane B stands as its
+ * cover, which shows no words (`PastList.cover`); and its two one-state
+ * steps, each inert at the end it cannot pass with its reason (`stepsOf`).
+ * Derived, never kept.
  * @param {PastList} L
  * @returns {import('../text/article.js').PastLine}
  */
@@ -5871,7 +5914,7 @@ function pastLine(L) {
     time: row && row.time != null ? stoodAt(row.time) : t('F.slot.not-recorded'), hand: row ? handFields(row.hand) : [{ text: t('F.slot.not-recorded'), face: 'client' }], why: pastWhyOf(L),
     notLast: PAST.notLastOf(L.rows, L.at, L.bottom),
     reading: reads(L) ? (asked && asked.time != null ? stoodAt(asked.time) : t('L.history.floor.untimed')) : null,
-    links: L.links === 'read' ? null : L.links,
+    links: L.links === 'read' || L.cover ? null : L.links,
     steps: stepsOf(L),
   };
 }
@@ -5957,8 +6000,9 @@ function feedFloorWords(L) {
  * not be read and why (`unreadOf`) — each with "read it again" beneath it
  * where it stands (`againOf`); else, where it shows the state asked, that
  * state the newest row's and the draft holding no words the board has not
- * kept, the words saying it is how the draft stands now; else none. Derived,
- * never kept: a row arriving above the state shown takes the last away.
+ * kept, the words saying it is how the draft stands now — never while pane B
+ * stands as its cover (`PastList.cover`); else none. Derived, never kept: a
+ * row arriving above the state shown takes the last away.
  * @param {PastList} L
  * @returns {import('../text/article.js').PastWhy | null}
  */
@@ -5975,7 +6019,7 @@ function pastWhyOf(L) {
     return u && { ...u, substituted: true, ...again };
   }
   const top = L.rows[0];
-  return !L.unkept && !!top && L.at === top.last && L.asked === top.last ? { id: 'B3.history.now', text: t('B3.history.now'), substituted: false } : null;
+  return !L.unkept && !L.cover && !!top && L.at === top.last && L.asked === top.last ? { id: 'B3.history.now', text: t('B3.history.now'), substituted: false } : null;
 }
 
 /** the board as the status region names it (the ARIA mirror's board item), its ⟨board⟩ in a past state's line and its act's reason; '' where none is held */
@@ -6082,7 +6126,7 @@ function pastListOf(h, got) {
   const on = got.held ?? h, rows = PAST.rowsOf(on.entries);
   /** @type {PastList} */
   const L = {
-    draft: on.draft, entries: [...on.entries], rows, days: PAST.daysOf(rows), open: new Set(), opened: false, at: got.shown, asked: on.asked, out: null, fell: false, cut: null,
+    draft: on.draft, entries: [...on.entries], rows, days: PAST.daysOf(rows), open: new Set(), opened: false, at: got.shown, asked: on.asked, out: null, fell: false, cover: false, cut: null,
     links: got.record.linksRead ? 'read' : 'arriving', met: null, floor: null, running: false, again: false,
     head: on.head, unkept: on.unkept, said: null, from: on.from, bottom: on.bottom, reading: false, figures: { ...on.figures, stateMs: got.ms, at: got.state.at, older: null }, html: '',
   };
@@ -6135,8 +6179,8 @@ export const PAST_RETRY_MAX_MS = 2000;
  */
 export const reissueGap = (k) => Math.min(PUMP.RETRY_MS * 2 ** k, PAST_RETRY_MAX_MS);
 
-/** the pause before a reissue let go unrun (`reissuing`): no reissue outlives the scene it was made for */
-function stopReissue() { if (reissuing) { clearTimeout(reissuing); reissuing = 0; } }
+/** the reissue standing let go (`reissue`): its pause let go unrun (`reissuing`), and a read of it out taking no answer (`letGo`) — no reissue outlives the scene, or the class of the page, it was made for */
+function stopReissue() { letGo++; if (reissuing) { clearTimeout(reissuing); reissuing = 0; } }
 
 /**
  * A draft's history standing (`open`, `reopen`; see the head): its line said
@@ -6191,18 +6235,21 @@ function sayLine(S, lead = null) {
  * the date its floor names once that is read (`floorOf`), each taken as every
  * refusal is (`metBy`), a reclaimed one standing the floor's line too
  * (`placeCut`) — save where the state asked was a step's or a row's, which
- * pane B never stood in the place of: that answer stands the floor's line
- * alone, pane B and its line as they stood (`refusedAtFloor`); each answer's
- * words written in its place (`lineMoved`). It ends with nothing more where
- * the scene closed or reopened, or another state was asked, meanwhile.
+ * pane B never stood in the place of, and pane B stands as no cover
+ * (`PastList.cover`): that answer stands the floor's line alone, pane B and
+ * its line as they stood (`refusedAtFloor`);
+ * each answer's words written in its place (`lineMoved`). It ends with
+ * nothing more, a read of it out taking no answer, where the scene closed or
+ * reopened, another state was asked, or it was let go (`stopReissue`),
+ * meanwhile.
  * @param {Scene} S
  * @returns {Promise<void>}
  */
 async function reissue(S) {
   const L = S.past;
   if (!L || !busy(L.met)) return;
-  const asked = L.asked;
-  const stands = () => scene === S && S.past === L && L.asked === asked;
+  const asked = L.asked, run = letGo;
+  const stands = () => run === letGo && scene === S && S.past === L && L.asked === asked;
   if (!PAST.rowHolding(L.rows, asked)) { L.running = false; lineMoved(S); return; }
   for (let k = 0; stands() && busy(L.met); k++) {
     await new Promise((r) => { reissuing = Number(setTimeout(r, reissueGap(k))); });
@@ -6213,7 +6260,7 @@ async function reissue(S) {
     if ('refused' in got) {
       const floor = busy(got.refused) ? null : await floorOf(got.refused);
       if (!stands()) return;
-      if (got.refused.name === 'history_reclaimed' && !L.fell) { await refusedAtFloor(S, got.refused, asked, floor, false); return; }
+      if (got.refused.name === 'history_reclaimed' && !L.fell && !L.cover) { await refusedAtFloor(S, got.refused, asked, floor, false); return; }
       if (got.refused.name === 'history_reclaimed') placeCut(L, cutOf(L, got.refused, asked, floor && floor.date, floor && floor.time));
       metBy(L, got.refused, floor && floor.date); lineMoved(S); continue;
     }
@@ -6253,31 +6300,37 @@ const readPast = (L, at, attempts) => (L.rows[0] && at === L.rows[0].last ? PUMP
  * where nothing later was asked meanwhile. A refusal: at the floor, its line
  * placed and pane B as it stood (`refusedAtFloor`) — save where pane B stands
  * in the place of the state the act asked, whose line the reclaimed answer
- * becomes as the scene's reissue's does (`PastList.fell`); else taken as every
+ * becomes as the scene's reissue's does (`PastList.fell`); while pane B
+ * stands as its cover, as a return takes it (`fellBack`); else taken as every
  * refusal is (`metBy`), the line written in its place (`lineMoved`) and the
  * scene reissuing a retry-class answer (`reissue`) — "read it again"'s
  * answer said in the status region whether or not it changed the line.
  * Nothing is taken where the scene closed or reopened meanwhile. An act in the
- * scene (`actedIn`).
+ * scene (`actedIn`) — save the ask a change of the page's class makes of the
+ * state pane B's cover stands on (`cover`; `dropped`, `refusedAtFloor`): no
+ * reader's act, it reads that state whatever pane B showed, beneath the
+ * floor's line too, where no read is out — a read out answers for it — and
+ * lands it saying only what the selection's following says (`landPast`'s
+ * `quiet`).
  * @param {Scene} S
  * @param {number} at the commit asked
- * @param {{again?: boolean}} [how] `again` the press of "read it again", whose answer is said whatever it is
+ * @param {{again?: boolean, cover?: boolean}} [how] `again` the press of "read it again", whose answer is said whatever it is; `cover` the ask of a change of the page's class (`dropped`)
  * @returns {Promise<void>}
  */
 async function askPast(S, at, how = {}) {
   const L = S.past;
   if (!L) return;
-  actedIn(S);
+  if (!how.cover) actedIn(S);
   if (at !== L.asked) {
     // a state asked anew: the reissue of the one asked before it, and the line that answered it, end
     L.asked = at; L.fell = false; L.met = null; L.floor = null; L.running = false; L.again = false;
     stopReissue();
-  } else if (L.out == null && !how.again && L.asked === L.at && !L.running) return;
+  } else if (L.out == null && !how.again && !how.cover && L.asked === L.at && !L.running) return;
   const stands = () => scene === S && S.past === L;
   if (L.out != null) { lineMoved(S); return; }
   while (stands()) {
     const want = L.asked, line = L.cut ? PAST.floorLine(L.rows, L.cut.at) : null;
-    if (line && want < line.cut && !how.again) { await refusedAtFloor(S, null, want, null, true); return; }
+    if (line && want < line.cut && !how.again && !how.cover) { await refusedAtFloor(S, null, want, null, true); return; }
     const t0 = performance.now();
     L.out = want;
     lineMoved(S);
@@ -6287,13 +6340,15 @@ async function askPast(S, at, how = {}) {
     if (!stands()) return;
     if (L.asked !== want) {
       // passed while its read was out: landed where it stands, no rest; a refusal at the floor stands the line still
-      if (!('refused' in got)) landPast(S, stateGot(L, got, want, t0), false);
+      if (!('refused' in got)) landPast(S, stateGot(L, got, want, t0), { rest: false });
       else if (got.refused.name === 'history_reclaimed') { const f = await floorOf(got.refused); if (!stands()) return; if (placeCut(L, cutOf(L, got.refused, want, f && f.date, f && f.time))) lineMoved(S); }
       continue;
     }
-    if (!('refused' in got)) { landPast(S, stateGot(L, got, want, t0)); return; }
+    // the state a change of the page's class asked of the cover lands saying only what the selection's following says
+    if (!('refused' in got)) { const quiet = !!how.cover && want === at, said = landPast(S, stateGot(L, got, want, t0), { quiet }); if (said) FOCUS.say(said); return; }
     const floor = busy(got.refused) ? null : await floorOf(got.refused);
     if (!stands() || L.asked !== want) continue;
+    if (L.cover) { await fellBack(S, want, got.refused, floor, t0, !!how.again); return; }
     if (got.refused.name === 'history_reclaimed' && !L.fell) { await refusedAtFloor(S, got.refused, want, floor, true); return; }
     // pane B standing in the place of the act's state: a reclaimed answer its line, and the floor's line placed
     if (got.refused.name === 'history_reclaimed') placeCut(L, cutOf(L, got.refused, want, floor && floor.date, floor && floor.time));
@@ -6308,6 +6363,45 @@ async function askPast(S, at, how = {}) {
 }
 
 /**
+ * The state asked refused while pane B stands as its cover (`PastList.cover`;
+ * see the head), taken as a return takes it (`pastState`): the newest kept
+ * state — the draft as the board holds it now (M-PUMP's `stateNow`) — read
+ * and landed in its place, the refusal as why (`landPast`); where that read
+ * is refused too, or the state asked is the newest kept one, pane B standing
+ * as its cover, the line saying why the state asked was not read (`metBy`).
+ * Either way a reclaimed refusal stands the floor's line (`placeCut`), the
+ * line is said as it stands, after what the selection's following says —
+ * "read it again"'s answer whether or not it changed it — and a retry-class
+ * refusal is reissued (`reissue`). Nothing is taken where the scene closed or
+ * reopened, another state was asked, or a state landed, meanwhile.
+ * @param {Scene} S
+ * @param {number} want the commit asked
+ * @param {Refusal} refused the refusal its read met
+ * @param {{date: string, time: string} | null} floor the feed's row at the floor the refusal names, where read (`floorOf`)
+ * @param {number} t0 when its reads began, by the platform's clock
+ * @param {boolean} again the press of "read it again", whose answer is said whatever it is
+ * @returns {Promise<void>}
+ */
+async function fellBack(S, want, refused, floor, t0, again) {
+  const L = S.past, top = L ? L.rows[0] : null;
+  if (!L) return;
+  /** @type {string | null} what the selection's following says as the newest kept state lands */
+  let lead = null, landed = false;
+  if (top && want !== top.last) {
+    const s = await PUMP.stateNow(L.draft);
+    if (scene !== S || S.past !== L || L.asked !== want || !L.cover) return;
+    if (!('refused' in s)) { lead = landPast(S, { ...stateGot(L, s, top.last, t0), met: refused, floor: floor && floor.date }, { quiet: true }); landed = true; }
+  }
+  if (!landed) metBy(L, refused, floor && floor.date);
+  if (refused.name === 'history_reclaimed') placeCut(L, cutOf(L, refused, want, floor && floor.date, floor && floor.time));
+  const words = again ? lineWords(L) : null;
+  if (words) L.said = runsText(words);
+  lineMoved(S, lead);
+  if (words) FOCUS.say(words, false, true);
+  if (L.running) void reissue(S);
+}
+
+/**
  * A state asked for pane B refused at the board's floor (see the head; B3-S7;
  * FP-41): the floor's line placed where the refusal stands it, rising only
  * (`cutOf`, `placeCut`) — a state already beneath it refused with no read —
@@ -6315,7 +6409,9 @@ async function askPast(S, at, how = {}) {
  * nothing standing in for the state; the state last asked the one pane B
  * shows again, so the next step counts from it; the list and the corner
  * written again, and the floor's words said once in the status region,
- * again where it holds them (`said`).
+ * again where it holds them (`said`). Where pane B stands as its cover
+ * (`PastList.cover`), the state it stands for is then read again in its
+ * place as a change of the page's class reads it (`askPast`'s `cover`).
  * @param {Scene} S
  * @param {Refusal | null} r the reclaimed refusal; null where the state stands beneath the line already
  * @param {number} asked the commit refused
@@ -6332,6 +6428,7 @@ async function refusedAtFloor(S, r, asked, floor, said) {
   lineMoved(S);
   const words = floorWords(L);
   if (said && words) FOCUS.say(asSentence(words), false, true);
+  if (L.cover) void askPast(S, L.at, { cover: true });
 }
 
 /**
@@ -6468,17 +6565,18 @@ const stateGot = (L, got, shown, t0) => {
  * changed (`rebanded`), its region described anew (`namePane`), the list
  * written again — the asked row's "reading", the floor mark — the rows in
  * view held where they stand (`writeList`), and the line said where its words
- * changed (`sayLine`).
+ * changed, after `lead` in one message where it is given (`sayLine`).
  * @param {Scene} S
+ * @param {string | null} [lead]
  */
-function lineMoved(S) {
+function lineMoved(S, lead = null) {
   const E = els;
   if (!E || scene !== S) return;
   writeCorner(E, S.b);
   rebanded(E, S);
   namePane(E, S, S.b);
   writeList(E, S, true);
-  sayLine(S);
+  sayLine(S, lead);
 }
 
 /**
@@ -6492,33 +6590,41 @@ function lineMoved(S) {
  * (`sharedBetween`) — the list marking its row, its day opened and its row
  * brought into view in the list where it stands in its column, no other day
  * opened (`showRow`), the line,
- * the in-flight clause and "read it again" gone; at a rest — nothing later
- * asked while it was read — the landing said once in the status region in
- * the words pane B's title names its state by (T-ARTICLE's `cornerTitle`,
- * `titleRuns`), what the selection's following says after it in the same
- * message, and the links that stood on it read (`restLinks`); else its
- * links not read, the selection's following alone said.
+ * the in-flight clause and "read it again" gone, and pane B's cover lifted
+ * (`PastList.cover`) — save the newest kept state landed in the place of the
+ * state asked, whose refusal its line then says (`PastGot.met`; `metBy`); at
+ * a rest — nothing later asked while it was read — the landing said once in
+ * the status region in the words pane B's title names its state by
+ * (T-ARTICLE's `cornerTitle`, `titleRuns`), what the selection's following
+ * says after it in the same message, and the links that stood on it read
+ * (`restLinks`); else its links not read, the selection's following alone
+ * said. A quiet landing — one a change of the page's class asked of pane B's
+ * cover — says nothing: what the selection's following says is its caller's
+ * to say.
  * @param {Scene} S
  * @param {PastGot} got
- * @param {boolean} [rest] it rests there: nothing later was asked while it was read
+ * @param {{rest?: boolean, quiet?: boolean}} [how] `rest` it rests there, nothing later asked while it was read — so where not given; `quiet` its landing is not said
+ * @returns {string | null} at a quiet landing, what the selection's following says; else null, all of it said
  */
-function landPast(S, got, rest = true) {
-  const L = S.past, P = S.b;
-  if (!L || !els) return;
+function landPast(S, got, how = {}) {
+  const L = S.past, P = S.b, rest = how.rest ?? true, quiet = !!how.quiet;
+  if (!L || !els) return null;
   const live = P.el ? SEL.selected('b') : null, carried = live ? idsIn(P, live.pos, live.width) : P.landed ?? [];
   const from = carried.length ? REC.placedIn(imageOf(P), carried) : [], to = carried.length ? REC.placedIn(got.record.image, carried) : [];
-  L.at = got.shown; L.met = got.met; L.floor = got.floor; L.running = false; L.again = false; L.fell = !!got.met;
+  L.at = got.shown; L.again = false; L.fell = !!got.met; L.cover = false;
+  if (got.met) metBy(L, got.met, got.floor); else { L.met = null; L.floor = null; L.running = false; }
   L.links = got.record.linksRead ? 'read' : rest ? 'arriving' : 'unread';
   L.figures = { ...L.figures, stateMs: got.ms, at: got.state.at };
   const day = PAST.dayHolding(L.days, L.at);
   if (day) L.open.add(day.key);
   const hold = from.length && to.length ? { from: from[0].pos, to: to[0].pos } : null;
-  const said = setPanes(S, [{ side: 'b', next: { d: got.record, kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold } }], sharedBetween(S.a, { src: P.src, d: got.record }), { named: rest });
+  const said = setPanes(S, [{ side: 'b', next: { d: got.record, kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold } }], sharedBetween(S.a, { src: P.src, d: got.record }), { named: rest && !quiet });
   if (carried.length) P.landed = carried;
   showRow(S);
-  const title = rest ? cornerTitle(paneCorner(S.b).view) : null;
-  if (title || said) FOCUS.say(joinRuns(FIELD, [title ? titleRuns(title) : '', said ?? '']));
+  const title = rest && !quiet ? cornerTitle(paneCorner(S.b).view) : null;
+  if (!quiet && (title || said)) FOCUS.say(joinRuns(FIELD, [title ? titleRuns(title) : '', said ?? '']));
   if (rest) void restLinks(S);
+  return quiet ? said : null;
 }
 
 /**
@@ -6780,7 +6886,8 @@ async function readOlder(S) {
  * draft, the state shown and the state asked, its top line, the line saying
  * why pane B shows its state with "read it again" beneath it where it stands
  * (`pastWhyOf`), whether a read of the state asked is out (`PastList.out`) —
- * `asking` too — the refusal that line answers by
+ * `asking` too — whether pane B stands as its cover (`PastList.cover`), the
+ * refusal that line answers by
  * its name and the date its floor names where that was read
  * (`PastList.floor`), whether the scene reissues the asked state, the clause saying
  * the state shown is not its minute's last with its count (M-PAST's
@@ -6799,7 +6906,7 @@ export function past() {
   if (!L) return null;
   const line = pastLine(L), steps = stepsOf(L), cut = L.cut ? PAST.floorLine(L.rows, L.cut.at) : null;
   return {
-    draft: L.draft, at: L.at, asked: L.asked, unkept: L.unkept, why: pastWhyOf(L), asking: L.out != null, out: L.out, met: L.met ? L.met.name : null, floor: L.floor, running: L.running, notLast: line.notLast, inFlight: line.reading,
+    draft: L.draft, at: L.at, asked: L.asked, unkept: L.unkept, why: pastWhyOf(L), asking: L.out != null, out: L.out, cover: L.cover, met: L.met ? L.met.name : null, floor: L.floor, running: L.running, notLast: line.notLast, inFlight: line.reading,
     links: L.links, steps: { earlier: steps.earlier.inert ? steps.earlier.inert.id : null, later: steps.later.inert ? steps.later.inert.id : null },
     cut: L.cut && cut ? { at: L.cut.at, cut: cut.cut, below: cut.below, words: floorWords(L) } : null,
     from: L.from, bottom: L.bottom, reading: L.reading, figures: { ...L.figures },
