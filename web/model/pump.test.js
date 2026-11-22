@@ -4348,7 +4348,7 @@ test('a draft\'s history is read off the feed narrowed to the draft — `under` 
   assert.ok(asked.length > 0 && asked.every((a) => a.under === W && a.session === 's-1'), `every page narrowed to the draft, under the session: ${JSON.stringify(asked.slice(0, 2))}`);
   assert.deepEqual([asked[0].since, first.from], [AT - OWN_W, AT - OWN_W], 'the first window the newest OWN_WINDOW positions before the page\'s place');
   assert.deepEqual([first.rows.map((u) => u.position), first.pages, first.read, first.next], [[4500, 4600, 4700, 4800, 4900], 2, 5, HEAD], 'its rows in position order: two rows and more read, no window after it — its pages paged by `next`, its rows counted, its last `next` the narrowed feed\'s head');
-  assert.equal(first.head, AT, 'the head it read up to: the page\'s place on the feed as it began, the newest row\'s state standing until it (issue #688)');
+  assert.equal(first.head, HEAD, 'the head it read up to: the narrowed feed\'s `next` its newest window\'s last page answered — the board\'s head, past the page\'s place on the feed — the newest row\'s state standing until it (issues #688, #718)');
   assert.deepEqual([REC.feedAt(), REC.draftsAt()], [was, d0], 'the narrowed feed\'s `next`, past the page\'s place, moved neither of the page\'s own positions on the whole feed');
   asked.length = 0;
   const older = await PUMP.historyOf(W, { below: first.from });
@@ -4356,8 +4356,8 @@ test('a draft\'s history is read off the feed narrowed to the draft — `under` 
   assert.equal(REC.feedAt(), was, 'nor did those');
   asked.length = 0;
   const since = await PUMP.historyOf(W, { above: 4300 });
-  assert.deepEqual([since.from, since.rows.map((u) => u.position), since.head, asked.every((a) => a.since >= 4300)], [4300, [4400, 4500, 4600, 4700, 4800, 4900], AT, true],
-    'above a position: the windows from the page\'s place back to it and no further, every row past it and none at or below it (issue #700)');
+  assert.deepEqual([since.from, since.rows.map((u) => u.position), since.head, asked.every((a) => a.since >= 4300)], [4300, [4400, 4500, 4600, 4700, 4800, 4900], HEAD, true],
+    'above a position: the windows from the board\'s head back to it and no further, every row past it and none at or below it (issue #700)');
   asked.length = 0;
   const all = await PUMP.historyOf(W);
   assert.deepEqual([all.from, all.rows.length], [0, 49], 'asked for nothing: the windows down to the feed\'s first position');
@@ -4366,6 +4366,46 @@ test('a draft\'s history is read off the feed narrowed to the draft — `under` 
   assert.deepEqual([no.refused?.name, no.rows, PUMP.inflightCount()], ['feed_rebuilding', [], 0], 'a refused page ends the read, its refusal handed up; nothing left in flight');
   assert.deepEqual([first.floor, older.floor, all.floor, no.floor], [false, false, false, false], 'no floor met: none reached');
   assert.deepEqual(fake.unanswered, []);
+});
+
+test('a draft\'s history read reads its newest window on to the board\'s head, past the page\'s place on the feed: a row the board holds whose feed row the page has not taken — the commit its own burst\'s ack answered — stands among the rows read, the read covering up to the narrowed feed\'s `next` at the head, the page\'s own positions on the whole feed unmoved; a read above a position reads it too; a read below a position reads nothing above it; a page refused in the newest window hands up the rows the pages before it answered, the read covering up to their `next` (B3-S7 THE LIST; issue #718)', async () => {
+  const W = '1.0.1.0.14', HEAD = 5000, AT = 4950, W1 = AT - PUMP.OWN_WINDOW;
+  /** the draft's rows on the narrowed feed: two before the page's place on the feed, one past it */
+  const ROWS = [4800, 4900, 4980].map((p) => ({ position: p, at: p, op: 'insert', docs: [W], class: 'drafts', key: 'bare', time: 1 }));
+  /** @type {number[]} each page's `since`, as asked */
+  const asked = [];
+  /** @type {number | null} the `since` of a page the board does not answer */
+  let silentAt = null;
+  const fake = FAKE.create(new Proxy({}, { get: (_t, k) => {
+    const key = String(k);
+    if (!key.startsWith('changes:')) return undefined;
+    const a = JSON.parse(key.slice(8));
+    asked.push(a.since);
+    if (a.since === silentAt) return { refused: { kind: 'unreachable', name: 'unreachable' } };
+    // a page holds at most two rows past `since`, its `next` the last of them, else the head
+    const page = ROWS.filter((u) => u.position > a.since).slice(0, 2);
+    return { result: { entries: page, next: page.length === 2 ? page[1].position : HEAD, head: HEAD } };
+  } }));
+  PORT.boot(fake);
+  REC._reset();
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  REC.reachFeed(AT);
+  const was = REC.feedAt(), d0 = REC.draftsAt();
+  const read = await PUMP.historyOf(W, { enough: (rows) => rows.length >= 2 });
+  assert.deepEqual([read.rows.map((u) => u.position), read.head, read.from, asked], [[4800, 4900, 4980], HEAD, W1, [W1, 4900]],
+    'the newest window read page after page on past the page\'s place to the board\'s head: the row past that place read with the rest, the read covering up to the head');
+  assert.deepEqual([REC.feedAt(), REC.draftsAt()], [was, d0], 'neither of the page\'s own positions on the whole feed moved by the narrowed feed\'s `next`');
+  asked.length = 0;
+  const since = await PUMP.historyOf(W, { above: 4900 });
+  assert.deepEqual([since.rows.map((u) => u.position), since.head, since.from, asked], [[4980], HEAD, 4900, [4900]], 'above a position: the row past the page\'s place, up to the board\'s head');
+  const below = await PUMP.historyOf(W, { below: AT });
+  assert.deepEqual([below.rows.map((u) => u.position), below.head], [[4800, 4900], AT], 'below a position: nothing above it, the read covering up to where it was asked below');
+  silentAt = 4900;
+  const cut = await PUMP.historyOf(W);
+  assert.deepEqual([cut.refused?.name, cut.rows.map((u) => u.position), cut.from, cut.head], ['unreachable', [4800, 4900], W1, 4900],
+    'refused on the newest window\'s second page: the rows its first page answered handed up, the read covering from that window\'s start up to the `next` they reached');
+  assert.deepEqual([PUMP.inflightCount(), fake.unanswered], [0, []]);
 });
 
 test('a draft\'s history read hands up every row of the positions it covers and none outside them: a page refused partway ends it at the windows read whole above it, their rows alone; a page refused below the first position the feed\'s files hold, naming it, is read again from the position before it — from the floor itself where that is refused too — and the read ends there, the floor reached (B3-S7 THE LIST; wire.md §The change feed, Retention; issue #696)', async () => {

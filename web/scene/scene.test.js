@@ -3688,24 +3688,40 @@ test('where no state before the newest is readable — reclaimed at its row and 
   } finally { SCENE.close(); restore(); delete script[rowKey]; WRITE.setKept(PASTD, null); }
 }, { acts: true }));
 
-test('a return reads the draft\'s rows written past the position its entry read up to, so the newest kept state stands under its own row: the state asked refused, the one in its place is the draft as it stands now — the list topped by the row written since the scene was left, its row marked, pane B titled with when it stood (issue #700\'s design decision; FP-23)', () => onPage(async (p) => {
-  await onTrail(p);
-  // the page's place on the feed past the draft's rows, so its history read reads up to a head
-  REC.reachFeed(Math.max(REC.feedAt() ?? 0, 70));
+/**
+ * The draft's history opened from its corner's act, left by WHOLE BOARD and returned to by Back, a row of the draft written
+ * meanwhile 13 past both the position the act's read reached and the page's place on the feed — that place raised to it,
+ * its feed row taken, where `taken` asks — the narrowed feed answering it from where the return's read begins, and the
+ * state the entry asked refused as reclaimed there and where it last stood: the newest kept state in its place under that
+ * row, topping the list, the line saying why, its row marked and pane B titled with when it stood
+ * @param {ReturnType<typeof page>} p
+ * @param {boolean} taken
+ */
+async function returnedOverRow(p, taken) {
   let restore = () => {}, since = '';
   try {
     assert.equal(await pastOpened(p), true, 'the scene shows');
-    const head = /** @type {number} */ (TRAIL.current()?.scene?.held.past?.head), at = head + 13, T = PAST_T0 + 9 * 60000;
+    const head = /** @type {number} */ (TRAIL.current()?.scene?.held.past?.head), at = Math.max(head, REC.feedAt() ?? 0) + 13, T = PAST_T0 + 9 * 60000;
     const board = GO.wholeBoard(); await flown(); await board;
-    since = FAKE.keyOf('changes', { session: 's-1', since: head, under: PASTD });
+    if (taken) REC.reachFeed(at);
+    since = FAKE.keyOf('changes', { session: 's-1', since: Math.max(head, (REC.feedAt() ?? 0) - PUMP.OWN_WINDOW), under: PASTD });
     script[since] = { result: { entries: [pastRow(at, T)], next: at, head: at } };
-    REC.reachFeed(at);
     restore = pastAnswering({ [PAST_AT]: 'history_reclaimed', 47: 'history_reclaimed' });
     const back = GO.back(); await flown(); await back;
     const L = SCENE.past(), line = t('B3.history.row', { time: lastRead(T), hand: t('F.slot.unsigned') });
-    assert.deepEqual([SCENE.isOpen(), L?.at, L?.days[0]?.rows[0]?.last, L?.why?.id], [true, at, at, 'B3.history.reclaimed'], 'the newest kept state under the row written since, topping the list, the line saying why');
+    assert.deepEqual([at > (REC.feedAt() ?? 0), SCENE.isOpen(), L?.at, L?.days[0]?.rows[0]?.last, L?.why?.id], [!taken, true, at, at, 'B3.history.reclaimed'], 'the newest kept state under the row written since, topping the list, the line saying why');
     assert.ok(p.cornerB.innerHTML.includes(`<span class="tl">${esc(line)}</span>`) && String(p.afterB[0].innerHTML).includes(`<button type="button" class="pl-row" data-row="${at}" data-shown="1"`), `pane B titled with when it stood, its row marked: ${p.cornerB.innerHTML}`);
   } finally { restore(); if (since) delete script[since]; WRITE.setKept(PASTD, null); }
+}
+
+test('a return reads the draft\'s rows written past the position its entry read up to — a row whose feed row the page has taken — so the newest kept state stands under its own row: the state asked refused, the one in its place is the draft as it stands now — the list topped by the row written since the scene was left, its row marked, pane B titled with when it stood (issue #700\'s design decision; FP-23)', () => onPage(async (p) => {
+  await onTrail(p);
+  await returnedOverRow(p, true);
+}, { acts: true }));
+
+test('a return reads the draft\'s rows written past the position its entry read up to though the page has not taken their feed rows — the read reaching the board\'s head past the page\'s place on the feed — so the newest kept state stands under its own row, topping the list (issue #718; FP-23)', () => onPage(async (p) => {
+  await onTrail(p);
+  await returnedOverRow(p, false);
 }, { acts: true }));
 
 /** the narrowest scene width, from 300 px, at which the panes stack with both corners beside their columns — the list's column `outer` px wide asked for (`SCENE.paneFit`, as `fitAt` lays the scene out) */

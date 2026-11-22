@@ -5201,13 +5201,13 @@ const NOT_ANSWERING = { kind: 'unreachable', name: 'unreachable', text: '' };
  * The draft's history opened over a port of its own (`GO.history`), the shared fake given back after: what was asked, in
  * order — each `changes` page's arguments, each feed row read at a position, each history read's position — and what the
  * act answered
- * @param {{refuse?: number[], busy?: number[], floor?: number, inside?: Record<number, number>, rows?: [number, number, number], feed?: object, part?: boolean, before?: () => void}} [o] `refuse` the positions whose state the board refuses as reclaimed, the refusal naming `floor` as the oldest position it answers where one is given; `busy` those whose state it is busy on, at every ask; `inside` positions lying inside a commit, each refused `not_a_position` naming the committed position below it it maps to; `rows` the positions of the draft's mint, its typed line and its newest change — 30, 40 and 48 where none are given; `feed` the refusal the history's `changes` read meets; `part` the page holds the draft's text in part, and the board answers none of its reads at the head; `before` what stands as the act is taken
+ * @param {{refuse?: number[], busy?: number[], floor?: number, inside?: Record<number, number>, rows?: [number, number, number], feed?: object, part?: boolean, before?: () => void}} [o] `refuse` the positions whose state the board refuses as reclaimed, the refusal naming `floor` as the oldest position it answers where one is given; `busy` those whose state it is busy on, at every ask; `inside` positions lying inside a commit, each refused `not_a_position` naming the committed position below it it maps to; `rows` the positions of the draft's mint, its typed line and its newest change — 30, 40 and 48 where none are given — the board's head 12 past the newest change, 60 at the least; `feed` the refusal the history's `changes` read meets; `part` the page holds the draft's text in part, and the board answers none of its reads at the head; `before` what stands as the act is taken
  * @param {(asked: string[]) => void} [during] read once the act has answered
  */
 async function historyOver(o = {}, during = () => {}) {
   /** @type {string[]} */
   const asked = [];
-  const at = o.rows ?? [30, 40, 48], [, line, newest] = at, inside = o.inside ?? {};
+  const at = o.rows ?? [30, 40, 48], [, line, newest] = at, inside = o.inside ?? {}, head = Math.max(60, newest + 12);
   const entries = HISTORY_ROWS.map((u, i) => ({ ...u, position: at[i], at: at[i] }));
   // the typed line's state at its row, at the position before the newest change, where it stood last, and at each committed
   // position a position inside a commit names; the newest's at its row
@@ -5217,9 +5217,9 @@ async function historyOver(o = {}, during = () => {}) {
     if (key.startsWith('changes:')) {
       const a = JSON.parse(key.slice(8));
       // one row of the whole feed after a position: the feed's row at the position after it
-      if (a.limit != null) { asked.push(`row at ${a.since + 1}`); return { result: { entries: entries.filter((u) => u.position > a.since).slice(0, a.limit), next: 60, head: 60 } }; }
+      if (a.limit != null) { asked.push(`row at ${a.since + 1}`); return { result: { entries: entries.filter((u) => u.position > a.since).slice(0, a.limit), next: head, head } }; }
       asked.push(`changes under ${a.under}`);
-      return o.feed ? { refused: o.feed } : { result: { entries, next: 60, head: 60 } };
+      return o.feed ? { refused: o.feed } : { result: { entries, next: head, head } };
     }
     if (!key.startsWith('op:')) return undefined;
     const f = JSON.parse(key.slice(3));
@@ -5254,6 +5254,14 @@ test('a draft\'s history opens as a departure: the open burst committed and its 
     assert.deepEqual(order, ['commit ' + HISTORY_DRAFT, 'landed', 'changes under ' + HISTORY_DRAFT, 'state at 40'], 'the burst committed, its flight landed, then the history read under the draft, then the state at the row below the top row\'s last position');
     assert.ok(!asked.includes('state at 48'), 'never the newest state, at the top row');
   } finally { WRITE.machine(null); WRITE.setFlight(HISTORY_DRAFT, false); }
+});
+
+test('a draft\'s history opens on how the draft stood before its newest change where the page has not taken that change\'s feed row — the burst the act just committed, past the page\'s place on the feed — for the history read reaches the board\'s head: the state asked is the one the row below the newest ends at, never the row below that (B3-S7; issue #718)', async () => {
+  REC.reachFeed(100);
+  const f = /** @type {number} */ (REC.feedAt());
+  const { asked } = await historyOver({ rows: [f - 18, f - 8, f + 10] });
+  assert.deepEqual(asked, ['changes under ' + HISTORY_DRAFT, 'state at ' + (f - 8)], 'the newest change, past the page\'s place, read with the rest: the state at the row below it asked');
+  assert.equal(REC.feedAt(), f, 'the page\'s place on the feed unmoved by the history read');
 });
 
 test('where the draft holds words the board has not kept, its history opens on the newest kept state, the top row\'s; a state refused as reclaimed is asked again at the last position it stood, before the draft\'s next change — the committed one the board names below it where that lies inside a commit — save where that is the position asked already, or the refusal\'s floor lies past it — and one the board does not read there yields to the newest kept one, read as the plane reads the draft, never from the board\'s history (skep-frontend #661, #688; issue #700)', async () => {

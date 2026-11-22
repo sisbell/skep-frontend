@@ -271,15 +271,16 @@
 // text, read off the document's image as it stood before the write
 // (`landedOf`) — each a read in flight while it is out.
 // A draft's history (B3-S7 THE LIST): its feed narrowed to the draft, read in
-// the launch's windows from the head back down to the feed's first position,
-// the first one its files hold, or the position a read before read up to, the
-// rows handed up every row of the positions the read covers, the narrowed
-// feed's `next` kept with the read alone and never as the page's place on the
-// whole feed (`historyOf`); one of its past states, its text and its image
-// read at a position of the board's history (`stateAt`); its newest kept
-// state, the draft as the board holds it now, never read through a history
-// read (`stateNow`); the links that stood on a past state's words, at its
-// position (`linksAt`); and the feed's row at the floor a history refusal
+// the launch's windows from the head back — the newest on to the board's
+// head, past the page's own place on the feed — down to the feed's first
+// position, the first one its files hold, or the position a read before read
+// up to, the rows handed up every row of the positions the read covers, the
+// narrowed feed's `next` kept with the read alone and never as the page's
+// place on the whole feed (`historyOf`); one of its past states, its text and
+// its image read at a position of the board's history (`stateAt`); its newest
+// kept state, the draft as the board holds it now, never read through a
+// history read (`stateNow`); the links that stood on a past state's words, at
+// its position (`linksAt`); and the feed's row at the floor a history refusal
 // names (`rowAt`) — each a read in flight.
 // Rules: FP-1, FP-2, FP-6, FP-9, FP-11, FP-21, FP-22, FP-23, FP-27, FP-28,
 // FP-29, FP-34, FP-35.
@@ -1412,8 +1413,8 @@ export async function newestOwn() {
  * @property {FeedUpdate[]} rows the draft's rows the windows read, in position order, each once — every row of `(from, head]`; where a page was refused, or the floor reached, none outside it
  * @property {number} pages how many `changes` pages were read
  * @property {number} read how many rows those pages held
- * @property {number} from the position the windows read whole down to, the read covering `(from, head]`: 0 where it reached the feed's first position; where a page was refused, the start of the last window read whole above it — `head` where none was
- * @property {number | null} head the position the windows read up to: `below` where the read was asked below it, else the page's place on the feed as the read began (M-REC's `feedAt`); null where the page held none, the windows read from position 0 up
+ * @property {number} from the position the windows read whole down to, the read covering `(from, head]`: 0 where it reached the feed's first position; where a page was refused, the start of the last window read whole above it — `below` where none was, and the newest window's own start where that window, read on to the board's head, met the refusal
+ * @property {number | null} head the position the read covers up to: `below` where it was asked below it; else the narrowed feed's `next` as the newest window's last page answered it — the board's head once every page there answered, past the page's own place on the feed (M-REC's `feedAt`) wherever the board's head stands past it; null where no page of that window answered
  * @property {number | null} next the last page's `next`, a position of the feed narrowed to the draft — kept here alone, never the page's own positions on the whole feed; null where no page answered
  * @property {boolean} floor the windows reached the first position the feed's files hold, below which no row can be read (`history_reclaimed` naming its floor): `from` stands there
  * @property {Refusal | null} refused the refusal a page met, the read ended there; null where every page answered
@@ -1435,42 +1436,47 @@ const feedFloorOf = (r) => {
  * A draft's history (B3-S7 THE LIST; the past states survey's R1): the
  * board's feed narrowed to the draft (`changes(session, since, under)`), read
  * in windows from the head back as the launch reads the account's
- * (`newestOwn`), since the feed reads forward alone — the newest OWN_WINDOW
- * positions first, forward, page after page, each page from the one before's
- * `next`, then the window before them, OWN_WIDEN times as many — until the
- * rows read hold what the caller asks (`enough`) or the windows reach the
- * feed's first position, or `above`; from position 0 where the page holds no
- * head (M-REC's `feedAt`), or below `below` where a read of the windows above
- * it went before. A page refused because its `since` lies below the first
- * position the feed's files hold, naming that floor (`feedFloorOf`), is asked
- * again from the floor — from the position before it, and from the floor
- * itself where that one is refused too — and the read ends with that window
- * (`HistoryRead.floor`). A page's `next` under the narrowing is a position of
- * the narrowed feed: it is kept here and never moves the page's own positions
- * on the whole feed (M-REC's `feedAt`, `draftsAt`). Read in the guest form
- * where no session stands, whose page of a draft is empty. The reads count as
- * reads in flight (`inflightCount`). Any other refused page ends the read, its
- * refusal handed up with the rows of the windows read whole before it — every
- * row read where the page holds no head, the one window read from position 0
- * up — so the rows handed up are every row of the positions the read covers.
+ * (`newestOwn`), since the feed reads forward alone — the newest window from
+ * OWN_WINDOW positions before the page's place on the feed (M-REC's
+ * `feedAt`) forward, page after page, each page from the one before's
+ * `next`, on to the board's head, so a commit whose feed row the page has
+ * not taken — one its own burst's ack answered, among them — stands among
+ * the rows read; then the window before it, OWN_WIDEN times as many, up to
+ * where the one above began — until the rows read hold what the caller asks
+ * (`enough`) or the windows reach the feed's first position, or `above`;
+ * from `above`, else position 0, on to the board's head where the page holds
+ * no place on the feed; at and below `below` alone where a read of the
+ * windows above it went before. A page refused because its `since` lies
+ * below the first position the feed's files hold, naming that floor
+ * (`feedFloorOf`), is asked again from the floor — from the position before
+ * it, and from the floor itself where that one is refused too — and the read
+ * ends with that window (`HistoryRead.floor`). A page's `next` under the
+ * narrowing is a position of the narrowed feed: it is kept here and never
+ * moves the page's own positions on the whole feed (M-REC's `feedAt`,
+ * `draftsAt`). Read in the guest form where no session stands, whose page of
+ * a draft is empty. The reads count as reads in flight (`inflightCount`). Any
+ * other refused page ends the read, its refusal handed up with the rows of
+ * the windows read whole before it — in the newest window, read on to the
+ * board's head, the rows of the pages it answered — so the rows handed up are
+ * every row of the positions the read covers.
  * @param {string} draft
  * @param {{enough?: (rows: FeedUpdate[]) => boolean, below?: number, above?: number}} [o] `enough` the rows read so far hold what the caller asks: no window is read after the one that made it so; `below` read only the positions at and below it — the windows a read before left; `above` read only the positions above it — those written past where a read before read up to: no window reaches below it
  * @returns {Promise<HistoryRead>}
  */
 export async function historyOf(draft, o = {}) {
-  const head = o.below ?? REC.feedAt(), low = Math.max(0, o.above ?? 0), key = 'history ' + draft;
+  const start = o.below ?? REC.feedAt(), low = Math.max(0, o.above ?? 0), key = 'history ' + draft;
   /** @type {Map<number, FeedUpdate>} */
   const rows = new Map();
   /** @type {HistoryRead} */
-  const out = { rows: [], pages: 0, read: 0, from: head ?? 0, head, next: null, floor: false, refused: null };
+  const out = { rows: [], pages: 0, read: 0, from: start ?? 0, head: o.below ?? null, next: null, floor: false, refused: null };
   /** the read covering `(from, head]`: its rows every row read, in position order — those there alone where `cut` asks, a refusal or the floor having left rows read below it */
   const reach = (/** @type {number} */ from, cut = false) => { out.from = from; out.rows = [...rows.values()].filter((u) => !cut || u.position > from).sort((a, b) => a.position - b.position); };
   inflight.add(key);
   try {
-    /** the window read last: it read `(since, until]` */
-    let until = head == null ? Infinity : head;
+    /** the window read last: it read `(since, until]` — the newest, where no `below` bounds it, on to the board's head */
+    let until = o.below ?? Infinity;
     for (let width = OWN_WINDOW; ; width *= OWN_WIDEN) {
-      let since = head == null ? low : Math.max(low, head - width);
+      let since = start == null ? low : Math.max(low, start - width);
       for (let from = since; from < until;) {
         const page = await atClass((x) => PORT.changes(x ? { session: x.session, since: from, under: draft } : { guest: /** @type {const} */ (true), board: REC.board()?.board, since: from, under: draft }));
         if ('refused' in page) {
@@ -1482,6 +1488,8 @@ export async function historyOf(draft, o = {}) {
           continue;
         }
         out.pages++; out.read += page.result.entries.length; out.next = page.result.next;
+        // the newest window reaches as far as its pages answered: every row of the draft up to that `next` read
+        if (until === Infinity) out.head = page.result.next;
         for (const u of page.result.entries) if (u.position <= until && !rows.has(u.position)) rows.set(u.position, u);
         if (page.result.next >= page.result.head || page.result.next <= from) break;
         from = page.result.next;
