@@ -8,7 +8,8 @@
 // with what its answer told and an act waiting on it, the panes' scrolls,
 // the margin's marks each editor pane stands and the first held mark in each
 // pane's view (`drawnMarks`, `heldAt`),
-// each pane's span focus, each pane's text — the record it was made from, the version it reads and
+// each pane's span focus, the selection kept aside for a setting of it and
+// the passage its last step carried, each pane's text — the record it was made from, the version it reads and
 // the address it names, the links and far ends and its owner's byline facts
 // it was set with — and its corner — opened whole or not, its head's rows —
 // the fit both panes are set at, side by side or stacked, and the band their
@@ -135,7 +136,7 @@
 // reads the same document's (`kindAt`). A draft — any text no publication
 // fixes, and any whose kind that test cannot tell — is read again whole and
 // set in its place, the first span in view holding still and the pane's
-// selection set again on the same words. An edition read at its bare address
+// selection following its words (below). An edition read at its bare address
 // keeps the version it opened on: its acts name the member its text is
 // (`D.k`, the chain probed as it opens), and a row naming a newer member —
 // by the documents it names or the home of the link it deposited
@@ -153,16 +154,20 @@
 // pinned at once from what it kept, one whose member is not known left as it
 // shows, and every other pane read again in its place, a version's count
 // taken first. The corner's act (`act`) reads the version it offers in that
-// pane's place: the selection, else the first span in view, carried into it
-// by `compare` and kept on its line (`carryInto`, `carriedTo`), the corner
+// pane's place: the selection, else the passage the pane's last step carried
+// where its text holds it (`Pane.landed`), else the first span in view,
+// carried into it by `compare` and kept on its line (`carryInto`,
+// `carriedTo`) — the pane's landing from then on — the corner
 // saying so where the version lacks it, and the version left one act away —
 // the pane's own state, never a box's: N-GO's pins are never touched
 // (FP-22). The page's own death reaches every pane at once, as does every
 // other change of its class (M-PUMP's `classChanged`): each is set again from
 // what the change left of its record — a text read as published standing,
 // its runs from drafts withheld runs and the links homed in drafts gone with
-// their ties, the reader's place and the selection carried into it; any
-// other taken down to its cover — no band standing; then each is read again
+// their ties, the reader's place carried into it and the selection following
+// its words; any other taken down to its cover, its reader's place and its
+// selection kept by their bytes for its read at the new class, the selection
+// standing none meanwhile — no band standing; then each is read again
 // at the class the page reads at then,
 // a document withheld from a guest standing as its head alone; a pane on a
 // covered draft stays open (FP-29), its head its cover, its corner saying it
@@ -190,9 +195,10 @@
 // whole, the two texts' `compare`, where each far end crossing between them
 // stands (`readPane`, `readBetween`) — then, where the scene still stands
 // and no later setting was asked of the pane, with nothing awaited: the new
-// article made and swapped in, the reader's place, the selection and the
-// ends set level carried by their bytes' identity through the images the two
-// articles were made from, the ties measured anew and drawn. While a pane is
+// article made and swapped in, the reader's place and the ends set level
+// carried by their bytes' identity through the images the two articles were
+// made from, the selection following its words (below), the ties measured
+// anew and drawn. While a pane is
 // being set again its own keys, the re-level and the corner's act wait for
 // it (`whenSet`); ending the scene never waits, so a board that does not
 // answer holds no scene open. A setting the board's events asked is made
@@ -470,10 +476,13 @@
 // of their own — the read that answers meanwhile landed with no rest, then
 // the latest read; the newest kept state read plainly (`readPast`); a state
 // beneath the floor's line never read. Each lands in place with no flight,
-// pane B set again in one step, what stood at its place kept on screen by its
-// bytes (`landPast`; FP-23), its row's day opened and the row brought into
-// view in the list where it stands in its column (`showRow`), the landing
-// said once where it rests; a
+// pane B set again in one step, the passage the step carries — pane B's
+// selection, else the passage its last step carried (`Pane.landed`) — kept
+// on its line where the state holds it, else what stood at its place kept
+// on screen by its bytes (`landPast`; FP-23), its row's day opened and the
+// row brought into view in the list where it stands in its column
+// (`showRow`), the landing said once where it rests, what pane B's
+// selection's following says after it in that message; a
 // refusal at the floor stands the floor's line, pane B, its line, its name and
 // its description as they stood, the state last asked the one shown again,
 // and its words said once (`refusedAtFloor`); any other refusal taken as every
@@ -576,8 +585,14 @@
 // draws, the boxes it draws where the platform draws no custom highlight
 // being the scene's: `placeSelBoxes`), the focus come into a pane — its
 // text, its corner, its list of past states (`focusedPane`) — making its
-// selection the live one (its `focusIn`; Q4), and ended as the scene stands
-// anew or closes (its `endPanes`); the selection the act that opens a scene
+// selection the live one (its `focusIn`; Q4), handed each setting of its
+// pane to follow its words into the text the pane takes — moved where they
+// stand in one piece, else ended, what that says said in the setting's one
+// message (its `followPane`; Q2; `setPanes`) — and ended as the scene stands
+// anew or closes (its `endPanes`); each pane keeps the passage its last step
+// carried, its landing (`Pane.landed`) — the passage held as the scene opens,
+// then what its corner's version read and a past state's step carried — so a
+// step with no selection standing carries that; the selection the act that opens a scene
 // was made over is set, by its bytes, as the selection of the first pane —
 // pane A, else pane B — whose text places all of them in one stretch, once
 // both panes stand level (`carrySel`; `Held.sel`; Q1); each article made with
@@ -729,7 +744,7 @@ import * as FOCUS from '../nav/focus.js';
 import { drawChord, keyShortcut } from '../nav/keys.js';
 import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLeadRuns, cornerTitle, titleRuns, kindWord, statedChain, notLastWords, inFlightWords, pastClauses } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn, pastSigns } from '../beams/beams.js';
-import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingLineOf, busy } from '../beams/held.js';
+import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingLineOf, busy, whereOf, nameIn } from '../beams/held.js';
 import { SAMENESS, HOLD, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { LINE_H, MEASURE, MEASURE_CPL, HEAD_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '../plane/layout.js';
 import { holdStack, LINE_BOX } from '../plane/labels.js';
@@ -998,6 +1013,8 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {string} corner its corner's items as last written (`writeCorner`, `cornerItems`): written again where they would read other
  * @property {Map<string, Stretch[] | Declined>} placed where the far ends of the links crossing into it stood in its text as it was set, by `⟨link⟩ ⟨slot⟩`
  * @property {Place | null} place the reader's place as a change of the page's class took the pane down to its cover, kept for the read at the new class that sets it again
+ * @property {import('../overlays/selection.js').Was | null} aside its selection by its bytes as a change of the page's class took the pane down to its cover, or a setting met its text still being read — standing none meanwhile — kept for the setting that follows it there (O-SELECTION's `followPane`); null where none is kept
+ * @property {ISpan[] | null} landed the passage its last step carried, by its bytes' identity — set as the scene opens from the passage held, by its corner's version read and by a past state's step: what the next step carries where no selection stands in it (`readIn`, `landPast`); null where none was carried
  * @property {HTMLElement | null} el the article it shows
  * @property {number} serial the settings asked of it: one sets it only where no later one was asked meanwhile
  * @property {number} sets the settings made of it: a `compare` read against its text before one is read again
@@ -1487,13 +1504,14 @@ export function heldVersionReason() {
  * act and what its corner says it lacks, whether its record is one the page
  * derived, whether it shows the moved scene's held version, its corner's rows
  * held at its top at its document's head and those its title took there
- * (`Pane.heldRows`, `Pane.titleRows`), and the blocks its article was made
- * from.
+ * (`Pane.heldRows`, `Pane.titleRows`), the passage its last step carried by
+ * its bytes (`Pane.landed`), whether a selection is kept aside for a setting
+ * of it (`Pane.aside`), and the blocks its article was made from.
  */
 export function panes() {
   const S = scene;
   if (!S) return null;
-  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, held: P.heldVersion, heldRows: P.heldRows, titleRows: P.titleRows, editor: editor(P), focus: P.focus, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
+  const of = (/** @type {Pane} */ P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read, lacks: P.lacks, derived: !!P.d.derived, held: P.heldVersion, heldRows: P.heldRows, titleRows: P.titleRows, editor: editor(P), focus: P.focus, landed: P.landed ? P.landed.map((x) => ({ ...x })) : null, aside: !!P.aside, blocks: P.d.blocks.map((b) => ({ pos: b.pos, width: b.width, kind: b.kind, text: b.text })) });
   return { a: of(S.a), b: of(S.b) };
 }
 
@@ -2150,7 +2168,7 @@ function paneAt(side, src, r) {
   const names = kind === 'bare' && r.n ? versionAddress(src, r.n) : src;
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
-    d: { ...r.d }, view: LAYER.sceneView(r.d), corner: '', placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
+    d: { ...r.d }, view: LAYER.sceneView(r.d), corner: '', placed: new Map(), place: null, aside: null, landed: null, el: null, serial: 0, sets: 0, kept: null, lift: null, signs: null, facts: undefined,
     open: false, rows: 0, heldRows: 0, titleRows: 0, heard: LAYER.kindOf(r.d), titleWords: null, heldVersion: false, focus: null,
   };
 }
@@ -2621,10 +2639,14 @@ const textOf = (/** @type {Source} */ x, /** @type {Doc} */ d) => ({ src: addrOf
  * @returns {Scene}
  */
 function sceneOf(pa, pb, pairs, held, got = null) {
-  const h = placedHeld(pa, held);
+  const h = placedHeld(pa, held), level = levels(pairs, h);
   pb.heldVersion = !!held.heldB && !!pb.d.derived;
+  // each pane's first landing (`Pane.landed`): pane A's the passage held, by the bytes the opener names where its text holds them; pane B's the end set level there
+  const own = (/** @type {ISpan[]} */ x) => (x.length ? x : null);
+  pa.landed = own(held.ids && REC.placedIn(pa.d.image, held.ids).length ? held.ids : h.posA != null ? REC.identityIn(pa.d.image, h.posA, Math.max(1, h.widthA ?? 1)) : level.a != null ? REC.identityIn(pa.d.image, level.a, 1) : []);
+  pb.landed = own(level.b != null ? REC.identityIn(pb.d.image, level.b, 1) : []);
   return {
-    a: pa, b: pb, pairs, level: levels(pairs, h), whole: !!h.wholeB, widthA: Math.max(1, h.widthA ?? 1),
+    a: pa, b: pb, pairs, level, whole: !!h.wholeB, widthA: Math.max(1, h.widthA ?? 1),
     bands: [], lines: [], strokes: [], listing: null, relist: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null,
     fit: { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX, stacked: false, outer: 0 }, link: held.link ?? null, hover: null, band: 0, size: '', updating: 0, waiting: [],
     past: held.past && got ? pastListOf(held.past, got) : null,
@@ -4301,25 +4323,31 @@ function measure() {
 /**
  * Panes set again in one step (see the head) — every read made before it,
  * nothing awaited in it: each one's reader's place, its selection
- * (O-SELECTION's) and the end set level in it read from the article it shows; its new
+ * (O-SELECTION's) — else the one kept aside for it (`Pane.aside`) — and the
+ * end set level in it read from the article it shows; its new
  * article made and swapped in, its corner and the bar naming what it shows
- * now; then each one's place, its selection and its end set level carried to
+ * now; then each one's place and its end set level carried to
  * where their bytes stand in the text it takes — by identity through the
  * images the two articles were made from, else by position, a corner's act's
- * passage by the position that act names; a selection none of whose bytes
- * that text holds ending there, unsaid (O-SELECTION's `setPane`) — the runs of shared identity
+ * passage by the position that act names — and its selection following its
+ * words there by FP-21's rule (O-SELECTION's `followPane`): moved where they
+ * stand in one piece, else ended; kept aside by its bytes, standing none,
+ * where that text is still being read — the runs of shared identity
  * between the panes taken, the far ends crossing into each kept, and the ties
  * measured anew and drawn, so no tie is drawn over text it was not measured
- * on; a stroke's list standing checked again (`recheckList`). Every article
+ * on; a stroke's list standing checked again (`recheckList`); and what the
+ * selections' following says said once in the status region, save where the
+ * caller says it with words of its own (`own`). Every article
  * is made at the scene's fit, its corner in the fit's form, and the fit set on
  * the panes (`applyFit`) before anything is carried, a place's line that
  * stood in view carried below what a held head covers (`clearOf`). A pane
  * taken down to its cover at a change of the page's class carries nothing
- * into the text it takes: its selection ends, and its reader's place is kept
- * for the read at the new class that sets it again. A pane set again at a new fit alone (`refit`)
+ * into the text it takes: its reader's place and its selection are kept for
+ * the read at the new class that sets it again, the selection standing none
+ * meanwhile and nothing said. A pane set again at a new fit alone (`refit`)
  * keeps its text, its lines broken anew: its place is its first line in view
  * (`firstLineIn`), no `compare` read against it is outdated by it, and a
- * place kept for such a read stays kept, as does its title's name. A pane set
+ * place or a selection kept for such a read stays kept, as does its title's name. A pane set
  * from a record not derived is the held version no more (`Pane.heldVersion`);
  * one set from another record takes its title's name for the state it shows
  * now (`nameTitle`). Each pane set counts its corner's rows held at its top
@@ -4327,21 +4355,25 @@ function measure() {
  * @param {Scene} S
  * @param {Array<{side: 'a' | 'b', next: Next, down?: boolean, same?: boolean}>} sets `down` the pane taken down to its cover at a change of the page's class; `same` the pane set again at a new fit, its text the one it shows
  * @param {ComparePair[] | null} pairs the runs of shared identity between the panes now; null where they stand as they were
+ * @param {{named: boolean} | null} [own] the caller says what the selections' following says, with words of its own — `named` where those name the pane before it, as a step's landing does by its title (O-SELECTION's `Into.named`)
+ * @returns {string | null} what the selections' following says, the panes' in order, each its sentences; none where no selection moved or ended
  */
-function setPanes(S, sets, pairs) {
+function setPanes(S, sets, pairs, own = null) {
   const E = els;
-  if (!E) return;
+  if (!E) return null;
   const set = new Set(sets.map((x) => x.side));
   const carried = sets.map(({ side, next, down, same }) => {
     const P = S[side], made = P.el ? LAYER.madeOf(P.el) : null, image = made ? made.image : [], pane = paneEl(E, side);
     const here = placeAt(P, next.hold ? next.hold.from : same ? firstLineIn(P, pane) : firstInView(pane));
-    if (down) { P.place = P.place || here; P.focus = null; SEL.clear(side); return { side, next, same, place: null, sel: null, level: null, focus: null }; }
+    const live = made ? SEL.selected(side) : null;
+    /** @type {import('../overlays/selection.js').Was | null} the selection as it stands, by its bytes in the text it stands in; else the one kept aside, save at a new fit alone */
+    const sel = live && made ? { span: live, ids: REC.identityIn(image, live.pos, live.width), backward: SEL.backward(side), text: made } : same ? null : P.aside;
+    if (down) { P.place = P.place || here; P.aside = sel; P.focus = null; SEL.clear(side); return { side, next, same, place: null, sel: null, level: null, focus: null }; }
     const place = same ? here : P.place || here;
     if (!same) P.place = null;
-    const sel = P.el ? SEL.selected(side) : null, lv = S.level[side];
+    const lv = S.level[side];
     return {
-      side, next, same, place,
-      sel: sel ? { ids: REC.identityIn(image, sel.pos, sel.width), backward: SEL.backward(side) } : null,
+      side, next, same, place, sel,
       level: lv != null ? { pos: lv, ids: REC.identityIn(image, lv, 1) } : null,
       focus: P.focus != null ? { pos: P.focus, ids: REC.identityIn(image, P.focus, 1) } : null,
     };
@@ -4359,6 +4391,8 @@ function setPanes(S, sets, pairs) {
   applyFit(E, S);
   standList(E, S);
   roomBelow(E);
+  /** @type {string[]} what each pane's selection's following says, in the panes' order */
+  const said = [];
   for (const { side, next, place, sel, level, focus } of carried) {
     const P = S[side], pane = paneEl(E, side), image = P.d.image;
     /** where a carried byte stands in the text taken: by its identity, the corner's act's passage at the position it names, else where it stood */
@@ -4369,10 +4403,8 @@ function setPanes(S, sets, pairs) {
     };
     // a line that stood in view stays in view, below what a held head covers
     if (place) { const line = lineAt(pane, P.names, there(place)); if (line) pane.scrollTop = line.top - (place.at >= 0 ? Math.max(place.at, clearOf(pane)) : place.at); }
-    if (sel && P.el) {
-      const at = REC.placedIn(image, sel.ids), z = at[at.length - 1];
-      SEL.setPane(side, z ? { addr: P.names, pos: at[0].pos, width: z.pos + z.width - at[0].pos } : null, sel.backward);
-    }
+    // the selection follows its words into the text taken: moved, ended, or kept aside while that text is read
+    if (sel && P.el) { const f = SEL.followPane(side, sel, !!own && own.named); P.aside = f.waits ? sel : null; if (f.said) said.push(f.said); }
     if (level) S.level[side] = there(level);
     // the span focus on the span holding its byte in the text taken, else where it stood (T-SPAN's `elementIn`)
     if (focus) { const b = elementIn(P.d.blocks, there(focus)); P.focus = b ? b.pos : null; }
@@ -4386,6 +4418,9 @@ function setPanes(S, sets, pairs) {
   measure();
   draw();
   recheckList(S);
+  const words = said.length ? sentences(...said) : null;
+  if (words && !own) FOCUS.say(words);
+  return words;
 }
 
 /**
@@ -4435,6 +4470,8 @@ async function update(side, how = {}) {
   // page shows of its draft, whose record the read sets again under it
   if (P.d.derived && !editor(P)) return;
   const stale = () => scene !== S || P.serial !== serial;
+  /** the passage the corner's act carries, by its bytes in the text the pane shows: the pane's landing once the version it reads is set (`Pane.landed`) */
+  const carried = how.carry ? idsIn(P, how.carry.pos, how.carry.width) : [];
   // the board's events ask it: the pane stands kept as it shows until a setting of it lands, saying so once it has stood a second
   if (!how.src && !P.kept) { P.kept = { since: performance.now(), at: how.at ?? Date.now(), met: null }; setTimeout(markDirty, PUMP.KEPT_MS); }
   /** the setting the board's events asked left unset by the refusal its reads met: the pane kept as it shows, saying why, and asked again once M-PUMP's pause ends where the board did not answer */
@@ -4484,6 +4521,7 @@ async function update(side, how = {}) {
       if (!how.src && P.kept) P.lift = { since: P.kept.at, outcome: REC.shownBy(P.d) === REC.shownBy(text) ? 'unchanged' : 'changed' };
       P.kept = null;
       setPanes(S, [{ side, next: { d: text, kind, src, names, shows: kind === 'bare' ? src : names, k, n, read, lacks, hold } }], between.pairs);
+      if (carried.length) P.landed = carried;
       answer(S, between);
       return;
     }
@@ -4597,8 +4635,10 @@ function newest(row, src) {
  * pane set again at once from what the change left of its record (M-REC's
  * `dropClass`), no band standing — one whose text was read as published
  * standing on that text, its runs from drafts covered, the reader's place
- * and the selection carried into it; one the change dropped or covered taken
- * down to its cover — and read again at the class the page reads at then; a
+ * carried into it and its selection following its words (`setPanes`); one
+ * the change dropped or covered taken down to its cover, its reader's place
+ * and its selection kept by their bytes for that read — and read again at
+ * the class the page reads at then; a
  * refresh reaching every pane (`refreshed`); a row naming a newer member
  * pinning an edition at its bare address at once, or counting a version's
  * chain again; any other row reaching a pane's text, and a clause decided
@@ -4679,9 +4719,8 @@ function refreshed(S, side, chains, at) {
 /**
  * A pane's corner's act (see the head), as its Enter and a click on it take
  * it, waiting for a setting reading (`whenSet`): the version it offers read in
- * the pane's place — the passage held carried into it: the selection standing
- * in the pane, else the first span in view — and the version left offered
- * back.
+ * the pane's place — the passage held carried into it (`readIn`) — and the
+ * version left offered back.
  * @param {'a' | 'b'} side
  * @param {{pos: number, width: number} | null} [passage] the passage held, in the text the pane shows; read from the pane where none is given
  */
@@ -4694,10 +4733,13 @@ export function act(side, passage = null) {
  * A version of a pane's document read in the pane's place, as its corner's
  * act reads the one it offers (`act`; the gate's door names one), waiting for
  * a setting reading (`whenSet`): the passage held — the selection standing in
- * the pane, else the first span in view — carried into it, its line kept, the
- * corner saying so where the version lacks it, and the version left offered
- * back; never a box's version (FP-22). Nothing where the pane shows no
- * version of an edition, or the version named.
+ * the pane, else the passage its last step carried where its text holds any
+ * of it (`landedIn`), else the first span in view — carried into it, its line
+ * kept, and the pane's landing from then on (`Pane.landed`); the selection
+ * following its words there (`setPanes`), the corner saying so where the
+ * version lacks the passage, and the version left offered back; never a
+ * box's version (FP-22). Nothing where the pane shows no version of an
+ * edition, or the version named.
  * @param {'a' | 'b'} side
  * @param {number} k the version
  * @param {{pos: number, width: number} | null} [passage] the passage held, in the text the pane shows; read from the pane where none is given
@@ -4709,11 +4751,23 @@ export function readIn(side, k, passage = null) {
     if (!S || !E) return;
     const P = S[side];
     if (P.kind === 'draft' || P.k == null || k === P.k) return;
-    const sel = passage || !P.el ? null : SEL.selected(side);
-    const pos = passage ? passage.pos : sel ? sel.pos : firstInView(paneEl(E, side));
-    const width = passage ? passage.width : sel ? sel.width : 1;
-    void update(side, { src: versionAddress(boxOf(P.src), k), carry: pos != null ? { pos, width } : null, read: P.k });
+    const first = firstInView(paneEl(E, side));
+    const at = passage || (P.el ? SEL.selected(side) : null) || landedIn(P) || (first != null ? { pos: first, width: 1 } : null);
+    void update(side, { src: versionAddress(boxOf(P.src), k), carry: at ? { pos: at.pos, width: at.width } : null, read: P.k });
   });
+}
+
+/**
+ * The passage a pane's last step carried where the text it shows holds any
+ * of it now (`Pane.landed`): from the first stretch the image its article was
+ * made from places those bytes in to the end of the last; null where it holds
+ * none, or none was carried.
+ * @param {Pane} P
+ * @returns {{pos: number, width: number} | null}
+ */
+function landedIn(P) {
+  const at = P.landed && P.landed.length ? REC.placedIn(imageOf(P), P.landed) : [], z = at[at.length - 1];
+  return z ? { pos: at[0].pos, width: z.pos + z.width - at[0].pos } : null;
 }
 
 /**
@@ -6419,17 +6473,21 @@ function lineMoved(S) {
 
 /**
  * A state landed in pane B (`askPast`, `reissue`; see the head): in place, with
- * no flight — pane B set again to it in one step (`setPanes`; FP-23), what
- * stood at its place kept on screen by its bytes' identity where the state
- * holds it, the runs it shares with pane A read off the two records' images
+ * no flight — pane B set again to it in one step (`setPanes`; FP-23), the
+ * passage the step carries — pane B's selection, else the passage its last
+ * step carried (`Pane.landed`) — kept on its line where the state holds its
+ * bytes and the pane's landing from then on, else what stood at its place
+ * kept on screen by its bytes' identity where the state holds it, pane B's
+ * selection following its words, the runs it shares with pane A read off the two records' images
  * (`sharedBetween`) — the list marking its row, its day opened and its row
  * brought into view in the list where it stands in its column, no other day
  * opened (`showRow`), the line,
  * the in-flight clause and "read it again" gone; at a rest — nothing later
  * asked while it was read — the landing said once in the status region in
  * the words pane B's title names its state by (T-ARTICLE's `cornerTitle`,
- * `titleRuns`), and the links that stood on it read (`restLinks`); else its
- * links not read, nothing said.
+ * `titleRuns`), what the selection's following says after it in the same
+ * message, and the links that stood on it read (`restLinks`); else its
+ * links not read, the selection's following alone said.
  * @param {Scene} S
  * @param {PastGot} got
  * @param {boolean} [rest] it rests there: nothing later was asked while it was read
@@ -6437,17 +6495,20 @@ function lineMoved(S) {
 function landPast(S, got, rest = true) {
   const L = S.past, P = S.b;
   if (!L || !els) return;
+  const live = P.el ? SEL.selected('b') : null, carried = live ? idsIn(P, live.pos, live.width) : P.landed ?? [];
+  const from = carried.length ? REC.placedIn(imageOf(P), carried) : [], to = carried.length ? REC.placedIn(got.record.image, carried) : [];
   L.at = got.shown; L.met = got.met; L.floor = got.floor; L.running = false; L.again = false; L.fell = !!got.met;
   L.links = got.record.linksRead ? 'read' : rest ? 'arriving' : 'unread';
   L.figures = { ...L.figures, stateMs: got.ms, at: got.state.at };
   const day = PAST.dayHolding(L.days, L.at);
   if (day) L.open.add(day.key);
-  setPanes(S, [{ side: 'b', next: { d: got.record, kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold: null } }], sharedBetween(S.a, { src: P.src, d: got.record }));
+  const hold = from.length && to.length ? { from: from[0].pos, to: to[0].pos } : null;
+  const said = setPanes(S, [{ side: 'b', next: { d: got.record, kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold } }], sharedBetween(S.a, { src: P.src, d: got.record }), { named: rest });
+  if (carried.length) P.landed = carried;
   showRow(S);
-  if (!rest) return;
-  const title = cornerTitle(paneCorner(S.b).view);
-  if (title) FOCUS.say(titleRuns(title));
-  void restLinks(S);
+  const title = rest ? cornerTitle(paneCorner(S.b).view) : null;
+  if (title || said) FOCUS.say(joinRuns(FIELD, [title ? titleRuns(title) : '', said ?? '']));
+  if (rest) void restLinks(S);
 }
 
 /**
@@ -7074,8 +7135,9 @@ export function key(k, side = textPane()) {
  * Each editor pane set again from the text the page shows of its draft where
  * that text moved since the pane was set (see the head; FP-38) — the person's
  * typing, or the record under it set again — in one step with nothing read
- * (`setPanes`): its place, its selection, its span focus and the end set level
- * in it carried by their bytes' identity, the runs the two texts share read
+ * (`setPanes`): its place, its span focus and the end set level in it
+ * carried by their bytes' identity, its selection following its words, said
+ * where it moved or ended (O-SELECTION's `followPane`), the runs the two texts share read
  * off their images by identity (`sharedBetween`), so words not yet kept carry
  * no band, the other pane unmoved; a live caret standing in it then holding
  * its span focus (`followCaret`). So too while a setting reads, which lands
@@ -7279,6 +7341,7 @@ export function toCaret(addr) {
  * @property {HTMLElement} el
  * @property {HTMLElement | null} article the article it shows, T-LAYER's mount (`sceneArticle`): where its selection is read, placed and drawn (O-SELECTION's) and an overlay at it stands (O-HOST's); null where none stands yet
  * @property {Shown[]} marks the links its article draws, as it was set (`Pane.view`): what a slot of the selection's acts at it reads (O-SELECTION's)
+ * @property {() => string} where the words naming the text it shows, made as they are asked for (`whereShown`): what a selection followed there is said in (O-SELECTION's)
  */
 
 /**
@@ -7291,7 +7354,24 @@ export function siteOf(side) {
   if (!S || !E) return null;
   const P = S[side], d = P.d.derived;
   const kind = editor(P) ? 'editor' : d && d.at != null ? 'past' : P.heldVersion || (d && d.rows.length) ? 'held' : 'read';
-  return { side, kind, names: P.names, shows: P.shows, d: P.d, focus: P.focus, el: paneEl(E, side), article: P.el, marks: P.view.marks };
+  return { side, kind, names: P.names, shows: P.shows, d: P.d, focus: P.focus, el: paneEl(E, side), article: P.el, marks: P.view.marks, where: () => whereShown(P, kind) };
+}
+
+/**
+ * The words naming the text a pane shows, as a line names a text (see the
+ * head; BM-HELD's `whereOf`): a past state its draft's text as it stood, when
+ * its row says it stood — "at a time not recorded" where it holds none; the
+ * held version what the person typed while its draft was held; any other its
+ * address's — a member's version, a bare address's current text.
+ * @param {Pane} P
+ * @param {PaneSite['kind']} kind
+ * @returns {string}
+ */
+function whereShown(P, kind) {
+  if (kind === 'held') return t('L.held.typed', { D: nameIn(P.names) });
+  if (kind !== 'past') return whereOf(P.names);
+  const L = scene && scene.past && P.side === 'b' ? scene.past : null, row = L ? PAST.rowHolding(L.rows, L.at) : null;
+  return t('L.held.past', { D: nameIn(P.names), time: row && row.time != null ? stoodAt(row.time) : t('L.time.at', { time: t('L.history.floor.untimed') }) });
 }
 
 /**

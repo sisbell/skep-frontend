@@ -222,6 +222,7 @@ import * as SEL from '../overlays/selection.js';
 import { recorder } from '../test/canvas.js';
 import { HEAD_CPL, MEASURE_CPL, CHAR_W, EDGE, LINE_H, fitFor, setAdvance } from '../plane/layout.js';
 import { cornerWidth, CORNER } from '../plane/register.js';
+import { nameIn } from '../beams/held.js';
 
 /** @returns {import('../model/frames.js').ComparePair} */
 const pair = (/** @type {number} */ u1, /** @type {number} */ u2, /** @type {number} */ width) => ({ d1: '1.0.1.0.3', d2: '1.0.1.0.3.2', u1, u2, width });
@@ -5158,6 +5159,179 @@ test('a version read in a pane\'s place carries that pane\'s own selection, neve
   await landed();
   assert.deepEqual(paneState('b'), { kind: 'pinned', src: RE1, names: RE1, shows: RE1, k: 1, n: 2, read: 2, lacks: 1 }, 'version 1 read in pane B\'s place carrying pane B\'s selection, whose words it lacks, said so');
 }));
+
+// ---- a pane's selection following its words as its pane is set again (issue #735) -----------------------------------------
+
+/** the draft's state at a position as the board answers it: its text, its image — each run `[ordinal, width]` of the draft's own I-space — and the links that stood on it, none */
+const pastAs = (/** @type {number} */ at, /** @type {string} */ text, /** @type {Array<[number, number]>} */ image) => ({
+  [FAKE.keyOf('op', { frame: F.opAt(at, F.retrieveDocVSpanSet(PASTD)) })]: { result: { as_of: at, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } },
+  [FAKE.keyOf('op', { frame: F.opAt(at, F.retrieveV(PASTD, 1, text.length)) })]: { result: { as_of: at, resp: 'delivery', items: [{ content: text }] } },
+  [FAKE.keyOf('op', { frame: F.opAt(at, F.image(PASTD, 1, text.length)) })]: { result: { as_of: at, resp: 'runs', runs: image.map(([o, w]) => ({ i_start: `${PASTD}.0.1.${o}`, width: String(w) })) } },
+  [pastLinksKey(at, text.length)]: { result: { as_of: at, resp: 'addrs', addrs: [] } },
+});
+/** entries set in the script; what puts it back as it stood */
+function scripted(/** @type {Record<string, unknown>} */ set) {
+  const was = Object.keys(set).map((k) => /** @type {[string, unknown]} */ ([k, script[k]]));
+  Object.assign(script, set);
+  return () => { for (const [k, v] of was) { if (v === undefined) delete script[k]; else script[k] = v; } };
+}
+/** what the status region was told since `from`, its emptyings left out */
+const saidSince = (/** @type {ReturnType<typeof page>} */ p, /** @type {number} */ from) => p.said.slice(from).filter(Boolean);
+/** the words a selection ended is said in: that it ended, then why, each a sentence */
+const endedWords = (/** @type {string} */ why, /** @type {Record<string, string>} */ values) => heard(sentences(sentence('L.selection.ended'), sentence(why, values)));
+
+test('a past state\'s step follows pane B\'s selection into the state it lands on, what that says said after the landing\'s title in one message: its words there in one piece, it moves onto them; set apart by that state\'s change, it ends in that frame; and a step with no selection standing carries the passage the last one carried, its landing (issue #735; #94\'s design decision: Q2)', () => onPage(async (p) => {
+  await onTrail(p);
+  // the minute's first commit, 40: five bytes made since standing before "Its first line."; the mint, 30: two inside its "first"
+  const restore = pastAnswering(STEP_STATES), put = scripted({ ...pastAs(PAST_AT, 'New. Its first line.', [[900, 5], [1, 15]]), ...pastAs(30, 'Its fixyrst line.', [[1, 6], [901, 2], [7, 9]]) });
+  const own = (/** @type {number} */ ordinal, /** @type {number} */ width) => [{ prefix: PASTD + '.0.1', ordinal, width }];
+  try {
+    assert.equal(await stepsOpened(p), true, 'the scene shows');
+    assert.equal(SCENE.past()?.at, 44, 'the state before the newest change');
+    SEL.setPane('b', { addr: PASTD, pos: 5, width: 5 });
+    p.paneB.focus();
+    let from = p.said.length;
+    await SCENE.step(-1);
+    assert.ok(await within(1500, () => SCENE.past()?.at === PAST_AT && SCENE.past()?.links === 'read'), '‹ earlier: the state at 40, at a rest');
+    assert.deepEqual(SEL.selected('b'), { addr: PASTD, pos: 10, width: 5 }, '"first" five bytes on in that state: moved onto it');
+    const at40 = saidSince(p, from), title = String(titleName(p.cornerB.innerHTML));
+    assert.ok(at40.length === 1 && at40[0].startsWith(title) && at40[0].endsWith(heard(fields(PASTD, t('F.position', { p: 10 })))), `said once, after the landing's title, in one message: ${at40}`);
+    assert.deepEqual(SCENE.panes()?.b.landed, own(5, 5), 'the step carried the selection: its words the pane\'s landing');
+    from = p.said.length;
+    await SCENE.step(-1);
+    assert.ok(await within(1500, () => SCENE.past()?.at === 30 && SCENE.past()?.links === 'read'), '‹ earlier again: the mint, at a rest');
+    assert.equal(SEL.selected('b'), null, 'two bytes set inside "first": ended');
+    const at30 = saidSince(p, from), where = t('L.held.past', { D: nameIn(PASTD), time: lastRead(PAST_T0) });
+    assert.ok(at30.length === 1 && at30[0].endsWith(endedWords('L.selection.pieces', { where })), `that it ended and why, after the title, naming the state's text: ${at30}`);
+    from = p.said.length;
+    await SCENE.step(1);
+    assert.ok(await within(1500, () => SCENE.past()?.at === PAST_AT), 'later ›: the state at 40 again, no selection standing');
+    assert.deepEqual([SCENE.panes()?.b.landed, SEL.selected('b')], [own(5, 5), null], 'the step carried the passage the last one carried, by its bytes; nothing selected');
+  } finally { put(); restore(); WRITE.setKept(PASTD, null); }
+}, { acts: true }));
+
+test('a pane\'s corner\'s version read with no selection standing carries the passage its last step carried — here the end the scene set level as it opened — never the first span in view: the version lacking it says so (issue #735; #94\'s design decision: Q2, "each step carries the selection, else the previous landing")', () => onPageWithText(async () => {
+  Object.assign(script, reads(RE, RE_TEXT, { members: 2 }), reads(RE1, RE1_TEXT), compared(A, A_TEXT, RE, RE_TEXT), compared(RE2, RE_TEXT, RE1, RE1_TEXT, [[1, 1, 'A read edition.\n\n'.length]]), compared(A, A_TEXT, RE1, RE1_TEXT));
+  const second = RE_TEXT.indexOf('second') + 1;
+  await SCENE.open(A, RE, { posB: second });
+  assert.deepEqual([SEL.selected('b'), SCENE.panes()?.b.landed], [null, [{ prefix: RE + '.0.1', ordinal: second, width: 1 }]], 'nothing selected; pane B\'s landing the end set level there, in "second version"');
+  SCENE.readIn('b', 1);
+  await landed();
+  assert.deepEqual(paneState('b'), { kind: 'pinned', src: RE1, names: RE1, shows: RE1, k: 1, n: 2, read: 2, lacks: 1 }, 'version 1 read carrying it — never the text\'s head, which version 1 holds — and saying it lacks it');
+}));
+
+test('a change of the page\'s class taking a pane down to its cover keeps its selection by its bytes, none standing and nothing said; the read at the new class setting the pane with the same text puts it back over the same words, nothing said; one refused at the new class ends it, said (issue #735; FP-29)', () => onPage(async (p) => {
+  await SCENE.open(A, B);
+  const names = /** @type {{a: string, b: string}} */ (SCENE.pair()), inA = { addr: names.a, pos: 5, width: 6 };
+  SEL.setPane('a', inA);
+  const from = p.said.length, extent = F.retrieveDocVSpanSet(A);
+  try {
+    let release = fake.hold('op', { frame: extent });
+    REC.invalidate(A);
+    SCENE.dropped({ row: null, addrs: null, at: Date.now() });
+    assert.deepEqual([SEL.selected('a'), SCENE.panes()?.a.aside, saidSince(p, from)], [null, true, []], 'taken down to its cover: its selection kept aside, none standing, nothing said');
+    release();
+    await landed();
+    assert.deepEqual([SEL.selected('a'), SCENE.panes()?.a.aside, saidSince(p, from)], [inA, false, []], 'the read at the new class, the same text: over the same words, nothing said');
+    const put = scripted({ [FAKE.keyOf('op', { frame: extent })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } } });
+    try {
+      release = fake.hold('op', { frame: extent });
+      REC.invalidate(A);
+      SCENE.dropped({ row: null, addrs: null, at: Date.now() });
+      assert.deepEqual([SEL.selected('a'), saidSince(p, from)], [null, []], 'taken down again: kept aside, nothing said');
+      release();
+      await landed();
+      const said = saidSince(p, from);
+      assert.ok(SEL.selected('a') === null && said.length === 1 && said[0].startsWith(heard(sentence('L.selection.ended'))) && said[0].includes(heard(t('L.held.why.withheld'))), `refused at the new class: ended, said why — ${said}`);
+    } finally { put(); }
+  } finally { REC.invalidate(A); await PUMP.loadWhole(A); }
+}));
+
+test('a key, a paste, a cut and an arrow without Shift at an editor pane\'s live caret over a selection in its text end that pane\'s selection at the act — the plane\'s never the one cleared — so the pane set again with the text they made follows nothing and says nothing of it (issue #735; D5 K-71, K-72, K-93)', () => onPageWithText(async (p, dom) => {
+  LAYER.readers({ panes: SCENE.editorPanes });
+  LAYER.dropCaret();
+  KEYS._reset();
+  try {
+    await PUMP.loadWhole(E1);
+    await SCENE.open(E1, B);
+    p.paneA.focus();
+    /** words of pane A's text selected by a drag, the caret live at its end */
+    const drag = (/** @type {string} */ words) => { const a = shownIn(p.paneA, 'a'); selectWords(dom, a, words); pressText(p, 'a', a); assert.ok(SEL.selected('a'), `pane A's selection over "${words}"`); };
+    drag('own');
+    let from = p.said.length;
+    await keyAt(p.paneA, 'x');
+    assert.equal(SEL.selected('a'), null, 'a key replacing it: pane A\'s selection ended at the key');
+    SCENE.followShown();
+    assert.deepEqual(saidSince(p, from), [], 'the pane set again with the key: nothing said of a selection');
+    drag('draft');
+    from = p.said.length;
+    const pasted = clipOf({ 'text/plain': 'note' });
+    assert.equal(KEYS.pasteEvent(pasted.e, { where: 'scene', byKey: false }), true, 'the paste over it: taken');
+    await KEYS.clipped();
+    assert.equal(SEL.selected('a'), null, 'a paste replacing it: ended at the paste');
+    SCENE.followShown();
+    assert.deepEqual(saidSince(p, from), [], 'nothing said of a selection');
+    drag('second');
+    from = p.said.length;
+    assert.equal(KEYS.cutEvent(clipOf().e, { where: 'scene', byKey: false }), true, 'the cut: taken');
+    await KEYS.clipped();
+    assert.equal(SEL.selected('a'), null, 'a cut taking it out: ended at the cut');
+    SCENE.followShown();
+    assert.deepEqual(saidSince(p, from), [], 'nothing said of a selection');
+    drag('third');
+    from = p.said.length;
+    await keyAt(p.paneA, 'ArrowRight');
+    assert.equal(SEL.selected('a'), null, '→ without Shift putting the caret at its end: ended at the key');
+    SCENE.followShown();
+    assert.deepEqual(saidSince(p, from), [], 'nothing said of a selection');
+  } finally { LAYER.dropCaret(); LAYER.readers({}); WRITE.clearEdits(E1); HINT.act(); }
+}));
+
+test('an editor pane\'s selection follows its words as the pane is set again from its draft\'s text shown: words set before it, it moves with them, said where it stands, the text the pane shows named first; words set inside it, as an undo lands, it ends in that frame, said once; over words typed here, the board minting them since names them anew and it stands where it stood, nothing said (issue #735; FP-38)', () => onPage((p) => withEditors(async () => {
+  await PUMP.loadWhole(E1);
+  await SCENE.open(E1, B);
+  p.paneA.focus();
+  const at = E1_TEXT.indexOf('second') + 1, where = t('L.held.current', { D: nameIn(E1) });
+  SEL.setPane('a', { addr: E1, pos: at, width: 6 });
+  let from = p.said.length;
+  WRITE.addEdit(E1, { pos: 1, width: 0, text: 'ab' });
+  SCENE.followShown();
+  assert.deepEqual([SEL.selected('a'), saidSince(p, from)], [{ addr: E1, pos: at + 2, width: 6 }, [heard(fields(where, E1, t('F.position', { p: at + 2 })))]], 'two bytes set before it: moved with its words, said where it stands, the current text of the draft named first');
+  from = p.said.length;
+  WRITE.addEdit(E1, { pos: at + 5, width: 0, text: 'zz' });
+  SCENE.followShown();
+  assert.deepEqual([SEL.selected('a'), saidSince(p, from)], [null, [endedWords('L.selection.pieces', { where })]], 'two set inside it: ended, said once');
+  WRITE.clearEdits(E1);
+  SCENE.followShown();
+  WRITE.addEdit(E1, { pos: 4, width: 0, text: 'xyz' });
+  SCENE.followShown();
+  const typed = { addr: E1, pos: 4, width: 3 }, page = /** @type {number} */ (WRITE.edits(E1).at(-1)?.page);
+  SEL.setPane('a', typed);
+  from = p.said.length;
+  REC.mint(E1, page, 3, `${E1}.0.1.500`, 9);
+  SCENE.followShown();
+  assert.deepEqual([SEL.selected('a'), saidSince(p, from)], [typed, []], 'its words minted since: named anew, standing where they stood, nothing said');
+})));
+
+test('the selection\'s own "which" list at a pane follows it: the pane set again with words before them, the list is drawn again over its targets where the selection stands now; the selection ending, the list ends with it (issue #735)', () => onPage((p) => withEditors(async () => {
+  const L1 = E1 + '.0.2.81', L2 = E1 + '.0.2.82', at = E1_TEXT.indexOf('second') + 1;
+  REC.takeLinks(E1, [L1, L2]);
+  for (const l of [L1, L2]) REC.takeLink({ addr: l, from: [passage(E1, at, 6)], to: [passage(B, 1, 3)], type: CITE, age: { at: null, time: null, from: null } });
+  try {
+    await PUMP.loadWhole(E1);
+    await SCENE.open(E1, B);
+    p.paneA.focus();
+    SEL.setPane('a', { addr: E1, pos: at, width: 6 });
+    assert.equal(SEL.act('follow', true, null, 'a'), true, 'follow at pane A\'s selection, over two links');
+    assert.deepEqual(standing(), ['which', { addr: E1, pos: at, width: 6, site: 'a' }], 'its "which" list at pane A');
+    WRITE.addEdit(E1, { pos: 1, width: 0, text: 'ab' });
+    SCENE.followShown();
+    assert.deepEqual([SEL.selected('a'), standing()], [{ addr: E1, pos: at + 2, width: 6 }, ['which', { addr: E1, pos: at + 2, width: 6, site: 'a' }]], 'moved with its words: the list drawn again over it there');
+    WRITE.addEdit(E1, { pos: at + 5, width: 0, text: 'zz' });
+    SCENE.followShown();
+    assert.deepEqual([SEL.selected('a'), standing()], [null, null], 'set apart: ended, its list with it');
+  } finally { HOST.dismiss(); REC.takeLinks(E1, []); }
+})));
 
 // ---- an editor pane through the board's events (FP-23, FP-38) -----------------------------------------------------------
 

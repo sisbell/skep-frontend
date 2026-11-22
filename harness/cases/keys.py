@@ -1846,9 +1846,14 @@ def scene_versions(ctx, r):
     (c) the corner's act pressed as a person presses it: version 2 read back in its place, the selection on the same
         words still, the corner offering version 1;
     (d) nothing selected — pane A's selection ended by Esc at its text — the paragraph that opens with the stretch
-        version 1 lacks — by the harness's own `compare` of
-        the two — first in view, version 1 read: the corner says the passage is not in version 1, and the line of the
-        position the two share nearest it stands where the paragraph's first line stood on screen.
+        version 1 lacks — by the harness's own `compare` of the two — first in view, version 1 read: the act carries the
+        passage the last step carried, the words (c) carried, never the first span in view (#94's design decision: Q2,
+        "each step carries the selection, else the previous landing"): version 1 holds them, so the corner says nothing is
+        lacking, and their line stands where it stood on screen;
+    (e) the newest version read back, a phrase that opens the stretch version 1 lacks selected in pane A, version 1 read: the
+        corner says the passage is not in version 1, the line of the position the two share nearest it stands where the
+        phrase's first line stood on screen, and the selection, whose words version 1 holds none of, ends, the status
+        region saying so and why (issue #735).
     The scene is ended and the edition left at its plain address"""
     V, V1 = VERSIONED, VERSIONED + '.1'
     figures = {}
@@ -1909,7 +1914,7 @@ def scene_versions(ctx, r):
                     '(c) the press leaves the selection standing, and the act carries it: on the same words still, the copy naming the version read', {'selection': sc, 'copy': back})
             figures['c'] = {'pressed': at, 'span': back['span']}
         # (d) nothing selected — pane A's selection ended as the person ends it, Esc at its text (#94) — the paragraph that
-        # opens with the stretch version 1 lacks first in view; version 1 read
+        # opens with the stretch version 1 lacks first in view; version 1 read, carrying the passage (c) carried
         ctx.js('document.getElementById("sceneA").focus({preventScroll: true})')
         chord(ctx, 'Escape')
         r.check(ctx.js('window.__skep.scene.isOpen()') and ctx.js('window.__skep.selection("a")') is None, '(d) Esc at pane A\'s text ends its selection, the scene standing', {'selection': ctx.js('window.__skep.selection("a")')})
@@ -1918,17 +1923,44 @@ def scene_versions(ctx, r):
           p.scrollTop += e.getBoundingClientRect().top - (p.getBoundingClientRect().top + p.clientTop) + 2; })(%d)''' % (b0 or 0))
         ctx.frames(2)
         first = ctx.js(PANE_NOW % json.dumps('a'))['first']
-        y0 = line_before(ctx, 'a', b0) if b0 else None
+        # the words (b) and (c) carried: where version n sets them, and where version 1 does
+        was = (figures.get('c') or {}).get('span')
+        into = ((figures.get('b') or {}).get('span') or [None, None])[1]
+        y0 = line_before(ctx, 'a', was['pos']) if was else None
+        ctx.js('window.__skep.scene.read("a", 1)')
+        landed = scene_set(ctx)
+        pa, corner = panes(), pane_corner(ctx, 'a') or {}
+        y1 = line_before(ctx, 'a', into['pos']) if into else None
+        r.check(b0 == gap['lo'] and bool(first) and first['pos'] == b0 and bool(was) and bool(into) and landed and pa.get('src') == V1 and pa.get('lacks') is None and corner.get('lacks') is None,
+                '(d) nothing selected, the paragraph that opens with the stretch version 1 lacks first in view, version 1 read: the act carries the passage the last step carried — the words (c) carried, which version 1 holds — never the first span in view, the corner saying nothing is lacking (#94\'s design decision: Q2; issues #160, #735)',
+                {'first': first, 'block': b0, 'gap': gap, 'carried': [was, into], 'pane': {k: pa.get(k) for k in keep}, 'corner': corner})
+        r.check(y0 is not None and y1 is not None and abs(y1 - y0) <= 0.5, '(d) the line of the words carried stands where it stood on screen, half a pixel either way (FP-8)',
+                {'line': [y0, y1], 'carried': [was, into]})
+        figures['d'] = {'gap': gap, 'line': [y0, y1]}
+        # (e) version n read back; a phrase that opens the stretch version 1 lacks selected in pane A; version 1 read
+        ctx.js('window.__skep.scene.read("a", %d)' % n)
+        back_n = scene_set(ctx)
+        w0 = min(10, gap['hi'] - gap['lo'])
+        ctx.js('window.__skep.select(%s, %d, %d, "a")' % (json.dumps(newest), gap['lo'], w0))
+        ctx.frames(2)
+        chosen = ctx.js('window.__skep.selection("a")')
+        y0 = line_before(ctx, 'a', gap['lo'])
         ctx.js('window.__skep.scene.read("a", 1)')
         landed = scene_set(ctx)
         pa, corner = panes(), pane_corner(ctx, 'a') or {}
         y1 = line_before(ctx, 'a', gap['at'])
-        r.check(b0 == gap['lo'] and bool(first) and first['pos'] == b0 and landed and pa.get('src') == V1 and pa.get('lacks') == 1 and corner.get('lacks') == t('F.floating.member', {'k': 1}),
-                f'(d) nothing selected, the paragraph that opens with the stretch version 1 lacks first in view, version 1 read: the corner says "{t("F.floating.member", {"k": 1})}" (issue #160)',
-                {'first': first, 'block': b0, 'gap': gap, 'pane': {k: pa.get(k) for k in keep}, 'corner': corner})
-        r.check(y0 is not None and y1 is not None and abs(y1 - y0) <= 0.5, f'(d) the line of position {gap["at"]}, the one the two share nearest the paragraph, stands where the paragraph\'s first line stood on screen, half a pixel either way',
+        where = ctx.js('(async () => { const s = (await import("./scene/scene.js")).siteOf("a"); return s && typeof s.where === "function" ? s.where() : null; })()')
+        ended = ctx.js('(async (w) => { const S = await import("./strings.js"); return S.heard(S.sentences(S.sentence("L.selection.ended"), S.sentence("L.selection.gone", {where: w}))); })(%s)' % json.dumps(where)) if where else None
+        said = ctx.js('(document.getElementById("live") || {}).textContent || ""')
+        r.check(back_n and chosen == {'addr': newest, 'pos': gap['lo'], 'width': w0} and landed and pa.get('src') == V1 and pa.get('lacks') == 1 and corner.get('lacks') == t('F.floating.member', {'k': 1}),
+                f'(e) a phrase that opens the stretch version 1 lacks selected in pane A, version 1 read: the corner says "{t("F.floating.member", {"k": 1})}" (issue #160)',
+                {'chosen': chosen, 'gap': gap, 'pane': {k: pa.get(k) for k in keep}, 'corner': corner})
+        r.check(y0 is not None and y1 is not None and abs(y1 - y0) <= 0.5, f'(e) the line of position {gap["at"]}, the one the two share nearest the phrase, stands where the phrase\'s first line stood on screen, half a pixel either way',
                 {'line': [y0, y1], 'nearest': gap['at']})
-        figures['d'] = {'gap': gap, 'line': [y0, y1]}
+        r.check(landed and ctx.js('window.__skep.selection("a")') is None and bool(ended) and said.endswith(ended),
+                '(e) the selection, whose words version 1 holds none of, ends, the status region saying so and why (L.selection.ended, L.selection.gone; issue #735)',
+                {'selection': ctx.js('window.__skep.selection("a")'), 'said': said, 'want': ended})
+        figures['e'] = {'chosen': chosen, 'line': [y0, y1], 'said': said}
     ctx.js('window.__skep.scene.close()')
     ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     chord(ctx, 'Escape')

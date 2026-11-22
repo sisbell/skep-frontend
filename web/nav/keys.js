@@ -144,7 +144,9 @@
 // draws in the caret's own text, reaching into no other document's text
 // (O-SELECTION's `reachesPast`; FP-40), is the caret's (`selectedAtCaret`):
 // it ends with any of those
-// keys but Shift's, its card with it: each that puts text in or takes it out
+// keys but Shift's, its card with it — the selection of the caret's own
+// site, an editor pane's where the caret stands in one (`caretSite`), at the
+// key, so no setting of the pane follows it after: each that puts text in or takes it out
 // replaces the selection, the key's text — none for Backspace and Delete —
 // standing in its bytes' place, the caret after it (`editAtCaret`; T-LAYER's
 // `caretReplace`), and an arrow without Shift puts the caret at the
@@ -1201,7 +1203,7 @@ function movedSays(/** @type {string} */ addr, /** @type {Pressed} */ e, /** @ty
 function stepCaret(dir) {
   const s = selectedAtCaret();
   if (!s) return LAYER.caretMove(dir);
-  SEL.clear();
+  SEL.clear(caretSite());
   if (dir === 'left' || dir === 'right') LAYER.placeCaret(s.addr, dir === 'left' ? s.pos : s.pos + s.width);
   else LAYER.caretMove(dir);
   return true;
@@ -1215,7 +1217,9 @@ function stepCaret(dir) {
  * T-LAYER refuses the selection as not whole in the text shown, the text put
  * in at the caret (`caretType`), or, for Backspace and Delete, the character
  * on the side `erase` names taken out (`caretErase`). A selection drawn there
- * ends with the key either way, its card with it (O-SELECTION's `clear`).
+ * ends with the key either way, its card with it — the caret's own site's
+ * (`caretSite`; O-SELECTION's `clear`), so no setting of an editor pane
+ * follows it past the key.
  * @param {string} text the key's text: its character, a new line, a tab; '' for Backspace and Delete
  * @param {-1 | 1} [erase] Backspace (−1) or Delete (1): the side a character is taken out on where no selection is replaced
  * @returns {boolean} whether the text shown changed
@@ -1223,7 +1227,7 @@ function stepCaret(dir) {
 function editAtCaret(text, erase) {
   const s = selectedAtCaret();
   const replaced = !!s && LAYER.caretReplace(s, text);
-  if (s) SEL.clear();
+  if (s) SEL.clear(caretSite());
   if (replaced) return true;
   return erase ? LAYER.caretErase(erase) : LAYER.caretType(text);
 }
@@ -1957,7 +1961,7 @@ function pasteAt(text, entry, e, ctx) {
     /** what the paste did, answered: the walk following what it placed, its face where it is told, its line where nothing was placed for its size or its emptiness */
     const answer = (/** @type {import('../text/layer.js').Pasted | false} */ r) => {
       const told = r && typeof r === 'object' ? r : null;
-      if (r === 'placed' || r === 'same' || (told && told.told === 'differs')) { if (over) SEL.clear(); clipping = followed(addr, e, ctx); }
+      if (r === 'placed' || r === 'same' || (told && told.told === 'differs')) { if (over) SEL.clear(caretSite()); clipping = followed(addr, e, ctx); }
       if (told) DELETION.pasted(addr, told.site, FACES.pasteWords(told.name, told.doc));
       else if (r === 'none') HINT.show('L.paste.none', null, hinted(e, ctx));
       else if (r === 'large') HINT.show('L.paste.large', { size: megabytes(byteLength(LAYER.pasteText(text))), limit: megabytes(WRITE.PASTE_MAX_BYTES) }, hinted(e, ctx));
@@ -2030,7 +2034,7 @@ export function cutEvent(e, ctx) {
   if (kept) LAYER.returnCaret(false, kept.addr);
   const over = selectedAtCaret(), b = REC.board();
   if (!over) { HINT.show('L.copy.nothing', null, hinted(e, ctx)); return true; }
-  if (LAYER.caretCut(e, over, b ? b.origin : '') === 'cut') { SEL.clear(); clipping = followed(addr, e, ctx); }
+  if (LAYER.caretCut(e, over, b ? b.origin : '') === 'cut') { SEL.clear(caretSite()); clipping = followed(addr, e, ctx); }
   else HINT.show('L.cut.uncopied', null, hinted(e, ctx));
   return true;
 }
@@ -2147,6 +2151,18 @@ function selectedAtCaret() {
   if (pane) { const p = LAYER.selectionIn(pane.article); return p && c && p.span.addr === c.addr ? p.span : null; }
   const s = SEL.selected('plane');
   return s && c && s.addr === c.addr && !SEL.reachesPast() ? s : null;
+}
+
+/**
+ * The site of the selection a key at the live caret acts on
+ * (`selectedAtCaret`): the reading scene's editor pane whose article the caret
+ * stands in (SC's `siteOf`), else the plane — the site whose selection a key
+ * replacing or ending it ends.
+ * @returns {import('../overlays/selection.js').Site}
+ */
+function caretSite() {
+  const pane = LAYER.caretPane();
+  return (pane && /** @type {const} */ (['a', 'b']).find((side) => SCENE.siteOf(side)?.article === pane.article)) || 'plane';
 }
 
 /** Mod+Enter at a live caret with no selection drawn in its text (`selectedAtCaret`; D5 K-51; B3-S13): nothing selected, nothing followed, the caret where it stands — the caret's follow line its hint at the focus until the next act */

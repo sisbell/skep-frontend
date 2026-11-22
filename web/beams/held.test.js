@@ -11,6 +11,8 @@
 // could not be read (FP-28), and "try again" only where a retry can change
 // the answer, the board's own retry class read by one test; a drawn link's far end's state before departure, read through
 // the version its far box shows (FP-22), its short form heading its whole;
+// a passage named before an ack found in a text named after it, and the one
+// piece a text holds a passage in;
 // and the runs' labels, fields — stretches cut where their bytes break the
 // passage's order, pieces numbered in the passage's order, repeats, the
 // amount and the order at the landing's run, merged labels and the wrapping
@@ -19,7 +21,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { heldOf, piecesOf, stretchesOf, piecesIn, labelOf, mergedLabel, stepFrom, lineOf, shortLineOf, saidOf, unknownOf, whyOf, retries, busy, whereOf, nameIn, floatingOf, floatingLineOf, floatingSaid, farHolds, farSays, farShort } from './held.js';
+import { heldOf, piecesOf, stretchesOf, onePiece, piecesIn, labelOf, mergedLabel, stepFrom, lineOf, shortLineOf, saidOf, unknownOf, whyOf, retries, busy, whereOf, nameIn, floatingOf, floatingLineOf, floatingSaid, farHolds, farSays, farShort } from './held.js';
 import { t, sentence, sentences } from '../strings.js';
 
 /** a field heading a sentence: its first letter a capital (style S1) */
@@ -63,6 +65,30 @@ test('a passage named by spans of two I-spaces is one passage, each span after t
   const swapped = piecesOf(passage, [[{ prefix: Q, ordinal: 1, width: 3 }, { prefix: P, ordinal: 55, width: 5 }]]);
   assert.deepEqual([swapped, heldOf(swapped.pieces, 8).holds], [{ pieces: [{ at: 5, width: 3 }, { at: 0, width: 5 }], places: 1 }, 'pieces'], 'the spans swapped in the text: two pieces');
   assert.equal(heldOf(piecesOf(passage, [[{ prefix: Q, ordinal: 1, width: 3 }]]).pieces, 8).holds, 'part', 'the second span alone: part');
+});
+
+test('a passage named by the page\'s own name of bytes it made is found in a text naming them by the address the board minted them at once it has, and the other way round: both named as the model names them now (M-REC\'s `namedNow`; FP-38; issue #735)', () => {
+  REC._reset();
+  const DR = '1.0.1.0.77', page = REC.pageSpace(DR), own = DR + '.0.1';
+  const passage = { prefix: page, ordinal: 1, width: 4 }, minted = { prefix: own, ordinal: 31, width: 4 };
+  const runs = [{ pos: 5, width: 4 }];
+  assert.deepEqual(stretchesOf(passage, runs, [[minted]]), [], 'before the ack: the page\'s name and the board\'s two bytes apart');
+  REC.mint(DR, 1, 4, `${own}.31`, 9);
+  assert.deepEqual(stretchesOf(passage, runs, [[minted]]), [{ pos: 5, width: 4, at: 0 }], 'the ack minted them there: the passage named by the page found in a text the board names');
+  assert.deepEqual(stretchesOf(minted, runs, [[passage]]), [{ pos: 5, width: 4, at: 0 }], 'and a passage the board names found in a text the page named before the ack');
+  assert.deepEqual(piecesOf(passage, [[minted]]), { pieces: [{ at: 0, width: 4 }], places: 1 }, 'its pieces read alike');
+  REC._reset();
+});
+
+test('the one piece a text holds a passage in: the stretch holding every position of it any stretch holds — all of it, or the part that stands — the first in the text\'s order where several do; none where the passage stands in pieces, or nowhere (issue #735)', () => {
+  assert.deepEqual(onePiece([{ pos: 5, width: 10, at: 0 }], 10), { stretch: { pos: 5, width: 10, at: 0 }, all: true }, 'all of it in one stretch');
+  assert.deepEqual(onePiece([{ pos: 5, width: 10, at: 0 }, { pos: 30, width: 3, at: 2 }], 10), { stretch: { pos: 5, width: 10, at: 0 }, all: true }, 'all of it in one stretch, part of it again: the stretch holding all of it');
+  assert.deepEqual(onePiece([{ pos: 5, width: 10, at: 0 }, { pos: 30, width: 10, at: 0 }], 10), { stretch: { pos: 5, width: 10, at: 0 }, all: true }, 'all of it twice: the first in the text');
+  assert.deepEqual(onePiece([{ pos: 5, width: 4, at: 3 }], 10), { stretch: { pos: 5, width: 4, at: 3 }, all: false }, 'the part that stands, in one stretch');
+  assert.deepEqual(onePiece([{ pos: 5, width: 4, at: 3 }, { pos: 20, width: 2, at: 4 }], 10), { stretch: { pos: 5, width: 4, at: 3 }, all: false }, 'the part that stands, part of it again');
+  assert.equal(onePiece([{ pos: 5, width: 5, at: 5 }, { pos: 10, width: 5, at: 0 }], 10), null, 'all of it in two pieces, its halves swapped');
+  assert.equal(onePiece([{ pos: 5, width: 3, at: 0 }, { pos: 20, width: 3, at: 7 }], 10), null, 'part of it, in two pieces');
+  assert.equal(onePiece([], 10), null, 'none of it');
 });
 
 test('the line names what a stop the reader returned to stood for', () => {

@@ -156,7 +156,13 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     and the mirror among it, the region holding any named. A step of its
     own, for the draft the pane reads again as a guest is a withheld record
     the page then holds, as a LEAP to it leaves one, and (g)'s fallen page
-    reads none.
+    reads none;
+(i) the owner's page opened once more selects a paragraph of the first
+    edition's own words before the run by the gate's `select`, its acts card
+    open, and its session is closed the same way (issue #735; FP-29): the
+    card taken down ending nothing, the selection standing on the same words
+    as its text is read at the guest's class, and the status region saying
+    nothing of it — neither that it ended nor where it stands.
 Shots into `shots/guest/`. The owner's page is opened again at the end and
 the first edition read, as the cases after this one expect."""
 import json
@@ -215,6 +221,14 @@ EMPTY_AFTER_RUN = '''(() => {
           empty: {pos: Number(empty.dataset.pos), text: empty.textContent, height: q(empty).height / s, bar_lines: none ? none.lines : 0},
           next: {pos: Number(next.dataset.pos), tag: next.tagName.toLowerCase()}};
 })()''' % (json.dumps(DOC), json.dumps(DOC), json.dumps(PLACEHOLDER))
+# the first position of the first edition's last paragraph before the window run that holds words: its own words, read as
+# published, which a guest reads too (formatted with the document and the run's position); null where it holds none
+OWN_BLOCK = '''((doc, at) => { const b = window.__skep.model.doc(doc).blocks.filter((x) => x.kind === 'para' && x.pos + x.width <= at && (x.text || '').trim()).pop();
+  return b ? b.pos : null; })(%s, %d)'''
+# what the status region says of the plane's selection followed (O-SELECTION's `changeWords`), rendered for the ear: that it
+# ended, and where it stands at a position (formatted with its document and that position)
+SELECTION_SAID = '''(async (doc, p) => { const S = await import("./strings.js");
+  return [S.heard(S.sentence("L.selection.ended")), S.heard(S.fields(doc, S.t("F.position", {p})))]; })(%s, %d)'''
 
 
 def squash(s):
@@ -1108,6 +1122,26 @@ def run(ctx):
     r.figures['shots'].append(ctx.shot('guest/fallen-scene.png'))
     r.figures['fallen_scene'] = {'stretches_held_before': held, 'pane_b_blocks_after': len(pb.get('blocks') or []), 'leaks': len(scene_leaks)}
     ctx.js('window.__skep.scene.close()'); ctx.frames(2)
+
+    # (i) the owner's page again, a selection of the first edition's own words standing over its own end, its acts card open
+    # (issue #735; FP-29)
+    ctx.open_page('all')
+    r.check(ctx.js('window.__skep.model.session()') is not None, '(i) the owner\'s page opened again: a session stands')
+    ctx.leap(DOC, WINDOW[0])
+    block = ctx.js(OWN_BLOCK % (json.dumps(DOC), WINDOW[0]))
+    if block is not None:
+        ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), block)); ctx.frames(2)
+    chosen, card = ctx.js('window.__skep.selection()'), ctx.js('window.__skep.overlay().id')
+    closed = close_session()
+    fell = wait_for(ctx, 'window.__skep.model.session() === null && window.__skep.line().state === 5')
+    ctx.settle(); ctx.frames(2)
+    after = {'selection': ctx.js('window.__skep.selection()'), 'card': ctx.js('window.__skep.overlay().id'), 'said': ctx.js('document.getElementById("live").textContent')}
+    unsaid = ctx.js(SELECTION_SAID % (json.dumps(DOC), (chosen or {}).get('pos', 0)))
+    r.check(block is not None and bool(chosen) and chosen['addr'] == DOC and card == 'selection' and closed and fell
+            and after['selection'] == chosen and after['card'] is None and not any(w in after['said'] for w in unsaid),
+            '(i) the page\'s own `close(session)` with a selection of the first edition\'s own words standing, its acts card open: the card taken down ending nothing, the selection standing on the same words, and the status region saying nothing of it — neither that it ended nor where it stands (issue #735; FP-29)',
+            {'block': block, 'before': {'selection': chosen, 'card': card}, 'closed': closed, 'fell': fell, 'after': after, 'unsaid': unsaid})
+    r.figures['fallen_selection'] = {'before': chosen, 'after': after['selection']}
 
     # the owner's page once more, the first edition read, as the cases after this one expect
     ctx.open_page('all')

@@ -1,8 +1,9 @@
 // O-SELECTION — the selection and its acts in fixed slots (the structure
 // record §3.2; foundations §3.1; D5 §1.6). Layer 2. ENGINE-BOUND. State
 // (FP-10): the plane's selection, how Shift with ← or → moves its ends
-// (`ends`), its bytes as it was set, which the person's edits elsewhere carry
-// it by (`stood`, `carry`), and the latest act of a slot that sends
+// (`ends`), its bytes and the text it stands in, which it follows its words
+// by as that text is set again (`stood`, `carry`), whether it is being
+// followed (`following`), and the latest act of a slot that sends
 // (`sending`); each reading scene's pane's selection (`paneSel`), the last
 // pane the platform's focus stood in (`lastPane`), whether a press stands on
 // a pane's text and on which (`pressed`), the pane a click on whose text was
@@ -46,9 +47,9 @@
 // extent ending the pressed pane's, as a click there does, and the click on
 // its text read again once the platform has settled it (`clickedIn`; FP-24)
 // — never the plane's acts, its walk or its caret. SC
-// sets a pane's selection by its own acts (`setPane`, `clear`), and as a
-// pane closes, stands anew, or is taken down to its cover its selection ends
-// with it (`endPanes`). A pane's selection has the acts of the plane's, on
+// sets a pane's selection by its own acts (`setPane`, `clear`), hands it each
+// setting of its pane to follow (`followPane`, below), and as a pane closes or
+// stands anew its selection ends with it (`endPanes`). A pane's selection has the acts of the plane's, on
 // its own words: the focused site holds the one acts row (`render` at its
 // site) — drawn at a take that says the selection and at the page's own act
 // that selects there (`holdPane`, `select`, `setPane` as an act, K-8 and
@@ -187,10 +188,33 @@
 // and extends from the walk's element and leaves the focus there; the card is
 // reached by its chords or by Tab, and each act's card takes the focus as the
 // act was made — a chord or Enter on the slot, never a click (rule 16). A
-// selection made is said through the status region (D4). The card is
-// dismissed with the selection it stands at; an act's card taking the acts'
+// selection made is said through the status region (D4). The acts card and
+// the "which" list the selection's own — those holding no span of their own
+// (`About.at`) — end with it at its site (`ownAt`); an act's card taking the acts'
 // place is a replacement, not a dismissal, and the selection stands under it.
 // The focus and the mirror stay at block grain (D5-F11).
+// A text set again under a selection (Q2; FP-21, FP-36): wherever the text a
+// site shows is set again under its selection, the selection meets it in one
+// place (`followWords`): its bytes by identity placed in that text by FP-21's
+// rule (`placing`) — where they stand in one piece, all of them or the part
+// that stands (BM-HELD's `onePiece`), it moves there, kept whole or shrunk,
+// its own card or "which" list drawn again over it; in pieces, none, or
+// couldn't tell — its bytes not named over a text that moved, or the text's
+// read refused — it ends in that frame, its own card and list with it, no
+// act on the chrome; a text still being read is waited for, never ended. The
+// status region says either change once (`changeWords`): a whole move where
+// it stands, as a selection made is said; a shrunk one in FP-21's words; an
+// end, that it ended and why — each naming the text the site shows, a pane's
+// by its own words (`PaneAt.where`); a move that leaves it where it stood
+// says nothing. The plane's follows the text shown of its document wherever
+// that text is set again — the person's edits, a read again, a change of the
+// page's class — while its box shows that text (`carry`); N-GO's re-check
+// across a version and a version move's landing hand it the text the box
+// shows then. A pane's follows each setting of its pane, SC handing it the
+// selection as it stood (`followPane`); one taken down to its cover is kept
+// by SC by its bytes for the read that sets it again. A change of the page's
+// class takes the acts row down ending nothing (`classChanged`), so the
+// selection follows as its text is read at the new class.
 // The selection is a surface of its place (FP-36): leaving the place ends
 // it (N-GO's departure, `clear`), which keeps it by its bytes' identity
 // (`asLeft`), its card and the "which" list by what they are about (O-HOST's
@@ -200,10 +224,8 @@
 // card or a list holding a span stands on that span alone: a return, or its
 // box's taking another version, reopens it over the bytes that text holds of
 // it, nothing selected (`reopen`). A version move leaves no place: the
-// selection stands beside it, and once its box shows another version N-GO's
-// re-check carries it — its card or its list drawn again with it — over the
-// bytes that version holds of it (`restore`), saying nothing where the move's
-// own landing says it (N-GO's `surfacesAcross`; FP-22).
+// selection stands beside it, and once its box shows another version it
+// follows its words into that version (above; N-GO's `surfacesAcross`; FP-22).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-12, FP-13, FP-20, FP-21, FP-22,
 // FP-24, FP-34, FP-36, FP-37, FP-40, FP-41.
 
@@ -217,10 +239,11 @@ import * as PROV from './provenance.js';
 import * as LINKS from './links-card.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
+import * as HELD from '../beams/held.js';
 import { extended, sameSpan, spanOfBlock } from '../text/span.js';
 import { sourcesIn } from '../text/article.js';
 import { boundaries, wordStop } from '../model/derive.js';
-import { t, tHTML, tRuns, typeName, facedHTML, withheldLine, heard } from '../strings.js';
+import { t, tHTML, tRuns, typeName, facedHTML, withheldLine, heard, sentence, sentences, fields } from '../strings.js';
 import { esc, fill, byteLength } from '../util.js';
 import { markDirty } from '../plane/camera.js';
 import { drawChord, keyShortcut } from '../nav/keys.js';
@@ -259,35 +282,226 @@ let sel = null;
 /** @type {Ends} how Shift with ← or → moves the selection's ends while it stands, set with it (`hold`) */
 let ends = AT_START;
 
-/** @type {{ids: ISpan[], rev: number} | null} the selection's bytes by identity as it was set, and how many times its document's page-local edits had changed then (W-WRITE's `editRev`): what it is carried by where they moved (`carry`) */
+/** @typedef {import('../model/records.js').Doc} Doc */
+/** @typedef {Pick<Doc, 'runs' | 'image' | 'blocks'>} Text a text as a site took it: its runs, its image and its blocks, each the array its record held — M-REC replaces a record's arrays and never edits them, so a text set again holds new ones */
+
+/**
+ * @typedef {Object} Stood — the plane's selection's words as they stand (`hold`, `carry`)
+ * @property {ISpan[]} ids its bytes by identity in `text` (T-LAYER's `shownIdentity`); none where that text's image did not name them
+ * @property {Text | null} text the text shown of its document it stands in, as it was taken; null where the model held no record of it
+ * @property {{d: Doc, rev: number} | null} seen the record it last waited on as still being read (`placing`), at its revision then (M-REC's `Doc.rev`): looked at again only once it or its revision moved
+ */
+
+/** @type {Stood | null} */
 let stood = null;
 
-/** the selection set, and how its ends move: the one place either is written, its bytes read with it */
+/** @type {boolean} the plane's selection is being followed into a text set again under it (`carry`): a read of it meanwhile follows nothing */
+let following = false;
+
+/** the selection set, and how its ends move: the one place either is written, its bytes and the text it stands in read with it */
 function hold(/** @type {Span | null} */ span, /** @type {Ends} */ how = AT_START) {
   sel = span; ends = how;
-  stood = span ? { ids: LAYER.shownIdentity(span.addr, span.pos, span.width), rev: WRITE.editRev(span.addr) } : null;
+  stood = span ? { ids: LAYER.shownIdentity(span.addr, span.pos, span.width), text: REC.has(span.addr) ? textIn(LAYER.shownOf(span.addr)) : null, seen: null } : null;
+}
+
+/** a record's text as a site took it (`Text`) */
+const textIn = (/** @type {Text} */ d) => ({ runs: d.runs, image: d.image, blocks: d.blocks });
+/** do two texts hold one text as the page took it: the same runs, image and blocks */
+const sameText = (/** @type {Text} */ x, /** @type {Text} */ y) => x.runs === y.runs && x.image === y.image && x.blocks === y.blocks;
+/** do two texts' runs stand in the same places, each of the same kind and words — the text unmoved, whatever its image names */
+const sameRuns = (/** @type {Doc['runs']} */ a, /** @type {Doc['runs']} */ b) => a === b || (a.length === b.length && a.every((r, i) => r.pos === b[i].pos && r.width === b[i].width && r.kind === b[i].kind && r.text === b[i].text));
+/** does a text show withheld text, under which the rest of a passage may stand */
+const showsWithheld = (/** @type {Text} */ d) => d.blocks.some((b) => b.kind === 'withheld');
+
+/**
+ * The plane's selection following its words as the text shown of its
+ * document is set again under it (see the head; Q2) — the person's edits, a
+ * read again, a change of the page's class: where that text is other than
+ * the one it stands in, or its read was refused, and its box shows that text
+ * (N-GO's `shownIn`), its words placed there by FP-21's rule (`placing`) and
+ * the selection moved or ended (`followWords`), said once through the status
+ * region. A text still being read is waited for, looked at again once its
+ * record moves; a move that would draw its own card or list again while a
+ * card the reader asked for still reads, which that would end (O-HOST's
+ * `pending`), waits for that card. Where its box shows another version,
+ * N-GO's re-check follows it. A read of the selection while it is being
+ * followed — a card's dismissal, a focus move — reads it as it stands, so it
+ * is followed, and said, once (`following`).
+ */
+function carry() {
+  if (following || !sel || !stood || !REC.has(sel.addr) || GO.shownIn(sel.addr) !== sel.addr) return;
+  const now = LAYER.shownOf(sel.addr);
+  if (!now.refused && stood.text && sameText(now, stood.text)) return;
+  if (stood.seen && stood.seen.d === now && stood.seen.rev === now.rev) return;
+  const f = placing(sel, stood.ids, stood.text, now);
+  if (f.state === 'wait') { stood.seen = { d: now, rev: now.rev }; return; }
+  if (f.state === 'one' && (f.pos !== sel.pos || f.width !== sel.width) && ownAt('plane') && HOST.pending()) return;
+  following = true;
+  try {
+    const said = followWords('plane', f, { was: sel, text: now, addr: sel.addr, where: HELD.whereOf(sel.addr) });
+    if (said) FOCUS.say(said);
+  } finally { following = false; }
 }
 
 /**
- * The selection carried through the person's edits (see the head): where the
- * page-local edits of its document moved since it was set, it stands over
- * the span its bytes hold in the text shown now — from their first stretch to
- * the end of their last — the platform's highlight placed there and its own
- * card drawn again with it; where none of its bytes stand, or they were not
- * named, as it is.
+ * @typedef {{state: 'wait'} | {state: 'one', pos: number, width: number, all: boolean} | {state: 'ended', why: 'pieces' | 'none' | 'unknown', met: import('../beams/held.js').Met | null}} Placing — where a selection's words stand in a text set again under it (`placing`): `wait` the text still being read; `one` all of them, or the part that stands, in one stretch of it — that stretch's first position and positions, and whether it holds every one; `ended` in pieces, none of them, or couldn't tell, with the refusal met where one was
  */
-function carry() {
-  if (!sel || !stood || WRITE.editRev(sel.addr) === stood.rev) return;
-  stood.rev = WRITE.editRev(sel.addr);
-  const now = stood.ids.length ? LAYER.placedShown(sel.addr, stood.ids) : [];
-  if (!now.length) return;
-  const span = { addr: sel.addr, pos: now[0].pos, width: now[now.length - 1].pos + now[now.length - 1].width - now[0].pos };
-  if (sameSpan(span, sel)) return;
-  const own = HOST.currentIs('selection') && sameSpan(/** @type {{span?: Span} | null} */ (HOST.currentState()?.anchor)?.span, sel);
-  sel = span;
-  LAYER.placeSelection(span);
+
+/**
+ * Where a selection's words stand in a text set again under it, by FP-21's
+ * rule (see the head; Q2): its bytes by identity placed in the text's image
+ * as stretches, each cut where its bytes break the selection's order
+ * (BM-HELD's `stretchesOf`), and one piece where a stretch holds every byte
+ * any of them holds — all of them, else the part that stands (BM-HELD's
+ * `onePiece`); else pieces, or none. Couldn't tell where the text's read was
+ * refused, or its bytes were not named and the text moved; bytes not named
+ * over a text whose runs stand unmoved stand where they stood. An empty text
+ * holds none of them. The text still being read waits: none of it delivered,
+ * or an image placing less than all of it where no stretch holds all of the
+ * words — a read must bring the rest first.
+ * @param {{pos: number, width: number}} span where the selection stood
+ * @param {ISpan[]} ids its bytes by identity in the text it stood in, in its order; none where that text's image did not name them
+ * @param {Text | null} was the text it stood in, where known
+ * @param {Doc} now the record the site shows now
+ * @returns {Placing}
+ */
+export function placing(span, ids, was, now) {
+  if (now.refused) return { state: 'ended', why: 'unknown', met: { kind: 'refused', name: now.refused === 'unregistered' ? 'doc_not_registered' : now.refused } };
+  if (now.extent === 0) return { state: 'ended', why: 'none', met: null };
+  if (now.from < 0) return { state: 'wait' };
+  if (!ids.length) return was && sameRuns(was.runs, now.runs) ? { state: 'one', pos: span.pos, width: span.width, all: true } : { state: 'ended', why: 'unknown', met: null };
+  const width = ids.reduce((n, s) => n + s.width, 0);
+  const st = HELD.stretchesOf(ids, now.image, now.image.map((r) => [{ prefix: r.prefix, ordinal: r.ordinal, width: r.width }]));
+  const one = HELD.onePiece(st, width);
+  if (one && one.all) return { state: 'one', pos: one.stretch.pos, width: one.stretch.width, all: true };
+  if (!REC.imageCovers(now)) return { state: 'wait' };
+  if (one) return { state: 'one', pos: one.stretch.pos, width: one.stretch.width, all: false };
+  return { state: 'ended', why: st.length ? 'pieces' : 'none', met: null };
+}
+
+/**
+ * @typedef {Object} Into — a text a selection is followed into (`followWords`)
+ * @property {Span} was the selection as it stood
+ * @property {Doc} text the record the site shows now
+ * @property {string} addr the address the site's acts name there: the plane's span's, a pane's (T-LAYER's `Made.addr`)
+ * @property {string} where the words naming that text (BM-HELD's `whereOf`; `PaneAt.where`)
+ * @property {boolean} [back] at a pane, its anchor stood at its end: Shift with an arrow moves its start
+ * @property {boolean} [named] the caller names the pane before these words — a step's landing, by its title — so a whole move's words name it no more
+ */
+
+/**
+ * A site's selection set as its words came to stand in a text set again
+ * under it — the one place a selection meets such a text (see the head; Q2):
+ * in one piece, moved over that stretch, kept whole or shrunk, its anchor at
+ * the same end and its bytes named anew there, the platform's range placed
+ * there where its site holds it, and its own card or "which" list drawn
+ * again over it where it moved (`drawOwn`) — save while a card the reader
+ * asked for still reads, which that would end; in pieces, none, or couldn't
+ * tell, ended in that frame with its own card and list, no act on the chrome
+ * (`endFollowed`).
+ * @param {Site} site
+ * @param {Placing} f where its words stand (`placing`); `wait` changes nothing
+ * @param {Into} into
+ * @returns {string | null} what the status region is to say of it (`changeWords`), the caller's to say or to say with words of its own; none where it stands where it stood
+ */
+export function followWords(site, f, into) {
+  if (f.state === 'wait') return null;
+  if (f.state === 'ended') { endFollowed(site); return changeWords(f, into, null, site); }
+  const span = { addr: into.addr, pos: f.pos, width: f.width }, left = ownLeft(site), moved = !sameSpan(span, into.was);
+  if (site === 'plane') {
+    hold(span, ends);
+    if (moved) { LAYER.placeSelection(span); markDirty(); }
+  } else {
+    holdPane(site, span, into.back ? 'start' : 'end', 'page');
+    if (site === focusedSite()) placePane(site);
+  }
+  if (moved && left && !HOST.pending()) drawOwn(left, span, site);
+  return moved ? changeWords(f, into, span, site) : null;
+}
+
+/**
+ * What the status region says of a selection followed (see the head): moved
+ * whole, where it stands now, as a selection made is said (`tell`) — at a
+ * pane, the text it shows named first (`Into.where`), save where the caller
+ * names the pane itself (`Into.named`); kept shrunk, FP-21's line for a part,
+ * the rest possibly under withheld text the text shows (BM-HELD's `lineOf`);
+ * ended, that it ended, then why — its words in pieces, none of them, or
+ * couldn't tell by the refusal met — each a sentence; the text named by
+ * `Into.where`.
+ * @param {Placing} f
+ * @param {Into} into
+ * @param {Span | null} now where it stands now, where it stands
+ * @param {Site} site
+ * @returns {string | null}
+ */
+function changeWords(f, into, now, site) {
+  const where = into.where;
+  if (f.state === 'one' && now) {
+    if (f.all) return fields(site === 'plane' || into.named ? null : where, now.addr, t('F.position', { p: now.pos }));
+    return HELD.lineOf({ .../** @type {HELD.Said} */ (HELD.saidOf({ holds: 'part' }, 'selected', into.addr, showsWithheld(into.text))), where });
+  }
+  if (f.state !== 'ended') return null;
+  const why = f.why === 'pieces' ? sentence('L.selection.pieces', { where }) : f.why === 'none' ? sentence('L.selection.gone', { where }) : HELD.lineOf({ ...HELD.unknownOf(f.met, 'selected', into.addr), where });
+  return sentences(sentence('L.selection.ended'), why);
+}
+
+/**
+ * A site's selection ended as its words came to stand in pieces, none, or
+ * untold (`followWords`): its own card or "which" list taken down first, no
+ * act on the chrome — a card the reader asked for still reading reads on —
+ * then the selection with its marks; at a pane the platform's range there
+ * collapsed where it stood (`clear`'s).
+ * @param {Site} site
+ */
+function endFollowed(site) {
+  const own = ownAt(site);
+  if (own) { moving = true; try { HOST.complete(own); } finally { moving = false; } }
+  if (site !== 'plane') { clear(site); return; }
+  if (!sel) return;
+  hold(null);
+  LAYER.placeSelection(null);
   markDirty();
-  if (own) render();
+}
+
+/** the id of the selection's own card or "which" list standing at a site — the acts card or the list holding no span of its own (`About.at`), which ends with the selection there (see the head) — else null */
+function ownAt(/** @type {Site} */ site) {
+  const o = HOST.currentState(), a = o && !o.notice ? /** @type {About | undefined} */ (o.about) : undefined;
+  return o && a && (a.kind === 'selection' || a.kind === 'which') && !a.at && (a.site ?? 'plane') === site ? o.id : null;
+}
+
+/** the selection's own card or "which" list standing at a site (`ownAt`) as it stands now — what it is about and the control the focus stands on in it (O-HOST's `asLeft`) — else null */
+function ownLeft(/** @type {Site} */ site) {
+  const left = ownAt(site) ? HOST.asLeft() : null;
+  return left ? /** @type {{about: About, focus: string | null}} */ (left) : null;
+}
+
+/**
+ * The selection's own card or "which" list drawn again over it where it
+ * stands now (`restore`, `followWords`): the list over its targets counted
+ * again there (`targetsAt`) where they are two or more, else the card, each
+ * taking the focus on the control it was left holding it on.
+ * @param {{about: About, focus: string | null}} left
+ * @param {Span} span
+ * @param {Site} site
+ */
+function drawOwn(left, span, site) {
+  const a = left.about;
+  if (a.kind !== 'which') { render(left.focus, null, null, site); return; }
+  const tg = targetsAt(a.what, span, site);
+  if (countOf(tg) > 1) which_(tg, a.what, span, false, left.focus, site); else render(null, null, null, site);
+}
+
+/**
+ * A change of the page's class, told before O-HOST's (the app's; FP-29): the
+ * acts row taken down wherever it stands, ending nothing, as a move of the
+ * focus takes it (`rowOff`'s way), so O-HOST's dismissal of what stands ends
+ * no selection — each follows its words as its text is read at the new class
+ * (see the head; `carry`, `followPane`).
+ */
+export function classChanged() {
+  if (!HOST.currentIs('selection')) return;
+  moving = true;
+  try { HOST.complete('selection'); } finally { moving = false; }
 }
 
 /** @typedef {'plane' | 'a' | 'b'} Site a place showing one arrangement of a document's words, which holds a selection of its own (see the head): the plane, or a reading scene's pane by its side */
@@ -308,6 +522,7 @@ function carry() {
  * @property {import('../model/records.js').Doc} d the record its text was made from: what its span focus walks and its acts read
  * @property {number | null} focus its span focus, the first position of the span it stands on; null where it stands on none
  * @property {Shown[]} marks the links its article draws, as it was set: the links a slot at it reads
+ * @property {() => string} where the words naming the text it shows, as a line names a text (BM-HELD's `whereOf`), made as they are asked for: what a selection followed there is said in (`changeWords`)
  */
 
 /**
@@ -419,8 +634,8 @@ function rowAt(side, over) {
 }
 
 /**
- * A site's selection, read-only, by value: the plane's where its bytes stand
- * in the text shown now (`carry`) — the one the screen draws, never a span a
+ * A site's selection, read-only, by value: the plane's as it follows its
+ * words in the text shown now (`carry`) — the one the screen draws, never a span a
  * card or a list holds (see the head); a pane's in its article's positions,
  * the focused pane's read from the platform's first (`paneNow`). Naming no
  * site reads the focused site's (`focusedSite`). Null where none stands.
@@ -531,12 +746,13 @@ function holdPane(side, span, moves, how) {
   if (how === 'say') { tell(span); rowAt(side, true); }
 }
 
-/** a pane's selection ended, its blocks unmarked, its range owed no more, its acts row taken down where it stands there (`rowOff`) */
+/** a pane's selection ended, its blocks unmarked, its range owed no more, its acts row taken down where it stands there (`rowOff`) and its own "which" list with it (`ownAt`) */
 function endPane(/** @type {Side} */ side) {
   if (owed === side) owed = null;
   if (!paneSel[side]) return;
   paneSel[side] = null;
   rowOff(side);
+  if (ownAt(side) === 'which') HOST.complete('which');
   markPane(side);
   markDirty();
 }
@@ -636,14 +852,13 @@ export function clickedIn(side) {
 }
 
 /**
- * A pane's selection set by the scene's own act (SC's: a setting carrying it
- * by its bytes, a return putting it back, the selection a scene opens
- * holding, a step at a pane's caret, select-all): its blocks marked, and
+ * A pane's selection set by the scene's own act (SC's: a return putting it
+ * back, the selection a scene opens holding, a step at a pane's caret,
+ * select-all): its blocks marked, and
  * placed as the platform's live one where that pane is the focused site
  * (`placePane`), nothing said; its acts row drawn where the person's act
- * selected it, and moved onto it where it stands at the pane — a setting
- * carrying the selection into the text the pane shows now (`rowAt`); null
- * ends it (`clear`).
+ * selected it, and moved onto it where it stands at the pane (`rowAt`); null
+ * ends it (`clear`). A setting of the pane follows it by `followPane`.
  * @param {Side} side
  * @param {Span | null} span in the positions of the article the pane shows now
  * @param {boolean} [back] its anchor stands at its end: Shift with an arrow moves its start
@@ -654,6 +869,35 @@ export function setPane(side, span, back = false, act = false) {
   holdPane(side, span, back ? 'start' : 'end', 'page');
   if (side === focusedSite()) placePane(side);
   if (act || rowAtPane(side)) rowAt(side, act);
+}
+
+/**
+ * @typedef {Object} Was — a pane's selection as it stood before a setting of its pane (SC's `setPanes`)
+ * @property {Span} span where it stood, in the positions of the article the pane showed
+ * @property {ISpan[]} ids its bytes by identity through that article's image; none where it did not name them
+ * @property {boolean} backward its anchor stood at its end
+ * @property {Text} text the text that article was made from
+ */
+
+/**
+ * A reading scene's pane's selection followed into the text its pane was set
+ * again with (see the head; Q2; SC's `setPanes`, after the step swapped the
+ * article in): its words placed there by FP-21's rule (`placing`) and the
+ * selection moved or ended there (`followWords`), the words the status region
+ * is to say of it handed back for the setting to say in one message. A text
+ * still being read is waited for: no selection standing on it, SC keeping
+ * the selection by its bytes for the read that sets the pane again.
+ * @param {Side} side
+ * @param {Was} was
+ * @param {boolean} [named] the setting's own words name the pane before these (`Into.named`)
+ * @returns {{said: string | null, waits: boolean}} `waits` the selection is SC's to keep until then
+ */
+export function followPane(side, was, named = false) {
+  const p = read.pane(side);
+  if (!p) return { said: null, waits: false };
+  const f = placing(was.span, was.ids, was.text, p.d);
+  if (f.state === 'wait') { clear(side); return { said: null, waits: true }; }
+  return { said: followWords(side, f, { was: was.span, text: p.d, addr: p.names, where: p.where(), back: was.backward, named }), waits: false };
 }
 
 /**
@@ -777,13 +1021,10 @@ export const asLeft = (site = 'plane') => { const s = selected(site); return s ?
 
 /**
  * The selection put back over the span its bytes hold in the text now — on
- * the reader's return to its place, or carried to the version its box shows
- * after a version change (see the head; N-GO's) — the platform's highlight
- * with it, said through the status region as a selection made is, save
- * where `say` is false; its card where it stood over it, or its "which" list
- * over its targets counted again at it (`targetsAt`) — the list where they
- * are two or more, else the card — each taking the focus on the control it
- * was left holding it on.
+ * the reader's return to its place (see the head; N-GO's) — the platform's
+ * highlight with it, said through the status region as a selection made is,
+ * save where `say` is false; its own card or "which" list where one stood
+ * over it, drawn again there (`drawOwn`).
  * @param {Span} span
  * @param {import('./host.js').Left | null} left the card or the list standing over it as the reader left it; null where none of the selection's stood
  * @param {boolean} [say] the status region says where it stands: false where the landing that carried it says it
@@ -792,9 +1033,8 @@ export function restore(span, left, say = true) {
   hold(span);
   LAYER.placeSelection(span);
   markDirty();
-  const a = left ? left.about : null, focus = left ? left.focus : null;
-  if (a && a.kind === 'which') { const tg = targetsAt(a.what, span); if (countOf(tg) > 1) which_(tg, a.what, span, false, focus); else render(); }
-  else if (a && a.kind === 'selection') render(focus);
+  const a = left ? left.about : null;
+  if (left && a && (a.kind === 'which' || a.kind === 'selection')) drawOwn(/** @type {{about: About, focus: string | null}} */ (left), span, 'plane');
   if (say) FOCUS.say(`${span.addr} · ${t('F.position', { p: span.pos })}`);
 }
 
@@ -1136,7 +1376,8 @@ function runTo(addr, anchor, to, platform) {
 
 /**
  * Clear a site's selection: the plane's with the platform's highlight, its
- * acts and its marks; a pane's with its marks, the platform's selection
+ * own card or "which" list (`ownAt`) and its marks; a pane's with its marks,
+ * its acts row and its own list (`endPane`), the platform's selection
  * standing over its text collapsed where it stood (T-LAYER's `unselectIn`).
  * @param {Site} [site] the plane's where none is named
  */
@@ -1145,7 +1386,7 @@ export function clear(site = 'plane') {
   if (!sel) return;
   hold(null);
   LAYER.placeSelection(null);
-  if (HOST.currentIs('selection') && rowSite() === 'plane') HOST.dismiss();
+  if (ownAt('plane')) HOST.dismiss();
   markDirty();
 }
 
@@ -1680,9 +1921,8 @@ function sourceRowRuns(addr, src, p = null) {
  * list opened (W-WRITE's `editRev`) — so bytes the text holds again elsewhere
  * never stretch a part — else placed, as the act is made, where those bytes
  * stand in the text shown, each from its first stretch to the end of its
- * last, as the selection is carried (`carry`), so the person's edits move
- * them with their words; a part as it stood where its bytes were not named or
- * none stands.
+ * last, so the person's edits move them with their words; a part as it
+ * stood where its bytes were not named or none stands.
  * @param {string} addr the span's document
  * @param {Source} src
  * @returns {() => Array<{pos: number, width: number}>}

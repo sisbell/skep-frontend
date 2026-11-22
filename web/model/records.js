@@ -52,7 +52,7 @@
 // the model which of the page's bytes took the addresses from it (`mint`),
 // each mint counted and the count never falling (`mintsOf`), the byte named
 // by that address from then on wherever bytes are named or placed
-// (`pageIds`, `placedIn`); a change of the page's class keeps what was minted,
+// (`pageIds`, `placedIn`, `namedNow`); a change of the page's class keeps what was minted,
 // for it names the page's own bytes, which W-WRITE keeps. Whether the page
 // holds dialed words of a draft the board has not acked (`setWriting`,
 // `writing`, `written`), set by W-MACHINE: each change of it counts the
@@ -2425,6 +2425,18 @@ function spelled(r) {
   let off = 0;
   return pageIds(addr, r.ordinal, r.width).map((x) => { const out = /** @type {T} */ ({ ...r, ...x, ...('pos' in r ? { pos: /** @type {number} */ (r.pos) + off } : {}) }); off += x.width; return out; });
 }
+
+/**
+ * Runs named by identity as the model names them now (see the head;
+ * `spelled`), in their order: a byte the page made named by the permanent
+ * address the board minted it at once the board has, so two namings of the
+ * same bytes — one taken before an ack, one after — compare alike. The runs
+ * given are handed back as they are where the board has minted nothing.
+ * @template {ISpan} T
+ * @param {readonly T[]} runs runs by identity, or an image's runs
+ * @returns {readonly T[]}
+ */
+export const namedNow = (runs) => (state.minted.size ? runs.flatMap(spelled) : runs);
 
 // ---- the refresh ---------------------------------------------------------------
 

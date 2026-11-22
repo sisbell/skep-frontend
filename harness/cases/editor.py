@@ -85,7 +85,11 @@ stood and that the board refused the read, the refusal's name set as code, "read
 read", pane B named by the line too — then the act pressed, the test board reading the state (`unread`; skep-frontend
 #702); and a held line,
 the act opening on the newest kept state under "now — not yet kept" (`unkept`) — every word of both panes' corners inside
-the box it stands in at each (issue #678).
+the box it stands in at each (issue #678). A selection in the past pane follows its words through a step
+(`past_selection_steps`; issue #735): a line typed and kept, a word typed into its middle and kept, pane B brought to the
+state before the word — a phrase after the word's place selected there moves with its words as "later ›" lands the word's
+state, said after the landing's title in one message (`selection-moves`); one spanning the word's place ends in the frame
+that state lands, none drawn, said with why (`selection-ends`).
 The editor pane follows them (`pane_rows`; skep-frontend #556, B3-S1's scene rule, B3-S13): a reading scene's pane holding
 the case's own draft typed in, its keys answered by its own lines, the way back to the kept caret, and the close re-taking
 the caret (`pane-typed`, `pane-lines`, `pane-way-back`, `pane-close`); and a paste made in a pane faced where it was made
@@ -394,6 +398,12 @@ STATES = [
     dict(screen='B3-S7', state='links', walk='W-08', step=8, drawn=True,
          how="a row's act, its state's links read held at its answer (`drv.held`); then answered; then Alt+↓ twice while a text read is held (skep-frontend #704)",
          claim='at a rest the state\'s links read by `/op-at` with `find_links_v` at the position its text was read at, after that read; while out "links — arriving" (B3.history.links.arriving) after its hand in pane B\'s corner and its description, its name unchanged, its count places hollow; answered, the clause gone and the counts the answer\'s; a state passed while its text read was out never its links read'),
+    dict(screen='B3-S7', state='selection-moves', walk='W-08', step=8, drawn=True,
+         how="the case's own draft framed as a landing frames it, a line typed at the end of its first line and kept, then a word typed into its middle and kept; the history opened and pane B brought to the state before the word; a phrase after the word's place selected in pane B by the gate's `select`, then \"later ›\" clicked (issue #735)",
+         claim='the next state lands — the word, or the first commit that typed it, set before the phrase — and pane B\'s selection stands on the same words at their new positions, read by the gate\'s `selection("b")`; the status region says where it stands — its address and its position — after the landing\'s title, in one message'),
+    dict(screen='B3-S7', state='selection-ends', walk='W-08', step=8, drawn=True,
+         how="as `selection-moves`, a phrase spanning the word's place selected in pane B at the state before it, then \"later ›\" clicked (issue #735)",
+         claim='in the frame the state with the word lands the selection ends: pane B holding none, none of pane B\'s drawn and no live range in its text; the status region says after the landing\'s title that it ended and why — "The selection ended. What you selected now stands in pieces in ⟨that state\'s text⟩." (L.selection.ended, L.selection.pieces)'),
     # B3-S1's scene rule (skep-frontend #556): a reading scene's pane holding the person's own draft is its editor
     dict(screen='B3-S1', state='pane-typed', walk='W-08', step=3, drawn=True,
          how="`window.__skep.scene.open(mine, DOC)`, a click on a word of pane A's text, then keys typed there; Mod+Z; a line held there (`op` armed `held`) (D5 K-70, K-72, K-75)",
@@ -1507,7 +1517,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             "the page opened on the harness's provider with `machine=1` boots with D6's machine handed in, under a session that writes", {'machine': boot and boot.get('machine'), 'writes': session and session.get('writes')})
     if not session or not board or not (boot and boot.get('machine')):
         for state in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'now-moved', 'not-last', 'in-flight', 'unread', 'unkept',
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'now-moved', 'not-last', 'in-flight', 'unread', 'unkept', 'selection-moves', 'selection-ends',
                       'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal', 'pane-refused', 'pane-held-bars'):
             red(state, 'the machine\'s page did not open')
         return
@@ -1622,7 +1632,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
             {'stands': stands, 'line': line0, 'focus': ctx.js('window.__skep.view.focus()')})
     if not stands:
         for st in ('undo-lines', 'kept-on-board', 'held-in-session', 'row-inert', 'refused-run', 'hand-over', 'moved-face', 'halted-store', 'second-window', 'held-full', 'deletion-face', 'held-bars', 'paste-plain', 'cut', 'paste-kept-caret',
-                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'now-moved', 'not-last', 'in-flight', 'unread', 'unkept',
+                      'paste-same', 'paste-after-cut', 'paste-own-draft', 'paste-unminted', 'paste-forged', 'source-faces', 'paste-held', 'published-target', 'corner-act', 'read', 'reclaimed', 'now-moved', 'not-last', 'in-flight', 'unread', 'unkept', 'selection-moves', 'selection-ends',
                       'pane-typed', 'pane-lines', 'pane-way-back', 'pane-close', 'pane-source-face', 'pane-forged-face', 'pane-removal', 'pane-refused', 'pane-held-bars'):
             red(st, 'the case\'s own draft did not mount')
         return
@@ -1906,6 +1916,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     same_rows(ctx, r, shoot, red, ops_allowed, held)
     published_rows(ctx, r, shoot, red, ops_allowed, held)
     past_rows(ctx, r, shoot, red, ops_allowed, held)
+    past_selection_steps(ctx, r, shoot, red, ops_allowed, held)
     pane_rows(ctx, r, shoot, red, ops_allowed, held)
 
 
@@ -4094,6 +4105,144 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     health1 = ctx.health()
     r.figures['past_rows'] = {'log_position_before': health0.get('log_position'), 'log_position_after': health1.get('log_position'), 'calls': dict(Counter(calls))}
     r.check(not any(c.startswith('history.') for c in calls) and 'changes' in calls, "B3-S7: the history read by `changes`, a reading row; no `history.past` or `history.restore` called", dict(Counter(calls)))
+
+
+# the first position of words in pane B's text, as its record's blocks place them (formatted with the words, as JSON); null where
+# its text holds none
+POS_IN_B = '''((w) => { const b = (window.__skep.scene.panes() || {}).b; if (!b) return null;
+  for (const k of b.blocks) { const i = k.text.indexOf(w); if (i >= 0) return k.pos + new TextEncoder().encode(k.text.slice(0, i)).length; } return null; })(%s)'''
+# what a person meets of pane B's selection now: the one the gate reads at pane B, whether a selection of pane B's is drawn, the
+# site the platform's live range stands in where it holds one with extent, pane B's title's words as it names its region, and what
+# the status region says
+B_SELECTION = '''(() => { const ps = window.__skep.platformSelection(), title = document.getElementById("sceneB-title");
+  return {selection: window.__skep.selection("b"), drawn: window.__skep.selections().some((x) => x.site === "b"), live: ps && !ps.collapsed ? ps.site : null,
+          title: title ? title.getAttribute("aria-label") : null, said: (document.getElementById("live") || {}).textContent || ""}; })()'''
+
+
+def past_selection_steps(ctx, r, shoot, red, ops_allowed, m):
+    """A SELECTION THROUGH A PAST STATE'S STEP (B3-S7; issue #735), on the machine's page at the case's own draft (`mine`),
+    framed as a landing frames it so the keys type at its caret: a line typed at the end of its first line and kept by the
+    test board, then a word typed into that line's middle and kept; the history opened by the corner's act, and at each width
+    pane B brought to the state before the word — the newest row's act, then "‹ earlier" until pane B's text holds the line
+    without it. `selection-moves`: a phrase after the word's place selected in pane B by the gate's `select`, then "later ›"
+    clicked: the next state lands — the word, or the first of the commits that typed it, set before the phrase — pane B's
+    selection the same words where that state sets them, read by the gate's `selection("b")`, and the status region saying its
+    address and its position after the landing's title, in one message. `selection-ends`: a phrase spanning the word's place selected there,
+    then "later ›": in the frame the state lands the selection ends — pane B holding none, none of pane B's drawn, no live range
+    in its text — and the status region says after the landing's title that it ended and why, its words in pieces in that
+    state's text, in the strings table's words (L.selection.ended, L.selection.pieces). Each checked and shot at both widths;
+    the writes are the two typed lines."""
+    mine, corner, quiet, caret_end, press, first_line, recentre = (m[k] for k in ('mine', 'corner', 'quiet', 'caret_end', 'press', 'first_line', 'recentre'))
+    names = ('selection-moves', 'selection-ends')
+    past_now = lambda: ctx.js('window.__skep.scene.past()') or {}
+    commits = lambda: [x for d in past_now().get('days') or [] for row in d['rows'] for x in sorted(row['positions'], reverse=True)]
+    first_b = lambda: ((((ctx.js('window.__skep.scene.panes()') or {}).get('b') or {}).get('blocks') or [{}])[0] or {}).get('text', '')
+    state_kept = lambda: wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return !!s.kept && s.kept.word === "kept" && window.__skep.write.edits(%s).length === 0; })()' % (json.dumps(mine), json.dumps(mine)), 20)
+
+    def landed(at, max_s=20):
+        """pane B rests at a commit: its state shown, nothing asked further and nothing read"""
+        ok = at is not None and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.at === %d && p.asked === %d && p.out == null && !p.running; })()' % (at, at), max_s)
+        ctx.frames(2)
+        return ok
+
+    def close_scene():
+        ctx.js('window.__skep.scene.close()'); ctx.settle(15); ctx.frames(2)
+
+    # the draft framed, the walk at its landing — never a corner's act a scene's close gave the focus back to — then the line,
+    # kept, and a word typed into its middle, kept
+    quiet(); recentre(); ctx.settle(10); quiet()
+    line0 = first_line()
+    typed, word = ' Alpha beta gamma.', 'new '
+    caret_end(line0); press(typed)
+    first_ok = state_kept(); quiet()
+    ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(mine), len((line0 + ' Alpha beta ').encode('utf8')) + 1)); ctx.frames(2)
+    press(word)
+    second_ok = state_kept(); quiet()
+    ctx.js('(async () => (await import("./text/layer.js")).dropCaret())()'); ctx.frames(2)
+    line1 = first_line()
+    recentre(); ctx.settle(10); ctx.frames(2)
+    clicked = ctx.js('((s) => { const b = document.querySelector(s); if (b) b.click(); return !!b; })(%s)' % json.dumps(corner + HISTORY_ACT))
+    opened = clicked and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return window.__skep.scene.isOpen() && !!p && p.draft === %s; })()' % json.dumps(mine), 30)
+    ctx.settle(20); ctx.frames(3)
+    rows = [row for d in past_now().get('days') or [] for row in d['rows']]
+    ready = first_ok and second_ok and opened and bool(rows) and line1 == line0 + ' Alpha beta new gamma.'
+    r.check(ready, "B3-S7 · selection: a line typed into the case's own draft and kept by the test board, then a word typed into its middle and kept; the act opens the draft's history",
+            {'kept': [first_ok, second_ok], 'opened': opened, 'line': line1, 'rows': [(x['first'], x['last']) for x in rows[:3]]})
+    if not ready:
+        for s in names:
+            red(s, {'kept': [first_ok, second_ok], 'opened': opened, 'line': line1})
+        close_scene()
+        return
+    before_text = line0 + typed
+
+    def to_before():
+        """pane B at the state before the word, nothing selected in it: the newest row's act, then "‹ earlier" until its text
+        holds the line without the word; that commit, and the one "later ›" goes to from it"""
+        quiet()
+        ctx.js('(async () => (await import("./overlays/selection.js")).clear("b"))()'); ctx.frames(1)
+        ctx.js(ROW_CLICK % rows[0]['last'])
+        if not landed(rows[0]['last']):
+            return None, None
+        for _ in range(4):
+            if first_b() == before_text:
+                break
+            at = past_now().get('at')
+            cs = commits()
+            nxt = cs[cs.index(at) + 1] if at in cs and cs.index(at) + 1 < len(cs) else None
+            ctx.js(STEP_CLICK % json.dumps('earlier'))
+            if not landed(nxt):
+                return None, None
+        at = past_now().get('at')
+        cs = commits()
+        after = cs[cs.index(at) - 1] if at in cs and cs.index(at) > 0 else None
+        return (at, after) if first_b() == before_text else (None, None)
+
+    def select_b(words):
+        """`words` of pane B's text selected at pane B by the gate's `select`: where they stood, and what pane B holds then"""
+        pos = ctx.js(POS_IN_B % json.dumps(words))
+        if pos is None:
+            return None, None
+        ctx.js('window.__skep.select(%s, %d, %d, "b")' % (json.dumps(mine), pos, len(words.encode('utf8')))); ctx.frames(2)
+        return pos, ctx.js('window.__skep.selection("b")')
+
+    def moves_check(w):
+        before, after = to_before()
+        words = 'gamma.'
+        at, chosen = select_b(words)
+        ctx.js(STEP_CLICK % json.dumps('later'))
+        stepped = landed(after)
+        seen = ctx.js(B_SELECTION) or {}
+        now = ctx.js(POS_IN_B % json.dumps(words))
+        where = heard(ctx, '%s · %s' % (mine, t(ctx, 'F.position', {'p': now}))) if now is not None else None
+        said, title = seen.get('said') or '', seen.get('title') or ''
+        chosen_ok = before is not None and at is not None and chosen == {'addr': mine, 'pos': at, 'width': len(words)}
+        moved_ok = stepped and at is not None and now is not None and now > at and seen.get('selection') == {'addr': mine, 'pos': now, 'width': len(words)}
+        said_ok = bool(where) and bool(title) and said.startswith(title) and said.endswith(where) and len(said) > len(where)
+        return {'pane B at the state before the word, the phrase selected there': (chosen_ok, {'before': before, 'at': at, 'chosen': chosen, 'text': first_b()}),
+                'the step lands: the selection on the same words at their new positions': (moved_ok, {'after': after, 'stepped': stepped, 'now': now, 'seen': seen}),
+                'said after the landing\'s title, in one message: where it stands': (said_ok, {'said': said, 'title': title, 'where': where})}
+
+    def ends_check(w):
+        before, after = to_before()
+        words = 'beta gamma'
+        at, chosen = select_b(words)
+        ctx.js(STEP_CLICK % json.dumps('later'))
+        stepped = landed(after)
+        seen = ctx.js(B_SELECTION) or {}
+        where_b = ctx.js('(async () => { const s = (await import("./scene/scene.js")).siteOf("b"); return s && typeof s.where === "function" ? s.where() : null; })()')
+        want = ctx.js('(async (w) => { const S = await import("./strings.js"); return S.heard(S.sentences(S.sentence("L.selection.ended"), S.sentence("L.selection.pieces", {where: w}))); })(%s)' % json.dumps(where_b)) if where_b else None
+        said, title = seen.get('said') or '', seen.get('title') or ''
+        chosen_ok = before is not None and at is not None and chosen == {'addr': mine, 'pos': at, 'width': len(words)}
+        ended_ok = stepped and seen.get('selection') is None and seen.get('drawn') is False and seen.get('live') != 'b'
+        said_ok = bool(want) and bool(title) and said.startswith(title) and said.endswith(want)
+        return {'pane B at the state before the word, the phrase across its place selected there': (chosen_ok, {'before': before, 'at': at, 'chosen': chosen, 'text': first_b()}),
+                'in the frame the step lands: the selection ended, none drawn, no live range in pane B': (ended_ok, {'after': after, 'stepped': stepped, 'seen': seen}),
+                'said after the landing\'s title, in one message: that it ended and why': (said_ok, {'said': said, 'title': title, 'want': want, 'where': where_b})}
+
+    shoot('selection-moves', moves_check)
+    shoot('selection-ends', ends_check)
+    ctx.js('(async () => (await import("./overlays/selection.js")).clear("b"))()')
+    close_scene()
 
 
 # a reading scene's pane as the person meets it, by its side (`A`, `B`): its text, the carets' marks standing in it, its span

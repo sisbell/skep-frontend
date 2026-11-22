@@ -320,13 +320,15 @@ function reading() {
  * what the find measured, the arrival and the trail's notices, the one
  * line's transient, and the hint with the notices it showed whole, taken
  * down from the model at once, the overlay first so the focus a closing card
- * hands back stands on the walk's element as the walk is taken again; then
- * each reading scene's pane kept fresh by its kind, and the walk taken again
- * where it stood.
+ * hands back stands on the walk's element as the walk is taken again — the
+ * selection's acts row before it, ending no selection, so each follows its
+ * words as its text is read at the new class (O-SELECTION's `classChanged`);
+ * then each reading scene's pane kept fresh by its kind, and the walk taken
+ * again where it stood.
  * @param {import('../model/pump.js').Dropped} x
  */
 function dropped(x) {
-  if (!x.addrs) { HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); FIND.classChanged(); GO.classChanged(); LINE.classChanged(x.at); HINT.classChanged(); DELETION.classChanged(); }
+  if (!x.addrs) { SEL.classChanged(); HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); FIND.classChanged(); GO.classChanged(); LINE.classChanged(x.at); HINT.classChanged(); DELETION.classChanged(); }
   SCENE.dropped(x);
   void WALK.dropped(x);
 }

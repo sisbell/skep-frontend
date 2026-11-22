@@ -101,7 +101,7 @@ import { standardFs, placeOf, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
 import { entitlementArm } from '../text/article.js';
 import { isElement } from '../text/span.js';
-import { STRINGS, t, tHTML, addressedHTML, sentence, asSentence, opening, hintSentences, heard } from '../strings.js';
+import { STRINGS, t, tHTML, addressedHTML, sentence, sentences, asSentence, opening, hintSentences, heard } from '../strings.js';
 import { esc } from '../util.js';
 import { nameIn } from '../beams/held.js';
 import * as TRAIL from './trail.js';
@@ -2986,7 +2986,7 @@ test('a version move whose compare the board does not answer lands in place at t
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a version move keeps the selection standing (issue #266\'s design decision: "`landInPlace` stops clearing the selection"): carried with its own card open, it moves to its counterpart in the version moved to, its card drawn again over it and nothing said of it, the landing saying it; carried under the versions list, it moves so, the list read again at the member; on a passage the version moved to holds none of, carried by no move, it stays on the version it names, its card standing, the dead end\'s face below the card, said', async () => {
+test('a version move keeps the selection standing where its words stand in one piece (issue #266\'s design decision: "`landInPlace` stops clearing the selection"; issue #735): carried with its own card open, it moves to its counterpart in the version moved to, its card drawn again over it and nothing said of it, the landing saying it; carried under the versions list, it moves so, the list read again at the member; on a passage the version moved to holds none of, carried by no move, it ends in that frame with its card, said, no dead end\'s face standing for it', async () => {
   const platform = { window: globalThis.window };
   globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
   const said = statusSaid(), member = { addr: FAR2, pos: FAR_HELD.pos, width: FAR_HELD.width };
@@ -2999,7 +2999,7 @@ test('a version move keeps the selection standing (issue #266\'s design decision
     said.length = 0;
     await inPlace(GO.toVersion(FAR2, { carry: { addr: FAR, ...FAR_HELD, selected: true } }));
     assert.deepEqual([SEL.selected(), HOST.currentState()?.id, HOST.currentState()?.anchor], [member, 'selection', { span: member }], 'carried with its own card open: on its counterpart in the member, its card drawn again over it');
-    assert.ok(!said.includes(`${FAR2} · ${t('F.position', { p: FAR_HELD.pos })}`), `nothing said of where it stands: the landing says it — ${said}`);
+    assert.ok(!said.includes(heard(`${FAR2} · ${t('F.position', { p: FAR_HELD.pos })}`)), `nothing said of where it stands: the landing says it — ${said}`);
     await run(GO.leapTo(FAR));
     SEL.select(FAR, FAR_HELD.pos, FAR_HELD.width);
     await VERSIONS.open(FAR, FAR_HELD.pos, null, FAR_HELD.width);
@@ -3009,12 +3009,72 @@ test('a version move keeps the selection standing (issue #266\'s design decision
     assert.deepEqual([SEL.selected(), HOST.currentState()?.id, /** @type {VERSIONS.About} */ (HOST.currentState()?.about).addr], [member, 'versions:' + FAR, FAR2], 'carried under the list: on its counterpart, the list read again at the member');
     await run(GO.leapTo(FAR));
     SEL.select(FAR, FAR_FIRST.pos, FAR_FIRST.width);
+    said.length = 0;
     await inPlace(GO.toVersion(FAR1));
-    assert.deepEqual([GO.shownIn(FAR), SEL.selected(), HOST.currentState()?.id, HOST.notice()?.id], [FAR1, { ...FAR_FIRST }, 'selection', 'face:floating'], 'a passage the first member holds none of: the selection stays on the version it names, its card standing, the dead end\'s face below the card');
-    assert.ok(saidBelow(deadAt(1)), `"The passage isn't in version 1.", said: ${HOST.notice()?.html}`);
+    assert.deepEqual([GO.shownIn(FAR), SEL.selected(), HOST.currentState()?.id ?? null, HOST.notice()], [FAR1, null, null, null], 'a passage the first member holds none of: the selection ended in that frame, its card with it, no dead end\'s face for it');
+    assert.ok(said.includes(heard(sentences(sentence('L.selection.ended'), sentence('L.selection.gone', { where: t('L.held.member', { k: 1 }) })))), `that it ended and why, said: ${said}`);
     await run(GO.leapTo(FAR));
   } finally { SEL.clear(); HOST.dismiss(); ownBytes(); globalThis.window = platform.window; }
   assert.deepEqual(fake.unanswered, []);
+});
+
+/** the first ten positions of FAR's second paragraph: FAR2 holds them where `splitIn` sets its image, and its `compare` against FAR answers them so — their halves swapped — and FAR1 none of them */
+const FAR_HALVES = { addr: FAR, pos: FAR_HELD.pos, width: 10 };
+/** FAR2's bytes FAR's own, FAR_HALVES' two halves swapped: its second five where its first stood, its first five after them */
+const splitIn = () => REC.takeImage(FAR2, 1, [{ iStart: FAR + '.0.1.1', width: FAR_HELD.pos - 1 }, { iStart: `${FAR}.0.1.${FAR_HELD.pos + 5}`, width: 5 }, { iStart: `${FAR}.0.1.${FAR_HELD.pos}`, width: 5 }, { iStart: `${FAR}.0.1.${FAR_HELD.pos + 10}`, width: FAR_EXTENT - FAR_HELD.pos - 9 }]);
+Object.assign(script, {
+  [FAKE.keyOf('op', { frame: carried(FAR_HALVES, FAR2, FAR_EXTENT) })]: between(FAR, FAR2, [[FAR_HELD.pos, FAR_HELD.pos + 5, 5], [FAR_HELD.pos + 5, FAR_HELD.pos, 5]]),
+  [FAKE.keyOf('op', { frame: carried(FAR_HALVES, FAR1, FAR_EXTENT) })]: between(FAR, FAR1, []),
+});
+
+test('the plane\'s selection follows its words into the version its box takes (issue #735): carried by no move, where they stand in one piece there it moves onto them, said where it stands; where they stand in two pieces it ends in that frame with its card, said, no face standing for it; carried by the move into a version holding it in two runs, it ends, said, the landing\'s outline standing on both runs', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const said = statusSaid(), pieces = heard(sentences(sentence('L.selection.ended'), sentence('L.selection.pieces', { where: t('L.held.member', { k: 2 }) })));
+  REC.takeMembers(FAR, 2);
+  await sharedBytes();
+  try {
+    await run(GO.leapTo(FAR));
+    SEL.select(FAR, FAR_HALVES.pos, FAR_HALVES.width);
+    said.length = 0;
+    await inPlace(GO.toVersion(FAR2));
+    assert.deepEqual([SEL.selected(), HOST.currentState()?.id], [{ ...FAR_HALVES, addr: FAR2 }, 'selection'], 'its words in one piece in the member: moved onto them, its card drawn again over it');
+    assert.ok(said.includes(heard(`${FAR2} · ${t('F.position', { p: FAR_HALVES.pos })}`)), `said where it stands: ${said}`);
+    await run(GO.leapTo(FAR));
+    splitIn();
+    SEL.select(FAR, FAR_HALVES.pos, FAR_HALVES.width);
+    said.length = 0;
+    await inPlace(GO.toVersion(FAR2));
+    assert.deepEqual([GO.shownIn(FAR), SEL.selected(), HOST.currentState()?.id ?? null, HOST.notice()], [FAR2, null, null, null], 'its words in two pieces in the member: ended with its card, no face standing for it');
+    assert.ok(said.includes(pieces), `that it ended and why, said: ${said}`);
+    await run(GO.leapTo(FAR));
+    SEL.select(FAR, FAR_HALVES.pos, FAR_HALVES.width);
+    said.length = 0;
+    await inPlace(GO.toVersion(FAR2, { carry: { ...FAR_HALVES, selected: true } }));
+    assert.deepEqual([SEL.selected(), GO.arrivalMark()?.runs], [null, [{ pos: FAR_HALVES.pos, width: 5 }, { pos: FAR_HALVES.pos + 5, width: 5 }]], 'carried into two runs: ended, the landing\'s outline standing on both');
+    assert.ok(said.includes(pieces), `that it ended and why, said: ${said}`);
+    await run(GO.leapTo(FAR));
+  } finally { SEL.clear(); HOST.dismiss(); GO.endArrival(); ownBytes(); globalThis.window = platform.window; }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a version move keeps a selection shrunk where the version holds only part of its words, in one piece: carried by no move, it moves onto what stands, the line saying only part of what was selected is there (issue #735; FP-21)', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const said = statusSaid();
+  REC.takeMembers(FAR, 2);
+  await sharedBytes();
+  // FAR2's bytes FAR's own but FAR_HALVES' last five, which it holds none of
+  REC.takeImage(FAR2, 1, [{ iStart: FAR + '.0.1.1', width: FAR_HELD.pos + 4 }, { iStart: '1.0.1.0.99.0.1.1', width: 5 }, { iStart: `${FAR}.0.1.${FAR_HELD.pos + 10}`, width: FAR_EXTENT - FAR_HELD.pos - 9 }]);
+  try {
+    await run(GO.leapTo(FAR));
+    SEL.select(FAR, FAR_HALVES.pos, FAR_HALVES.width);
+    said.length = 0;
+    await inPlace(GO.toVersion(FAR2));
+    assert.deepEqual(SEL.selected(), { addr: FAR2, pos: FAR_HALVES.pos, width: 5 }, 'shrunk onto the five that stand, in one piece');
+    assert.ok(said.includes(heard(sentence('L.held.part', { subject: t('L.held.selected'), where: t('L.held.member', { k: 2 }) }))), `the line said: ${said}`);
+    await run(GO.leapTo(FAR));
+  } finally { SEL.clear(); HOST.dismiss(); GO.endArrival(); ownBytes(); globalThis.window = platform.window; }
 });
 
 test('a version move carries a card a slot\'s act opened at the walk\'s focused span, no selection standing, as it carries the selection\'s own: Mod+K\'s acts card at FAR\'s second paragraph, moved to FAR\'s second member, is drawn again over the paragraph\'s counterpart there, holding it, nothing selected (issue #471; FP-22, FP-36)', async () => {
@@ -4659,6 +4719,123 @@ test('an arrival in several runs whose text is set again keeps its runs\' labels
     assert.deepEqual(GO.arrivalMark(), { addr: SETA, pos: 20 + k, runs: [{ pos: 20 + k, width: 6 }, { pos: 26 + k, width: 5 }], link: null }, 'a paragraph set before them: both runs where they stand now, the landing at piece 2');
     assert.deepEqual([GO.landing()?.pos, GO.landing()?.current, GO.landingLine(), GO.steps()], [20 + k, 0, piece(2), true], 'its line piece 2\'s, the step still offered');
   } finally { GO.endArrival(); HOST.dismiss(); }
+});
+
+test('the plane\'s selection follows its words as a read sets its document\'s text again under it (issue #735): a paragraph set before them, it moves with them, said where it stands; its words then set apart in two pieces, it ends in that frame with its card, said; a text dropped, waiting to be read again, it waits, nothing said', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const said = statusSaid(), at = SETA_TEXT.indexOf('Its passage') + 1, width = 'Its passage'.length, n = SETA_TEXT.length, lead = 'A new lead.\n', k = lead.length;
+  try {
+    await leapToSeta();
+    GO.endArrival();
+    SEL.select(SETA, at, width);
+    assert.equal(HOST.currentState()?.id, 'selection', 'selected, its card open');
+    said.length = 0;
+    placeSeta([[n + 1, k], [1, n]], lead);
+    assert.deepEqual([SEL.selected(), HOST.currentState()?.id], [{ addr: SETA, pos: at + k, width }, 'selection'], 'a paragraph set before its words: moved with them, its card with it');
+    assert.ok(said.includes(heard(`${SETA} · ${t('F.position', { p: at + k })}`)), `said where it stands: ${said}`);
+    REC.invalidate(SETA);
+    said.length = 0;
+    assert.deepEqual([SEL.selected(), said], [{ addr: SETA, pos: at + k, width }, []], 'its text dropped, waiting to be read again: it waits, nothing said');
+    placeSeta([[n + 1, k], [1, at - 1], [at + 5, width - 5], [at, 5], [at + width, n - at - width + 1]], lead);
+    assert.deepEqual([SEL.selected(), HOST.currentState()?.id ?? null], [null, null], 'read again, its words\' halves swapped: ended with its card');
+    assert.ok(said.includes(heard(sentences(sentence('L.selection.ended'), sentence('L.selection.pieces', { where: t('L.held.current', { D: nameIn(SETA) }) })))), `that it ended and why, said: ${said}`);
+  } finally { SEL.clear(); HOST.dismiss(); GO.endArrival(); globalThis.window = platform.window; }
+});
+
+test('the plane\'s selection follows its words through the person\'s own edits, its own "which" list with it (issue #735): words typed before it, it moves with them, the list drawn again over its targets there; words set inside it, as an undo lands, it ends in that frame and the list with it, one message said', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const said = statusSaid(), from = NEAR_TEXT.indexOf('The first') + 1, width = 11;
+  try {
+    await run(GO.leapTo(D));
+    GO.endArrival();
+    SEL.select(D, from, width);
+    assert.equal(SEL.act('follow', true), true, 'follow at the selection, over two links');
+    assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor?.span], ['which', { addr: D, pos: from, width }], 'its "which" list at the selection');
+    WRITE.addEdit(D, { pos: 1, width: 0, text: 'ab' });
+    assert.deepEqual([SEL.selected(), HOST.currentState()?.id, HOST.currentState()?.anchor?.span], [{ addr: D, pos: from + 2, width }, 'which', { addr: D, pos: from + 2, width }], 'two characters typed before it: moved with its words, its list drawn again over it');
+    said.length = 0;
+    WRITE.addEdit(D, { pos: from + 5, width: 0, text: 'xy' });
+    assert.deepEqual([SEL.selected(), HOST.currentState()], [null, null], 'two typed inside it: ended, its list with it in that frame');
+    assert.deepEqual(said.filter(Boolean), [heard(sentences(sentence('L.selection.ended'), sentence('L.selection.pieces', { where: t('L.held.current', { D: nameIn(D) }) })))], 'one message said');
+  } finally { WRITE.clearEdits(D); SEL.clear(); HOST.dismiss(); globalThis.window = platform.window; }
+});
+
+test('a card a slot opened over the plane\'s selection, holding a span of its own, stands as the selection ends under it (issue #735; FP-36): "who wrote this?" asked over the selection in its acts card\'s place, two characters typed inside the selection — the selection ends, said, and the card stands', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const said = statusSaid(), at = await atTenth(), text = 'Line 10';
+  Object.assign(script, { [FAKE.keyOf('op', { frame: F.showOrigin(CUT, at.pos, text.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [FAR] } } });
+  try {
+    GO.endArrival();
+    SEL.select(CUT, at.pos, text.length);
+    assert.equal(HOST.currentState()?.id, 'selection', 'selected, its acts card open');
+    await PROV.wrote(CUT, at.pos, text.length, false, true);
+    assert.deepEqual([HOST.currentState()?.id, SEL.selected()], ['provenance:wrote', { addr: CUT, pos: at.pos, width: text.length }], '"who wrote this?" in the acts card\'s place, the selection standing under it');
+    said.length = 0;
+    WRITE.addEdit(CUT, { pos: at.pos + 4, width: 0, text: 'xy' });
+    assert.deepEqual([SEL.selected(), HOST.currentState()?.id], [null, 'provenance:wrote'], 'two typed inside it: the selection ended, the card standing');
+    assert.ok(said.includes(heard(sentences(sentence('L.selection.ended'), sentence('L.selection.pieces', { where: t('L.held.current', { D: nameIn(CUT) }) })))), `that it ended and why, said: ${said}`);
+  } finally { HOST.dismiss(); SEL.clear(); GO.endArrival(); WRITE.clearEdits(CUT); globalThis.window = platform.window; }
+});
+
+/** SETA's text held again as a read answered it with no image: its bytes named by nothing */
+const plainSeta = (/** @type {string} */ text) => REC.setAgain(SETA, { spans: [{ subspace: 1, ordinal: 1, positions: text.length }], text: { runs: [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }], asOf: 9 } });
+
+test('the plane\'s selection over words no image named stands where it stood while its text\'s runs stand unmoved — the image arriving names them, nothing said — and ends where its text moves under it unnamed, said as couldn\'t tell (issue #735; FP-21)', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const said = statusSaid(), at = SETA_TEXT.indexOf('Its passage') + 1, width = 'Its passage'.length, n = SETA_TEXT.length;
+  try {
+    await leapToSeta();
+    GO.endArrival();
+    plainSeta(SETA_TEXT);
+    SEL.select(SETA, at, width);
+    said.length = 0;
+    placeSeta([[1, n]]);
+    assert.deepEqual([SEL.selected(), said], [{ addr: SETA, pos: at, width }, []], 'its image arriving over the text it stands in: where it stood, nothing said');
+    plainSeta(SETA_TEXT);
+    SEL.select(SETA, at, width);
+    said.length = 0;
+    plainSeta('A new lead.\n' + SETA_TEXT);
+    assert.equal(SEL.selected(), null, 'its text moved under it, its words never named: ended');
+    assert.ok(said.includes(heard(sentences(sentence('L.selection.ended'), sentence('L.held.unknown', { where: t('L.held.current', { D: nameIn(SETA) }), subject: t('L.held.selected'), reason: t('L.held.why.unread') })))), `that it ended, couldn't tell, said: ${said}`);
+  } finally { SEL.clear(); HOST.dismiss(); GO.endArrival(); placeSeta([[1, SETA_TEXT.length]]); globalThis.window = platform.window; }
+});
+
+test('the plane\'s selection over words the person typed stands where it stood as the board mints them, nothing said: its bytes and the text shown both named as the model names them now (issue #735; FP-38)', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const said = statusSaid();
+  try {
+    await run(GO.leapTo(D));
+    GO.endArrival();
+    WRITE.addEdit(D, { pos: 1, width: 0, text: 'abc' });
+    SEL.select(D, 1, 3);
+    const page = /** @type {number} */ (WRITE.edits(D).at(-1)?.page);
+    said.length = 0;
+    REC.mint(D, page, 3, `${D}.0.1.500`, 9);
+    assert.deepEqual([SEL.selected(), said], [{ addr: D, pos: 1, width: 3 }, []], 'minted: where it stood, nothing said');
+  } finally { WRITE.clearEdits(D); SEL.clear(); HOST.dismiss(); globalThis.window = platform.window; }
+});
+
+test('a change of the page\'s class takes the selection\'s acts card down ending nothing, told to O-SELECTION before O-HOST as the app tells them: the selection stands on the text the class kept; covered, it ends, said (issue #735; FP-29)', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const said = statusSaid(), at = SETA_TEXT.indexOf('Its passage') + 1, width = 'Its passage'.length;
+  try {
+    await leapToSeta();
+    GO.endArrival();
+    SEL.select(SETA, at, width);
+    assert.equal(HOST.currentState()?.id, 'selection', 'selected, its card open');
+    SEL.classChanged(); HOST.classChanged();
+    assert.deepEqual([SEL.selected(), HOST.currentState()], [{ addr: SETA, pos: at, width }, null], 'the card taken down, the selection standing');
+    said.length = 0;
+    REC.takeRefused(SETA, 'withheld');
+    assert.equal(SEL.selected(), null, 'its text withheld at the new class: ended');
+    assert.ok(said.includes(heard(sentences(sentence('L.selection.ended'), sentence('L.held.unknown', { where: t('L.held.current', { D: nameIn(SETA) }), subject: t('L.held.selected'), reason: t('L.held.why.withheld') })))), `that it ended and why, said: ${said}`);
+  } finally { SEL.clear(); HOST.dismiss(); GO.endArrival(); REC.invalidate(SETA); globalThis.window = platform.window; }
 });
 
 test('the passage being read gone from the text its document is set again as lands in place in the none state: the dead end\'s face at the line kept, said in the status region, no camera move and no trail entry, the arrival standing elsewhere put out; where a surface of the reader\'s stands it takes nothing\'s place, its words said alone (FP-21, FP-36; issue #285)', async () => {

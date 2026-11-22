@@ -229,17 +229,22 @@
 // in the air; or standing on a trunk a newer version's arrival pinned on its
 // member, the selection's bytes named as it arrives, before its text is
 // handed on (`arrived`) — is re-checked once for each version its box takes
-// (`surfacesAcross`), by the landing rule, once the page holds that
-// version's text and its image: its subject's bytes by identity placed there
-// (`placeBytes`). All of them standing, it moves there — the selection over
-// them, said, its card or its list drawn again with it; a card or a list
-// reopened there by its owner, its reads made again (`reopenBy`) — part, it
-// moves to what stands, the line said (`heldPart`); none, it stays on the
-// version it names, said, the dead end's face below it and the latest member
-// holding it whole offered (`heldNone`). A surface about a document — the
-// links card, a tail's list — moves there whole; one whose bytes were not
-// named stands as it is. The selection a version move carried moves as the
-// move's landing placed it, which says it once (`carrySelection`). Nothing is
+// (`surfacesAcross`), once the page holds that version's text and its
+// image. The selection follows its words there by FP-21's rule
+// (O-SELECTION's `placing`, `followWords`): in one piece it moves there, its
+// own card or list drawn again with it, said — kept shrunk, in the line, the
+// latest member holding it whole offered (`heldPart`); in pieces, none, or its
+// bytes not named, it ends in that frame with its own card and list, said,
+// no face standing for it. A card or a list is re-checked by the landing
+// rule: its subject's bytes by identity placed there (`placeBytes`) — all of
+// them standing, it is reopened there by its owner, its reads made again
+// (`reopenBy`); part, it moves to what stands, the line said (`heldPart`);
+// none, it stays on the version it names, said, the dead end's face below it
+// and the latest member holding it whole offered (`heldNone`). A surface
+// about a document — the links card, a tail's list — moves there whole; one
+// whose bytes were not named stands as it is. The selection a version move
+// carried follows as the move's landing placed it — moved, which the landing
+// says once, or ended, said (`carrySelection`). Nothing is
 // reopened while a card the reader asked for still reads, for the reopen
 // would end it: a later frame re-checks it once that opening shows or ends.
 // A text set again under the reader (FP-21's landing rule; FP-36): an
@@ -2018,7 +2023,7 @@ async function heldByBytes(c, into, extent) {
  * @param {Carry} c the passage carried
  * @param {Doc} d the document landed in, read whole
  * @param {Refusal | null} met the refusal the text's whole read met
- * @returns {Promise<{held: Held, at: number, pos: number, runs: Run[], pieces: Pieces | null} | 'none' | {refused: Refusal | null}>} `at` the passage's own position the run landed at, `pos`, holds
+ * @returns {Promise<{held: Held, at: number, pos: number, runs: Run[], stretches: Stretch[], pieces: Pieces | null} | 'none' | {refused: Refusal | null}>} `at` the passage's own position the run landed at, `pos`, holds; `stretches` every run with where its stretch of the passage begins in it
  */
 async function reproject(c, d, met) {
   if (d.extent == null) return { refused: met };
@@ -2028,7 +2033,7 @@ async function reproject(c, d, met) {
   const stretches = inTextOrder(out.counterparts.map((h) => ({ pos: h.b, width: h.width, at: h.at })));
   const pieces = HELD.piecesIn(stretches, carriedWidth(c), showsWithheld(d));
   const first = pieces ? pieces.runs[pieces.order[0]] : { pos: out.counterparts[0].b, at: out.counterparts[0].at };
-  return { held: out.held, at: posIn(c, first.at), pos: first.pos, runs: stretches.map((s) => ({ pos: s.pos, width: s.width })), pieces };
+  return { held: out.held, at: posIn(c, first.at), pos: first.pos, runs: stretches.map((s) => ({ pos: s.pos, width: s.width })), stretches, pieces };
 }
 
 /** does a document's held text show withheld text — a run withheld from the reader, under which the rest of a passage may stand? */
@@ -2583,7 +2588,7 @@ function sayNamed(addr, pos, named) {
  * @param {string} was the version the box shows
  * @param {Doc} d the version moved to, read whole
  * @param {Refusal | null} met the refusal its whole read met
- * @returns {Promise<{from: number, pos: number, at: number | null, runs: Run[] | null, said: Said | null, pieces: Pieces | null, none: boolean}>} `from` the position in `was` whose line keeps its screen line; `pos` the one in `d` that takes it
+ * @returns {Promise<{from: number, pos: number, at: number | null, runs: Run[] | null, stretches: Stretch[] | null, said: Said | null, pieces: Pieces | null, none: boolean}>} `from` the position in `was` whose line keeps its screen line; `pos` the one in `d` that takes it; `stretches` the runs with where each one's stretch of the passage begins in it, where they were read
  */
 async function swapped(c, was, d, met) {
   const subject = c.selected ? 'selected' : 'reading', head = headOf(d);
@@ -2592,10 +2597,10 @@ async function swapped(c, was, d, met) {
     const e = REC.doc(was).extent;
     const out = e && d.extent ? await PUMP.compareParts({ doc: was, pos: 1, width: e }, { doc: d.addr, pos: 1, width: d.extent }) : null;
     const near = out && 'pairs' in out ? SCENE.nearest(out.pairs, c.pos) : null;
-    return { from: c.pos, pos: near ? near.b : head, at: null, runs: null, said: null, pieces: null, none: true };
+    return { from: c.pos, pos: near ? near.b : head, at: null, runs: null, stretches: null, said: null, pieces: null, none: true };
   }
-  if ('held' in held) return { from: held.at, pos: held.pos, at: held.at, runs: held.runs, said: HELD.saidOf(held.held, subject, d.addr, showsWithheld(d)), pieces: held.pieces, none: false };
-  return { from: c.pos, pos: head, at: null, runs: null, said: HELD.unknownOf(held.refused, subject, d.addr), pieces: null, none: false };
+  if ('held' in held) return { from: held.at, pos: held.pos, at: held.at, runs: held.runs, stretches: held.stretches, said: HELD.saidOf(held.held, subject, d.addr, showsWithheld(d)), pieces: held.pieces, none: false };
+  return { from: c.pos, pos: head, at: null, runs: null, stretches: null, said: HELD.unknownOf(held.refused, subject, d.addr), pieces: null, none: false };
 }
 
 /**
@@ -2603,7 +2608,7 @@ async function swapped(c, was, d, met) {
  * again as the version moved to with the line `from` stood on taken by
  * `pos`'s (T-LAYER's `holdAcross`) — the camera where it stands — the box
  * taking that version, the passage outlined where the version holds it and
- * the link lit; the selection the move carried moved as the landing placed
+ * the link lit; the selection the move carried followed as the landing placed
  * it (`carrySelection`); the walk moved to the landing and aimed at it — the
  * platform's focus carried there only where the mirror held it, where the
  * reader took the camera over while the move read (`take` false); then every
@@ -2611,7 +2616,7 @@ async function swapped(c, was, d, met) {
  * version moved to (`surfacesAcross`).
  * @param {string} was the version the box showed
  * @param {Doc} d the version moved to
- * @param {{from: number, pos: number, runs: Run[] | null, none?: boolean}} placed
+ * @param {{from: number, pos: number, runs: Run[] | null, stretches?: Stretch[] | null, none?: boolean}} placed
  * @param {string | null} link
  * @param {ISpan[]} spans the passage held by identity, which the outline is placed again and read again by (`withBytes`)
  * @param {boolean | undefined} byKey
@@ -2682,8 +2687,8 @@ export async function toVersion(addr, opts = {}) {
     endAir(act, false);
     return null;
   }
-  const head = { from: headOf(REC.doc(was)), pos: headOf(d), at: null, runs: null, said: null, pieces: null, none: false };
-  const placed = given ? { from: given.from, pos: given.to, at: null, runs: inTextOrder(given.runs), said: null, pieces: null, none: false } : c ? await swapped(c, was, d, met) : head;
+  const head = { from: headOf(REC.doc(was)), pos: headOf(d), at: null, runs: null, stretches: null, said: null, pieces: null, none: false };
+  const placed = given ? { from: given.from, pos: given.to, at: null, runs: inTextOrder(given.runs), stretches: null, said: null, pieces: null, none: false } : c ? await swapped(c, was, d, met) : head;
   const notice = placed.none ? floatingNotice(addr, placed.pos) : null;
   TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : { view: departed.view, reading: departed.reading, stood: landsAt(addr, placed.pos) }), pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
   if (act !== made) return null;
@@ -4454,7 +4459,7 @@ const readIn = (/** @type {string} */ addr) => { const d = REC.has(addr) ? textO
 /** the key a selection re-checked across a version is kept by (`Across.sel`): its span, and the version its box shows */
 const acrossKey = (/** @type {Span} */ s, /** @type {string} */ shown) => `${s.addr} ${s.pos} ${s.width} ${shown}`;
 
-/** is a card or a list the selection's own — its card, its "which" list — which stands and moves with it, rather than one holding a span of its own (O-SELECTION's `About.at`)? */
+/** is a card or a list the selection's own — its card, its "which" list — which moves with it and ends with it, rather than one holding a span of its own (O-SELECTION's `About.at`)? */
 const selectionsOwnAbout = (/** @type {import('../overlays/host.js').About} */ a) => (a.kind === 'selection' || a.kind === 'which') && !a.at;
 
 /** the card or the list standing where it is the selection's own (`selectionsOwnAbout`); null for every other */
@@ -4467,14 +4472,14 @@ function selectionsOwn() {
  * The selection across a version change (`surfacesAcross`): standing on a
  * version its box no longer shows, its bytes — named as a newer version's
  * arrival found them (`arrived`), else through the text the page holds of
- * the version it names — placed in the version shown (`placeBytes`): all of
- * them there, it moves over them, said, its card or its list drawn again with
- * it (O-SELECTION's `restore`); part, onto what stands, the line said
- * (`heldPart`); none, it stays, said, the dead end's face below the card
- * standing over it, where one stands (`heldNone`). It waits while the page
- * holds that version's text and image not yet, and while a card still reads
- * where its own card stands, which drawing that again would end; it stands
- * as it is where its bytes are not named.
+ * the version it names — followed into the version shown by FP-21's rule
+ * (O-SELECTION's `placing`, `followWords`): in one piece, it moves there, its
+ * own card or list drawn again with it, said — kept shrunk, in FP-21's line,
+ * the latest member holding it whole offered (`heldPart`); in pieces, none,
+ * or its bytes not named, it ends in that frame with its own card and list,
+ * said, no face standing for it. It waits while the page holds that version's
+ * text and image not yet, and while a card still reads where its own card
+ * stands, which drawing that again would end.
  */
 function acrossSelection() {
   const s = SEL.selected('plane');
@@ -4483,18 +4488,14 @@ function acrossSelection() {
   const key = s && shown !== s.addr ? acrossKey(s, shown) : null;
   if (!s || !key) { across.sel = null; return; }
   if (across.sel && across.sel.span === s && across.sel.key === key) return;
-  const mine = selectionsOwn();
-  if (!readIn(shown) || (mine && HOST.pending())) return;
+  if (!readIn(shown) || (selectionsOwn() && HOST.pending())) return;
   across.sel = { span: s, key };
   const ids = across.bytes ? across.bytes.ids : LAYER.shownIdentity(s.addr, s.pos, s.width);
   across.bytes = null;
-  if (!ids.length) return;
-  /** @type {Subject} */
-  const subject = { addr: s.addr, pos: s.pos, width: s.width, ids };
-  const at = placeBytes(subject);
-  if (!at.span) { heldNone(subject); return; }
-  SEL.restore(at.span, mine);
-  if (at.holds === 'part') heldPart(at, subject, 'selected');
+  const now = textOf(shown), f = SEL.placing(s, ids, null, now);
+  const said = SEL.followWords('plane', f, { was: s, text: now, addr: shown, where: HELD.whereOf(shown) });
+  if (f.state === 'one' && !f.all) heldPart({ holds: 'part', span: { addr: shown, pos: f.pos, width: f.width } }, { addr: s.addr, pos: s.pos, width: s.width, ids }, 'selected');
+  else if (said) FOCUS.say(said);
 }
 
 /**
@@ -4503,8 +4504,8 @@ function acrossSelection() {
  * where they hold a span of their own (O-SELECTION's `About.at`); none for a
  * surface no box's version bounds — a mark's list, and any surface at a
  * reading scene's pane, whose version is the scene's own (`paneOf`; FP-22,
- * FP-23) — and none for the selection's own card and list, which stand and
- * move with it (`acrossSelection`).
+ * FP-23) — and none for the selection's own card and list, which move with
+ * it and end with it (`acrossSelection`).
  * @param {import('../overlays/host.js').About} a
  * @returns {string[]}
  */
@@ -4548,26 +4549,29 @@ function acrossOverlay() {
 }
 
 /**
- * The selection a version move carried, moved as the move's landing placed
- * it (see the head): over the stretches the version moved to holds it in,
- * from the first to the end of the last, its card or its list standing over
- * it drawn again with it (O-SELECTION's `restore`); standing on the version
- * it names where that version holds none of it, the landing's face saying
- * so. Nothing is said: the landing says it once. Where the landing could not
- * tell, or a card still reads while the selection's own stands, the re-check
- * places it by its bytes (`surfacesAcross`).
+ * The selection a version move carried, followed as the move's landing placed
+ * it (see the head): where the stretches the landing read hold it in one
+ * piece (BM-HELD's `onePiece`), it moves there, kept whole or
+ * shrunk, its own card or list drawn again with it (O-SELECTION's
+ * `followWords`), nothing said: the landing says it once; where they hold it
+ * in several, or the version holds none of it, it ends in that frame with its
+ * own card and list, said — the landing's line and face standing for the
+ * passage alone. Where the landing could not tell, or a card still reads
+ * while the selection's own stands, the re-check follows it by its bytes
+ * (`surfacesAcross`).
  * @param {Carry} c the passage carried, in the version it was carried from
  * @param {string} addr the version moved to, the one its box shows now
- * @param {{runs: Run[] | null, none?: boolean}} placed
+ * @param {{stretches?: Stretch[] | null, none?: boolean}} placed
  */
 function carrySelection(c, addr, placed) {
-  const s = SEL.selected('plane');
-  if (!s || !sameSpan(s, c)) return;
-  if (placed.none) { across.sel = { span: s, key: acrossKey(s, addr) }; return; }
-  const mine = selectionsOwn();
-  if (!placed.runs || !placed.runs.length || (mine && HOST.pending())) return;
-  const first = placed.runs[0], last = placed.runs[placed.runs.length - 1];
-  SEL.restore({ addr, pos: first.pos, width: last.pos + last.width - first.pos }, mine, false);
+  const s = SEL.selected('plane'), st = placed.stretches;
+  if (!s || !sameSpan(s, c) || (!placed.none && (!st || !st.length))) return;
+  const one = placed.none || !st ? null : HELD.onePiece(st, carriedWidth(c));
+  if (one && selectionsOwn() && HOST.pending()) return;
+  /** @type {import('../overlays/selection.js').Placing} */
+  const f = one ? { state: 'one', pos: one.stretch.pos, width: one.stretch.width, all: one.all } : { state: 'ended', why: placed.none ? 'none' : 'pieces', met: null };
+  const said = SEL.followWords('plane', f, { was: s, text: textOf(addr), addr, where: HELD.whereOf(addr) });
+  if (f.state === 'ended' && said) FOCUS.say(said);
 }
 
 /**

@@ -13,7 +13,13 @@
 // cross several runs of an image — is read through the identity of the
 // bytes of each run its text holds it in (`piecesOf`), each run cut where
 // its bytes break the passage's order into the stretches an arrival
-// outlines (`stretchesOf`). Where no answer told — a read refused by any
+// outlines (`stretchesOf`) — the passage's bytes and each run's named as the
+// model names them now, a byte the page made by the address the board minted
+// it at once it has (M-REC's `namedNow`), so a passage named before an ack
+// is found in a text named after it. A text holds a passage in one piece
+// where one of those stretches holds every position of it any of them holds
+// — all of it, or the part that stands — which is where a selection set
+// again under its words stands (`onePiece`; O-SELECTION's). Where no answer told — a read refused by any
 // name but a size's, or still refused for its size once asked in parts
 // (M-PUMP's `compareParts`, `imageParts`) — the state is couldn't tell, its
 // reason keyed on the refusal's name and kind, never its token (`whyOf`),
@@ -35,7 +41,8 @@
 // by what it was to the reader — the selection, the text they were reading,
 // a followed link's passage, what a reading scene's stop the reader returned
 // to stood for — and the text by F.floating's two forms, a
-// member or a bare address's current text (`whereOf`); where the landing
+// member or a bare address's current text (`whereOf`), else by the words
+// naming a text its address does not name so (`Said.where`); where the landing
 // shows withheld text, a part's line says after its short form — the line's
 // start (`shortLineOf`) — that the rest may be in text withheld from the
 // reader. The line is
@@ -112,6 +119,7 @@ import { numeral } from '../util.js';
  * @property {'part' | 'pieces' | 'unknown'} state
  * @property {Subject} subject
  * @property {string} addr the document whose text it is: a member, or a bare address
+ * @property {string} [where] the words naming the text, where its address does not name it as a line names one (`whereOf`) — a reading scene's pane showing a past state or the held version (O-SELECTION's); absent, the address's
  * @property {boolean} withheld the text shows withheld text, and the line says the rest of a part may be under it
  * @property {string | null} why couldn't tell: the id of its reason's words (`whyOf`)
  * @property {boolean} again couldn't tell: a retry may tell (`retries`)
@@ -143,8 +151,9 @@ export function heldOf(pieces, width, places = pieces.length) {
  * passage's own, one piece where they meet it — bytes that follow on in the
  * text and in the passage both extending the piece before them — and the
  * runs holding any of it, its places. A passage named by several spans is
- * one passage, each span after the one before it in the passage's order. A
- * run whose bytes are not named counts as none.
+ * one passage, each span after the one before it in the passage's order.
+ * Both are named as the model names them now (M-REC's `namedNow`). A run
+ * whose bytes are not named counts as none.
  * @param {ISpan | ISpan[]} passage
  * @param {ISpan[][]} runs each run of the text, its bytes by identity in the text's order
  * @returns {{pieces: Piece[], places: number}}
@@ -153,7 +162,7 @@ export function piecesOf(passage, runs) {
   /** each span of the passage, with where it begins in the passage, counted from 0 */
   const spans = [];
   let o = 0;
-  for (const p of Array.isArray(passage) ? passage : [passage]) { spans.push({ ...p, from: o }); o += p.width; }
+  for (const p of REC.namedNow(Array.isArray(passage) ? passage : [passage])) { spans.push({ ...p, from: o }); o += p.width; }
   /** @type {Piece[]} */
   const pieces = [];
   let places = 0;
@@ -161,7 +170,7 @@ export function piecesOf(passage, runs) {
     let holds = false, text = 0;
     /** @type {{piece: Piece, text: number} | null} the last piece, and where in the run's text its bytes end */
     let last = null;
-    for (const s of ids) {
+    for (const s of REC.namedNow(ids)) {
       const hits = spans.flatMap((p) => {
         const lo = Math.max(s.ordinal, p.ordinal), hi = Math.min(s.ordinal + s.width, p.ordinal + p.width);
         return p.prefix === s.prefix && lo < hi ? [{ lo, hi, at: p.from + lo - p.ordinal }] : [];
@@ -191,7 +200,8 @@ export function piecesOf(passage, runs) {
  * bytes that follow on in the text and in the passage both one stretch —
  * each at its own positions in the text. A passage named by several spans is
  * one passage, each span after the one before it in the passage's order.
- * Bytes of another I-space, or past the passage, hold none of it.
+ * Both are named as the model names them now (M-REC's `namedNow`). Bytes of
+ * another I-space, or past the passage, hold none of it.
  * @param {ISpan | ISpan[]} passage
  * @param {Array<{pos: number, width: number}>} runs the runs of the text, in its order
  * @param {ISpan[][]} ids each run's bytes by identity, in the text's order, as many positions as the run
@@ -201,12 +211,12 @@ export function stretchesOf(passage, runs, ids) {
   /** @type {Array<ISpan & {from: number}>} each span of the passage, with where it begins in the passage, counted from 0 */
   const spans = [];
   let o = 0;
-  for (const p of Array.isArray(passage) ? passage : [passage]) { spans.push({ ...p, from: o }); o += p.width; }
+  for (const p of REC.namedNow(Array.isArray(passage) ? passage : [passage])) { spans.push({ ...p, from: o }); o += p.width; }
   /** @type {Stretch[]} */
   const out = [];
   runs.forEach((r, k) => {
     let p = r.pos;
-    for (const s of ids[k] || []) {
+    for (const s of REC.namedNow(ids[k] || [])) {
       const hits = spans.flatMap((q) => {
         const lo = Math.max(s.ordinal, q.ordinal), hi = Math.min(s.ordinal + s.width, q.ordinal + q.width);
         return q.prefix === s.prefix && lo < hi ? [{ lo, hi, at: q.from + lo - q.ordinal }] : [];
@@ -220,6 +230,24 @@ export function stretchesOf(passage, runs, ids) {
     }
   });
   return out.sort((a, b) => a.pos - b.pos);
+}
+
+/**
+ * The one piece a text holds a passage in (see the head): the stretch holding
+ * every position of the passage that any of the text's stretches holds —
+ * all of it, or the part that stands — the first in the text's order where
+ * several do; null where none holds any of it, or what stands of it stands
+ * in pieces.
+ * @param {Stretch[]} stretches the text's stretches holding the passage, in the text's order (`stretchesOf`)
+ * @param {number} width the passage's positions
+ * @returns {{stretch: Stretch, all: boolean} | null} `all` the stretch holds every position of the passage
+ */
+export function onePiece(stretches, width) {
+  const held = stretches.filter((s) => s.width > 0);
+  if (!held.length) return null;
+  const lo = Math.min(...held.map((s) => s.at)), hi = Math.max(...held.map((s) => s.at + s.width));
+  const one = held.find((s) => s.at <= lo && s.at + s.width >= hi);
+  return one ? { stretch: one, all: one.at <= 0 && one.at + one.width >= Math.max(1, width) } : null;
 }
 
 /** a stretch's material: its stretch of the passage */
@@ -444,7 +472,7 @@ export function unknownOf(r, subject, addr) {
  * @returns {[string, Record<string, string>]}
  */
 function shortOf(s) {
-  const subject = t(SUBJECTS[s.subject]), where = whereOf(s.addr);
+  const subject = t(SUBJECTS[s.subject]), where = s.where ?? whereOf(s.addr);
   if (s.state === 'unknown') return ['L.held.unknown', { subject, where, reason: t(s.why || 'L.held.why.other') }];
   return [s.state === 'pieces' ? 'L.held.pieces' : 'L.held.part', { subject, where }];
 }

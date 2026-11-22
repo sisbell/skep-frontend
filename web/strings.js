@@ -1361,14 +1361,22 @@ export const STRINGS = {
   'L.held.reading': { text: 'the text you were reading', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line', lane: true },
   'L.held.followed': { text: 'the passage this link leads to', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
   'L.held.stop': { text: 'what this stop stood for', cls: 'DRAFT', kind: 'K15', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
-  'L.held.member': { text: 'version ⟨k⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end; B1-S9: a stop returned to', lane: true },
-  'L.held.current': { text: 'the current text of ⟨D⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end; B1-S9: a stop returned to', lane: true },
+  'L.held.member': { text: 'version ⟨k⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end; B1-S9: a stop returned to; the status region: a selection followed as its text was set again, at a reading scene\'s pane the text it shows named first', lane: true },
+  'L.held.current': { text: 'the current text of ⟨D⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a link\'s far end; B1-S9: a stop returned to; the status region: a selection followed as its text was set again, at a reading scene\'s pane the text it shows named first', lane: true },
   // why no answer told (BM-HELD's `whyOf`), where no entry above already says it: never the refusal's token, never "compare"
   'L.held.why.busy': { text: 'the board was busy', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a versions row; B1-S9: a stop returned to', lane: true },
   'L.held.why.size': { text: 'it is too large to check, even in parts', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a versions row; B1-S9: a stop returned to', lane: true },
   'L.held.why.withheld': { text: 'some of it is withheld from you', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a versions row; B1-S9: a stop returned to', lane: true },
   'L.held.why.unread': { text: 'its text could not be read', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a versions row; B1-S9: a stop returned to', lane: true },
   'L.held.why.other': { text: 'the board did not say', cls: 'DRAFT', kind: 'K15', source: '', screen: 'a landing\'s line; a versions row; a link\'s far end; B1-S9: a stop returned to', lane: true },
+  // a selection the text under it was set again under (O-SELECTION's `changeWords`): where its words stand in pieces, none of them, or
+  // no answer told, it ends, said in the status region — a lead, then why, each a sentence; its text named as the reading scene's
+  // pane names it where its address does not: a draft's past state, the moved scene's held version
+  'L.selection.ended': { text: 'the selection ended', cls: 'DRAFT', kind: 'K13', source: '', screen: 'the status region: the plane\'s or a reading scene\'s pane\'s selection ended as the text under it was set again — a draft read again, typing in an editor pane, a change of the page\'s class, a pane\'s version read, a past-state step, the plane\'s version move — its words standing in pieces, none of them, or no answer told', lane: true },
+  'L.selection.pieces': { text: 'what you selected now stands in pieces in ⟨where⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'the status region: after L.selection.ended, where the selection\'s words stand in several stretches of the text set again under it', lane: true },
+  'L.selection.gone': { text: 'what you selected is no longer in ⟨where⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'the status region: after L.selection.ended, where the text set again under the selection holds none of its words', lane: true },
+  'L.held.past': { text: 'the text of ⟨D⟩ as it stood ⟨time⟩', cls: 'DRAFT', kind: 'K15', source: '', screen: 'the status region: a selection followed in a draft\'s history\'s past state, that state\'s text named; ⟨time⟩ when it stood, as a sentence names a time', lane: true },
+  'L.held.typed': { text: 'what you typed while ⟨D⟩ was held', cls: 'DRAFT', kind: 'K15', source: '', screen: 'the status region: a selection followed in the moved scene\'s held version, that text named', lane: true },
   // the runs' labels (FP-21): an arrival in several runs labels each at the text's edge — its piece in the passage's own
   // order, a repeat's word, and at the run the landing stands at how much of the passage the runs hold and whether the
   // text holds it in another order (BM-HELD's `labelOf`, `mergedLabel`); the landing's line steps among them
