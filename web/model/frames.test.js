@@ -11,10 +11,11 @@
 // example, its absent members null and a malformed form the decoder's null —
 // a held line's anchor edge that is a piece of unminted words, the lines a
 // `held` event names kept, a placement at several whole places, a past
-// state and a draft's standing among them — every literal the fetched
-// declarations give a union the decoders check taken, and no member the
-// declarations lack read; and the read by identity, `retrieve_i`, composed and
-// its `i_delivery` decoded as the wire's own examples spell them.
+// state with the runs a restore would send, a fork's merge report and a
+// draft's standing among them — every literal the fetched declarations give
+// a union the decoders check taken, and no member the declarations lack
+// read; and the read by identity, `retrieve_i`, composed and its
+// `i_delivery` decoded as the wire's own examples spell them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -255,7 +256,8 @@ const SHAPES = {
   held_lines: { kind: 'shell', name: 'held_lines', doc: '1.0.1.0.1013', held: 2 },
   restored: { draft: '1.0.1.0.1013', at: 9, position: 17, as_of: 16, marker: null },
   restored_marked: { draft: '1.0.1.0.1013', at: 9, position: 17, as_of: 16, marker: { sides: ['1.0.1.0.1.1.1'], head: '1.0.1.0.1.2', head_copied: '6', at: 14 } },
-  past: { draft: '1.0.1.0.1013', at: 9, as_of: 16, state: [{ origin: '1.0.1.0.1013', i_start: 1, width: 5 }, { origin: '1.0.1.0.1014', i_start: 40, width: 8 }], sent: [{ origin: '1.0.1.0.1013', i_start: 1, width: 5 }, { origin: '1.0.1.0.7', i_start: 1, width: 8 }], covered: 8, marker: null },
+  // `written` names the member `1.0.1.0.7.1` as the origin of the words it minted, where `sent` names its trunk `1.0.1.0.7`
+  past: { draft: '1.0.1.0.1013', at: 9, as_of: 16, state: [{ origin: '1.0.1.0.1013', i_start: 1, width: 5 }, { origin: '1.0.1.0.1014', i_start: 40, width: 8 }], sent: [{ origin: '1.0.1.0.1013', i_start: 1, width: 5 }, { origin: '1.0.1.0.7', i_start: 1, width: 8 }], written: [{ origin: '1.0.1.0.1013', i_start: 1, width: 5 }, { origin: '1.0.1.0.7.1', i_start: 1, width: 8 }], covered: 8, marker: null },
   standing: { base: '1.0.1.0.1.1', standing: 'behind', head: '1.0.1.0.1.2', left_behind: ['1.0.1.0.1014'] },
   undone: { draft: '1.0.1.0.1013', position: 17, record: null, restored: { base: '1.0.1.0.1.1', extent: 5 } },
   undone_bare: { draft: '1.0.1.0.1013', position: 18, record: '1.0.1.0.1.0.2.9', restored: null },
@@ -382,15 +384,17 @@ test('`history.restore`\'s `Restored` decodes — the state restored, the write\
   for (const bad of [null, {}, { shown: 'yes' }, { shown: 1 }, true]) assert.equal(F.decodeShown(bad), null, JSON.stringify(bad));
 });
 
-test('`history.past`\'s `Past` decodes — the state\'s runs as drawn and as a restore made now would send them, how many a record covers and the marker as it stands — and `publication.standing`\'s `PublicationStanding` the base, its standing, the head it stands behind and what its publication leaves behind; a malformed form of either is null', () => {
+test('`history.past`\'s `Past` decodes — the state\'s runs as drawn and as mapped, the runs a restore made now would send with a member\'s run naming the member where the mapped runs name its trunk, how many a record covers and the marker as it stands — and `publication.standing`\'s `PublicationStanding` the base, its standing, the head it stands behind and what its publication leaves behind; a malformed form of either is null', () => {
   assert.deepEqual(F.decodePast(SHAPES.past), {
     draft: '1.0.1.0.1013', at: 9, asOf: 16,
     state: [{ origin: '1.0.1.0.1013', iStart: 1, width: 5 }, { origin: '1.0.1.0.1014', iStart: 40, width: 8 }],
     sent: [{ origin: '1.0.1.0.1013', iStart: 1, width: 5 }, { origin: '1.0.1.0.7', iStart: 1, width: 8 }],
+    written: [{ origin: '1.0.1.0.1013', iStart: 1, width: 5 }, { origin: '1.0.1.0.7.1', iStart: 1, width: 8 }],
     covered: 8, marker: null,
   });
   assert.deepEqual(F.decodePast({ ...SHAPES.past, marker: SHAPES.restored_marked.marker })?.marker, { sides: ['1.0.1.0.1.1.1'], head: '1.0.1.0.1.2', headCopied: 6, at: 14 }, 'the marker as it stands');
-  for (const bad of [null, {}, { ...SHAPES.past, as_of: undefined }, { ...SHAPES.past, state: [{ origin: '1.0.1.0.1013', i_start: '1', width: 5 }] }, { ...SHAPES.past, sent: 'none' }, { ...SHAPES.past, covered: '8' }]) assert.equal(F.decodePast(bad), null, JSON.stringify(bad));
+  for (const bad of [null, {}, { ...SHAPES.past, as_of: undefined }, { ...SHAPES.past, state: [{ origin: '1.0.1.0.1013', i_start: '1', width: 5 }] }, { ...SHAPES.past, sent: 'none' }, { ...SHAPES.past, covered: '8' },
+    { ...SHAPES.past, written: undefined }, { ...SHAPES.past, written: [{ origin: '1.0.1.0.7.1', i_start: '1', width: 8 }] }]) assert.equal(F.decodePast(bad), null, JSON.stringify(bad));
   assert.deepEqual(F.decodePublicationStanding(SHAPES.standing), { base: '1.0.1.0.1.1', standing: 'behind', head: '1.0.1.0.1.2', leftBehind: ['1.0.1.0.1014'] });
   assert.deepEqual(F.decodePublicationStanding({ base: '1.0.1.0.1', standing: 'first', left_behind: [] }), { base: '1.0.1.0.1', standing: 'first', head: null, leftBehind: [] }, 'no head named where the base does not stand behind one');
   for (const bad of [null, {}, { ...SHAPES.standing, standing: 'ahead' }, { ...SHAPES.standing, base: 1 }, { ...SHAPES.standing, left_behind: '1.0.1.0.1014' }, { ...SHAPES.standing, head: 2 }]) assert.equal(F.decodePublicationStanding(bad), null, JSON.stringify(bad));
@@ -405,7 +409,7 @@ test('`merge.undo`\'s `Undone` and `merge.withdraw`\'s `Withdrawn` decode — th
   for (const bad of [null, {}, { draft: '1.0.1.0.1013' }, { ...SHAPES.withdrawn, draft: null }]) assert.equal(F.decodeWithdrawn(bad), null, JSON.stringify(bad));
 });
 
-test('`merge.compose`\'s report decodes with its sides, runs and gaps typed — the landing\'s members and the re-open\'s gaps at their defaults, each optional member null where absent — and a gap\'s kind, a run\'s family or a placement outside its set is null', () => {
+test('`merge.compose`\'s report decodes with its sides, runs and gaps typed — the landing\'s members, the re-open\'s gaps at their defaults and a fork\'s side read at no position, each optional member null where absent — and a gap\'s kind, a run\'s family or a placement outside its set is null', () => {
   const r = F.decodeMergeReport(SHAPES.report);
   assert.deepEqual([r?.outcome, r?.doc, r?.head, r?.base, r?.side, r?.form, r?.into, r?.position, r?.fresh, r?.headMoved, r?.recordLink, r?.unrecorded, r?.member, r?.claims, r?.counts, r?.cap, r?.overCap, r?.asOf],
     ['landed', '1.0.1.0.1', '1.0.1.0.1.2', '1.0.1.0.1.1', '1.0.1.0.1.1.1', 'daughter', '1.0.1.0.1013', 14, false, null, null, null, null, [], { a: 1, b: 1, m: 2 }, 4096, false, 15]);
@@ -419,7 +423,10 @@ test('`merge.compose`\'s report decodes with its sides, runs and gaps typed — 
   ], 'the unsettled gap at its default order, the anchor gap the rules settled');
   const gap = (/** @type {object} */ g) => F.decodeMergeReport({ ...SHAPES.report_reopened, gaps: [{ ...SHAPES.report_reopened.gaps[0], ...g }] });
   for (const bad of [{ kind: 'swap' }, { placed: 'elsewhere' }, { placed: ['0'] }, { settled: 'no' }, { id: '1' }]) assert.equal(gap(bad), null, JSON.stringify(bad));
-  for (const bad of [null, {}, { ...SHAPES.report, outcome: 'done' }, { ...SHAPES.report, form: 'fork' }, { ...SHAPES.report, runs: [{ ...SHAPES.report.runs[0], family: 'copy' }] }, { ...SHAPES.report, sides: [{ at: '1.0.1.0.1.2', role: 'base', position: null }] }, { ...SHAPES.report, counts: { a: 1 } }]) assert.equal(F.decodeMergeReport(bad), null, JSON.stringify(bad));
+  const forkSide = { at: '1.0.2.0.1', role: 'fork', position: null, arranged: 12 };
+  const fork = F.decodeMergeReport({ ...SHAPES.report, side: '1.0.2.0.1', form: 'fork', sides: [SHAPES.report.sides[0], forkSide], replaced: [] });
+  assert.deepEqual([fork?.side, fork?.form, fork?.sides], ['1.0.2.0.1', 'fork', [{ at: '1.0.1.0.1.2', role: 'head', position: null }, { at: '1.0.2.0.1', role: 'fork', position: null }]], 'a fork\'s report: its side the fork, read at no position, the members no screen reads left unread');
+  for (const bad of [null, {}, { ...SHAPES.report, outcome: 'done' }, { ...SHAPES.report, form: 'clone' }, { ...SHAPES.report, runs: [{ ...SHAPES.report.runs[0], family: 'copy' }] }, { ...SHAPES.report, sides: [{ at: '1.0.1.0.1.2', role: 'base', position: null }] }, { ...SHAPES.report, counts: { a: 1 } }]) assert.equal(F.decodeMergeReport(bad), null, JSON.stringify(bad));
 });
 
 test('`merge.land`\'s landing decodes — the member, its commit, how it was acknowledged, the claim, the record and the retries, beside the parts answered, the sets left private and the places left at their defaults it carries — and `decodeLanding` reads whichever of its three outcomes the answer is; a landing lacking a member, or acknowledged a way the declarations do not name, is null', () => {

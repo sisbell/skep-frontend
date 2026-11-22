@@ -109,7 +109,7 @@ def run(ctx):
               'L.clause.unread': 'then "edition claims not read" in the place of C-67\'s clause — a read of the claims on %s failed' % WINDOW[2],
               CLAUSE_READING: 'and its words not yet shown — a read C-67\'s clause on %s waits on is still out' % WINDOW[2]}.get(
         clause_id, 'and nothing in the place of C-67\'s clause — the board admits no edition claim on %s' % WINDOW[2])
-    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s gap occupies the run, as tall as its bars, never its bytes — its origin\'s key, "1.0.1.0.1003", in it — and the origin states itself once in its column\'s edge beside the run, compact and headed by its key, its mark opening the run\'s whole wording as a card: B1-S7\'s head, "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", and the guest\'s entitlement arm, %s, %s (issue #288); the act at the rest of the gap, C-39\'s face, is the guest case\'s.' % (arm, clause), 'window-run-withheld',
+    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s gap occupies the run, as tall as its bars, never its bytes — its origin\'s key, "%s", in it — and the origin states itself once in its column\'s edge beside the run, compact and headed by its key, its mark opening the run\'s whole wording as a card: B1-S7\'s head, "withheld · 1.0.1 (1.0.1) · 240 positions · origin %s", and the guest\'s entitlement arm, %s, %s (issue #288); the act at the rest of the gap, C-39\'s face, is the guest case\'s.' % (WINDOW[2], WINDOW[2], arm, clause), 'window-run-withheld',
          claims=[(PLACEHOLDER, 'the withheld run\'s gap', None)])
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     ghost = next((s for s in shown if s['far'] == GHOST), None)
@@ -132,7 +132,7 @@ def run(ctx):
     r.check(ctx.js('window.__skep.model.session()') is not None, 'W-05 runs on the owner\'s page, opened again: a session stands')
     ctx.leap(DOC, WINDOW[0])
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
-    ctx.view_doc_px(DOC, 5)
+    ctx.view_extent_px(DOC, 5)
     step(ctx, r, 'W-05', 1, 'zoom for structure: far', 'W-05 step 1: "far = counts and density" (law 5\'s LOD tiers). The accounts\' clusters, each with its density mark and its address; at this scale a cluster\'s mark has no room for its counts at the label floor, so they are left out — the counts a larger mark holds stand at WHOLE BOARD (B1-S3), and the far counts\' room is the design\'s open question; the system account held and not drawn.', 'far')
     far = [l for l in ctx.js('window.__skep.labels()') if l['kind'] == 'cluster']
     r.check(bool(far) and all(len(l['lines']) == 1 and l['lines'][0]['text'] == l['place'] for l in far), 'W-05 step 1: each cluster carries its address and no count, as the note says', [[l['place'], [x['text'] for x in l['lines']]] for l in far])
@@ -141,14 +141,14 @@ def run(ctx):
     ctx.leap(DOC, 541)
     step(ctx, r, 'W-05', 1, 'zoom for structure: reading', 'W-05 step 1: "reading = full text with span-anchored beams" — the LEAP to a named document lands at reading scale (law 6; R92 rider (a)).', 'reading')
     ctx.view_at(DOC, WINDOW[0])
-    step(ctx, r, 'W-05', 2, 'read: the same material', 'W-05 step 2: "transcluded content visibly THE SAME material, one gesture to the source (R2) — delivered per ORIGIN, position by position." The window run opens on its hairline, its ground on each of its lines; its origin, 1.0.1.0.1003, stated once in its column\'s edge — its key, the gesture to the source, then C-33\'s words.', 'same-material',
+    step(ctx, r, 'W-05', 2, 'read: the same material', 'W-05 step 2: "transcluded content visibly THE SAME material, one gesture to the source (R2) — delivered per ORIGIN, position by position." The window run opens on its hairline, its ground on each of its lines; its origin, %s, stated once in its column\'s edge — its key, the gesture to the source, then C-33\'s words.' % WINDOW[2], 'same-material',
          claims=[(RUN_OPENS, 'the run\'s opening hairline', None), (ORIGIN_STATEMENT, 'the origin\'s statement in the edge', None)])
     c33 = ctx.js('window.__skep.strings.pinned().find((s) => s.id === "C-33").text')
     said = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.textContent : null; })()' % json.dumps(ORIGIN_STATEMENT))
     r.check(bool(said) and WINDOW[2] in said and c33 in said, 'W-05 step 2: the statement holds the origin\'s key and C-33\'s words, as the note says', {'statement': said, 'c33': c33})
     last = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))[-1]
     ctx.view_at(DOC, last['pos'])
-    step(ctx, r, 'W-05', 2, 'read: the scene offer', 'W-05 step 2: the scene offer stands at the article\'s end, below its last block in its last column: "this document windows 1.0.1.0.1003".', 'scene-offer',
+    step(ctx, r, 'W-05', 2, 'read: the scene offer', 'W-05 step 2: the scene offer stands at the article\'s end, below its last block in its last column: "this document windows %s".' % WINDOW[2], 'scene-offer',
          claims=[(SCENE_OFFER, 'the scene offer', None)])
     # the links card asked at a cited passage, its citations' line in the visible view at the reading size, where the content
     # stage draws their tails
@@ -204,7 +204,7 @@ def run(ctx):
     ctx.js('window.__skep.cards.wrote(%s, %d)' % (json.dumps(DOC), wb['pos']))
     ctx.settle()
     ctx.frames(2)
-    step(ctx, r, 'W-05', 6, 'who wrote this?', 'W-05 step 6: "Provenance: who wrote this? one gesture, byte-granular, through transclusion chains (R29, show_origin)" — the block holding the window: written at its origin in the draft 1.0.1.0.1003 and at this document.', 'who-wrote')
+    step(ctx, r, 'W-05', 6, 'who wrote this?', 'W-05 step 6: "Provenance: who wrote this? one gesture, byte-granular, through transclusion chains (R29, show_origin)" — the block holding the window: written at its origin in the draft %s and at this document.' % WINDOW[2], 'who-wrote')
     ctx.esc()
     ctx.js('window.__skep.cards.uses(%s, %d)' % (json.dumps(DOC), wb['pos']))
     ctx.settle()
@@ -230,11 +230,12 @@ def run(ctx):
          claims=[('#find', 'the find\'s box', None)])
     ctx.esc(); ctx.esc(); ctx.esc()
     ctx.leap(DOC, WINDOW[0])
-    step(ctx, r, 'W-05', 9, 'where am I', 'W-05 step 9: "Where-am-I: account › document › position always visible (R6); home, landmarks, and the trail anchor against disorientation (R92 rider (c))." The one line: ‹ back · forward › · the trail │ 1 › 1.0.1 › 1.0.1.0.3 › position │ acting as 1.0.1 ….', 'where-am-i')
+    step(ctx, r, 'W-05', 9, 'where am I', 'W-05 step 9: "Where-am-I: account › document › position always visible (R6); home, landmarks, and the trail anchor against disorientation (R92 rider (c))." The one line: ‹ back · forward › · the trail │ 1 › 1.0.1 › %s › position │ acting as 1.0.1 ….' % DOC, 'where-am-i')
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(AGENT_SPACE + '.0.1'))
     ctx.settle()
     ctx.frames(2)
-    step(ctx, r, 'W-05', 10, 'the empty view', 'W-05 step 10: "Empty view: the residue answer — a count, a cluster mark, a stub, or honest emptiness whose one action is ZOOM OUT, convergent (law 13)." The agent space 1.0.1.1: its home document holds the delegation\'s record and nothing else; the account\'s count says one.', 'agent-space')
+    listed = [p['doc'] for p in ctx.js('window.__skep.model.places()') if p['account'] == AGENT_SPACE]
+    step(ctx, r, 'W-05', 10, 'the empty view', 'W-05 step 10: "Empty view: the residue answer — a count, a cluster mark, a stub, or honest emptiness whose one action is ZOOM OUT, convergent (law 13)." The agent space %s holds its home document %s, which holds the delegation\'s record and nothing else, and its mailbox %s; the account\'s count says %d, the documents `places` lists for it (%s).' % (AGENT_SPACE, AGENT_SPACE + '.0.1', AGENT_SPACE + '.0.2', len(listed), ', '.join(listed) or 'none'), 'agent-space')
     ctx.esc()
     # ---- a typed draft's walk, find and Back land on the typed words, at both widths (the unsent-typing decision) -------
     own = WINDOW[2]

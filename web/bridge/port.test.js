@@ -1,10 +1,11 @@
 // B-PORT's test over the fake port (FP-15): the port's calls are the rows of
 // the generated `Bridge`, in its order, the `merge` family's four, the `node`
-// family's three, `publication.standing`, `history.past`, `history.restore`
-// and `held.show` among them beside the rows it held before; the `node`,
-// `publication`, `merge` and `history` families and `held.show` go out under
-// their dotted names and `changes` under its own, each answer handed up as it
-// came and a lost session's refusal told to the session watchers; a
+// family's three, `publication.standing`, `history.past`, `history.restore`,
+// `held.show` and the `text` family's five among them beside the rows it held
+// before; the `node`, `publication`, `merge`, `history` and `text` families and
+// `held.show` go out under their dotted names and `changes` under its own,
+// each answer handed up as it came and a lost session's refusal told to the
+// session watchers; a
 // `publication` event and an `another-window` event each reach their own
 // subscribers and every-event ones; a close handed in at the page's unload,
 // the frames it carries with it, goes to the adapter as given, told to no
@@ -43,12 +44,14 @@ const MERGE = ['merge.compose', 'merge.land', 'merge.undo', 'merge.withdraw'];
  * The rows added since, each after the row it follows in the generated
  * `Bridge`'s order, in the order they are placed: the editor's groundwork's
  * two (issue #410); then the notebook's three after `probe`,
- * `publication.standing` after `publication.cancel`, and `history.past`
- * after `merge.withdraw`, so before `history.restore`.
+ * `publication.standing` after `publication.cancel`, `history.past` after
+ * `merge.withdraw`, so before `history.restore`, and the `text` family's five
+ * after `resolve`, in their order.
  */
 const ADDED = /** @type {const} */ ([
   ['history.restore', 'merge.withdraw'], ['held.show', 'held'],
   ['node.start', 'probe'], ['node.stop', 'node.start'], ['node.restart', 'node.stop'], ['publication.standing', 'publication.cancel'], ['history.past', 'merge.withdraw'],
+  ['text.replace', 'resolve'], ['text.edit', 'text.replace'], ['text.move', 'text.edit'], ['text.mark', 'text.move'], ['text.diff', 'text.mark'],
 ]);
 
 /** the calls as the port holds them now: the rows it held, the `merge` family after `publication.cancel`, and each added row after the row it follows */
@@ -101,9 +104,9 @@ test('a publication row refused as from a session the shell does not hold is tol
   assert.ok('refused' in out && out.refused === refusal);
 });
 
-test('CALLS holds the merge family\'s four rows after the publication family\'s, `history.restore` after them and `held.show` after `held`, the notebook\'s three after `probe`, `publication.standing` after `publication.cancel` and `history.past` before `history.restore`, and beside them exactly the twenty-eight it held (issues #395, #410)', () => {
+test('CALLS holds the merge family\'s four rows after the publication family\'s, `history.restore` after them and `held.show` after `held`, the notebook\'s three after `probe`, `publication.standing` after `publication.cancel`, `history.past` before `history.restore` and the text family\'s five after `resolve`, and beside them exactly the twenty-eight it held (issues #395, #410)', () => {
   assert.equal(HELD.length, 28);
-  assert.equal(PORT.CALLS.length, 39, 'thirty-two before the editor\'s groundwork, its two, and the five the shell added since');
+  assert.equal(PORT.CALLS.length, 44, 'thirty-two before the editor\'s groundwork, its two, and the ten the shell added since');
   assert.deepEqual(PORT.CALLS, expectedCalls(), 'the rows it held, none dropped, the four after `publication.cancel`, and each added row after the row it follows, in the Bridge\'s order');
   assert.deepEqual(PORT.CALLS.slice(PORT.CALLS.indexOf('probe'), PORT.CALLS.indexOf('op') + 1), ['probe', 'node.start', 'node.stop', 'node.restart', 'op'], 'the notebook\'s three between `probe` and `op`');
   assert.deepEqual(Object.keys(PORT.node), ['start', 'stop', 'restart'], 'the node family\'s three rows');
@@ -113,7 +116,35 @@ test('CALLS holds the merge family\'s four rows after the publication family\'s,
   assert.ok(Object.isFrozen(PORT.merge), 'frozen as `publication` is');
   assert.deepEqual(Object.keys(PORT.history), ['past', 'restore'], 'the history family\'s two rows, the read before the write');
   assert.ok(Object.isFrozen(PORT.history), 'frozen as the other families are');
+  assert.deepEqual(PORT.CALLS.slice(PORT.CALLS.indexOf('resolve'), PORT.CALLS.indexOf('changes') + 1), ['resolve', 'text.replace', 'text.edit', 'text.move', 'text.mark', 'text.diff', 'changes'], 'the text family\'s five between `resolve` and `changes`');
+  assert.deepEqual(Object.keys(PORT.text), ['replace', 'edit', 'move', 'mark', 'diff'], 'the text family\'s five rows');
+  assert.ok(Object.isFrozen(PORT.text), 'frozen as the other families are');
   assert.equal(typeof PORT.heldShow, 'function', '`held.show` beside the `held` call');
+});
+
+test('the text family goes out under its dotted names, each answer handed up as it came', async () => {
+  const replace = { session: 's-1', doc: DRAFT, old: 'teh', new: 'the' }, edit = { session: 's-1', doc: DRAFT, edits: [{ old: 'a', new: 'b' }] };
+  const move = { session: 's-1', doc: DRAFT, first: 2, last: 3, before: 1 }, mark = { session: 's-1', doc: DRAFT }, diff = { session: 's-1', doc: DRAFT, since: DRAFT + '.1', stat: true };
+  const replaced = { result: { outcome: 'replaced', doc: DRAFT, ordinal: '4', removed: 'teh', inserted: 'the', at: 20 } };
+  const edited = { result: { outcome: 'edited', doc: DRAFT, pairs: [], at: 21, lines: [] } };
+  const moved = { result: { outcome: 'moved', doc: DRAFT, first: 2, last: 3, to_first: 1, to_last: 2, cuts: [], at: 22, lines: [] } };
+  const marked = { refused: { kind: 'shell', name: 'held_lines', doc: DRAFT, held: 1 } };
+  const diffed = { result: { outcome: 'diffed', doc: DRAFT, since: DRAFT + '.1', as_of: 22, shared: '9', bytes: { new: '3', gone: '0', moved: '2' } } };
+  const fake = FAKE.create({
+    [FAKE.keyOf('text.replace', replace)]: replaced,
+    [FAKE.keyOf('text.edit', edit)]: edited,
+    [FAKE.keyOf('text.move', move)]: moved,
+    [FAKE.keyOf('text.mark', mark)]: marked,
+    [FAKE.keyOf('text.diff', diff)]: diffed,
+  });
+  PORT.boot(fake);
+  assert.equal(await PORT.text.replace(replace), replaced);
+  assert.equal(await PORT.text.edit(edit), edited);
+  assert.equal(await PORT.text.move(move), moved);
+  assert.equal(await PORT.text.mark(mark), marked, 'a refusal handed up as it came');
+  assert.equal(await PORT.text.diff(diff), diffed);
+  assert.deepEqual(fake.calls().map((c) => c.name), ['text.replace', 'text.edit', 'text.move', 'text.mark', 'text.diff'], 'each sent under its dotted name');
+  assert.deepEqual(fake.unanswered, [], 'each went out with the arguments it was given');
 });
 
 test('the node family, publication.standing and history.past go out under their dotted names, each answer handed up as it came', async () => {
@@ -122,7 +153,7 @@ test('the node family, publication.standing and history.past go out under their 
   const stopped = { result: { daemon: 'stopped', dialed: null, signed: null } };
   const refused = { refused: { kind: 'shell', name: 'no_own_node', call: 'node.restart' } };
   const stands = { result: { base: '1.0.1.0.1.1', standing: 'behind', head: '1.0.1.0.1.2', left_behind: [] } };
-  const state = { result: { draft: DRAFT, at: 9, as_of: 16, state: [{ origin: DRAFT, i_start: 1, width: 5 }], sent: [{ origin: DRAFT, i_start: 1, width: 5 }], covered: 0, marker: null } };
+  const state = { result: { draft: DRAFT, at: 9, as_of: 16, state: [{ origin: DRAFT, i_start: 1, width: 5 }], sent: [{ origin: DRAFT, i_start: 1, width: 5 }], written: [{ origin: DRAFT, i_start: 1, width: 5 }], covered: 0, marker: null } };
   const fake = FAKE.create({
     [FAKE.keyOf('node.start', {})]: probe,
     [FAKE.keyOf('node.stop', {})]: stopped,

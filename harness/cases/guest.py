@@ -34,8 +34,8 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     claimant's refused `withheld`, no text delivered, nothing mounted, no
     corner or chip, no label naming a draft's first line, the mirror's item
     led by the withheld box's words —
-    every draft of the claimant's on this board lies past the sound depth,
-    its box the account's residue cell, where the continuation's one mark
+    the draft the window run windows, which lies past the sound depth, its
+    box the account's residue cell, where the continuation's one mark
     stands; and a LEAP to a withheld document with a box of its own (the
     second account's draft) drawing its withheld box, its label its words,
     "withheld · ⟨owner⟩", bracketed in its first line's place, and its
@@ -512,8 +512,8 @@ def run(ctx):
         r.check(not off, f'(d) each account\'s count is the places {whose} index lists for it', off)
 
     def run_withheld(what):
-        """(e)'s model at the window run: one withheld block at 1467, 240 positions, its origin 1.0.1.0.1003, and none of
-        its text; the first edition's record"""
+        """(e)'s model at the window run: one withheld block at 1467, 240 positions, its origin the draft W (`WINDOW`), and
+        none of its text; the first edition's record"""
         doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))
         run_blocks = [b for b in doc['blocks'] if b['kind'] == 'withheld' and b['pos'] <= WINDOW[0] < b['pos'] + b['width']]
         held_text = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1]))
@@ -644,7 +644,7 @@ def run(ctx):
 
     # (e) the window run at 1467, withheld
     ctx.leap(DOC, WINDOW[0])
-    doc = run_withheld('(e) the model holds the window run as a withheld block — at 1467, 240 positions, its origin 1.0.1.0.1003 — and none of its text')
+    doc = run_withheld('(e) the model holds the window run as a withheld block — at 1467, 240 positions, its origin %s — and none of its text' % WINDOW[2])
     ph = gaps(ctx)
     head = t(ctx, 'B1.withheld-run', {'owner': OWNER, 'account': OWNER, 'width': WINDOW[1], 'origin': WINDOW[2]})
     arm = t(ctx, arm_id, {'owner': OWNER})
@@ -874,8 +874,8 @@ def run(ctx):
     same = all(abs(home['cam'][k] - launch['cam'][k]) <= 1e-6 * max(1.0, abs(launch['cam'][k])) for k in ('x', 'y', 'scale'))
     r.check(same and bool(home['focus']) and home['focus']['kind'] == 'board', '(c) Mod+Shift+H from the first edition goes HOME: the launch\'s view, the board\'s extent, the focus the board', {'home': home, 'launch': launch['cam']})
 
-    # (d) a LEAP to a draft of the claimant's: on this board its box is the account's residue cell, the continuation's one mark's
-    draft = drafts[1] if len(drafts) > 1 else drafts[0]
+    # (d) a LEAP to a draft of the claimant's — W, by name: on this board its box is the account's residue cell, the continuation's one mark's
+    draft = WINDOW[2] if WINDOW[2] in drafts else drafts[0]
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(draft))
     ctx.settle(); ctx.frames(2)
     d = ctx.js('window.__skep.model.doc(%s)' % json.dumps(draft))
@@ -975,7 +975,7 @@ def run(ctx):
     r.check(bool(off) and off[0] == 'board' and retaken == ['document', WITHHELD, None],
             '(d) the walk on the board, Mod+= ending at the near band over the withheld document\'s outline re-takes that document, never its account: a box the plane draws, though the index does not list it (issue #141\'s design decision)',
             {'before': off, 'after': retaken})
-    ctx.set_view(mid_x, mid_y, ctx.js('window.__skep.scaleFor(%s, "em", 3)' % json.dumps(WITHHELD)))
+    ctx.set_view(mid_x, mid_y, 3 / ctx.js('window.__skep.constants.STANDARD_FS'))
     vp, lod, t0 = ctx.js('window.__skep.view.viewport()'), ctx.js('window.__skep.view.lod().name'), ctx.js('window.__skep.trail()')
     ctx.drv.mouse(vp['VW'] / 2, vp['VH'] / 2); ctx.settle(); ctx.frames(2)
     t1 = ctx.js('window.__skep.trail()')
@@ -1021,7 +1021,7 @@ def run(ctx):
             {'closed': closed, 'fell': fell, 'strings': ids})
     held_up = [f for f in frames if f['own'] > 0 and f['mounted'] and f['run'] == '' and f['blocks'] == [[WINDOW[0], WINDOW[1], WINDOW[2]]] and not f['leaks']]
     r.check(len(frames) >= WATCHED_FRAMES and len(held_up) == len(frames),
-            '(g) from the first frame after the close the first edition\'s own text stands, its article mounted — never taken down to wait — the window run a withheld block at 1467, 240 positions, its origin 1.0.1.0.1003, none of its text held, and none of the owner\'s bytes over it anywhere in the page (issue #274\'s design decision: "everything not read as published goes at once")',
+            '(g) from the first frame after the close the first edition\'s own text stands, its article mounted — never taken down to wait — the window run a withheld block at 1467, 240 positions, its origin %s, none of its text held, and none of the owner\'s bytes over it anywhere in the page (issue #274\'s design decision: "everything not read as published goes at once")' % WINDOW[2],
             {'frames': len(frames), 'first': frames[:1], 'off': [f for f in frames if f not in held_up][:2]})
     r.check(card == 'provenance:wrote' and ctx.js('window.__skep.overlay().id') is None,
             '(g) the card standing over the draft\'s run as the session ends — made from what the session read — is taken down with it (issue #177: "Cards on covered material close onto the cover")', {'before': card, 'after': ctx.js('window.__skep.overlay().id')})
@@ -1082,7 +1082,7 @@ def run(ctx):
     ctx.js('window.__skep.go.home()'); ctx.settle(); ctx.frames(2)
     fallen_home = draws_no_draft('the fallen page\'s HOME', covered)
     ctx.leap(DOC, WINDOW[0])
-    run_withheld('(g) the fallen page holds the window run as the guest\'s does: a withheld block at 1467, 240 positions, its origin 1.0.1.0.1003, and none of its text')
+    run_withheld('(g) the fallen page holds the window run as the guest\'s does: a withheld block at 1467, 240 positions, its origin %s, and none of its text' % WINDOW[2])
     fallen_leaks, _ = leaks(fallen)
     r.check(not fallen_leaks, '(g) none of the owner\'s bytes over the run stands anywhere in the fallen page', fallen_leaks[:4])
     r.figures['shots'].append(ctx.shot('guest/fallen.png'))

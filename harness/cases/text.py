@@ -260,7 +260,7 @@ def run(ctx):
 
     swept('the first edition\'s landing')
     r.check(line['address']['doc'] == DOC and line['address']['pos'] is not None, 'the address segment names the document and the position', line['address'])
-    r.check('1 › 1.0.1 › 1.0.1.0.3 › position' in line['text'], 'the where-am-I reads board › account › document › position', line['text'][:160])
+    r.check('1 › 1.0.1 › %s › position' % DOC in line['text'], 'the where-am-I reads board › account › document › position', line['text'][:160])
     marks = wording_marks(ctx, '#line')
     r.check('F.acting-as' in marks['shown'] and not marks['marked'], 'the one line\'s strings are words alone: none is set apart by its class in the inventory — no dotted underline, no bar at its left', marks)
     trail = ctx.js('window.__skep.trail()')
@@ -272,7 +272,7 @@ def run(ctx):
     # view's centre, and the line names the account the camera is over — no document, no position — and the LEAP box opens
     # holding what the line shows (K-30)
     zooms = 0
-    while zooms < 12 and ctx.js('window.__skep.view.lod()')['name'] != 'mid':
+    while zooms < 24 and ctx.js('window.__skep.view.lod()')['name'] != 'mid':
         ctx.drv.key('-', code='Minus', mods=('Meta',))
         ctx.settle()
         ctx.frames(2)

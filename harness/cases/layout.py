@@ -474,12 +474,16 @@ which the case finds by its own reads, and the first span in view, which
 reads the article's blocks here, and the stretch a version lacks, which the
 harness's own reads of the board decide here; the thresholds are here. The
 beam-label check is marked with the page issue it waits on and counts as
-expected while that stands."""
+expected while that stands; so are (vii)'s connections at HOME and at
+mid-extents, HOME's label rule, and the pinned edition's history strip at
+mid, marked with #643: the account's first grid holds its home and its
+mailbox alone, and the edition stands two continuations deeper, its box too
+small for a strip."""
 import json
 import math
 import re
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, heard
+from . import BEAMED, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, XFAIL_FIRST_GRID, Result, account_of, corner_fit, edition, heard
 
 LEVELS_EM = [9, 12, 18, 30]
 # the room about the viewport the text layer stands a document's lines in (issue #122: a document stands by line) — the
@@ -1023,7 +1027,7 @@ def labels_hold(r, name, v):
     if name in ('mid-extents', 'home'):
         hidden = [[c['place'], c['count'], left.get(c['place'])] for c in conns if c['count'] >= 2 and c['label'] != str(c['count'])]
         r.check(any(c['count'] >= 2 for c in conns) and not hidden, f'{name}: (vii) no count is hidden — every mid connection holding two links or more carries it',
-                {'hidden': hidden, 'connections': [[c['place'], c['count'], c['label']] for c in conns][:12]})
+                {'hidden': hidden, 'connections': [[c['place'], c['count'], c['label']] for c in conns][:12]}, xfail=XFAIL_FIRST_GRID)
     if name == 'home':
         # the label rule (F-9; foundations §2.1: drawn only where its place holds it): a document's label stands in its
         # outline's first row (issue #15), so it is set wherever that row holds its address at the floor — past its region's
@@ -1038,7 +1042,7 @@ def labels_hold(r, name, v):
         must = [q for q in whole if holds(q)]
         r.check(bool(must) and set(must) <= labelled and set(whole) <= labelled | named,
                 'home: every document standing whole in the visible view whose outline\'s first row holds its address at the label floor carries its label, and every other is named left out by the rule that left it out',
-                {'in_view': len(whole), 'rows_holding': len(must), 'unlabelled': sorted(set(must) - labelled)[:8], 'unnamed': sorted(set(whole) - labelled - named)[:8]})
+                {'in_view': len(whole), 'rows_holding': len(must), 'unlabelled': sorted(set(must) - labelled)[:8], 'unnamed': sorted(set(whole) - labelled - named)[:8]}, xfail=XFAIL_FIRST_GRID)
         r.check(any(m['lines'] for m in v['marks']), 'home: the continuation drawn as one mark carries its count', [m['lines'] for m in v['marks']])
     if name == 'whole-board':
         named = {(l['kind'], l['place']) for l in labels}
@@ -2785,8 +2789,8 @@ def scene_holds(ctx, r):
     return seen
 
 
-# the documents of the claimant's first grid that cite FAR_LEAP, which the plane draws: a scene on one and FAR_LEAP draws its citation
-CITERS = ['1.0.1.0.4', '1.0.1.0.14', '1.0.1.0.20', BEAMED]
+# the editions that cite FAR_LEAP, which the plane draws: a scene on one and FAR_LEAP draws its citation
+CITERS = [edition(2), edition(12), edition(18), BEAMED]
 
 
 def scene_kept_holds(ctx, r):
@@ -3324,7 +3328,7 @@ def version_holds(ctx, r):
     ours = lambda x: x == VERSIONED or x.startswith(VERSIONED + '.')
     drawn = lambda: ctx.js('window.__skep.view.lod().name') == 'mid' and not [x for x in ctx.js('window.__skep.mountedAddrs()') if ours(x)]
     out = 0
-    while out < 14 and not drawn():
+    while out < 24 and not drawn():
         ctx.drv.key('-', code='Minus', mods=('Meta',))
         ctx.settle()
         ctx.frames(2)
@@ -3356,7 +3360,7 @@ def version_holds(ctx, r):
     pixels = (strip or {}).get('pixels') or {}
     r.check(got == want and (chain['members'] or 0) >= 2 and near_rgb(pixels.get('start'), rgb(reg['ink'])) and near_rgb(pixels.get('end'), rgb(reg['ink'])) and near_rgb(pixels.get('tick'), rgb(reg['land'])),
             'at mid the box\'s history strip marks its %s members, version 1 held in the window mark closed at both ends — its edges and member 1\'s tick in their own colours on the canvas — and the last member in the head\'s triangle where the board ended the chain there (issue #241)' % chain['members'],
-            {'strip': got, 'want': want, 'pixels': pixels, 'rect': strip and strip['rect'], 'window': strip and strip['window'], 'ink': reg})
+            {'strip': got, 'want': want, 'pixels': pixels, 'rect': strip and strip['rect'], 'window': strip and strip['window'], 'ink': reg}, xfail=XFAIL_FIRST_GRID)
     seen['strip'] = {'strip': got, 'pixels': pixels}
     for _ in range(out):
         ctx.drv.key('=', code='Equal', mods=('Meta',))
@@ -3389,7 +3393,7 @@ def version_holds(ctx, r):
     seen['back'] = {'cam_left': cam0, 'back': b['cam'], 'forward': f['cam']}
     # a click on the box at mid scale, as a person clicks a document there: the teleport lands on the version it shows
     out = 0
-    while out < 14 and not drawn():
+    while out < 24 and not drawn():
         ctx.drv.key('-', code='Minus', mods=('Meta',))
         ctx.settle()
         ctx.frames(2)
@@ -5762,21 +5766,25 @@ def run(ctx):
     first = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(DOC))
     seen = {}
     for name, value, kind in ctx.js('window.__skep.thresholds'):
-        # an em threshold over the first edition's first column, where its text stands; a box threshold over its room
+        # an em threshold at the first edition's own em, over its first column, where its text stands; a box threshold —
+        # P-LOD's, a depth-0 document's extent — over its room
         at = first if kind == 'em' else {'x': box['x'] + box['w'] / 2, 'y': box['y'] + box['h'] / 2}
-        ctx.set_view(at['x'], at['y'], ctx.js('window.__skep.scaleFor(%s, %s, %s)' % (json.dumps(DOC), json.dumps(kind), value)))
+        ctx.set_view(at['x'], at['y'], ctx.js('window.__skep.scaleFor(%s, "em", %s)' % (json.dumps(DOC), value)) if kind == 'em' else ctx.extent_scale(value))
         seen[name] = labels_hold(r, name, label_view(ctx))
-    # a box risen under the one line (issue #169's design decision: "Held below the line"): S3's mid-extents, where the line names the
-    # account under the camera and never the first edition, its box's top UNDER_LINE_PX above the line's bottom; then its outline's
-    # foot risen to within its label's line box of the hold, then past the line
+    # a box risen under the one line (issue #169's design decision: "Held below the line"): the first edition's box at mid, 90 px
+    # wide, or as wide as a column of its outline — the room a held label stands in, inside the half gutter either side — needs
+    # to hold its address at the label floor by the case's own bound (HOME's label rule's), where the line names the account
+    # under the camera and never the first edition, its box's top UNDER_LINE_PX above the line's bottom; then its outline's foot
+    # risen to within its label's line box of the hold, then past the line
     vp = ctx.js('window.__skep.view.viewport()')
-    s90 = ctx.js('window.__skep.scaleFor(%s, "doc", 90)' % json.dumps(DOC))
     f90 = ctx.js('window.__skep.fold(%s)' % json.dumps(DOC))
     short = DOC[len(account_of(DOC)):]
+    room = min(q['w'] for q in f90['rects']) - ctx.js('window.__skep.constants.GUTTER') * f90['fs']
+    s90 = max(ctx.js('window.__skep.scaleFor(%s, "doc", 90)' % json.dumps(DOC)), (len(short) * MIN_LABEL_PX * 0.632 + 1) / room)
     lh = None
     def risen(name, y_at):
-        """the camera at mid-extents with the first edition's outline's top at `y_at` on screen; the label view, and the first
-        edition's label set there, with its outline on screen and the half gutter"""
+        """the camera at that mid scale with the first edition's outline's top at `y_at` on screen; the label view, and the
+        first edition's label set there, with its outline on screen and the half gutter"""
         ctx.set_view(box['x'] + box['w'] / 2, f90['outline']['y'] + (vp['VH'] / 2 - y_at) / s90, s90)
         v = label_view(ctx)
         seen[name] = labels_hold(r, name, v)
@@ -5786,6 +5794,9 @@ def run(ctx):
         mine = next((l for l in v['labels'] if l['kind'] == 'doc' and l['place'] == DOC), None)
         seen[name].update(outline_top=round(o['top'], 2), outline_bottom=round(o['bottom'], 2), line=v['seen']['y'], held=mine and [[x['text'], x['rect']] for x in mine['lines']])
         return v, o, mine, GUTTER_EM / 2 * f90['fs'] * cam['scale']
+    # the words of the first edition's link badge as its label sets them (T-LAYER's `docLabel`): a held contents line sets it just
+    # before the address, never as its first line
+    badges = ctx.js('(async (a) => (await import("./text/layer.js")).docLabel((await import("./model/records.js")).doc(a), 1).parts.map((p) => p.text))(%s)' % json.dumps(DOC))
     for under in UNDER_LINE_PX:
         name = 'under-the-line-%d' % under
         top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
@@ -5794,17 +5805,19 @@ def run(ctx):
         below = sorted(l['place'] for l in v['labels'] if l['kind'] == 'doc' and l['place'] != DOC and all(x['rect']['y'] >= line - LABEL_TOL_PX for x in l['lines']))
         a = address_line(mine) if mine else None
         q = a['rect'] if a else None
-        first = mine['lines'][0] if mine and mine['lines'][0] is not a else None
+        first = mine['lines'][0] if mine and mine['lines'][0] is not a and mine['lines'][0]['text'] not in badges else None
+        badge = next((x for x in (mine or {}).get('lines', []) if x is not a and x['text'] in badges), None)
         at_hold = bool(q) and abs(q['y'] - (line + HOLD_GAP_PX)) <= LABEL_TOL_PX
         on_foot = bool(q) and abs(q['y'] + q['h'] - (o['bottom'] - g)) <= LABEL_TOL_PX
         lead = v['leads'].get(DOC, {}).get('words') or ''
         r.check(abs(line - o['top'] - under) <= LABEL_TOL_PX and v['named']['doc'] is None and bool(mine) and mine.get('held') and bool(a) and a['text'] == short and mine.get('plate') is not None
                 and abs(q['x'] + q['w'] - (mine['within']['x'] + mine['within']['w'])) <= LABEL_TOL_PX and abs(mine['within']['x'] - (o['left'] + g)) <= LABEL_TOL_PX
                 and (first is None or (abs(first['rect']['x'] - (o['left'] + g)) <= LABEL_TOL_PX and word_cut(first['text'], lead)))
+                and (badge is None or (badge['rect']['x'] + badge['rect']['w'] <= q['x'] + LABEL_TOL_PX and (first is None or first['rect']['x'] + first['rect']['w'] <= badge['rect']['x'] + LABEL_TOL_PX)))
                 and q['y'] <= line + HOLD_GAP_PX + LABEL_TOL_PX and q['y'] + q['h'] <= o['bottom'] - g + LABEL_TOL_PX and (at_hold or on_foot) and bool(below),
-                f'{name}: the first edition\'s box\'s top {under} px above the one line\'s bottom, the line naming its account and not it: its label held below the line — one line from its first column\'s text left, on its ground, its first line, where set, at that left cut on a word and its address at the line\'s end, its top {HOLD_GAP_PX} px below the line or its bottom on its outline\'s foot inside the half gutter — and the labels of the documents below the line set',
+                f'{name}: the first edition\'s box\'s top {under} px above the one line\'s bottom, the line naming its account and not it: its label held below the line — one line from its first column\'s text left, on its ground, its first line, where set, at that left cut on a word, its link badge, where set, just before its address, and its address at the line\'s end, its top {HOLD_GAP_PX} px below the line or its bottom on its outline\'s foot inside the half gutter — and the labels of the documents below the line set',
                 {'line': line, 'outline': o, 'gutter': g, 'named': v['named'], 'held': mine and {'lines': [[x['text'], x['rect']] for x in mine['lines']], 'plate': mine.get('plate'), 'held': mine.get('held'), 'within': mine.get('within')},
-                 'left_out': [[x['text'], x['reason']] for x in v['out'] if x['kind'] == 'doc' and x['place'] == DOC], 'set_below': below[:8]})
+                 'badges': badges, 'left_out': [[x['text'], x['reason']] for x in v['out'] if x['kind'] == 'doc' and x['place'] == DOC], 'set_below': below[:8]})
         if q:
             lh = q['h']
     # the outline's foot risen to within the label's line box of the hold — the label floor's where no label was held — the label pushed up

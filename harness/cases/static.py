@@ -52,9 +52,11 @@ LAYER = [
 WRITE_IMPORTS = ['bridge/', 'model/', 'util.js', 'write/']
 # B-PORT's exports for the bridge's rows that write or compose a write, each by its name on the port — a family's row as
 # `family.row`, a family every row of which is one by the family alone: the publication family's panel and its three acts on
-# it, the merge family, `history.restore`, `upload`, `restore`, `resolve` (WIRE's READ_ROWS refuses each of the owner's
-# provider). No module outside `web/write/` calls one; a family's read — `publication.standing`, `history.past` — is no row here
-WRITE_ROWS = ['publication.open', 'publication.count', 'publication.confirm', 'publication.cancel', 'merge', 'history.restore', 'upload', 'restore', 'resolve']
+# it, the merge family, `history.restore`, the text family's four writes, `upload`, `restore`, `resolve` (WIRE's READ_ROWS
+# refuses each of the owner's provider). No module outside `web/write/` calls one; a family's read — `publication.standing`,
+# `history.past`, `text.diff` — is no row here
+WRITE_ROWS = ['publication.open', 'publication.count', 'publication.confirm', 'publication.cancel', 'merge', 'history.restore',
+              'text.replace', 'text.edit', 'text.move', 'text.mark', 'upload', 'restore', 'resolve']
 PORT = 'bridge/port.js'
 # the wire's writes, read from the list M-FRAMES's test holds READ_OPS clear of: a literal naming one composes a write frame
 WIRE_WRITES = re.compile(r'const WRITES = \[([^\]]*)\]')

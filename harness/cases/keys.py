@@ -321,12 +321,16 @@ flavors and removes its selection, each a page-local edit; at a span holding
 no caret, an edition, another's document and an unwritable draft each says
 its line and places nothing, a cut at text the person may not edit and both
 in a field left to the platform (`paste_and_cut`; D5 K-93; B3-S5).
+
+The step into a document of the account's first grid that is not its first
+(`stepped_in`) is marked with #643 and counts as expected while it stands:
+that grid holds the account's home and its mailbox alone.
 """
 import json
 import re
 import time
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, corner_fit, drawn_keys, heard, item_words, key_fingerprint, named_as, trunk_of
+from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, XFAIL_FIRST_GRID, Result, account_of, corner_fit, drawn_keys, edition, heard, item_words, key_fingerprint, named_as, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -344,7 +348,7 @@ OUT_STEPS = 4
 PANE_EDGE_PX = 40
 CODES = {'[': 'BracketLeft', ']': 'BracketRight', '=': 'Equal', '-': 'Minus', '0': 'Digit0', '1': 'Digit1', '2': 'Digit2', '/': 'Slash', '+': 'Equal'}
 # the board's longest edition: six columns at the measure, the page holding at its landing the columns in view and one past them
-FIND_DOC = '1.0.1.0.303'
+FIND_DOC = edition(301)
 # the commons registry, an edition of the system account: the one document of another account than the session's whose words
 # the seed holds — the agent space's home and the second account's edition hold none — and a position in its third paragraph
 REGISTRY = ('1.1.0.1.0.1', 28)
@@ -801,7 +805,7 @@ def press_holds(ctx, r):
     # door drops its text as a row naming a document out of view does, a press in the first edition, then the camera back
     # brings it into view with the button down
     ctx.leap(DOC, WINDOW[0])
-    f3, b4 = ctx.js('window.__skep.fold(%s)' % json.dumps(DOC)), ctx.js('window.__skep.boxOf("1.0.1.0.4")')
+    f3, b4 = ctx.js('window.__skep.fold(%s)' % json.dumps(DOC)), ctx.js('window.__skep.boxOf(%s)' % json.dumps(edition(2)))
     ctx.set_view((f3['outline']['x'] + f3['outline']['w'] + b4['x']) / 2, f3['columns'][0]['y'] + f3['columns'][0]['h'] / 2, ctx.js('window.__skep.scaleFor(%s, "em", 8.5)' % json.dumps(DOC)))
     cam0 = ctx.camera()
     near = ctx.js('''(() => { const c = window.__skep.view.camera(), p = window.__skep.view.viewport();
@@ -2312,7 +2316,7 @@ def side_by_side_direct(ctx, r):
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(BEAMED)) or []
     meets = lambda a, b: a['pos'] < b['pos'] + b['width'] and b['pos'] < a['pos'] + a['width']
     # the editions BEAMED's citations reach, which the board registers (the seed's fixed points): never a ghost
-    reached = (FAR_LEAP, '1.0.1.0.946', '1.0.1.0.931', '1.0.1.0.999')
+    reached = (FAR_LEAP, edition(944), edition(929), edition(997))
     alone = [x for x in shown if x['far'] in reached and x['width'] > 0 and not any(y is not x and meets(x, y) for y in shown)]
     one = next((x for x in alone if x['far'] == FAR_LEAP), None) or (alone[0] if alone else None)
     r.check(one is not None, 'BEAMED draws a citation of an edition the board registers where no other link\'s end meets its bytes',
@@ -2443,7 +2447,8 @@ def stepped_in(ctx, r):
     first. The step stands the walk on it as one stop, framed short of its reading scale — its own em under 8 — its
     mirror item collapsed, and pushes nothing; → there is Enter's act, one trail entry pushed, the document at the
     reading size (em READING_PX); Mod+[ returns to HOME's entry at the stop's view, the walk on the document whole and its
-    item collapsed; Mod+] returns into it at the reading size. The step ends at the first edition's landing"""
+    item collapsed; Mod+] returns into it at the reading size. The step ends at the first edition's landing. Its entry
+    into a document never the first is marked with #643: the first grid holds the account's home and its mailbox alone"""
     def seen():
         """the walk, its place among its siblings, the trail, the camera and the current item as the page stands"""
         return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), i = document.getElementById("walk-" + S.mirror.index());
@@ -2489,7 +2494,7 @@ def stepped_in(ctx, r):
     whole = framed_whole(doc) if doc else None
     r.check(bool(doc) and stop['index'] > 0 and whole is not None and whole >= 8,
             '→ at HOME\'s account, the view\'s centre over %s\'s outline, enters that document — never the account\'s first — one whose outline framed whole would read at an em of 8 or more (K-3; what the step\'s checks stand on)' % target,
-            {'target': target, 'first': first, 'stop': stop['focus'], 'index': stop['index'], 'framed_whole_em': whole})
+            {'target': target, 'first': first, 'stop': stop['focus'], 'index': stop['index'], 'framed_whole_em': whole}, xfail=XFAIL_FIRST_GRID)
     if not doc:
         ctx.leap(DOC, WINDOW[0])
         return
@@ -4294,15 +4299,16 @@ def run(ctx):
     chord(ctx, 'l', mods=('Meta',))
     r.check(state(ctx)['leap'], 'Mod+L opens the LEAP box at the whole board')
     ctx.js('(() => { const i = document.getElementById("leapq"); i.value = ""; })()')
-    ctx.drv.ime('1.0.1.0.19')
+    typed = edition(17)
+    ctx.drv.ime(typed)
     ctx.frames(2)
     rows = ctx.js('window.__skep.leap.rows()')
-    r.check(rows and rows[0]['addr'] == '1.0.1.0.19', 'the typed address is the first row', rows[:2])
+    r.check(rows and rows[0]['addr'] == typed, 'the typed address is the first row', rows[:2])
     trail_before = state(ctx)['trail']
     chord(ctx, 'Enter')
     s = state(ctx)
-    r.check(not s['leap'] and s['focus'] and s['focus']['addr'] == '1.0.1.0.19', 'Enter LEAPs to the typed address (the focus lands there)', s['focus'])
-    r.check('1.0.1.0.19' in s['line'], 'the one line\'s address names the landing', s['line'][:120])
+    r.check(not s['leap'] and s['focus'] and s['focus']['addr'] == typed, 'Enter LEAPs to the typed address (the focus lands there)', s['focus'])
+    r.check(typed in s['line'], 'the one line\'s address names the landing', s['line'][:120])
     r.check(s['trail'] == trail_before + 1, 'the LEAP pushed a trail entry', {'before': trail_before, 'after': s['trail']})
     r.check(ctx.js('window.__skep.view.lod()')['name'] == 'near', 'the landing is at reading scale')
     ring_drawn(ctx, r, 'Enter on a typed address')

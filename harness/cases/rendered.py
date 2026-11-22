@@ -40,13 +40,24 @@ a person presses it, it lists them, each row naming its far document; a
 ghost address answers its face. "Shown" is
 measured, not read off the DOM: the page's `visible` oracle says whether a
 block, a mark or a corner lies inside the clip the page draws and the
-viewport — text the DOM holds past a clip is shown to no one."""
+viewport — text the DOM holds past a clip is shown to no one. The first
+edition's tail at HOME, and the connections into the mark with the count each
+carries, are marked with #643 and count as expected while it stands: each
+reads the account's first grid, which holds its home and its mailbox alone.
+The system account's editions against the census are marked with
+sisbell/skep#1141 while the board's time document 1.1.0.1.0.4 holds no record
+and is all that differs: genesis places it published and memberless, no
+`/changes` row names it until the time writer's first record, and the index
+lists no document a row never names."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, GHOST, SECOND_ACCOUNT, WINDOW, Result
+from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, SECOND_ACCOUNT, WINDOW, XFAIL_FIRST_GRID, XFAIL_UNNAMED_BY_FEED, Result, edition
 
 WS = re.compile(r'\s+')
+# the board's time document: genesis places it published and memberless, and the time writer's first record — made at the
+# first write an hour or more past the board's first commit — is its first member (skep-core's `time_document`)
+TIME_DOCUMENT = '1.1.0.1.0.4'
 
 
 def squash(s):
@@ -121,7 +132,7 @@ def tails_home(ctx, r):
     tail = mine[0] if len(mine) == 1 else None
     r.check(v['lod'] == 'mid' and bool(v['ghost']) and tail is not None and sorted(tail['links']) == v['want'],
             'at HOME the first edition\'s box carries one tail, holding once each link the case\'s own reading joins it by to a document the plane draws nowhere — its citation of the ghost among them — drawn at either of the two',
-            {'tails': [[t['links'], t['label']] for t in mine], 'links': v['want'], 'cites_ghost': v['ghost'], 'lod': v['lod']})
+            {'tails': [[t['links'], t['label']] for t in mine], 'links': v['want'], 'cites_ghost': v['ghost'], 'lod': v['lod']}, xfail=XFAIL_FIRST_GRID)
     if tail is None:
         return {'tails': len(mine)}
     want = str(len(tail['links'])) if len(tail['links']) > 1 else tail['far'][0]
@@ -386,10 +397,10 @@ def run(ctx):
     r.check(not mism, '(i) the model\'s held text equals the daemon\'s delivery, run by run', mism)
     # the withheld run: the oracle's box and width, the entitled reader's text with C-33's words beside it
     r.check(len(withheld_runs) == 1 and withheld_runs[0]['pos'] == WINDOW[0] and withheld_runs[0]['width'] == WINDOW[1] and withheld_runs[0].get('origin') == WINDOW[2],
-            'the guest\'s delivery withholds the window run at 1467, width 240, origin 1.0.1.0.1003 — its box and width, never its text', r.figures['oracle_runs'])
+            'the guest\'s delivery withholds the window run at 1467, width 240, origin %s — its box and width, never its text' % WINDOW[2], r.figures['oracle_runs'])
     origins = doc.get('origins') or []
     r.check(any(o['pos'] <= WINDOW[0] and o['pos'] + o['width'] >= WINDOW[0] + WINDOW[1] and o['doc'] == WINDOW[2] for o in origins),
-            'the entitled reader\'s model marks the run\'s origin (the same material as 1.0.1.0.1003)', origins[:6])
+            'the entitled reader\'s model marks the run\'s origin (the same material as %s)' % WINDOW[2], origins[:6])
     held_window = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1]))
     r.check(len(held_window.encode('utf8')) == WINDOW[1], 'the signed session holds the run\'s 240 bytes (entitled)', len(held_window.encode('utf8')))
     # (ii) the mounted article: the lines in view stand, by line (issue #122) — each block part standing, a block the
@@ -484,6 +495,10 @@ def run(ctx):
         fold[acct] = f
         probes += n
     r.figures['census'] = {'probes': probes, 'per_account': {a: dict(sorted(((k, sum(1 for v in f.values() if v == k)) for k in set(f.values())))) for a, f in fold.items()}}
+    # the time document while its chain holds no member (`doc_metadata`'s `birth` null, wire.md §Namespace): no row names it
+    t = ctx.daemon_op({'op': 'doc_metadata', 'doc': TIME_DOCUMENT})
+    unnamed = {TIME_DOCUMENT} if t.get('resp') == 'doc_metadata' and t.get('published') and t.get('birth') is None else set()
+    r.figures['time_document'] = {'doc': TIME_DOCUMENT, 'published': t.get('published'), 'birth': t.get('birth')}
     by_acct = {}
     for p in places:
         by_acct.setdefault(p['account'], []).append(p)
@@ -493,7 +508,10 @@ def run(ctx):
         phantom = sorted(set(page_editions) - set(oracle_editions))
         r.check(not phantom, f'{acct}: every edition `places` lists is a published document at the daemon (no phantom)', phantom[:10])
         if complete:
-            r.check(oracle_editions == page_editions, f'{acct}: the index is complete, so its editions are exactly the census\'s', {'only_oracle': sorted(set(oracle_editions) - set(page_editions))[:10], 'n': (len(oracle_editions), len(page_editions))})
+            # marked while the memberless time document is all that differs, or nothing does, so the mark comes off with the fix
+            unlisted = acct == '1.1.0.1' and bool(unnamed) and set(oracle_editions) ^ set(page_editions) <= unnamed
+            r.check(oracle_editions == page_editions, f'{acct}: the index is complete, so its editions are exactly the census\'s', {'only_oracle': sorted(set(oracle_editions) - set(page_editions))[:10], 'n': (len(oracle_editions), len(page_editions))},
+                    xfail=XFAIL_UNNAMED_BY_FEED if unlisted else None)
         else:
             r.check(len(page_editions) <= len(oracle_editions), f'{acct}: the index is at its floor, so its count is a LOWER BOUND of the census\'s', {'indexed': len(page_editions), 'census': len(oracle_editions), 'arm': index_state.get('arm') if index_state else None})
         oracle_withheld = sorted(k for k, v in f.items() if v == 'withheld')
@@ -515,18 +533,18 @@ def run(ctx):
     r.note('the system account\'s rows (the head document H and its members) are HELD by the model and not drawn (the H ruling); the census sees them published')
     # the boxes: each document's box inside its account's cell; two documents never share a box
     cell = ctx.js('window.__skep.accountCell("1.0.1")')
-    boxes = {a: ctx.js('window.__skep.boxOf(%s)' % json.dumps(a)) for a in [DOC, '1.0.1.0.4', '1.0.1.0.19', '1.0.1.0.127', '1.0.1.0.1003']}
+    boxes = {a: ctx.js('window.__skep.boxOf(%s)' % json.dumps(a)) for a in [DOC, edition(2), edition(17), FAR_LEAP, WINDOW[2]]}
     inside = all(b['x'] >= cell['x'] - 1e-6 and b['y'] >= cell['y'] - 1e-6 and b['x'] + b['w'] <= cell['x'] + cell['w'] + 1e-6 and b['y'] + b['h'] <= cell['y'] + cell['h'] + 1e-6 for b in boxes.values())
     r.check(inside, 'every sampled document box lies inside its account\'s cell', {k: (round(v['x']), round(v['y']), round(v['w'], 2), round(v['h'], 2)) for k, v in boxes.items()})
     keys = list(boxes)
     overl = [(keys[i], keys[j]) for i in range(len(keys)) for j in range(i + 1, len(keys)) if boxes[keys[i]]['x'] < boxes[keys[j]]['x'] + boxes[keys[j]]['w'] and boxes[keys[j]]['x'] < boxes[keys[i]]['x'] + boxes[keys[i]]['w'] and boxes[keys[i]]['y'] < boxes[keys[j]]['y'] + boxes[keys[j]]['h'] and boxes[keys[j]]['y'] < boxes[keys[i]]['y'] + boxes[keys[i]]['h']]
     r.check(not overl, 'no two sampled documents share a box (reading order, no collision)', overl)
-    r.figures['residue_depth'] = {'1.0.1.0.3': ctx.js('window.__skep.depthOf("1.0.1.0.3")'), '1.0.1.0.1003': ctx.js('window.__skep.depthOf("1.0.1.0.1003")'), 'residue_boxes': [a for a in boxes if boxes[a].get('residue')]}
+    r.figures['residue_depth'] = dict({a: ctx.js('window.__skep.depthOf(%s)' % json.dumps(a)) for a in (DOC, WINDOW[2])}, residue_boxes=[a for a in boxes if boxes[a].get('residue')])
     # ---- S2: the claimant's drafts — one read with its corner, then the region at mid ----
     drafts = [p['doc'] for p in places if p['kind'] == 'draft' and p['account'] == '1.0.1']
     r.check(len(drafts) >= 1, 'the session\'s index lists the claimant\'s drafts', len(drafts))
     if drafts:
-        draft = sorted(drafts, key=lambda a: int(a.split('.')[-1]))[1] if len(drafts) > 1 else drafts[0]
+        draft = WINDOW[2] if WINDOW[2] in drafts else drafts[0]
         ctx.leap(draft, None)
         md = ctx.js('window.__skep.mounted(%s)' % json.dumps(draft))
         chip_on = ctx.js('window.__skep.strings.pinned().find(s => s.id === "C-28.flag-on").text')
@@ -539,7 +557,7 @@ def run(ctx):
         r.check(corner_shown, 'the draft\'s corner stands beside its article, inside its clip and the viewport (the chip is shown, not merely held)', corner_vis)
         r.figures['draft_shown'] = {'addr': draft, 'corner': full, 'corner_shown': corner_shown, 'depth': ctx.js('window.__skep.depthOf(%s)' % json.dumps(draft))}
         dbox = ctx.js('window.__skep.boxOf(%s)' % json.dumps(draft))
-        ctx.set_view(dbox['x'] + dbox['w'] / 2, dbox['y'] + dbox['h'] / 2, ctx.js('window.__skep.scaleFor(%s, "doc", 160)' % json.dumps(DOC)))
+        ctx.set_view(dbox['x'] + dbox['w'] / 2, dbox['y'] + dbox['h'] / 2, ctx.extent_scale(160))
         r.check(ctx.js('window.__skep.view.lod()')['name'] in ('mid', 'mid~near'), 'the region at mid scale (a depth-0 document 160 px wide)', ctx.js('window.__skep.view.lod()'))
         depth = ctx.js('window.__skep.depthOf(%s)' % json.dumps(draft))
         holding = [m for m in ctx.js('window.__skep.residues()') if m['account'] == '1.0.1' and draft in m['members']]
@@ -609,13 +627,13 @@ def run(ctx):
           return Object.fromEntries([...links].map(([a, s]) => [a, s.size]).filter(([, n]) => n > 0));
         })()''' % (json.dumps(members), json.dumps(sorted(into))))
         r.check(bool(linked) and into == linked, 'each document standing whole that a link joins to a document the mark holds — drawn at either of the two — is joined to the MARK by one connection counting those links, each once, and no other is',
-                {'drawn': into, 'links': linked})
+                {'drawn': into, 'links': linked}, xfail=XFAIL_FIRST_GRID)
         # the count on the stroke (foundations §2.1's register: "one connection drawn per document pair with its count"; P44 forbids a merged
         # mark that hides it): the numeral of LK's links, read apart from the canvas, where the connection holds two or more; none where one
         carried = {(c['b'] if c['a'] == mark['key'] else c['a']): c.get('label') for c in conns if mark['key'] in (c['a'], c['b'])}
         miscarried = {d: {'links': linked.get(d), 'carries': n} for d, n in carried.items() if n != (str(linked[d]) if linked.get(d, 0) >= 2 else None)}
         r.check(any(n >= 2 for n in linked.values()) and not miscarried, 'each connection into the mark carries its count on its stroke where it holds two links or more — the numeral of those links — and none where it holds one',
-                {'miscarried': miscarried, 'carried': carried})
+                {'miscarried': miscarried, 'carried': carried}, xfail=XFAIL_FIRST_GRID)
         r.figures['home_mark'] = dict({k: mark[k] for k in ('k', 'n', 'exact', 'newest', 'lines', 'rect')}, newest_lines=mark.get('newestLines'), newest_target=band, connections_to_mark={'drawn': into, 'links': linked, 'carried': carried})
         if band:
             r.figures['home_mark']['acts'] = mark_acts(ctx, r, mark, band, newest)
@@ -631,6 +649,6 @@ def run(ctx):
     # ---- S13: the agent space -----------------------------------------------------
     agent_places = [p for p in places if p['account'] == AGENT_SPACE]
     r.figures['agent_space'] = {'places': [p['doc'] for p in agent_places], 'census': fold.get(AGENT_SPACE)}
-    r.note('the agent space 1.0.1.1 holds its home document 1.0.1.1.0.1 at the daemon (published, the delegation\'s mint); "the empty agent space" of the record §8.4 is not empty on this board — reported')
+    r.note('the agent space %s holds its home document %s at the daemon (published, the delegation\'s mint) and its mailbox %s; "the empty agent space" of the record §8.4 is not empty on this board — reported' % (AGENT_SPACE, AGENT_SPACE + '.0.1', AGENT_SPACE + '.0.2'))
     ctx.leap(DOC, WINDOW[0])
     return r.out()

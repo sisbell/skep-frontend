@@ -918,15 +918,19 @@ const iRunsOf = (v) => array(v).map((r) => { const x = object(r); return { origi
  * @property {string} draft
  * @property {number} at the position read
  * @property {number} asOf the position the reads were made at
- * @property {IRun[]} state the draft's runs as read at `at`, in V order: what the state draws
- * @property {IRun[]} sent the same positions in the same order, words published since as the published words they became: what a restore made now would send
+ * @property {IRun[]} state the draft's runs as read at `at`, in V order, each `origin` the trunk the words were minted under: what the state draws
+ * @property {IRun[]} sent the same positions in the same order mapped through the correspondence records, words published since as the published words they became, each `origin` the trunk: for drawing, never what a restore sends
+ * @property {IRun[]} written the runs a restore made now would send, the mapped state in V order, each `origin` the document that minted the run, a member's version kept
  * @property {number} covered the positions of `state` a correspondence record covers
  * @property {MergeMarker | null} marker the draft's merge marker as it stands; null where it carries none
  */
 
-/** `history.past` → the past state's runs as drawn and as a restore would send them; null where a member is not as declared */
+/** `history.past` → the past state's runs as drawn and as mapped, and the runs a restore would send; null where a member is not as declared */
 export function decodePast(/** @type {unknown} */ answer) {
-  return decode(answer, (a) => /** @type {Past} */ ({ draft: string(a.draft), at: number(a.at), asOf: number(a.as_of), state: iRunsOf(a.state), sent: iRunsOf(a.sent), covered: number(a.covered), marker: markerOf(a.marker) }));
+  return decode(answer, (a) => /** @type {Past} */ ({
+    draft: string(a.draft), at: number(a.at), asOf: number(a.as_of),
+    state: iRunsOf(a.state), sent: iRunsOf(a.sent), written: iRunsOf(a.written), covered: number(a.covered), marker: markerOf(a.marker),
+  }));
 }
 
 /**
@@ -990,7 +994,7 @@ const TERMS = { runs: null, places: null, links: null, retract: null, read_with:
 /** @type {Record<import('../bridge/shapes').MergeReport['outcome'], null>} the outcomes of a merge's composition (`MergeReport.outcome`) */
 const MERGE_OUTCOMES = { landed: null, reopened: null, merged: null };
 /** @type {Record<import('../bridge/shapes').MergeReport['form'], null>} the forms of a merge's side (`MergeReport.form`) */
-const MERGE_FORMS = { daughter: null, draft: null };
+const MERGE_FORMS = { daughter: null, draft: null, fork: null };
 /** @type {Record<import('../bridge/shapes').MergeSide['role'], null>} the roles of a merge record's side (`MergeSide.role`) */
 const SIDE_ROLES = { head: null, alternative: null, draft: null, fork: null };
 /** @type {Record<import('../bridge/shapes').MergeRun['family'], null>} the families of a run of M (`MergeRun.family`) */
@@ -1000,7 +1004,7 @@ const RUN_FAMILIES = { own: null, window: null, draft_native: null };
  * @typedef {Object} MergeSide — one side of the merge record (`MergeSide`)
  * @property {string} at the member or the draft
  * @property {import('../bridge/shapes').MergeSide['role']} role
- * @property {number | null} position the board position a draft side was read at; null at a member
+ * @property {number | null} position the board position a draft side was read at; null at a member and at a fork
  */
 
 /**
@@ -1030,7 +1034,7 @@ const RUN_FAMILIES = { own: null, window: null, draft_native: null };
  * @property {string} doc the trunk
  * @property {string} head the trunk's head the merge was composed on
  * @property {string} base the member both sides descend from
- * @property {string} side the daughter or the draft composed
+ * @property {string} side the daughter, the draft or the fork composed
  * @property {import('../bridge/shapes').MergeReport['form']} form
  * @property {MergeSide[]} sides
  * @property {MergeRun[]} runs

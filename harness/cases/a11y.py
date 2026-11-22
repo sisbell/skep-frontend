@@ -1158,7 +1158,7 @@ def run(ctx):
     member = VERSIONED + '.1'
     ctx.leap(member)
     zooms = 0
-    while zooms < 12 and ctx.js('window.__skep.view.lod().name') != 'mid':
+    while zooms < 24 and ctx.js('window.__skep.view.lod().name') != 'mid':
         ctx.drv.key('-', code='Minus', mods=('Meta',))
         ctx.settle()
         ctx.frames(2)

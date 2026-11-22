@@ -40,21 +40,36 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 DESIGN = os.environ.get('SKEP_DESIGN_REPO', os.path.normpath(os.path.join(ROOT, '..', 'skep-ux-design')))
 PAGE_ORIGIN = 'http://127.0.0.1:8731'
 
-# the seed's fixed points (the test board, seeded as the owner's is)
-DOC = '1.0.1.0.3'            # the first edition: its window of the draft 1.0.1.0.1003 is withheld from a guest
-WINDOW = (1467, 240, '1.0.1.0.1003')
-GHOST = '1.0.1.0.1049578'    # cited by the first edition, never minted: `doc_not_registered`
-FAR_LEAP = '1.0.1.0.127'     # the one citation whose target is a real edition
-BEAMED = '1.0.1.0.34'        # a citer of FAR_LEAP whose citations reach four editions the plane draws — .127, .946, .931, .999 — the
-                             # first edition's every citation reaching a ghost, which a tail names (issue #132): where the beams are read
-# the seed's `publish` shot minted `3.102.1` correspondence records (A-328) homed in the draft 1.0.1.0.2, each with its `to` end
-# the positions the shot published of one edition — the first edition's (`1.0.1.0.2.0.2.1`) and BEAMED's (`.0.2.32`) among
-# them: the owner's page holds each among its edition's links, a guest's page never, and the page draws, counts and lists
-# none of them (LK's rule (i)), so an edition's drawn links are its citations alone on either page
+# the seed's fixed points (the test board, seeded as the owner's is): an account numbers its documents 1, then from
+# FIRST_ORDINARY on, and the seed mints through that counter alone, in one order — the staging draft D, the editions, the
+# draft W — so every seeded document's number is derived here and named nowhere else
+FIRST_ORDINARY = 64          # skep's `FIRST_ORDINARY_DOCUMENT`: an account's first number after its home; 2–63 are reserved, its mailbox at 2
+EDITIONS = 1000              # the seed's editions at the gate
+
+
+def edition(n):
+    """the seed's n-th edition, counted from 1"""
+    return '1.0.1.0.%d' % (FIRST_ORDINARY + n)
+
+
+# the staging draft D, the claimant's first ordinary document: 6.27 MB at the owner's seed, every edition's bytes inserted
+# into it in turn
+STAGING = '1.0.1.0.%d' % FIRST_ORDINARY
+DOC = edition(1)             # the first edition: its window of the draft W is withheld from a guest
+WINDOW = (1467, 240, '1.0.1.0.%d' % (FIRST_ORDINARY + EDITIONS + 1))  # that window: its first position, its width and W
+GHOST = '1.0.1.0.%d' % (FIRST_ORDINARY + EDITIONS + 2 ** 20)  # the last edition + 2^20, cited by the first edition, never minted: `doc_not_registered`
+FAR_LEAP = edition(125)      # the one citation whose target is a real edition
+BEAMED = edition(32)         # a citer of FAR_LEAP whose citations reach four editions the plane draws — FAR_LEAP, edition(944),
+                             # edition(929), edition(997) — the first edition's every citation reaching a ghost, which a tail
+                             # names (issue #132): where the beams are read
+# the seed's `publish` shot minted `3.102.1` correspondence records (A-328) homed in D, each with its `to` end the positions the
+# shot published of one edition — the first edition's (`<D>.0.2.1`) and BEAMED's (`<D>.0.2.32`) among them: the owner's page
+# holds each among its edition's links, a guest's page never, and the page draws, counts and lists none of them (LK's rule
+# (i)), so an edition's drawn links are its citations alone on either page
 AGENT_SPACE = '1.0.1.1'      # the claimant's delegated agent space
 SECOND_ACCOUNT = '1.0.2'     # the seed's keyless second account
-WITHHELD = '1.0.2.0.2'       # its draft: withheld from every reader of this board, a box of its own (continuation depth 0)
-VERSIONED = '1.0.1.0.43'     # an edition with two members, the latest holding all of it, far from every place the later cases read
+WITHHELD = SECOND_ACCOUNT + '.0.%d' % FIRST_ORDINARY  # its draft: withheld from every reader of this board, a box of its own
+VERSIONED = edition(41)      # an edition with two members, the latest holding all of it, far from every place the later cases read
 NO_MATCH = 'qzx no label holds this'  # LEAP text no address, share form, URL, label or address prefix answers
 EDITION_CLASS = '1.1.0.1.0.1.0.3.14'  # R20's edition claim: every edition claim's type, its descriptive subtypes beneath it by prefix
 CLAUSE_UNREAD = 'L.clause.unread'     # C-67's place where a read of the edition claims failed: "edition claims not read" (issue #186)
@@ -503,6 +518,18 @@ def read_ops():
 XFAIL_BEAM_LABELS = ("page: each bundle's label is set at its first beam's end, so stubs bound for different documents that land near "
                      "each other on the view's border, below the saturation the merge per direction waits for, set their labels over "
                      "one another — what stands there is the design's to rule (web/beams/beams.js `draw`)")
+XFAIL_FIRST_GRID = ("#643: the plane places a document by its raw number, so an account's first grid holds its home and its mailbox "
+                    "alone, and every document from 64 stands one or two continuations deeper (the plane's `slotOf`)")
+XFAIL_DASHED_OUTLINE = ("#756: the plane strokes each account's region and the board's as a dashed outline around its whole cell, however "
+                        "far past the view it reaches, so the frame's raster grows sevenfold a continuation deeper (P-RENDER's "
+                        "`drawAccountFrames`, `drawBoard`)")
+XFAIL_LONG_DRAFT = ("#757: a leap to a draft waits on reading its links one at a time, and each answer plans its held article again, "
+                    "counting every link at every block, so a long draft holding many links does not land (N-GO's `leapTo`, "
+                    "T-LAYER's `folded`)")
+# a boundary the shell's index draws, not the page
+XFAIL_UNNAMED_BY_FEED = ("sisbell/skep#1141: the board index lists only the documents a `/changes` row names, so the system account's "
+                         "time document 1.1.0.1.0.4, which genesis places published and memberless and no row names until the time "
+                         "writer's first record, is not listed while it holds none, though the index reads complete")
 
 
 class Result:
@@ -664,8 +691,22 @@ class Context:
         self.set_view(at['x'], at['y'], scale if scale is not None else self.camera()['scale'])
 
     def view_doc_px(self, addr, px):
+        """the camera over a document's box at the scale its own box stands `px` px wide"""
         box = self.js('window.__skep.boxOf(%s)' % json.dumps(addr))
         scale = self.js('window.__skep.scaleFor(%s, "doc", %s)' % (json.dumps(addr), px))
+        self.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, scale)
+        return scale
+
+    def extent_scale(self, px):
+        """the scale at which a depth-0 document's box stands `px` px wide — the extent P-LOD's bands are measured in,
+        whatever depth a document stands at"""
+        return px / self.js('window.__skep.constants.DOC_W')
+
+    def view_extent_px(self, addr, px):
+        """the camera over a document's box at the scale a depth-0 document's box stands `px` px wide (`extent_scale`):
+        the band P-LOD names for `px`, wherever the document stands"""
+        box = self.js('window.__skep.boxOf(%s)' % json.dumps(addr))
+        scale = self.extent_scale(px)
         self.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, scale)
         return scale
 
@@ -834,11 +875,15 @@ class Context:
             raise RuntimeError('no editor provider: the driver names it with --editor-provider')
         return self.provider_call(name, args, self.editor_provider, self.editor_secret)
 
+    def editor_get(self, path):
+        """the harness's own `GET <its provider><path>` with that provider's secret: the body's bytes"""
+        req = urllib.request.Request(self.editor_provider + path, headers={'Origin': PAGE_ORIGIN, 'Skep-Provider': self.editor_secret})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.read()
+
     def editor_log(self):
         """the harness's own provider's `GET /bridge/log`: its calls — a canned answer logged `canned` — and its dials"""
-        req = urllib.request.Request(self.editor_provider + '/bridge/log', headers={'Origin': PAGE_ORIGIN, 'Skep-Provider': self.editor_secret})
-        with urllib.request.urlopen(req, timeout=60) as r:
-            return json.load(r)
+        return json.loads(self.editor_get('/bridge/log'))
 
     def editor_seq(self):
         """the harness's own provider's log's last seq; -1 where it holds none"""

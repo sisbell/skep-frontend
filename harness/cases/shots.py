@@ -18,8 +18,9 @@ def run(ctx):
     written = []
     first = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(DOC))
     for name, value, kind in thresholds:
-        scale = ctx.js('window.__skep.scaleFor(%s, %s, %s)' % (json.dumps(DOC), json.dumps(kind), value))
-        # an em threshold over the first edition's first column, where its text stands; a box threshold over its room
+        # an em threshold at the first edition's own em, over its first column, where its text stands; a box threshold —
+        # P-LOD's, a depth-0 document's extent — over its room
+        scale = ctx.js('window.__skep.scaleFor(%s, "em", %s)' % (json.dumps(DOC), value)) if kind == 'em' else ctx.extent_scale(value)
         ctx.set_view(first['x'] if kind == 'em' else box['x'] + box['w'] / 2, first['y'] if kind == 'em' else box['y'] + box['h'] / 2, scale)
         lod = ctx.js('window.__skep.view.lod()')
         rel = ctx.shot(f'thresholds/{name}.png')
@@ -37,7 +38,7 @@ def run(ctx):
     ctx.leap(DOC, WINDOW[0])
     screen('B1-S1', 'arrive and read: the first edition at reading scale, the owner\'s links in place, the byline, the presence indicator, its corner', 'B1-S1-arrive-and-read',
            claims=[(corner, 'the first edition\'s corner', None)])
-    ctx.view_doc_px(DOC, 160)
+    ctx.view_extent_px(DOC, 160)
     screen('B1-S2', 'the region at mid: the extents, each edged as a draft or an edition', 'B1-S2-region-mid')
     ctx.js('window.__skep.go.wholeBoard()'); ctx.settle(); ctx.frames(2)
     screen('B1-S3', 'the far counts: the whole board at the clamp — the board\'s label and residue statement in the cell of its user grid no account takes; each cluster\'s address above its density mark and beneath it the counts its mark holds at the label floor, those it cannot hold left out', 'B1-S3-far-counts')

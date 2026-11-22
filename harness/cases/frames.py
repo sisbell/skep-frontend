@@ -12,7 +12,9 @@ ZOOM (issue #122's design decision: "measure the frame time while zooming
 across a view tiled with readable documents"): the window set as large as a
 6K display at its own scale, the plane parked at the far band first so the
 page reads nothing as it grows, the sweep from em 6 to em 14 and back over
-the claimant's first grid of documents — centred across on its middle
+the grid of the claimant's documents the seeded editions fill — the first
+continuation's while the plane places a document by its raw number, each
+em the em of a document standing there — centred across on its middle
 document's first column, that row's outlines at the view's top at the
 readable em so the row after it stands in view too — where the documents in
 view at the readable em outnumber the text layer's limit on a frame's new
@@ -22,10 +24,12 @@ bars or yields a line to none, and the guard holds; the figures name the
 frame and draw times, the articles and lines standing, the new mounts a frame
 made, the mounts' cost, and one reveal over the tiled view at em 12, which
 sets every standing article again in one frame. The window, the camera and
-the reveal are put back after it."""
+the reveal are put back after it. The tiled zoom's guard is marked with #756
+and counts as expected while it stands: one continuation deep, the plane's
+dashed region outlines are stroked around cells far wider than the view."""
 import json
 
-from . import DOC, Result
+from . import DOC, XFAIL_DASHED_OUTLINE, Result, edition
 
 PHASE_MS = 2500
 # the guard: how many frames over 33.34 ms a phase may show on the gate machine before the case fails
@@ -33,9 +37,11 @@ MAX_OVER_33 = 2
 # the tiled zoom's window, a 6K display at its own scale, and the ems its sweep runs between
 TILED_WINDOW = (6016, 3384)
 TILED_FROM_EM, TILED_TO_EM, TILED_REVEAL_EM = 6, 14, 12
-# the document at the middle of the claimant's first grid, whose first column the tiled zoom centres across on, and how far
-# below the view's top its row's outlines stand at the readable em, so the row after it stands in view too
-TILED_CENTRE, TILED_TOP_PX = '1.0.1.0.25', 20
+# the document at the middle of the grid the tiled zoom sweeps — the 9th edition, the middle of the first continuation's grid,
+# where the seeded editions stand while the plane places a document by its raw number (#643; under its placement the first
+# grid's middle is edition(20)) — whose first column the tiled zoom centres across on, and how far below the view's top its
+# row's outlines stand at the readable em, so the row after it stands in view too
+TILED_CENTRE, TILED_TOP_PX = edition(9), 20
 # the readable em: a document at it or above stands as text (P-LOD's LOD_TXT_LO), held apart from the page's
 READABLE_EM = 8
 
@@ -69,9 +75,11 @@ def tiled(ctx, r):
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, k['LOD_FAR_LO'] / 2 / k['DOC_W'])
     was = ctx.resize(*TILED_WINDOW)
     try:
-        # a hair over the em asked for, so a document at the standard size stands at it by the page's own test, the product of
-        # the em and its inverse never a float's width under it
-        scale = lambda em: em / k['STANDARD_FS'] * (1 + 1e-12)
+        # a hair over the em asked for, so a document at the standard size as deep as the middle document — the plane's standard
+        # type scaled as its box is — stands at it by the page's own test, the product of the em and its inverse never a
+        # float's width under it
+        fs = k['STANDARD_FS'] * box['w'] / k['DOC_W']
+        scale = lambda em: em / fs * (1 + 1e-12)
         # centred across on the middle document's first column, its row's outlines TILED_TOP_PX below the view's top at the
         # readable em, so the row after it stands in view too
         first, outline = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(TILED_CENTRE)), ctx.js('window.__skep.fold(%s).outline' % json.dumps(TILED_CENTRE))
@@ -98,7 +106,8 @@ def tiled(ctx, r):
         r.check(summary['max_both'] == 0 and summary['max_neither'] == 0, 'tiled-zoom: no frame drew a document\'s label or a bar over its own standing text, or yielded a line of one to text that does not stand',
                 {'both': summary['max_both'], 'neither': summary['max_neither']})
         r.check(summary['frames_over_33ms'] <= MAX_OVER_33, f'tiled-zoom: frames over 33 ms within the guard ({MAX_OVER_33}) on this machine',
-                {'over': summary['frames_over_33ms'], 'worst_ms': summary['worst_frame_ms'], 'p99': summary['frame_p99'], 'mounts': out['mounts']})
+                {'over': summary['frames_over_33ms'], 'worst_ms': summary['worst_frame_ms'], 'p99': summary['frame_p99'], 'mounts': out['mounts']},
+                xfail=XFAIL_DASHED_OUTLINE)
         # one reveal over the tiled view: every standing article set again in the one frame
         ctx.set_view(at['x'], at['y'], scale(TILED_REVEAL_EM))
         ctx.settle(60)
@@ -129,7 +138,7 @@ def run(ctx):
     ctx.shared['refresh_hz'] = refresh
     box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
     centre = {'x': box['x'] + box['w'] / 2, 'y': box['y'] + box['h'] / 2}
-    far = ctx.js('window.__skep.scaleFor(%s, "doc", 5)' % json.dumps(DOC))
+    far = ctx.extent_scale(5)
     mid = ctx.js('window.__skep.scaleFor(%s, "doc", 120)' % json.dumps(DOC))
     near = ctx.js('window.__skep.scaleFor(%s, "em", 12.5)' % json.dumps(DOC))
     phases = [

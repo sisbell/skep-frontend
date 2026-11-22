@@ -2,15 +2,15 @@
 // client.md §4b.1's calls and §4b.2's events; FP-14, FP-15). Layer 0,
 // engine-bound only through its adapter. Every row of the generated `Bridge`
 // as a function: the calls (`CALLS`), the `node` family's three, the
-// `publication` family's five, the `merge` family's four and the `history`
-// family's two among them, each family on one object (`node`, `publication`,
-// `merge`, `history`) and each row sent under its dotted name, the
-// `held.show` row beside the `held` call as `heldShow`, and the two answers
-// to a moment (`answer`, `cancel`); every event (`EVENTS`) as a
-// subscription; and
-// the adapter beneath, handed to `boot` (S-14 (b)). State: the event
-// subscribers, the session watchers and, while no adapter stands beneath it,
-// why none does (`noAdapter`) — no copy of any record. The port composes no
+// `publication` family's five, the `merge` family's four, the `history`
+// family's two and the `text` family's five among them, each family on one
+// object (`node`, `publication`, `merge`, `history`, `text`) and each row sent
+// under its dotted name, the `held.show` row beside the `held` call as
+// `heldShow`, and the two answers to a moment (`answer`, `cancel`); every
+// event (`EVENTS`) as a subscription; and the adapter beneath, handed to
+// `boot` (S-14 (b)). State: the event subscribers, the session watchers and,
+// while no adapter stands beneath it, why none does (`noAdapter`) — no copy
+// of any record. The port composes no
 // frame, decodes no answer and refuses no call an adapter answers: every
 // answer is the adapter's `Outcome` handed up as it came, in the one refusal
 // shape (`{kind, name, …}`, §4.4). With no adapter every call answers the
@@ -25,11 +25,11 @@
 // The event stream's own notices (`StreamNotice`) — its drop, and its reopen
 // after one, which the adapter alone can see — are told to the stream
 // watchers, the port's own shape and no event of the declarations.
-// The `node`, `publication`, `merge` and `history` families, `held.show` and
-// the ceremonial rows are declared here and called by no screen; a write
-// frame goes from W-MACHINE alone: through `op`, and at the page's unload in
-// the one `close` the adapter posts to outlive the page (`closeAtUnload`),
-// which carries every frame the page had not dialed.
+// The `node`, `publication`, `merge`, `history` and `text` families,
+// `held.show` and the ceremonial rows are declared here and called by no
+// screen; a write frame goes from W-MACHINE alone: through `op`, and at the
+// page's unload in the one `close` the adapter posts to outlive the page
+// (`closeAtUnload`), which carries every frame the page had not dialed.
 // Types: the generated declarations in `./shapes.d.ts` (S-16 (a); FP-16),
 // which the checker holds the port's rows and its events to.
 
@@ -268,6 +268,19 @@ export const held = (args) => call('held', args);
 export const heldShow = (args) => call('held.show', args);
 /** @type {Bridge['resolve']} */
 export const resolve = (args) => call('resolve', args);
+/** the `text` family, each row sent under its dotted name */
+export const text = Object.freeze({
+  /** @type {Bridge['text.replace']} */
+  replace: (args) => call('text.replace', args),
+  /** @type {Bridge['text.edit']} */
+  edit: (args) => call('text.edit', args),
+  /** @type {Bridge['text.move']} */
+  move: (args) => call('text.move', args),
+  /** @type {Bridge['text.mark']} */
+  mark: (args) => call('text.mark', args),
+  /** @type {Bridge['text.diff']} */
+  diff: (args) => call('text.diff', args),
+});
 /** @type {Bridge['changes']} */
 export const changes = (args) => call('changes', args);
 /** @type {Bridge['answer']} */
@@ -285,7 +298,9 @@ const ROWS = {
   'node.start': node.start, 'node.stop': node.stop, 'node.restart': node.restart, op,
   'publication.open': publication.open, 'publication.count': publication.count, 'publication.confirm': publication.confirm, 'publication.cancel': publication.cancel, 'publication.standing': publication.standing,
   'merge.compose': merge.compose, 'merge.land': merge.land, 'merge.undo': merge.undo, 'merge.withdraw': merge.withdraw, 'history.past': history.past, 'history.restore': history.restore,
-  upload, fetch, restore, search, places, held, 'held.show': heldShow, resolve, changes, answer, cancel,
+  upload, fetch, restore, search, places, held, 'held.show': heldShow, resolve,
+  'text.replace': text.replace, 'text.edit': text.edit, 'text.move': text.move, 'text.mark': text.mark, 'text.diff': text.diff,
+  changes, answer, cancel,
 };
 /** the call names, in the generated `Bridge`'s order; the two answers to a moment, `answer` and `cancel`, stand apart */
 export const CALLS = Object.freeze(/** @type {CallName[]} */ (Object.keys(ROWS).filter((n) => n !== 'answer' && n !== 'cancel')));
