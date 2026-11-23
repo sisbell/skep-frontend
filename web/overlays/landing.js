@@ -40,7 +40,9 @@
 // found, the line naming that member on a line of its own (`F.floating.last`)
 // and the act reading it beneath; "try again", where a
 // retry may tell; "put back in the current text", where the person's own
-// removal took the rest of the passage and the line says so — each N-GO's
+// removal took the rest of the passage and the line says so, and beside it
+// "read it as it stood" where that removal holds the position its `delete`
+// was acked at (N-GO's `offersRead`; B3-S4) — each N-GO's
 // (`landingAct`), told whether a key pressed it
 // by the controller's one reading, and every act named by its words rendered
 // for the ear (ST's `heard`; style S22). No edge marks; no refusing, no asking
@@ -71,7 +73,7 @@ import { esc } from '../util.js';
 /** @typedef {import('../beams/beams.js').Geometry} Geometry */
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
 
-/** @typedef {'beside' | 'version' | 'again' | 'back' | 'next' | 'previous'} Act */
+/** @typedef {'beside' | 'version' | 'again' | 'back' | 'read' | 'next' | 'previous'} Act */
 
 /**
  * @typedef {Object} LineState — what the line is written from
@@ -133,7 +135,7 @@ export function attach(e, r = {}) {
   e.addEventListener('click', (ev) => {
     const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest('[data-act]'));
     const which = b ? b.dataset.act : null;
-    if (which === 'beside' || which === 'version' || which === 'again' || which === 'back' || which === 'next' || which === 'previous') GO.landingAct(which, FOCUS.byKey(ev));
+    if (which === 'beside' || which === 'version' || which === 'again' || which === 'back' || which === 'read' || which === 'next' || which === 'previous') GO.landingAct(which, FOCUS.byKey(ev));
   });
 }
 
@@ -178,6 +180,7 @@ export function stateNow(group) {
   if (version != null) acts.push({ act: 'version', label: t('F.floating.read', { k: version }) });
   if (offers.again) acts.push({ act: 'again', label: t('B1.try-again') });
   if (GO.offersBack()) acts.push({ act: 'back', label: t('B3.history.put-back') });
+  if (GO.offersRead()) acts.push({ act: 'read', label: t('B3.deletion.read-earlier') });
   const last = lastOf(version);
   const members = p && group && group.includes(l.current) ? group : [l.current];
   if (l.removed) return { id: 'L.removed.part', words: line, last, acts };

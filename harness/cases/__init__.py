@@ -499,12 +499,13 @@ def placeholder_sweep(ctx):
 # states last, the one case that opens a page on the harness's provider
 ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys', 'frames', 'walks', 'shots', 'guest', 'editor']
 
-# the bridge's rows a page may call of the gate's provider: those that read, and the session's open and close. Every
-# other row is refused: a row that writes or composes a write (the publication, merge and history families, `upload`,
+# the bridge's rows a page may call of the gate's provider: those that read, and the session's open and close — a draft's
+# past state's preview, `history.past`, among them, which asks no write door (the past states survey's P10). Every other
+# row is refused: a row that writes or composes a write (the publication and merge families, `history.restore`, `upload`,
 # `restore`, `resolve`), since no case sends the gate's provider a write — the editor's writes go through the harness's
 # own; a key ceremony or an answer to one of its moments (`answer`, `cancel`), since a ceremony writes the device's key
 # store where no board check sees it; and `held.show`, which opens the shell's own window
-READ_ROWS = ('boards', 'session', 'close', 'fingerprint', 'health', 'probe', 'op', 'fetch', 'search', 'places', 'held', 'changes')
+READ_ROWS = ('boards', 'session', 'close', 'fingerprint', 'health', 'probe', 'op', 'fetch', 'search', 'places', 'held', 'changes', 'history.past')
 
 
 def read_ops():

@@ -192,6 +192,7 @@
 // FP-23, FP-24).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import * as FS from 'node:fs';
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
@@ -5655,3 +5656,175 @@ test('an editor pane follows the text shown while a setting of it reads: its `co
     assert.deepEqual(fake.unanswered.slice(unanswered).filter((k) => k.includes(EK2)), [], 'every read of the draft answered');
   } finally { WRITE.clearEdits(EK2); }
 }))));
+
+// ---- a past state's marks, the passage held and the put-back (B3-S7; skep-frontend #617, #675, #708) ---------------------
+
+/** a draft whose newest change removed a passage: its current text — its own bytes 1 … 11 and 24 … 36 — and its state before that change, holding "Gone words. " at 12, its bytes 12 … 23 */
+const RMD = '1.0.1.0.98', RM_PAST = 'Keep this. Gone words. Then the end.', RM_NOW = 'Keep this. Then the end.', RM_AT = 40, RM_MEMBER = RMD + '.1';
+const RM_ROWS = [[30, 'create_new_document', PAST_T0], [RM_AT, 'insert', PAST_T0 + 2 * 60000], [48, 'delete', PAST_T0 + 5 * 60000]].map(([at, op, time]) => ({ position: at, at, op, docs: [RMD], class: 'drafts', key: 'bare', time }));
+Object.assign(script, reads(RMD, RM_NOW, { published: false, image: [{ i_start: RMD + '.0.1.1', width: '11' }, { i_start: RMD + '.0.1.24', width: '13' }] }), {
+  [FAKE.keyOf('op', { frame: F.opAt(RM_AT, F.retrieveDocVSpanSet(RMD)) })]: { result: { as_of: RM_AT, resp: 'span_set', set: [{ start: '1.1', width: '0.' + RM_PAST.length }] } },
+  [FAKE.keyOf('op', { frame: F.opAt(RM_AT, F.retrieveV(RMD, 1, RM_PAST.length)) })]: { result: { as_of: RM_AT, resp: 'delivery', items: [{ content: RM_PAST }] } },
+  [FAKE.keyOf('op', { frame: F.opAt(RM_AT, F.image(RMD, 1, RM_PAST.length)) })]: { result: { as_of: RM_AT, resp: 'runs', runs: [{ i_start: RMD + '.0.1.1', width: String(RM_PAST.length) }] } },
+  [FAKE.keyOf('op', { frame: F.opAt(RM_AT, F.findLinksV(RMD, 1, RM_PAST.length)) })]: { result: { as_of: RM_AT, resp: 'addrs', addrs: [] } },
+});
+/** the preview's answer at the state before the removal (`history.past`): the removed passage a publication re-minted since, its words the member's own — `written` naming the member, its version kept */
+const RM_PREVIEW = FAKE.keyOf('history.past', { session: 's-1', draft: RMD, at: RM_AT });
+const rmPreview = () => ({ result: { draft: RMD, at: RM_AT, as_of: 60, state: [{ origin: RMD, i_start: 1, width: 36 }], sent: [{ origin: RMD, i_start: 1, width: 36 }],
+  written: [{ origin: RMD, i_start: 1, width: 11 }, { origin: RM_MEMBER, i_start: 1, width: 12 }, { origin: RMD, i_start: 24, width: 13 }], covered: 12, marker: null } });
+/** the draft's history scripted from where its read begins */
+function rmRows() { const since = Math.max(0, (REC.feedAt() ?? 0) - PUMP.OWN_WINDOW); script[FAKE.keyOf('changes', { session: 's-1', since, under: RMD })] = { result: { entries: RM_ROWS, next: 60, head: 60 } }; }
+/** the draft held whole, kept, and its history opened from its corner's act: on the state before the removal */
+async function rmOpened() { await PUMP.loadWhole(RMD); WRITE.setKept(RMD, { word: 'kept', reason: null }); rmRows(); const opening = GO.history(RMD); await flown(); return opening; }
+/** the text the page shows of the draft, whole */
+const rmShown = () => { const d = LAYER.shownOf(RMD); return REC.textOf(d.runs, d.from, d.to); };
+/** bytes of the draft's own by identity, an image of them from position 1 */
+const rmImage = (/** @type {Array<[string, number, number]>} */ runs) => { let pos = 1; return runs.map(([prefix, ordinal, width]) => { const r = { pos, width, prefix, ordinal }; pos += width; return r; }); };
+
+test('the passages a past state holds that the current text lacks are read off the two images by the bytes\' identity: none where they share every byte, a removal at its place, words removed and typed again marked still — new bytes are no identity of theirs — and, where the preview names the state\'s words by the member a publication minted, by that identity, those words named re-minted by their member, its version kept (B3-S7 THE MARKS; the past states survey row 20; question 3)', () => {
+  const P = RMD + '.0.1', past = rmImage([[P, 1, 36]]);
+  assert.deepEqual(SCENE.removedIn(rmImage([[P, 1, 36]]), past), [], 'every byte shared: none');
+  assert.deepEqual(SCENE.removedIn(rmImage([[P, 1, 11], [P, 24, 13]]), past), [{ pos: 12, width: 12 }], 'a removal, at its place in the state');
+  assert.deepEqual(SCENE.removedIn(rmImage([[P, 1, 11], [RMD + '.0.p', 1, 12], [P, 24, 13]]), past), [{ pos: 12, width: 12 }], 'the same words typed again: new bytes, the old ones removed still');
+  const written = SCENE.writtenImage(/** @type {any} */ (rmPreview().result.written).map((/** @type {any} */ r) => ({ origin: r.origin, iStart: r.i_start, width: r.width })));
+  assert.deepEqual(written.map((r) => [r.pos, r.width, r.prefix, r.ordinal]), [[1, 11, P, 1], [12, 12, RM_MEMBER + '.0.1', 1], [24, 13, P, 24]], 'the preview\'s runs over the state\'s positions, each by the document that minted it');
+  assert.deepEqual(SCENE.removedIn(rmImage([[P, 1, 11], [RM_MEMBER + '.0.1', 1, 12], [P, 24, 13]]), past, written), [], 'the re-minted words standing in the current text by the member\'s identity: none removed');
+  assert.deepEqual(SCENE.removedIn(rmImage([[P, 1, 11], [P, 24, 13]]), past, written), [{ pos: 12, width: 12 }], 'removed under that identity too: marked');
+  assert.deepEqual(SCENE.republished(past, written), [{ pos: 12, width: 12, member: RM_MEMBER }], 'the words re-minted since, by the member that minted them');
+});
+
+test('removed passages standing at one site — one line — are one mark carrying them in the text\'s order, keyed by its first; a passage at another its own (P44; B3-S7: "co-located removed passages\' marks merged into one")', () => {
+  const site = (/** @type {number} */ pos) => (pos < 30 ? 'line 1' : 'line 2');
+  assert.deepEqual(SCENE.removedMarks([{ pos: 5, width: 3 }, { pos: 12, width: 4 }, { pos: 40, width: 2 }], site), [{ key: '5', members: [{ pos: 5, width: 3 }, { pos: 12, width: 4 }] }, { key: '40', members: [{ pos: 40, width: 2 }] }]);
+  assert.deepEqual(SCENE.removedMarks([{ pos: 5, width: 3 }, { pos: 12, width: 4 }], (pos) => pos), [{ key: '5', members: [{ pos: 5, width: 3 }] }, { key: '12', members: [{ pos: 12, width: 4 }] }], 'one site each: two marks');
+});
+
+test('the list\'s head names its passage by its words cut between words with "…" where its room cannot hold them whole — the reader\'s spacing kept room for — and never inside a word; whole where they fit (skep-frontend #675\'s design decision; FP-26)', () => {
+  const measure = (/** @type {string} */ s) => s.length * 6;
+  assert.equal(SCENE.headWords('Keep this.', 200, measure), 'Keep this.', 'whole where they fit');
+  const cut = SCENE.headWords('Keep this and then the rest of the passage, which runs on.', 200, measure);
+  assert.ok(cut.endsWith('…') && 'Keep this and then the rest of the passage, which runs on.'.startsWith(cut.slice(0, -1).trimEnd()) && / $|\w$|,$/.test(cut.slice(0, -1)), `cut on a word, its ellipsis after: ${cut}`);
+  assert.ok(measure(cut) + ([...cut].length * 0.12 + (cut.match(/ /g) || []).length * 0.16) * 11 <= 200, `the cut fits the room at the reader's spacing: ${cut}`);
+  assert.ok(!/\w…$/.test(cut) || 'Keep this and then the rest of the passage, which runs on.'.split(' ').some((w) => cut.slice(0, -1).endsWith(w)), `never inside a word: ${cut}`);
+});
+
+test('a past state\'s pane marks the passage its state holds that the current text lacks, one mark there; its act is handed to W-WRITE — one placing by identity, at no caret, of the state\'s own bytes — where the words before it stand in the current text at the press, a typing having moved them; the mark goes once the current text holds the words again, pane A outlining them, and a second press places nothing (B3-S7 THE MARKS, "put back in the current text"; FP-9, FP-11, FP-38)', () => onPage(async (p) => {
+  await onTrail(p);
+  try {
+    assert.equal(await rmOpened(), true, 'the history shows');
+    const L = SCENE.past();
+    assert.deepEqual([L?.at, L?.removed.map((m) => [m.pos, m.width, m.words]), L?.marks], [RM_AT, [[12, 12, 'Gone words. ']], [{ key: '12', members: [{ pos: 12, width: 12 }] }]], 'the passage the newest change removed, marked at its place in pane B, one mark');
+    assert.deepEqual(L?.preview, null, 'the preview not told: refused, the state\'s own identity stands');
+    WRITE.addEdit(RMD, { pos: 1, width: 0, text: 'Now. ' });
+    SCENE.followShown();
+    assert.deepEqual(SCENE.past()?.removed.map((m) => [m.pos, m.width]), [[12, 12]], 'a typing in pane A leaves the mark: the current text lacks the words still');
+    assert.equal(SCENE.putBack(12), true, 'the put-back taken');
+    const list = WRITE.edits(RMD);
+    assert.deepEqual(list.filter((e) => e.based).map((e) => e.took?.ids.map((x) => [x.prefix, x.ordinal, x.width])), [[[RMD + '.0.1', 12, 12]]], 'the passage\'s own bytes, placed by identity — a removal kept for the put-back after it');
+    assert.ok(list.some((e) => e.back && e.pos === 17), `placed where the words before it stand at the press, after "Now. Keep this. ": ${JSON.stringify(list.map((e) => [e.pos, e.width, e.text, !!e.back, !!e.based]))}`);
+    assert.equal(rmShown(), 'Now. Keep this. Gone words. Then the end.', 'the current text holds them at once (FP-38)');
+    assert.equal(new Set(list.filter((e) => e.based || e.back).map((e) => e.step)).size, 1, 'one act');
+    SCENE.followShown();
+    assert.deepEqual([SCENE.past()?.removed, SCENE.past()?.put], [[], [{ prefix: RMD + '.0.1', ordinal: 12, width: 12 }]], 'the mark gone, the current text holding the words again; pane A outlining them');
+    assert.equal(SCENE.putBack(12), false, 'a second press places nothing');
+    assert.equal(WRITE.edits(RMD).length, list.length, 'nothing more added');
+  } finally { WRITE.clearEdits(RMD); WRITE.setKept(RMD, null); }
+}, { acts: true }));
+
+test('where the preview says a publication re-minted a removed passage since the state shown, the put-back sends the member\'s identity, never the draft\'s, and pane B names the member there (B3-S7; M7 (c); the past states survey row 37)', () => onPage(async (p) => {
+  await onTrail(p);
+  script[RM_PREVIEW] = rmPreview();
+  const previews = () => fake.asked.filter((k) => k === RM_PREVIEW).length, was = previews();
+  try {
+    assert.equal(await rmOpened(), true, 'the history shows');
+    assert.ok(await within(1000, () => SCENE.past()?.preview != null), 'the preview read once pane B rests, and told');
+    const L = SCENE.past();
+    assert.deepEqual([L?.preview?.at, L?.republished, L?.removed.map((m) => [m.pos, m.width])], [RM_AT, [{ pos: 12, width: 12, member: RM_MEMBER }], [[12, 12]]], 'the words re-minted named by their member; removed since under that identity: marked');
+    assert.equal(previews() - was, 1, 'read once, at the rest');
+    assert.equal(SCENE.putBack(12), true, 'the put-back taken');
+    assert.deepEqual(WRITE.edits(RMD).filter((e) => e.based).map((e) => e.took?.ids.map((x) => [x.prefix, x.ordinal, x.width])), [[[RM_MEMBER + '.0.1', 1, 12]]], 'the member\'s bytes, its version kept — never the draft\'s');
+  } finally { delete script[RM_PREVIEW]; WRITE.clearEdits(RMD); WRITE.setKept(RMD, null); }
+}, { acts: true }));
+
+test('a past state\'s marks are read again as it lands quietly after a change of the page\'s class, and none stands while pane B stands as its cover (B3-S7; issue #724; FP-29)', () => onPage(async (p) => {
+  await onTrail(p);
+  let release = () => {};
+  try {
+    assert.equal(await rmOpened(), true, 'the history shows');
+    assert.equal(SCENE.past()?.removed.length, 1, 'marked as it opened');
+    release = fake.hold('op', { frame: F.opAt(RM_AT, F.retrieveDocVSpanSet(RMD)) });
+    SCENE.dropped({ row: null, addrs: null, at: Date.now() });
+    assert.deepEqual([SCENE.past()?.cover, SCENE.past()?.removed, SCENE.past()?.marks], [true, [], []], 'pane B its cover: no mark stands');
+    release();
+    assert.ok(await within(1500, () => SCENE.past()?.cover === false), 'the state lands quietly');
+    assert.deepEqual(SCENE.past()?.removed.map((m) => [m.pos, m.width]), [[12, 12]], 'the mark read again at that landing');
+  } finally { release(); WRITE.setKept(RMD, null); }
+}, { acts: true }));
+
+test('the list\'s head is its first line, above the top line: its first row the words of the passage held — at the deletion face\'s act the span the face stands at, the removal\'s words — a button and a Tab stop of its own, out of the list\'s one stop, named by the words whole; pane B lands holding that passage at the state before the removal, its act bringing it into view there and, where neither pane holds it, opening its words whole beneath the head; pane B\'s selection, where one stands, is what the head names; no second row, no step act and nothing calling the passage\'s step (skep-frontend #675\'s design decision; B3-S7; K-61; the past states survey P8)', () => onPage(async (p) => {
+  await onTrail(p);
+  const gone = [{ prefix: RMD + '.0.1', ordinal: 12, width: 12 }];
+  try {
+    await PUMP.loadWhole(RMD); WRITE.setKept(RMD, { word: 'kept', reason: null }); rmRows();
+    const opening = GO.history(RMD, { removal: { at: 48, ids: gone, words: 'Gone words. ' } }); await flown();
+    assert.equal(await opening, true, 'the history shows, opened from the removal\'s face');
+    const L = SCENE.past(), held = TRAIL.current()?.scene?.held.past;
+    assert.deepEqual([L?.at, held?.asked, held?.words, held?.passage, held && 'unkept' in held], [RM_AT, RM_AT, 'Gone words. ', gone, false],
+      'the state before the removal asked; the trail entry keeps the passage held — the removal\'s bytes and words — and nothing of whether words were unkept (#708)');
+    assert.deepEqual([L?.passage.words, L?.passage.in, SCENE.panes()?.b.landed], ['Gone words. ', null, gone], 'pane B lands holding the passage, the state holding all of it');
+    const html = String(p.afterB[0].innerHTML);
+    assert.ok(html.startsWith(`<div class="pl-top"><button type="button" class="pl-passage" data-passage="1" aria-label="${esc(heard([{ text: 'Gone words.', face: 'reading' }]))}"><span class="pl-words">Gone words.</span></button></div>`), `the head first, its row naming the passage by its words whole: ${html.slice(0, 300)}`);
+    SCENE.passageAct();
+    assert.equal(SCENE.past()?.passage.whole, false, 'its act at a passage pane B holds: brought into view there, nothing opened beneath the head');
+    assert.ok(!/B3\.history\.(stop|earlier-change|next-change)/.test(html), 'no second row: no stop, no step act');
+    SEL.setPane('b', { addr: RMD, pos: 12, width: 5 });
+    SCENE.markKept();
+    assert.equal(SCENE.past()?.passage.words, 'Gone ', 'pane B\'s selection is what the head names');
+    assert.ok(String(p.afterB[0].innerHTML).includes('<span class="pl-words">Gone</span>'), 'written again as the selection stands');
+    SEL.clear('b');
+    const src = ['./scene.js', '../nav/keys.js', '../nav/go.js'].map((f) => FS.readFileSync(new URL(f, import.meta.url), 'utf8'));
+    assert.ok(src.every((s) => !/passageStep\(/.test(s)), 'nothing on the page calls the passage\'s step: its presses land with #705');
+  } finally { WRITE.setKept(RMD, null); }
+}, { acts: true }));
+
+test('the list\'s top line, "later ›"\'s reason and the words saying pane B shows how the draft stands now follow whether the draft holds words the board has not kept as they are drawn — never as the history opened — drawn again in one step as that changes (skep-frontend #708; FP-33)', () => onPage(async (p) => {
+  await onTrail(p);
+  const held = /** @type {any} */ (F.decodeHeldRows([{ held: 7, doc: RMD, base: 48, frame: { op: 'insert', doc: RMD, at: { ordinal: '25', subspace: '1' }, values: [' More.'] }, cause: 'unreachable', sent: true, time: 0 }]));
+  try {
+    WRITE.setHeld(RMD, held);
+    assert.equal(await rmOpened(), true, 'the history shows, opened while a line is held');
+    const list = () => String(p.afterB[0].innerHTML);
+    assert.deepEqual([SCENE.past()?.at, SCENE.past()?.unkept, SCENE.past()?.steps.later, SCENE.past()?.why, list().includes('data-string="L.history.unkept"')], [48, true, 'L.history.newest-kept', null, true],
+      'on the newest kept state: the top line, "later ›" saying it is the newest kept one, no "now"');
+    WRITE.setHeld(RMD, []);
+    SCENE.markKept();
+    assert.deepEqual([SCENE.past()?.unkept, SCENE.past()?.steps.later, SCENE.past()?.why?.id, list().includes('data-string="L.history.unkept"')], [false, 'B3.history.now', 'B3.history.now', false],
+      'the held words gone: the top line gone, "later ›" and pane B saying it is how the draft stands now, at that frame');
+    assert.ok(p.cornerB.innerHTML.includes('B3.history.now'), `pane B's corner says so: ${p.cornerB.innerHTML.slice(0, 200)}`);
+    WRITE.setHeld(RMD, held);
+    SCENE.markKept();
+    assert.deepEqual([SCENE.past()?.unkept, SCENE.past()?.steps.later, SCENE.past()?.why, list().includes('data-string="L.history.unkept"')], [true, 'L.history.newest-kept', null, true], 'words held again: drawn again so');
+  } finally { WRITE.setHeld(RMD, []); WRITE.setKept(RMD, null); }
+}, { acts: true }));
+
+test('the passage held is re-projected at the state pane B shows: where that state holds none of it, its corner says so in the dead end\'s form — "the passage you hold is not in this state" — where part of it, that it holds part, each held at its head and describing the pane; where all of it, neither (B3-S7, row 19; D5 K-102)', () => onPage(async (p) => {
+  await onTrail(p);
+  /** the history opened from a removal's face holding the bytes given, and what pane B then says of them */
+  const openHolding = async (/** @type {import('../model/records.js').ISpan[]} */ ids) => {
+    SCENE.close();
+    rmRows();
+    const opening = GO.history(RMD, { removal: { at: 48, ids, words: 'x' } }); await flown();
+    assert.equal(await opening, true, 'the history shows');
+    return { in: SCENE.past()?.passage.in, corner: p.cornerB.innerHTML, described: String(p.paneB.attrs['aria-description'] ?? '') };
+  };
+  try {
+    await PUMP.loadWhole(RMD); WRITE.setKept(RMD, { word: 'kept', reason: null });
+    const none = await openHolding([{ prefix: RMD + '.0.1', ordinal: 100, width: 4 }]);
+    assert.ok(none.in === 'none' && none.corner.includes(`<span class="passage-word" data-string="B3.history.passage.none">${esc(t('B3.history.passage.none'))}</span>`) && !none.corner.includes('B3.history.passage.part') && none.described.includes(heard(t('B3.history.passage.none'))),
+      `none of it: the dead end's words, in the corner and its description — ${JSON.stringify(none)}`);
+    const part = await openHolding([{ prefix: RMD + '.0.1', ordinal: 20, width: 4 }, { prefix: RMD + '.0.1', ordinal: 100, width: 4 }]);
+    assert.ok(part.in === 'part' && part.corner.includes('data-string="B3.history.passage.part"') && !part.corner.includes('B3.history.passage.none') && part.described.includes(heard(t('B3.history.passage.part'))), `part of it: the part words — ${JSON.stringify(part)}`);
+    const all = await openHolding([{ prefix: RMD + '.0.1', ordinal: 20, width: 4 }]);
+    assert.ok(all.in === null && !all.corner.includes('passage-word'), `all of it: neither — ${JSON.stringify(all)}`);
+  } finally { WRITE.setKept(RMD, null); }
+}, { acts: true }));

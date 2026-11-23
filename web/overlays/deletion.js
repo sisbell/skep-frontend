@@ -20,11 +20,16 @@
 // in order (`partsOf`): C-49; the audience by the venue — at a draft read by
 // the person alone its one clause, at a shared draft C-50 then the reach —
 // and, where a published document holds the words removed, the line naming
-// the edition of the draft. It never takes the focus and holds no key: its
-// mark is a native button, in the page's order after a landing's labels,
-// described by the face's words rendered for the ear (ST's `heard`), the
-// draft's name in them as written; a press on it leaves the focus where it
-// stands, its click its act, and moving the focus to it ends nothing. It
+// the edition of the draft; then, where the removal holds the position the
+// board acked its `delete` at (W-WRITE's `Removal.at`), its act "read it as
+// it stood", opening the draft's history at the state before the removal,
+// holding the removal's words (`readEarlier`; N-GO's `history`; B3-S4). It
+// never takes the focus: its mark is a native button, in the page's order
+// after a landing's labels, described by the face's words rendered for the
+// ear (ST's `heard`), the draft's name in them as written; a press on it
+// leaves the focus where it stands, its click its act, and moving the focus
+// to it ends nothing; its act a native button after it, Tab reaching it and
+// Enter or Space taking it (D5 K-58). It
 // moves no text: beside its line where the margin holds FACE_MIN_PX of room,
 // else a layer over the lines beneath its site. A draft's removals stand on
 // the plane where the draft stands as text at its reading scale; while a
@@ -60,7 +65,7 @@
 // (`classChanged`).
 // Figures: MARK_PX 12, a face at most FACE_MAX_PX 280 and beside its line
 // only with FACE_MIN_PX 140 of room (unmeasured).
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-13, FP-20, FP-26, FP-31, FP-33,
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-13, FP-20, FP-25, FP-26, FP-31, FP-33,
 // FP-36, FP-38.
 
 import * as FOCUS from '../nav/focus.js';
@@ -69,6 +74,7 @@ import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
 import * as LAYER from '../text/layer.js';
 import * as SCENE from '../scene/scene.js';
+import * as GO from '../nav/go.js';
 import * as LINE from '../line/line.js';
 import { pageGeometry, leaveAt } from '../beams/beams.js';
 import { visibleView, markDirty } from '../plane/camera.js';
@@ -148,9 +154,28 @@ export function attach(e) {
   el = e;
   e.addEventListener('mousedown', (ev) => { if ((/** @type {HTMLElement} */ (ev.target)).closest('button[data-removal]')) ev.preventDefault(); });
   e.addEventListener('click', (ev) => {
-    const b = /** @type {HTMLElement | null} */ ((/** @type {HTMLElement} */ (ev.target)).closest('button[data-removal]'));
+    const tg = /** @type {HTMLElement} */ (ev.target), b = /** @type {HTMLElement | null} */ (tg.closest('button[data-removal]')), r = /** @type {HTMLElement | null} */ (tg.closest('button[data-read]'));
     if (b) act(b.dataset.doc || '', Number(b.dataset.removal));
+    else if (r) readEarlier(r.dataset.doc || '', Number(r.dataset.read), r);
   });
+}
+
+/**
+ * The face's act, "read it as it stood" (see the head; B3-S4, B3-S7's second
+ * gesture site; C-354): the draft's history opened at the state before the
+ * removal — the draft's commit before the position its `delete` was acked at
+ * — holding the removal's words, the span the face stands at (N-GO's
+ * `history`, its `removal`); a refusal's line standing beside the act.
+ * Nothing where the removal holds no such position.
+ * @param {string} addr the draft
+ * @param {number} id the removal
+ * @param {Element | null} [at] the act's element
+ * @returns {Promise<boolean>} the history shows, or the focus went into its pane
+ */
+export async function readEarlier(addr, id, at = null) {
+  const r = WRITE.removalsOf(addr).find((x) => x.id === id);
+  if (!r || r.at == null) return false;
+  return GO.history(addr, { removal: { at: r.at, ids: r.ids, words: r.words }, at });
 }
 
 /**
@@ -293,10 +318,11 @@ function pointOf(/** @type {string} */ addr, /** @type {{before: ISpan[], after:
 /** the markup of a paste's face (`pasted`): its words alone, in the deletion face's form, no mark beside them — it opens on nothing and closes on nothing; the focus never stands in it */
 const pasteMarkup = (/** @type {Pasted} */ p) => `<div class="removal whole pasted" data-doc="${esc(p.addr)}" data-paste="${p.n}"><div class="face"><div class="part" data-string="${esc(p.id)}">${addressedHTML(p.text)}</div></div></div>`;
 
-/** the markup of one removal: its mark, named "removed here" and described by its face's words rendered for the ear (ST's `heard`), held in a hidden element of its own, and its face where it stands whole */
-function markup(/** @type {string} */ addr, /** @type {Removal} */ r, /** @type {boolean} */ whole) {
+/** the markup of one removal: its mark, named "removed here" and described by its face's words rendered for the ear (ST's `heard`), held in a hidden element of its own, and its face where it stands whole — its parts, then, where the removal holds the position its `delete` was acked at, its act "read it as it stood" (`readEarlier`) */
+export function markup(/** @type {string} */ addr, /** @type {Removal} */ r, /** @type {boolean} */ whole) {
   const key = `removal-${addr}-${r.id}`.replace(/[^\w-]/g, '_'), parts = whole ? faceOf(addr, r) : [];
-  const face = whole ? `<div class="face" id="${key}">${parts.map((p) => `<div class="part" data-string="${esc(p.id)}">${addressedHTML(p.text)}</div>`).join('')}<span id="${key}-heard" hidden>${esc(heard(saidOf(parts)))}</span></div>` : '';
+  const read = whole && r.at != null ? `<div class="acts"><button type="button" class="face-act" data-read="${r.id}" data-doc="${esc(addr)}" data-string="B3.deletion.read-earlier" aria-label="${esc(heard(t('B3.deletion.read-earlier')))}">${esc(t('B3.deletion.read-earlier'))}</button></div>` : '';
+  const face = whole ? `<div class="face" id="${key}">${parts.map((p) => `<div class="part" data-string="${esc(p.id)}">${addressedHTML(p.text)}</div>`).join('')}${read}<span id="${key}-heard" hidden>${esc(heard(saidOf(parts)))}</span></div>` : '';
   return `<div class="removal${whole ? ' whole' : ''}" data-doc="${esc(addr)}" data-id="${r.id}">`
     + `<button type="button" class="mark" data-removal="${r.id}" data-doc="${esc(addr)}" data-string="B3.removed-here" title="${esc(t('B3.removed-here'))}" aria-label="${esc(heard(t('B3.removed-here')))}" aria-expanded="${whole}"${whole ? ` aria-describedby="${key}-heard"` : ''}></button>${face}</div>`;
 }
@@ -330,9 +356,9 @@ export function render() {
   if (paste && left(paste)) paste = null;
   const p = !paste ? null : inScene ? (paste.scene ? paste : null) : REC.has(paste.addr) && LAYER.isMounted(paste.addr) && LAYER.atReadingScale(paste.addr) ? paste : null;
   const at = p && !inScene ? pointOf(p.addr, p) : null, face = p && (inScene || at != null) ? { p, pos: at } : null;
-  const key = JSON.stringify([inScene, stands.map((s) => [s.addr, s.r.id, s.whole, s.whole ? faceOf(s.addr, s.r) : null]), face ? face.p.n : null]);
+  const key = JSON.stringify([inScene, stands.map((s) => [s.addr, s.r.id, s.whole, s.whole ? faceOf(s.addr, s.r) : null, s.whole && s.r.at != null]), face ? face.p.n : null]);
   if (key !== written) {
-    FOCUS.keep(host, (x) => (x.getAttribute('data-removal') ? `${x.getAttribute('data-doc')}:${x.getAttribute('data-removal')}` : null), () => { host.innerHTML = stands.map((s) => markup(s.addr, s.r, s.whole)).join('') + (face ? pasteMarkup(face.p) : ''); });
+    FOCUS.keep(host, (x) => (x.getAttribute('data-removal') ? `${x.getAttribute('data-doc')}:${x.getAttribute('data-removal')}` : x.getAttribute('data-read') ? `read:${x.getAttribute('data-doc')}:${x.getAttribute('data-read')}` : null), () => { host.innerHTML = stands.map((s) => markup(s.addr, s.r, s.whole)).join('') + (face ? pasteMarkup(face.p) : ''); });
     host.classList.toggle('on', stands.length > 0 || !!face);
     host.classList.toggle('scene', inScene && (stands.length > 0 || !!face));
     written = key;

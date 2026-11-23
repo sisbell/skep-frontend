@@ -380,7 +380,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    tabular figures as wide as T-ARTICLE sets it, an empty box on a faint ground while the count is not known; that the state
    its act asked is read again, the running mark after its words — each on a line of its own, wrapped between its words and
    never cut, folded or hidden, in either form — on one line in a head's row its words fit */
-.corner .not-last, .corner .inflight, .corner .links-word { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
+.corner .not-last, .corner .inflight, .corner .links-word, .corner .passage-word { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
 /* a past state's one-state steps (B3-S7; D5 K-102; FP-41): "‹ earlier" and "later ›" at the two ends of the corner's first
    row, each in a slot of its label's width at the corner's size (T-ARTICLE's `stepsHTML`), so neither moves as the words
    between them change; beside its column one line of acts above the title, "later ›" ending the second row where one row
@@ -513,6 +513,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #removed .mark:hover { background:#2a1c1e; }
 #removed .face { position:absolute; left:16px; top:0; width:max-content; max-width:280px; pointer-events:auto; padding:4px 8px; font-size:11px; line-height:1.45; color:var(--ink); background:#1b1f25; border:1px solid var(--bad); border-radius:4px; box-shadow:0 2px 10px rgba(0,0,0,.4); }
 #removed .face .part + .part { margin-top:3px; color:var(--dim); }
+#removed .face .acts { margin-top:3px; color:var(--ink); }
+#removed .face .face-act { margin:0; padding:1px 6px; font:inherit; color:var(--accent); background:transparent; border:1px solid var(--line); border-radius:3px; cursor:pointer; }
 /* what the reading scene holds of the layer (O-DELETION's), a removal's mark and face or a paste's face in an editor pane:
    the layer over the scene, which it follows in the page, under the hint, the find box, the overlay and the LEAP box; the
    pointer passing through each face to the pane beneath, whose wheel scrolls the pane, and each mark taking it, a wheel
@@ -708,12 +710,12 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    in the place of a reclaimed one, below its row, set as the top line is; a focused head
    or row scrolled clear of the held head */
 #scenepast { font:var(--corner-px)/1.4 var(--face-client); color:#8b8f96; user-select:none; -webkit-user-select:none; }
-#scenepast.beside { position:absolute; top:26px; right:0; bottom:0; width:var(--scene-list); padding:8px var(--scene-list-pad); border-left:var(--scene-list-rule) solid var(--line); overflow:auto; z-index:1; background:var(--bg); scroll-padding-top:1.7em; }
+#scenepast.beside { position:absolute; top:26px; right:0; bottom:0; width:var(--scene-list); padding:8px var(--scene-list-pad); border-left:var(--scene-list-rule) solid var(--line); overflow:auto; z-index:1; background:var(--bg); scroll-padding-top:calc(1.7em + var(--pl-top, 0px)); }
 #scenepast.after { flex:none; align-self:stretch; margin-top:1em; border-top:1px solid var(--line); padding-top:6px; }
 #sceneB.past-after:not(.head) { flex-wrap:wrap; }
 #sceneB.past-after:not(.head) > #scenepast.after { flex:0 0 100%; }
 #scenepast .pl-now, #scenepast .pl-floor { padding-bottom:.2em; padding-left:6px; color:#cfd6df; }
-#scenepast .pl-head { position:sticky; top:var(--past-held, 0px); z-index:1; display:block; width:100%; margin:0; padding:.15em 0 .15em 6px; border:0; border-left:3px solid transparent; background:var(--bg); color:#cfd6df; font:inherit; text-align:left; white-space:normal; }
+#scenepast .pl-head { position:sticky; top:calc(var(--past-held, 0px) + var(--pl-top, 0px)); z-index:1; display:block; width:100%; margin:0; padding:.15em 0 .15em 6px; border:0; border-left:3px solid transparent; background:var(--bg); color:#cfd6df; font:inherit; text-align:left; white-space:normal; }
 #scenepast button.pl-head { cursor:pointer; }
 #scenepast .pl-head .pl-fold { margin-right:.3em; }
 #scenepast .pl-head .pl-hands { display:block; color:#8b8f96; }
@@ -722,15 +724,42 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #scenepast .pl-row.below { cursor:default; }
 /* the floor's line (B3-S7): a hairline across the column labelled with the floor's words, held in view below its day's head
    as the rows beneath it scroll; the rows below it in their places, nothing greyed */
-#scenepast .pl-floor { position:sticky; top:calc(var(--past-held, 0px) + 1.6em); z-index:1; border-top:1px solid #8b8f96; background:var(--bg); padding-top:.2em; }
+#scenepast .pl-floor { position:sticky; top:calc(var(--past-held, 0px) + var(--pl-top, 0px) + 1.6em); z-index:1; border-top:1px solid #8b8f96; background:var(--bg); padding-top:.2em; }
 #scenepast .pl-time { flex:none; min-width:var(--pl-time, auto); }
 #scenepast .pl-join { flex:none; white-space:pre; }
 #scenepast .pl-what { flex:1 1 0; min-width:0; }
 #scenepast .pl-row:is(.reading, .unread) .pl-what { flex:0 1 auto; }
 #scenepast :is(.pl-reading, .pl-unread) { flex:none; color:#8b8f96; }
-#scenepast.after .pl-head { scroll-margin-top:var(--past-held, 0px); }
-#scenepast.after .pl-row { scroll-margin-top:calc(var(--past-held, 0px) + 1.6em); }
+#scenepast.after .pl-head { scroll-margin-top:calc(var(--past-held, 0px) + var(--pl-top, 0px)); }
+#scenepast.after .pl-row { scroll-margin-top:calc(var(--past-held, 0px) + var(--pl-top, 0px) + 1.6em); }
 #scenepast [data-shown] { border-left-color:#cfd6df; }
+/* THE LIST's HEAD (B3-S7; FP-26; SC's): held at the list's top above the day heads and the floor
+   line, which stand beneath it (`--pl-top`, its height, SC's); its first row the words of what its next press acts on in the
+   reading face, cut between words by SC and never wrapping, one button and a Tab stop of its own; beneath it the words whole
+   where its act opened them */
+#scenepast .pl-top { position:sticky; top:var(--past-held, 0px); z-index:2; background:var(--bg); }
+#scenepast .pl-passage { display:block; width:100%; margin:0; padding:0 0 .15em 6px; border:0; border-left:3px solid transparent; background:transparent; color:var(--ink); font:inherit; font-family:var(--face-reading); text-align:left; white-space:nowrap; overflow:hidden; cursor:pointer; }
+#scenepast .pl-whole { padding:0 0 .3em 9px; font-family:var(--face-reading); color:var(--ink); white-space:normal; overflow-wrap:break-word; }
+/* A PAST STATE's MARKS (B3-S7; SC's): in a pane's content, placed by translate so its scroll carries them. The passage held's
+   mark a rule along its lines at the column's edge, never the caret's shape; the words a put-back placed ruled in pane A as an
+   arrival's are, in its hue. In pane B each removed passages' mark at its line's edge, O-DELETION's struck dash in the removed
+   hue, a walk element, its count after it where it stands for several; its face C-49's words and each passage's act; the
+   removed passages in a ground of no hue; the line saying words were published as new since, and the passage held's
+   none and part lines, in the face's form */
+.pane .past-mark { position:absolute; top:0; left:0; }
+.pane .past-mark.rule { width:2px; background:var(--margin-held); pointer-events:none; }
+.pane .past-mark.rule.put { background:var(--hue-you); }
+.pane .removed-mark { position:relative; display:block; min-width:12px; height:12px; margin:0; padding:0 0 0 14px; background:none; border:none; border-radius:2px; cursor:pointer; color:var(--dim); font:10px/12px var(--face-client); text-align:left; }
+.pane .removed-mark::before { content:""; position:absolute; left:1px; width:10px; top:5px; height:2px; background:var(--margin-removal); border-radius:1px; }
+.pane .removed-mark:hover, .pane .removed-mark:focus-visible { background:#2a1c1e; }
+.pane .past-face { position:absolute; left:16px; top:0; width:max-content; max-width:280px; padding:4px 8px; font:11px/1.45 var(--face-client); color:var(--ink); background:#1b1f25; border:1px solid var(--line); border-radius:4px; box-shadow:0 2px 10px rgba(0,0,0,.4); }
+.pane .removed-face { border-color:var(--bad); }
+.pane .past-face .part + .part { margin-top:3px; }
+.pane .past-face .member .words { font-family:var(--face-reading); }
+.pane .past-face .face-act { margin:0; padding:1px 6px; font:inherit; color:var(--accent); background:transparent; border:1px solid var(--line); border-radius:3px; cursor:pointer; }
+.pane .past-face .face-act[aria-disabled="true"] { color:var(--dim); cursor:default; }
+.pane .past-mark:not(.removed-at) > .past-face { position:static; }
+::highlight(skep-removed) { background-color:rgba(139,143,150,.16); }
 /* the bar's name for a past state's pane: when it stood, after its address (B3-S7; C-363) */
 #scenebar .as-of { color:#cfd6df; }
 /* a stroke's list (SC's, at O-HOST's): each change's characters in the reading face, their white space kept */

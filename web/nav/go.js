@@ -1376,6 +1376,36 @@ export const landingOffers = () => ({ steps: !!landed && !!landed.pieces, again:
 export const offersBack = () => !!landed && !!landed.removed && !landed.floating;
 
 /**
+ * The removal of kept text the deletion face stands at that took words of the
+ * landing's passage and holds the position its `delete` was acked at (W-WRITE's
+ * `Removal`): what the landing's line's "read it as it stood" opens the draft's
+ * history before (`readEarlier`; B3-S7's (4), the past states survey's row
+ * 8); null where none does, or no landing's passage was removed so.
+ * @returns {import('../write/write.js').Removal | null}
+ */
+function removalOfLanding() {
+  const l = landed, gone = l && l.removed ? l.removed : null;
+  if (!l || !gone) return null;
+  const meets = (/** @type {import('../model/records.js').ISpan} */ x) => gone.some((y) => x.prefix === y.prefix && x.ordinal < y.ordinal + y.width && y.ordinal < x.ordinal + x.width);
+  return WRITE.removalsOf(l.addr).find((r) => r.at != null && r.ids.some(meets)) ?? null;
+}
+/** does the landing's line offer "read it as it stood" beside the put-back (`readEarlier`): the put-back stands, and a removal it puts back holds its `delete`'s position (`removalOfLanding`) */
+export const offersRead = () => offersBack() && !!removalOfLanding();
+
+/**
+ * "read it as it stood" at the landing's line (B3-S4, B3-S7; the past states
+ * survey's row 8): the draft's history opened at the state before the removal
+ * that took the landing's passage (`removalOfLanding`; `history`), holding its
+ * words; nothing where none stands.
+ * @param {Element | null} [at] the act's element
+ */
+export function readEarlier(at = null) {
+  const l = landed, r = removalOfLanding();
+  if (!l || !r || r.at == null) return;
+  void history(l.addr, { removal: { at: r.at, ids: r.ids, words: r.words }, at });
+}
+
+/**
  * What the landing says, for the mirror's descriptions of the items it
  * stands on (N-WALK's `described`; FP-21): first, where it crossed into its
  * document from another (`Landing.crossed`), that document's kind in its
@@ -1407,9 +1437,11 @@ export function described() {
  * bytes and set level with its counterpart here (SC), the document it came
  * from the one opened beside; `version`, the version move to the latest
  * member holding the passage whole; `again`, the landing's read made again;
+ * `back`, the put-back (`putBack`); `read`, the draft's history at the state
+ * before the removal that took the passage (`readEarlier`);
  * `next` and `previous`, the step (`step`). Each acts only while the
  * landing's line stands.
- * @param {'beside' | 'version' | 'again' | 'back' | 'next' | 'previous'} which
+ * @param {'beside' | 'version' | 'again' | 'back' | 'read' | 'next' | 'previous'} which
  * @param {boolean} [byKey] a key made the act
  */
 export function landingAct(which, byKey = false) {
@@ -1417,6 +1449,7 @@ export function landingAct(which, byKey = false) {
   if (which === 'beside' && landed.beside) { const b = landed.beside; void toScene(b.a, shownIn(landed.addr), b.held, { beside: 'a', site: { span: { addr: landed.addr, pos: landed.pos } } }); }
   else if (which === 'version' && versionOffer) versionOffer(byKey);
   else if (which === 'back') putBack();
+  else if (which === 'read') readEarlier();
   else if (which === 'again' && retry) void retry(byKey);
   else if (which === 'next' || which === 'previous') step(which === 'next' ? 1 : -1, byKey);
 }
@@ -3054,9 +3087,16 @@ export function changeNear(past, now, near) {
  * state shown nor why, so a return asks it again (SC's `Held.past`).
  * The state asked is the draft as it stood before its newest change, the position
  * the row below the top row ends at; where the draft holds words the board has
- * not kept, the newest kept state, the top row's, the list saying so above it;
- * where no row stands below the top, the top row's own, which is how the
- * draft stands now, its corner saying so. The newest kept state is the draft
+ * not kept as the act is made, the newest kept state, the top row's, the list
+ * saying so above it while it does — read where each line is drawn, never kept
+ * from the act (SC's); where no row stands below the top, the top row's own, which is how the
+ * draft stands now, its corner saying so. Made at a removal's deletion face
+ * ("read it as it stood"; B3-S4, B3-S7), the state asked is the one before the
+ * removal: the newest commit read below the position its `delete` was acked
+ * at, the rows read until they hold one (`beforeRemoval`), else that position
+ * less one, which the board answers at the commit at or below it. The scene
+ * opens holding the passage the act was made at (`PastHeld.passage`) — the
+ * removal's words at its face, else by B3-S7's ladder (`heldPassage`). The newest kept state is the draft
  * as the board holds it now, read as the plane's acts read it and never from
  * the board's history (M-PUMP's `stateNow`). A past state refused as
  * reclaimed is asked again where it last stood, and one the board does not
@@ -3080,7 +3120,7 @@ export function changeNear(past, now, near) {
  * leaves it opening nothing. Where no board is held, the act answered where
  * it was made (FP-35).
  * @param {string} addr the draft
- * @param {{site?: Site | null, side?: 'a' | 'b' | null, at?: Element | null}} [opts] `site` where the act was made; `side` the reading scene's pane whose corner it was made at, whose selection the panes level at — the plane's where none is named; `at` the act's element, which a refusal's line stands beside — the walk's focus where none is named
+ * @param {{site?: Site | null, side?: 'a' | 'b' | null, at?: Element | null, removal?: {at: number, ids: import('../model/records.js').ISpan[], words: string} | null}} [opts] `site` where the act was made; `side` the reading scene's pane whose corner it was made at, whose selection the panes level at — the plane's where none is named; `at` the act's element, which a refusal's line stands beside — the walk's focus where none is named; `removal` the removal a deletion face's act was made at — the position its `delete` was acked at, its bytes and its words (W-WRITE's `Removal`)
  * @returns {Promise<boolean>} the scene shows, or the focus went into its history pane
  */
 export async function history(addr, opts = {}) {
@@ -3088,7 +3128,8 @@ export async function history(addr, opts = {}) {
   const act = LAYER.historyAct(addr);
   if (!act) return false;
   if (act.inert) { FOCUS.say(act.inert.text, false, true); return false; }
-  if (SCENE.pastOf() === addr) { SCENE.focusPast(); return true; }
+  // in the draft's own history scene: the focus into the history pane, the deletion face's act asking there the state before its removal
+  if (SCENE.pastOf() === addr) { if (opts.removal) SCENE.showBefore(opts.removal.at); SCENE.focusPast(); return true; }
   const mine = ++histories, start = made;
   const stands = () => mine === histories && made === start;
   /** a refused read answered at the act: its line beside the act's element and said, nothing opened (`historyRefused`) */
@@ -3096,15 +3137,16 @@ export async function history(addr, opts = {}) {
   WRITE.commit(addr);
   await WRITE.landed(addr);
   if (!stands()) return false;
-  const t0 = performance.now();
-  const read = await PUMP.historyOf(addr, { enough: (rows) => PAST.rowsOf(rows).length >= 2 });
+  const t0 = performance.now(), removal = opts.removal ?? null;
+  // the deletion face's act reads the rows until one holds a commit before the removal; the corner's the top row and the one below it
+  const read = await PUMP.historyOf(addr, { enough: (rows) => (removal ? beforeRemoval(PAST.rowsOf(rows), removal.at) != null : PAST.rowsOf(rows).length >= 2) });
   const readMs = performance.now() - t0;
   if (!stands()) return false;
   if (read.refused) { refused(read.refused); return false; }
   const rows = PAST.rowsOf(read.rows), unkept = WRITE.unkept(addr);
   // no row read, no state to open on: the draft as it stands is all its history holds
   if (!rows.length) { FOCUS.say(sentence('B3.history.now'), false, true); return false; }
-  const asked = (unkept ? null : rows[1]) ?? rows[0];
+  const asked = removal ? beforeRemoval(rows, removal.at) ?? Math.max(0, removal.at - 1) : ((unkept ? null : rows[1]) ?? rows[0]).last;
   const got = await SCENE.pastState(addr, rows, asked, read.head);
   if (!stands()) return false;
   if ('refused' in got) { refused(got.refused); return false; }
@@ -3114,8 +3156,53 @@ export async function history(addr, opts = {}) {
   /** @type {import('../scene/scene.js').Held} */
   const held = sel && sel.addr === addr ? { posA: sel.pos, widthA: sel.width, ...(sel.ids.length ? { sel: sel.ids, ...(opts.side ? { ids: sel.ids } : {}) } : {}) } : change ? { posA: change.a, widthA: 1, posB: change.b } : {};
   if (opts.side && !held.sel) held.sel = [];
-  held.past = { draft: addr, entries: read.rows, from: read.from, bottom: read.from === 0 || read.floor, head: read.head, asked: asked.last, unkept, figures: { pages: read.pages, read: read.read, readMs } };
+  const passage = removal ? { ids: removal.ids, words: removal.words } : heldPassage(addr, sel, opts.side ?? null);
+  held.past = { draft: addr, entries: read.rows, from: read.from, bottom: read.from === 0 || read.floor, head: read.head, asked, passage: passage.ids, words: passage.words, figures: { pages: read.pages, read: read.read, readMs } };
   return toScene(LAYER.paneSource(addr), addr, held, { site: opts.site ?? null, past: got });
+}
+
+/**
+ * The commit of a draft's rows standing before a removal's (`history`'s
+ * deletion face's act; the past states survey's U6): the newest commit read
+ * below the position the removal's `delete` was acked at — the state before
+ * the removal; null where the rows read hold none below it.
+ * @param {readonly import('../model/past.js').Row[]} rows newest first (M-PAST's `rowsOf`)
+ * @param {number} at the position the removal's `delete` was acked at (W-WRITE's `Removal.at`)
+ * @returns {number | null}
+ */
+function beforeRemoval(rows, at) {
+  return PAST.commitsOf(rows).find((p) => p < at) ?? null;
+}
+
+/**
+ * The passage a draft's history opens holding (B3-S7's ladder; P43's one
+ * order): the selection standing in the draft where the act was made — the
+ * plane's, or the reading scene's pane's whose corner it was made at
+ * (O-SELECTION's `asLeft`); else the span the draft's caret stands in
+ * (T-LAYER's `caretSpan`); else the walk's focused span in the draft; else the
+ * first span of the draft in view where the act was made — the plane's
+ * (O-VERSIONS' `firstInView`), or that pane's (SC's `firstSpanIn`) — each by
+ * its bytes' identity through the text the page shows of the draft
+ * (T-LAYER's `shownIdentity`), with its words read there; none where no rung
+ * holds one.
+ * @param {string} addr the draft
+ * @param {{addr: string, pos: number, width: number, ids: import('../model/records.js').ISpan[]} | null} sel the selection where the act was made (O-SELECTION's `asLeft`)
+ * @param {'a' | 'b' | null} side the reading scene's pane whose corner the act was made at; null on the plane
+ * @returns {{ids: import('../model/records.js').ISpan[], words: string}}
+ */
+export function heldPassage(addr, sel, side) {
+  const shown = LAYER.shownOf(addr);
+  /** the bytes and the words of a stretch of the text shown */
+  const of = (/** @type {number} */ pos, /** @type {number} */ width) => ({ ids: LAYER.shownIdentity(addr, pos, width), words: REC.textOf(shown.runs, pos, pos + width) });
+  if (sel && sel.addr === addr && sel.ids.length) {
+    const at = LAYER.placedShown(addr, sel.ids), z = at[at.length - 1];
+    return z ? { ids: sel.ids, words: REC.textOf(shown.runs, at[0].pos, z.pos + z.width) } : { ids: sel.ids, words: '' };
+  }
+  /** the block of the text shown holding a position, as a passage */
+  const span = (/** @type {number | null | undefined} */ pos) => { const b = pos == null ? null : LAYER.blockAt(addr, pos); return b ? of(b.pos, b.width) : null; };
+  const c = LAYER.caretIn(addr) ? LAYER.caretSpan(addr) : null, f = WALK.focusedSpan();
+  const first = side ? SCENE.firstSpanIn(side) : (VERSIONS.firstInView(addr) || { pos: null }).pos;
+  return span(c && c.block) ?? (f && f.addr === addr ? span(f.pos) : null) ?? span(first) ?? { ids: [], words: '' };
 }
 
 /** HOME's place and view: the acting account's region at mid scale; a guest's the board's extent (R92 rider (c)) */

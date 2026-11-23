@@ -90,6 +90,18 @@ the box it stands in at each (issue #678). A selection in the past pane follows 
 state before the word — a phrase after the word's place selected there moves with its words as "later ›" lands the word's
 state, said after the landing's title in one message (`selection-moves`); one spanning the word's place ends in the frame
 that state lands, none drawn, said with why (`selection-ends`).
+A past state's marks follow, after the editor pane (`past_marks_rows`; B3-S7, skep-frontend #675, #708, the past states
+survey's P8, P43, P44): two paragraphs typed and three words of them removed one at a time, each kept; the first removal's
+deletion face's act opening the history at the state before it, pane B marking by identity each passage the current text
+lacks — two of one line one mark carrying their count — in the removed ground (`marks`); the list's head first in the list,
+the passage held's words on one line, a long selection in pane B cut between words (`list-head`); a state holding none of
+the passage held saying so, the head's act opening its words whole (`not-in-state`); a mark reached by ↓ in pane B's walk
+and put back by Enter, one `reinstate`, its undo and redo, and a passage placed where the words before it stand at the press
+(`put-back`); the preview armed to name a passage by a member's identity, the line naming the member at it and its
+put-back's run naming the member, answered at the harness (`published-since`); and the list's and pane B's "now" lines
+following a line held at the newest kept state and its drop (`now-lines`). The moved scene's held version stands beside the
+draft on that page too, opened by the moved face's "see the held text", each pane's held words carrying the held bar
+(`moved-held-scene`; skep-frontend #617, #610).
 The editor pane follows them (`pane_rows`; skep-frontend #556, B3-S1's scene rule, B3-S13): a reading scene's pane holding
 the case's own draft typed in, its keys answered by its own lines, the way back to the kept caret, and the close re-taking
 the caret (`pane-typed`, `pane-lines`, `pane-way-back`, `pane-close`); and a paste made in a pane faced where it was made
@@ -282,6 +294,9 @@ STATES = [
          how='`scene.openHeld(own, [an insert row])`: the current text beside the held version re-derived (D6 BM-14; #411)',
          claim="a scene stands with the own draft in pane A and the derived record in pane B, derived, no compare asked; both panes' "
                "text at the reading size, no word cut at a pane's edge; the bar's re-level and dismiss acts in view"),
+    dict(screen='B3-S2', state='moved-held-scene', walk='W-08', step=7, drawn=True,
+         how="the moved line of `moved-face` held as the shell holds it — the frame the page sent — then the face's \"see the held text\" (D6 BM-14; skep-frontend #617, #610)",
+         claim="the scene stands with the draft in pane A and the held version in pane B, the held words in each pane carrying one held bar beside them and \"held\" (B3.held) once in that pane's edge — pane B's held words named as pane A's, by identity — the shared runs banded"),
     dict(screen='B3-S2', state='stopped', walk='W-08', step=7, drawn=True,
          how="fire `daemon` {board, state: 'stopped'} (D6 BM-9)",
          claim="the one line's daemon segment in its own-board stopped form (F.daemon.notebook.stopped)"),
@@ -403,6 +418,24 @@ STATES = [
     dict(screen='B3-S7', state='selection-ends', walk='W-08', step=8, drawn=True,
          how="as `selection-moves`, a phrase spanning the word's place selected in pane B at the state before it, then \"later ›\" clicked (issue #735)",
          claim='in the frame the state with the word lands the selection ends: pane B holding none, none of pane B\'s drawn and no live range in its text; the status region says after the landing\'s title that it ended and why — "The selection ended. What you selected now stands in pieces in ⟨that state\'s text⟩." (L.selection.ended, L.selection.pieces)'),
+    dict(screen='B3-S7', state='marks', walk='W-08', step=8, drawn=True,
+         how="two paragraphs typed after the case's own draft's first and kept, three words of them removed one at a time and kept — two in one line — then the first removal's deletion face's act \"read it as it stood\" clicked (P8; skep-frontend #675)",
+         claim="the history opens at the state before the removal — the commit below the position its `delete` was acked at — and pane B marks each passage of its state the current text lacks, by identity: the two removed from one line one mark carrying their count, the other its own, each at its line's edge a walk element out of the Tab order named \"removed here\" (B3.removed-here), the passages in the removed ground"),
+    dict(screen='B3-S7', state='list-head', walk='W-08', step=8, drawn=True,
+         how="as `marks`; then a long stretch of pane B's first paragraph selected by the gate's `select`, and the list scrolled beside the panes (skep-frontend #675)",
+         claim="the list's head stands first in the list, its first row the passage held's words on one line inside its box, a Tab stop of its own named by the words whole; a long selection in pane B is what it names, cut between words with \"…\"; beside the panes it stays at the column's top as the rows scroll; no step act of the passage's is drawn"),
+    dict(screen='B3-S7', state='not-in-state', walk='W-08', step=8, drawn=True,
+         how="as `marks`, then \"‹ earlier\" pressed until pane B's state holds none of the passage held, and the head's act pressed (skep-frontend #675)",
+         claim="pane B's corner says the state holds none of the passage held (B3.history.passage.none), and the head's act, neither pane holding it, opens the passage's words whole beneath the head"),
+    dict(screen='B3-S7', state='put-back', walk='W-08', step=8, drawn=True,
+         how="as `marks`; ↓ in pane B's walk to the lone mark, Enter, Enter; Mod+Z and Mod+Shift+Z with a caret in pane A; a word typed in pane A before the merged mark's first passage, then that passage's act (D5 K-102, K-75; P43)",
+         claim="Enter at the mark opens its face — C-49's words, then \"Put back in the current text\" (B3.history.put-back), focused — and Enter there places the passage by its identity, one `reinstate` acked, where the words before it stand at the press: pane A's rule outlines it, pane B's mark at it is gone; Mod+Z takes it out by one `delete` and Mod+Shift+Z places the same run again"),
+    dict(screen='B3-S7', state='published-since', walk='W-08', step=8, drawn=True,
+         how="`history.past` armed, once the page is quiet, to name the merged mark's other passage by a member's identity, then the history opened at the state before that passage's removal; then `op` armed `bad_run` and the passage's put-back pressed (M7 (c); the past states survey's R5)",
+         claim="the line \"these words were published as new in ⟨E.k⟩ …\" (B3.history.published-new) stands at the passage, naming the member; its put-back's `reinstate` names the member as its run's origin, its version kept"),
+    dict(screen='B3-S7', state='now-lines', walk='W-08', step=8, drawn=True,
+         how="the history at the newest kept state, then a line held at a word of pane A (`op` armed `held`), then dropped (skep-frontend #708)",
+         claim="while the line is held the list's top line reads \"now — not yet kept\" (L.history.unkept), \"later ›\" stands inert with its reason (L.history.newest-kept) and pane B's \"now\" is gone; the drop takes the line away and pane B and \"later ›\" say again it is how the draft stands now (B3.history.now)"),
     # B3-S1's scene rule (skep-frontend #556): a reading scene's pane holding the person's own draft is its editor
     dict(screen='B3-S1', state='pane-typed', walk='W-08', step=3, drawn=True,
          how="`window.__skep.scene.open(mine, DOC)`, a click on a word of pane A's text, then keys typed there; Mod+Z; a line held there (`op` armed `held`) (D5 K-70, K-72, K-75)",
@@ -533,6 +566,19 @@ def sentence(ctx, sid, values=None):
 def live(ctx):
     """what the status region says"""
     return ctx.js('(document.getElementById("live") || {}).textContent || ""')
+
+
+def pane_described(ctx, clauses, passage=None):
+    """pane B's description as the page sets it from its corner's clauses (SC's `namePane`): the clauses given, then — where the
+    state shown holds none of the passage held, or part (`passage`, `past().passage.in`) — the words saying so (B3-S7), joined as
+    fields and rendered for the ear; None where none stands"""
+    words = [c for c in clauses if c] + ([t(ctx, 'B3.history.passage.none' if passage == 'none' else 'B3.history.passage.part')] if passage else [])
+    return ctx.js('(async (w) => { const S = await import("./strings.js"); return S.heard(S.fields(...w)); })(%s)' % json.dumps(words)) if words else None
+
+
+def passage_in(ctx):
+    """whether the state pane B shows holds none of the passage held (`none`), part (`part`), or all of it or none is held (None)"""
+    return (((ctx.js('window.__skep.scene.past()') or {}).get('passage')) or {}).get('in')
 
 
 def page_calls(ctx):
@@ -1803,6 +1849,30 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
                 'the kept word\'s act (K-57)': (word_ok, {'statement': said}),
                 'the held bar (D8)': (m['words'] > 0 and m['beside'] == 1 and [x['kind'] for x in m['marks']] == ['held'] and len(m['held']) == 1 and m['held'][0]['text'] == t(ctx, 'B3.held'), m)}
     shoot('moved-face', moved_check, recentre)
+    # the held version beside the draft (B3-S2; D6 BM-14): the moved line held as the shell holds it — the frame the page sent for
+    # it — then the face's "see the held text"; each pane's held words carry the held bar and "held" once in that pane's edge
+    sent_frame = ctx.js('(() => { const c = window.__skep.bridge.calls().filter((c) => c.name === "op" && /"op":"insert"/.test(c.frame || "") && / Moved\\./.test(c.frame || "")).pop(); return c ? JSON.parse(c.frame) : null; })()')
+    moved_line = dict(held_row(k, 'moved', sent=True, refusal=refusal('arrangement_moved', as_of=1, current=2), sendable=False, hands=hands), frame=sent_frame)
+    set_held = bool(sent_frame) and ctx.js('window.__skep.write.setHeld(%s, %s)' % (json.dumps(mine), json.dumps([moved_line])))
+    ctx.frames(2)
+    see = bool(set_held) and face_act('held')
+    held_scene = see and wait_for(ctx, 'window.__skep.scene.isOpen() && (window.__skep.scene.pair() || {}).a === %s' % json.dumps(mine), 20)
+    ctx.settle(10); ctx.frames(3)
+
+    def held_scene_check(w):
+        at, width = len(line1.encode('utf8')) + 1, len(' Moved.')
+        got = {side: ctx.js(PANE_MARKS % (json.dumps(side), json.dumps(mine), at, width, json.dumps('held'))) or {} for side in ('A', 'B')}
+        signs = ctx.js('["sceneA", "sceneB"].map((id) => [...document.querySelectorAll("#" + id + " > .edge-sign[data-sign=held]")].filter((e) => getComputedStyle(e).display !== "none").length)')
+        bands = [x for x in (ctx.js('window.__skep.scene.ties()') or []) if x.get('kind') == 'band']
+        bar = lambda g: g.get('words', 0) > 0 and g.get('beside') == 1 and (g.get('word') or {}).get('id') == 'B3.held'
+        return {'the held bar in pane A': (bar(got['A']), got['A']), "the held bar in pane B, by the words' identity": (bar(got['B']), got['B']),
+                '"held" once in each pane\'s edge': (signs == [1, 1], signs), 'the shared runs banded': (len(bands) >= 1, len(bands))}
+    if held_scene:
+        shoot('moved-held-scene', held_scene_check, marks={NARROW_PX: {'the held bar in pane A': '#758', "the held bar in pane B, by the words' identity": '#758'}})
+    else:
+        red('moved-held-scene', {'frame': bool(sent_frame), 'set': set_held, 'see': see})
+    ctx.js('window.__skep.scene.close()'); ctx.settle(10); ctx.frames(2)
+    open_corner(False)
     # the first key after the verdict (BM-18): typed, held behind, and followed by the verdict's line
     quiet()
     seq = ctx.editor_seq()
@@ -1917,6 +1987,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
     past_rows(ctx, r, shoot, red, ops_allowed, held)
     past_selection_steps(ctx, r, shoot, red, ops_allowed, held)
     pane_rows(ctx, r, shoot, red, ops_allowed, held)
+    past_marks_rows(ctx, r, shoot, red, ops_allowed, held)
 
 
 # the words the reopen row's armed line types before the case's own draft's first line: a paragraph of their own
@@ -2998,7 +3069,7 @@ IN_FLIGHT_SEEN = '''(async (sel) => { const b = document.querySelector(sel); if 
     return {clicked: true, head: c.classList.contains("head"), words, id: e.dataset.string || null, busy: e.getAttribute("aria-busy"), mark: !!e.querySelector('.running[data-string="L.running"]'),
             marks: c.querySelectorAll(".running").length, why: why ? {words: why.textContent, busy: why.getAttribute("aria-busy"), mark: !!why.querySelector(".running")} : null,
             held: !!row && row.dataset.held === "1", after_title: before(t, e), before_chip: before(e, chip), labelled: pane.getAttribute("aria-labelledby"), description: pane.getAttribute("aria-description"), pane_busy: pane.getAttribute("aria-busy"),
-            past: p ? {at: p.at, asked: p.asked, met: p.met, running: p.running, inFlight: p.inFlight} : null}; };
+            past: p ? {at: p.at, asked: p.asked, met: p.met, running: p.running, inFlight: p.inFlight, passage: p.passage ? p.passage.in : null} : null}; };
   return await new Promise((res) => {
     let timer = 0;
     const obs = new MutationObserver(() => { const v = read(); if (v) { obs.disconnect(); clearTimeout(timer); res(v); } });
@@ -3125,7 +3196,8 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     again at its row and read by the test board, pane B on it, the line, the act and the mark gone (skep-frontend #702).
     `unkept`: a line held, then the act — the newest kept state, the list's top line saying so. At `read`, `reclaimed`,
     `now`, `now-moved`, `not-last`, `in-flight`, `unread` and `unkept`, at both widths, every word of both panes' corners stands inside
-    the box it is set in, 1 px either way, the worst excess a figure (`fit_part`; issue #678). No `history.past` is called; the
+    the box it is set in, 1 px either way, the worst excess a figure (`fit_part`; issue #678). `history.past`, a reading row, is
+    called at each rest on a past state, `history.restore` never; the
     rows' writes are the two typed lines and the held line's drop."""
     mine, corner, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'corner', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
     sid, figures = m['sid'], m['figures']
@@ -3323,7 +3395,7 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         # pane B's name as the AX tree computes it: its title's own element, then its address — the same at every fit (`named`,
         # below) — and no description, the state shown the one its act asked (issue #687)
         pane_names[w] = got_as = named_as(ctx, '#sceneB') or {}
-        name_ok = got_as.get('name') == '%s %s' % (heard(ctx, ex.get('corner') or ''), lead.get('address')) and got_as.get('description') is None
+        name_ok = got_as.get('name') == '%s %s' % (heard(ctx, ex.get('corner') or ''), lead.get('address')) and got_as.get('description') == pane_described(ctx, [], passage_in(ctx))
         return {'the state': (state_ok, {'at': P.get('at'), 'rows': [x['last'] for x in rows[:4]], 'b': pane_text('b')[:100], 'want': text1[:100]}),
                 'the days': (dates_ok and folded_ok, {'heads': {k: (v['head'], v['folded'], v['act']) for k, v in heads.items()}, 'want': exdays, 'yesterday': y}),
                 'the rows': (rows_ok and marks_ok, {'lines': lines[:10], 'want': list(exrows.values())[:10], 'version': want['version']}),
@@ -3618,7 +3690,7 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         corner_ok = (seen.get('words') == words and seen.get('id') == 'B3.history.not-last' and seen.get('count') == str(n_want) and seen.get('pending') is False
                      and seen.get('after_title') and seen.get('before_chip') and not seen.get('more') and not seen.get('now') and (seen.get('held') or not seen.get('head')))
         named_ok = (lead.get('labelled') == 'sceneB-title sceneB-name' and got_as.get('name') == '%s %s' % (heard(ctx, lead.get('words') or ''), lead.get('address'))
-                    and got_as.get('description') == heard(ctx, words))
+                    and got_as.get('description') == pane_described(ctx, [words], passage_in(ctx)))
         return {'the state shown, not its minute\'s last': (state_ok, {'signed': signed_n, 'armed': armed_n, 'opened': opened_n, 'consumed': taken_n, 'told': told, 'at': P.get('at'), 'want_at': below1.get('last'),
                                                                      'not_last': P.get('notLast'), 'n_want': n_want, 'why': P.get('why'), 'rows': [(x['first'], x['last'], x['hand']['kind']) for x in rows[:4]]}),
                 'its corner\'s clause': (corner_ok, dict(seen, want=words, n_want=n_want)),
@@ -3645,8 +3717,9 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
           const asked = p.days.flatMap((d) => d.rows).find((r) => r.positions.includes(p.asked));
           return {clause: asked ? T.t("B3.history.in-flight", {time: asked.time == null ? T.t("L.history.floor.untimed") : T.stoodAt(asked.time)}) : null, busy: T.t("B3.history.busy")}; })()''') or {}
         clause, busy = want.get('clause'), want.get('busy')
-        # the line names pane B after its title; the clause alone describes it
-        described = heard(ctx, clause) if clause else None
+        # the line names pane B after its title; the clause describes it, the words saying the state shown holds none of the passage
+        # held or part after it where they stand (B3-S7)
+        described = pane_described(ctx, [clause], (seen.get('past') or {}).get('passage')) if clause else None
         after = ctx.js('''(() => { const c = document.querySelector("#sceneB > .corner"), pane = document.getElementById("sceneB"), l = document.getElementById("scenepast");
           return {inflight: !!c && !!c.querySelector(".inflight"), busy: !!c && !!c.querySelector("[aria-busy]"), description: pane ? pane.getAttribute("aria-description") : null, reading: !!l && !!l.querySelector(".pl-reading")}; })()''') or {}
         past0 = seen.get('past') or {}
@@ -3655,8 +3728,8 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         clause_ok = (seen.get('words') == clause and seen.get('id') == 'B3.history.in-flight' and seen.get('busy') == 'true' and seen.get('mark') and seen.get('marks') == 1
                      and seen.get('why') == {'words': busy, 'busy': None, 'mark': False} and seen.get('pane_busy') is None and seen.get('after_title') and seen.get('before_chip')
                      and (seen.get('held') or not seen.get('head')) and seen.get('labelled') == 'sceneB-title sceneB-why sceneB-name' and seen.get('description') == described)
-        gone_ok = landed_f and after == {'inflight': False, 'busy': False, 'description': None, 'reading': False}
         end = ctx.js('window.__skep.scene.past()') or {}
+        gone_ok = landed_f and after == {'inflight': False, 'busy': False, 'description': pane_described(ctx, [], (end.get('passage') or {}).get('in')), 'reading': False}
         return {'the state asked, read again': (state_ok, {'armed': armed_f, 'consumed': taken_f, 'past': past0, 'clause': clause, 'timed_out': seen.get('timedOut')}),
                 'its corner\'s in-flight clause': (clause_ok, dict(seen, want=clause, want_why=busy, want_description=described)),
                 'the clause gone as the state lands': (gone_ok, dict(after, landed=landed_f, past={k: end.get(k) for k in ('at', 'asked', 'met', 'running', 'inFlight')})),
@@ -3971,7 +4044,7 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
             as0 = named_as(ctx, '#sceneB') or {}
             flight_ok = (out_ok and P0.get('out') == want and P0.get('asked') == want and P0.get('at') == ab_s['last'] and P0.get('running') is False and P0.get('inFlight') and clause.endswith(P0['inFlight'])
                          and seen0.get('words') == clause and seen0.get('busy') == 'true' and seen0.get('mark') and seen0.get('marks') == 1 and seen0.get('why') is None and seen0.get('pane_busy') is None
-                         and seen0.get('reading') and as0.get('name') == name0 and (as0.get('description') or '').endswith(heard(ctx, clause)) and pane_text('b') == text0)
+                         and seen0.get('reading') and as0.get('name') == name0 and (as0.get('description') or '').endswith(pane_described(ctx, [clause], (P0.get('passage') or {}).get('in')) or '\x00') and pane_text('b') == text0)
             # answered busy at every attempt the read makes: the scene reads it again
             answered = []
             for _ in range(int(attempts)):
@@ -4111,7 +4184,7 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
     calls = [c['name'] for c in page_calls(ctx)[calls0:]]
     health1 = ctx.health()
     r.figures['past_rows'] = {'log_position_before': health0.get('log_position'), 'log_position_after': health1.get('log_position'), 'calls': dict(Counter(calls))}
-    r.check(not any(c.startswith('history.') for c in calls) and 'changes' in calls, "B3-S7: the history read by `changes`, a reading row; no `history.past` or `history.restore` called", dict(Counter(calls)))
+    r.check(not any(c.startswith('history.') and c != 'history.past' for c in calls) and 'changes' in calls, "B3-S7: the history read by `changes`, and a past state's preview by `history.past`, reading rows; no `history.restore` called", dict(Counter(calls)))
 
 
 # the first position of words in pane B's text, as its record's blocks place them (formatted with the words, as JSON); null where
@@ -4252,6 +4325,453 @@ def past_selection_steps(ctx, r, shoot, red, ops_allowed, m):
     close_scene()
 
 
+# a past state's marks as pane B shows them (B3-S7): the scene's own reading — the removed passages and their words, their marks,
+# the face standing whole, the words a publication re-minted, the put-back's words, the passage held, the preview, whether the draft
+# holds words the board has not kept, the line saying why and the steps' reasons — and each mark's element as a person meets it:
+# its key, whether it is drawn, its name, whether it stands open, its Tab stop, its string, and its face's parts and acts; the
+# rules standing in each pane, by their kind; the lines saying words were published as new; whether the removed ground is drawn
+MK_PAST = """(() => { const p = window.__skep.scene.past(); if (!p) return null; const pane = document.getElementById("sceneB");
+  const drawn = (e) => { const r = e.getBoundingClientRect(); return getComputedStyle(e).display !== "none" && r.width > 0 && r.height > 0; };
+  const marks = [...pane.querySelectorAll(":scope > .removed-at")].map((e) => { const b = e.querySelector("button[data-removed]"), f = e.querySelector(".removed-face");
+    return {key: e.dataset.mark, drawn: drawn(e), label: b && b.getAttribute("aria-label"), expanded: b && b.getAttribute("aria-expanded"), tab: b ? b.tabIndex : null, string: b && b.dataset.string,
+            face: f ? {parts: [...f.querySelectorAll(".part[data-string]")].map((x) => x.dataset.string), acts: [...f.querySelectorAll("button[data-put]")].map((a) => ({put: Number(a.dataset.put), words: a.textContent, string: a.dataset.string, inert: a.getAttribute("aria-disabled")}))} : null}; });
+  const rules = (id) => [...document.querySelectorAll("#" + id + " > .past-mark.rule")].filter(drawn).map((e) => [...e.classList].filter((c) => c === "passage" || c === "put").join(""));
+  return {at: p.at, asked: p.asked, removed: p.removed, marks: p.marks, faced: p.faced, republished: p.republished, put: p.put, passage: p.passage, preview: p.preview, unkept: p.unkept, why: p.why, steps: p.steps,
+          figures: p.figures, drawn: marks, rulesA: rules("sceneA"), rulesB: rules("sceneB"), ground: !!(window.CSS && CSS.highlights && CSS.highlights.has("skep-removed")),
+          news: [...pane.querySelectorAll(":scope > .past-mark .past-face.new")].map((e) => ({words: e.textContent, string: e.dataset.string, drawn: drawn(e)}))}; })()"""
+# what the platform's focus stands on: a removed passages' mark, a put-back act, the list's head's first row, else the element's id
+MK_FOCUS = """(() => { const a = document.activeElement; if (!a) return null; const d = a.dataset || {}; return d.removed ? "mark:" + d.removed : d.put ? "put:" + d.put : d.passage ? "passage" : a.id || a.tagName; })()"""
+# the list's head as a person meets it: whether it stands first in the list, its first row's words, its name, its Tab stop, how far
+# its words run past its box, the lines they are set on, its box and the list's, whether a step act of the passage's stands in the
+# list, the words standing whole beneath it, and whether the list stands in its column beside the panes
+MK_HEAD = """(() => { const l = document.getElementById("scenepast"), top = l && l.querySelector(":scope > .pl-top"), b = top && top.querySelector("button[data-passage]");
+  if (!l || !top || !b) return {first: false}; const q = (e) => { const r = e.getBoundingClientRect(); return {x: r.left, y: r.top, w: r.width, h: r.height}; };
+  const w = b.querySelector(".pl-words"), whole = top.querySelector(".pl-whole");
+  return {first: l.firstElementChild === top, words: w ? w.textContent : null, name: b.getAttribute("aria-label"), tab: b.tabIndex, over: b.scrollWidth - b.clientWidth,
+          lines: w ? [...w.getClientRects()].filter((k) => k.width > 0).length : 0, box: q(b), top: q(top), list: q(l),
+          steps: !!l.querySelector('[data-string="B3.history.earlier-change"], [data-string="B3.history.next-change"]'), whole: whole ? whole.textContent : null, beside: l.classList.contains("beside")}; })()"""
+# the removed passages' computation a mark's reading makes, over the two panes' images as they stand: ms a read, and each image's
+# runs and positions (FP-18)
+MK_MARKS_MS = """(async () => { const S = await import("./scene/scene.js"), L = await import("./text/layer.js"), a = document.querySelector("#sceneA > article.dtext"), b = document.querySelector("#sceneB > article.dtext");
+  const A = a && L.madeOf(a), B = b && L.madeOf(b); if (!A || !B) return null; const t0 = performance.now(); for (let i = 0; i < 20; i++) S.removedIn(A.image, B.image);
+  const size = (im) => ({runs: im.length, positions: im.reduce((n, r) => n + r.width, 0)}); return {ms: (performance.now() - t0) / 20, a: size(A.image), b: size(B.image)}; })()"""
+
+
+def past_marks_rows(ctx, r, shoot, red, ops_allowed, m):
+    """A PAST STATE's MARKS, THE PUT-BACK, THE LIST's HEAD AND THE "NOW" LINES (B3-S7; skep-frontend #675, #708; the past states
+    survey's P7, P8, P43, P44), on the machine's page at the case's own draft (`mine`). Two paragraphs typed after the draft's
+    first and kept by the test board, then three words of them removed one at a time, each removal kept — two in one line, one in
+    the other — each removal keeping the position its `delete` was acked at.
+    `marks`: the first removal's deletion face opened whole and its act "read it as it stood" (B3.deletion.read-earlier) clicked —
+    the history opened at the state before that removal, the commit below the position its `delete` was acked at, pane B the
+    test board's text there; the three passages the current text lacks marked in pane B by their identity, the two of one line
+    one mark carrying their count, the other its own, each a walk element named "removed here" (B3.removed-here) out of the Tab
+    order, the passages in the removed ground; the removed passages' reading a figure.
+    `list-head`: the list's head first in the list, its first row the passage held's words never wrapping and nothing running
+    past its box, a Tab stop of its own named by the words whole; a long selection in pane B named there cut between words with
+    "…"; held at the column's top as the rows scroll beside the panes; no step act of the passage's drawn.
+    `not-in-state`: "‹ earlier" pressed back past the state that typed the passage held — pane B's corner saying the state holds
+    none of it (B3.history.passage.none) — and the head's act, neither pane holding it, opening its words whole beneath the head.
+    `put-back`: pane B's walk stepped by ↓ from its first span to the lone mark, Enter there opening its face — C-49's words and
+    "Put back in the current text" (B3.history.put-back), the act focused — and Enter taking it: ONE `reinstate` of the passage's
+    own I-run, acked; the test board's text holding the words where the words before them stand, pane A's rule outlining them,
+    pane B's mark at them gone; with a caret in pane A, Mod+Z taking them out — one `delete` — and the mark back, Mod+Shift+Z
+    placing the same run again; then a word typed in pane A before the merged mark's first passage, and that passage put back by
+    its face's act: placed where the words before it stand at the press. The put-back's answer a figure.
+    `published-since`: the preview armed to name the merged mark's other passage by a member's identity, the history read again
+    at the state before that passage's removal — the line "these words were published as new in ⟨E.k⟩ …"
+    (B3.history.published-new) at it — and its put-back's `reinstate` answered at the harness `bad_run`: its run named by the
+    member, its version kept, so no member's run reaches the board. The preview's read a figure.
+    `now-lines`: the history at the newest kept state, then a line held at a word of pane A: the list's top line "now — not yet
+    kept" (L.history.unkept) and "later ›"'s reason (L.history.newest-kept), pane B's "now" gone; its drop takes the line away and
+    pane B and "later ›" say again it is how the draft stands now (B3.history.now).
+    Each checked against `strings.js` and shot at both widths. `history.past` is called at a rest, `history.restore` never. The
+    writes name the case's own draft: the typing, the removals, the put-backs and their undo and redo, and the held line's drop."""
+    mine, sid, quiet, recentre, press, hold_typed, drop_all, figures = (m[k] for k in ('mine', 'sid', 'quiet', 'recentre', 'press', 'hold_typed', 'drop_all', 'figures'))
+    names = ('marks', 'list-head', 'not-in-state', 'put-back', 'published-since', 'now-lines')
+    act_sel = m['corner'] + HISTORY_ACT
+    calls0 = len(page_calls(ctx))
+    past_now = lambda: ctx.js('window.__skep.scene.past()') or {}
+    seen = lambda: ctx.js(MK_PAST) or {}
+    commits = lambda: sorted({x for d in past_now().get('days') or [] for row in d['rows'] for x in row['positions']})
+    text_of = lambda: ctx.js(SHOWN_TEXT % json.dumps(mine)) or ''
+    pane_text = lambda side: ''.join(b['text'] for b in ((ctx.js('window.__skep.scene.panes()') or {}).get(side) or {}).get('blocks') or [])
+    flat = lambda s: (s or '').replace('\n', '')
+    nb = lambda s: len(s.encode('utf8'))
+    kept = lambda max_s=20: wait_for(ctx, '(() => { const s = window.__skep.write.state(%s); return !!s.kept && s.kept.word === "kept" && !s.inFlight && window.__skep.write.edits(%s).length === 0; })()' % (json.dumps(mine), json.dumps(mine)), max_s)
+
+    def place(pos):
+        ctx.js('(async () => (await import("./text/layer.js")).placeCaret(%s, %d))()' % (json.dumps(mine), pos)); ctx.frames(2)
+
+    def drop_caret():
+        ctx.js('(async () => (await import("./text/layer.js")).dropCaret())()'); ctx.frames(2)
+
+    def at_of(text, sub, after=0):
+        """the position of `sub`'s first byte in a text, its first occurrence at or past the character `after`"""
+        return nb(text[:text.index(sub, after)]) + 1
+
+    def close_scene():
+        if ctx.js('window.__skep.scene.isOpen()'):
+            ctx.js('window.__skep.scene.close()'); ctx.settle(15); ctx.frames(2)
+
+    def board_at(at):
+        return ctx.js('(async (a, at) => { const s = await (await import("./model/pump.js")).stateAt(a, at); return "refused" in s ? null : s.runs.map((x) => x.text || "").join(""); })(%s, %d)' % (json.dumps(mine), at), timeout=60)
+
+    def board_text():
+        """the draft's text as the test board holds it, read through the page's port over the text shown's length"""
+        got = port_op(ctx, sid, {'op': 'retrieve_v', 'specs': [{'doc': mine, 'span': {'start': '1.1', 'width': '0.%d' % max(1, nb(text_of()))}}]})
+        return ''.join(i.get('content', '') for i in (((got or {}).get('result') or {}).get('items') or []))
+
+    def writes_since(n0):
+        """the write frames the page sent from its `n0`-th call on: each its op, the document, its position, its runs and its answer"""
+        out = []
+        for c in ctx.js('((n) => window.__skep.bridge.calls().slice(n).filter((c) => c.name === "op").map((c) => ({frame: c.frame || null, answer: c.answer || null})))(%d)' % n0) or []:
+            try:
+                f = json.loads(c['frame'] or 'null')
+            except (TypeError, ValueError):
+                continue
+            if isinstance(f, dict) and f.get('op') and 'frame' not in f and f['op'] not in ops_allowed:
+                out.append({'op': f['op'], 'doc': f.get('doc'), 'at': (f.get('at') or {}).get('ordinal'), 'runs': f.get('runs'), 'answer': c['answer'] or ''})
+        return out
+
+    def opened_at(want=None, max_s=30):
+        """the scene stands on the draft's history, its reads answered — at the commit `want` where one is named"""
+        came = wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return window.__skep.scene.isOpen() && !!p && p.draft === %s && p.out == null && !p.running%s; })()'
+                        % (json.dumps(mine), '' if want is None else ' && p.at === %d' % want), max_s)
+        ctx.settle(20); ctx.frames(3)
+        return came
+
+    def landed(at, max_s=20):
+        ok = at is not None and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.at === %d && p.asked === %d && p.out == null && !p.running; })()' % (at, at), max_s)
+        ctx.frames(2)
+        return ok
+
+    def read_earlier(removal):
+        """the removal's deletion face opened whole on the plane, its line framed, and its act "read it as it stood" clicked: whether
+        the act stood there to click"""
+        close_scene()
+        ctx.leap(mine, removal['line']); ctx.settle(10); ctx.frames(3)
+        ctx.js('(async (a, id) => { const D = await import("./overlays/deletion.js"); if (!D.standing(a).some((x) => x.id === id && x.whole)) D.act(a, id); })(%s, %d)' % (json.dumps(mine), removal['id']))
+        sel = '#removed button[data-read="%d"][data-doc="%s"]' % (removal['id'], mine)
+        there = wait_for(ctx, '!!document.querySelector(%s)' % json.dumps(sel), 8)
+        if there:
+            ctx.js('document.querySelector(%s).click()' % json.dumps(sel))
+        return there
+
+    def walk_to(key, limit=60):
+        """pane B's walk taken from its first span by ↓, one stop at a time, to the mark keyed `key`: whether the focus came to it"""
+        ctx.js('document.getElementById("sceneB").focus({preventScroll: true})'); ctx.frames(1)
+        ctx.drv.key('Home'); ctx.frames(2)
+        for _ in range(limit):
+            if ctx.js(MK_FOCUS) == 'mark:' + key:
+                return True
+            ctx.drv.key('ArrowDown'); ctx.frames(2)
+        return ctx.js(MK_FOCUS) == 'mark:' + key
+
+    def to_passage():
+        """the head's act: the passage held brought into view in each pane holding it"""
+        ctx.js('(async () => (await import("./scene/scene.js")).passageAct())()'); ctx.frames(3)
+
+    # ---- two paragraphs typed after the draft's first and kept, then three words removed one at a time, each kept -------------
+    quiet(); close_scene(); recentre(); ctx.settle(10); quiet()
+    t0 = text_of()
+    first_end = nb(t0.split('\n')[0]) + 1
+    place(first_end)
+    ctx.drv.key('Enter'); ctx.drv.key('Enter'); ctx.frames(2)
+    press('Qx one zv two.')
+    typed1 = kept(); quiet()
+    t1 = text_of()
+    place(at_of(t1, 'Qx one zv two.') + nb('Qx one zv two.'))
+    ctx.drv.key('Enter'); ctx.drv.key('Enter'); ctx.frames(2)
+    press('Jq three wk.')
+    typed2 = kept(); quiet()
+
+    def remove(word, line):
+        """`word`, its leading space with it, taken out by Backspace at the caret after it in the paragraph `line` begins, kept"""
+        tx = text_of()
+        i = tx.index(line)
+        after = at_of(tx, word, i) + nb(word)
+        place(after)
+        for _ in range(nb(word)):
+            ctx.drv.key('Backspace')
+        ctx.frames(2)
+        drop_caret()
+        ok = kept(); quiet()
+        return ok, at_of(text_of(), line)
+    removed_ok, lines = [], {}
+    for word, line in ((' one', 'Qx'), (' two', 'Qx'), (' three', 'Jq')):
+        ok, at = remove(word, line)
+        removed_ok.append(ok); lines[word] = at
+    listed = ctx.js('(async (a) => (await import("./write/write.js")).removalsOf(a).map((r) => ({id: r.id, words: r.words, at: r.at})))(%s)' % json.dumps(mine)) or []
+    by = {x['words']: dict(x, line=lines.get(x['words'])) for x in listed if x['words'] in lines}
+    ready = (typed1 and typed2 and all(removed_ok) and set(by) == set(lines) and all(isinstance(by[w]['at'], int) for w in by) and by[' one']['at'] < by[' two']['at'] < by[' three']['at'])
+    r.check(ready, "B3-S7 · marks: two paragraphs typed after the case's own draft's first and kept by the test board, then three words removed one at a time, each removal kept and keeping the position its `delete` was acked at (the past states survey's U6)",
+            {'typed': [typed1, typed2], 'removed': removed_ok, 'removals': listed[-4:], 'text': text_of()[:400]})
+    if not ready:
+        for s in names:
+            red(s, {'setup': {'typed': [typed1, typed2], 'removed': removed_ok, 'removals': listed[-4:]}})
+        return
+    r1, r2 = by[' one'], by[' two']
+
+    # ---- `marks`: the first removal's face's act opens the history at the state before it --------------------------------------
+    clicked = read_earlier(r1)
+    came = clicked and opened_at()
+    before1 = max([c for c in commits() if c < r1['at']], default=None)
+    P0 = past_now()
+    b_ok = came and before1 is not None and P0.get('at') == before1 and flat(pane_text('b')) == flat(board_at(before1) or '')
+    r.check(b_ok, "B3-S7 · marks: the deletion face's act \"read it as it stood\" (B3.deletion.read-earlier) opens the draft's history at the state before the removal — the commit below the position its `delete` was acked at — pane B the test board's text there (P8)",
+            {'clicked': clicked, 'came': came, 'at': P0.get('at'), 'want': before1, 'removal_at': r1['at'], 'b': pane_text('b')[:300]})
+    figures['past_marks'] = {'removed_ms': ctx.js(MK_MARKS_MS), 'figures': P0.get('figures')}
+
+    def groups_of(g):
+        words = {x['pos']: x['words'] for x in g.get('removed') or []}
+        return [[words.get(x['pos']) for x in mk['members']] for mk in g.get('marks') or []]
+
+    def marks_check(w):
+        to_passage()
+        g = seen()
+        drawn = {x['key']: x for x in g.get('drawn') or []}
+        merged = next((mk for mk in g.get('marks') or [] if len(mk['members']) == 2), None)
+        alone = next((mk for mk in g.get('marks') or [] if len(mk['members']) == 1), None)
+        here = heard(ctx, t(ctx, 'B3.removed-here'))
+        ok = ([x['words'] for x in g.get('removed') or []] == [' one', ' two', ' three'] and groups_of(g) == [[' one', ' two'], [' three']] and bool(merged) and bool(alone)
+              and set(drawn) == {merged['key'], alone['key']} and all((x['string'], x['tab'], x['expanded']) == ('B3.removed-here', -1, 'false') for x in drawn.values())
+              and drawn[alone['key']]['label'] == here and drawn[merged['key']]['label'] != here and '2' in (drawn[merged['key']]['label'] or '') and drawn[merged['key']]['drawn'] and g.get('ground') is True)
+        return {'the marks by identity': (ok, {'removed': g.get('removed'), 'groups': groups_of(g), 'drawn': g.get('drawn'), 'ground': g.get('ground'), 'here': here})}
+    if b_ok:
+        shoot('marks', marks_check)
+    else:
+        red('marks', {'opened': came, 'at': P0.get('at'), 'want': before1})
+
+    # ---- `list-head`: the head first, the passage held's words on one line, a long selection cut between words -----------------
+    def head_check(w):
+        h, P = ctx.js(MK_HEAD) or {}, past_now().get('passage') or {}
+        named = heard(ctx, [{'text': ' '.join((P.get('words') or '').split()), 'face': 'reading'}])
+        ok = (h.get('first') is True and h.get('words') == P.get('cut') == 'one' and h.get('name') == named and h.get('tab') == 0 and (h.get('over') or 0) <= 1 and h.get('lines') == 1
+              and h.get('steps') is False and h.get('whole') is None)
+        first = ((((ctx.js('window.__skep.scene.panes()') or {}).get('b') or {}).get('blocks')) or [{}])[0]
+        ctx.js('window.__skep.select(%s, %d, %d, "b")' % (json.dumps(mine), first.get('pos') or 1, min(160, nb(first.get('text') or '')))); ctx.frames(3)
+        h2, P2 = ctx.js(MK_HEAD) or {}, past_now().get('passage') or {}
+        words2 = ' '.join((P2.get('words') or '').split())
+        cut = h2.get('words') or ''
+        cut_ok = (len(words2) > 60 and cut == P2.get('cut') and cut.endswith('…') and words2.startswith(cut[:-1].rstrip()) and (h2.get('over') or 0) <= 1 and h2.get('lines') == 1
+                  and h2.get('name') == heard(ctx, [{'text': words2, 'face': 'reading'}]))
+        ctx.js('(async () => (await import("./overlays/selection.js")).clear("b"))()'); ctx.frames(3)
+        held_ok, h3 = True, {}
+        if h.get('beside'):
+            ctx.js('document.getElementById("scenepast").scrollTop = 600'); ctx.frames(2)
+            h3 = ctx.js(MK_HEAD) or {}
+            held_ok = abs(((h3.get('top') or {}).get('y') or 0) - ((h.get('top') or {}).get('y') or 0)) <= 1
+            ctx.js('document.getElementById("scenepast").scrollTop = 0'); ctx.frames(2)
+        to_passage()
+        outlined = seen()
+        ok = ok and 'passage' in (outlined.get('rulesB') or []) and 'passage' not in (outlined.get('rulesA') or [])
+        return {"the head's first row": (ok, {'head': h, 'passage': P, 'named': named, 'rules': [outlined.get('rulesA'), outlined.get('rulesB')]}),
+                'a long selection in pane B cut between words': (cut_ok, {'head': h2, 'words': words2[:200], 'cut': P2.get('cut')}),
+                "held at the column's top as the rows scroll": (held_ok, {'before': h.get('top'), 'after': h3.get('top')})}
+    if b_ok:
+        shoot('list-head', head_check)
+    else:
+        red('list-head', {'opened': came})
+
+    # ---- `not-in-state`: "‹ earlier" back past the state that typed the passage held -------------------------------------------
+    target = None
+    for _ in range(12):
+        P = past_now()
+        if (P.get('passage') or {}).get('in') == 'none':
+            target = P.get('at')
+            break
+        if P.get('at') is None or not ctx.js(STEP_CLICK % json.dumps('earlier')):
+            break
+        stepped = wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && p.at !== %d && p.at === p.asked && p.out == null && !p.running; })()' % P['at'], 30)
+        ctx.frames(2)
+        if not stepped:
+            break
+    if target is not None:
+        ctx.js('(() => { const b = document.querySelector("#scenepast button[data-passage]"); if (b) b.click(); })()'); ctx.frames(3)
+
+    def not_in_check(w):
+        e = ctx.js('(() => { const e = document.querySelector("#sceneB > .corner .passage-word"); return e ? {words: e.textContent, id: e.dataset.string} : null; })()') or {}
+        h, P = ctx.js(MK_HEAD) or {}, past_now()
+        ok = e == {'words': t(ctx, 'B3.history.passage.none'), 'id': 'B3.history.passage.none'} and (P.get('passage') or {}).get('in') == 'none'
+        whole_ok = h.get('whole') == 'one' and (P.get('passage') or {}).get('whole') is True
+        return {"pane B's corner: the state holds none of the passage held": (ok, {'line': e, 'passage': P.get('passage'), 'at': P.get('at')}),
+                "the head's act opens the words whole beneath it": (whole_ok, {'head': h})}
+    if target is not None:
+        shoot('not-in-state', not_in_check)
+    else:
+        red('not-in-state', {'reached': past_now().get('at'), 'passage': past_now().get('passage')})
+
+    # ---- `put-back`: ↓ to the lone mark, Enter opening its face, Enter taking its act ------------------------------------------
+    clicked2 = read_earlier(r1)
+    came2 = clicked2 and opened_at(before1)
+    g0 = seen()
+    alone = next((mk for mk in g0.get('marks') or [] if len(mk['members']) == 1), None)
+    merged = next((mk for mk in g0.get('marks') or [] if len(mk['members']) == 2), None)
+    put_ok = undo_ok = moved_ok = False
+    w1 = w2 = w3 = w4 = []
+    detail = {'came': came2, 'marks': g0.get('marks')}
+    if came2 and alone and merged:
+        three = alone['members'][0]
+        walked = walk_to(alone['key'])
+        ctx.drv.key('Enter'); ctx.frames(3)
+        focus1 = ctx.js(MK_FOCUS)
+        face = next((x for x in seen().get('drawn') or [] if x['key'] == alone['key']), {}).get('face')
+        n0 = len(page_calls(ctx))
+        t_put = time.time()
+        ctx.drv.key('Enter'); ctx.frames(3)
+        put_kept = kept()
+        figures.setdefault('past_marks', {})['put_back_ms'] = round((time.time() - t_put) * 1000)
+        quiet()
+        w1, g1, board1 = writes_since(n0), seen(), board_text()
+        put_ok = (walked and focus1 == 'put:%d' % three['pos'] and bool(face) and face['parts'] == ['C-49'] and [a['string'] for a in face['acts']] == ['B3.history.put-back'] and face['acts'][0]['inert'] is None
+                  and put_kept and [x['op'] for x in w1] == ['reinstate'] and w1[0]['doc'] == mine and '"ack' in w1[0]['answer'] and 'Jq three wk.' in board1
+                  and bool(g1.get('put')) and [x['words'] for x in g1.get('removed') or []] == [' one', ' two'] and 'put' in (g1.get('rulesA') or []))
+        detail.update(walked=walked, focus=focus1, face=face, writes=w1, removed=[x['words'] for x in g1.get('removed') or []], put=g1.get('put'), rulesA=g1.get('rulesA'), board=board1[-200:])
+        # the undo chord with a caret in pane A — the draft the scene's editor pane holds — then the redo chord
+        tx = text_of()
+        place(at_of(tx, 'Jq'))
+        n1 = len(page_calls(ctx))
+        ctx.drv.key('z', mods=('Meta',)); ctx.frames(3)
+        undone = kept(); quiet()
+        w2, board2, back = writes_since(n1), board_text(), [x['words'] for x in seen().get('removed') or []]
+        n2 = len(page_calls(ctx))
+        ctx.drv.key('z', mods=('Meta', 'Shift')); ctx.frames(3)
+        redone = kept(); quiet()
+        w3, board3 = writes_since(n2), board_text()
+        undo_ok = (undone and [x['op'] for x in w2] == ['delete'] and 'Jq wk.' in board2 and back == [' one', ' two', ' three']
+                   and redone and [x['op'] for x in w3] == ['reinstate'] and 'Jq three wk.' in board3 and bool(w1) and w3[0]['runs'] == w1[0]['runs'])
+        # the place moved: a word typed in pane A before the merged mark's first passage's line, then that passage put back
+        tx = text_of()
+        place(at_of(tx, 'Qx'))
+        ctx.js('(async () => (await import("./text/layer.js")).caretType("Now "))()'); ctx.frames(2)
+        drop_caret()
+        typed_now = kept(); quiet()
+        one = merged['members'][0]
+        n3 = len(page_calls(ctx))
+        ctx.js('((k) => { const b = document.querySelector(`#sceneB > .removed-at[data-mark="${k}"] button[data-removed]`); if (b) b.click(); })(%s)' % json.dumps(merged['key'])); ctx.frames(3)
+        ctx.js('((p) => { const b = document.querySelector(`#sceneB button[data-put="${p}"]`); if (b) b.click(); })(%d)' % one['pos']); ctx.frames(3)
+        kept(); quiet()
+        w4, board4, t4 = writes_since(n3), board_text(), text_of()
+        want_at = at_of(t4, 'Now Qx') + nb('Now Qx') if 'Now Qx' in t4 else None
+        moved_ok = typed_now and [x['op'] for x in w4] == ['reinstate'] and 'Now Qx one zv.' in board4 and want_at is not None and str(want_at) == str(w4[0]['at'])
+        detail.update(undo={'writes': w2, 'board': board2[-120:], 'removed': back}, redo={'writes': w3, 'board': board3[-120:]}, moved={'typed': typed_now, 'writes': w4, 'want_at': want_at, 'board': board4[-200:]})
+    r.check(put_ok, "B3-S7 · put-back: ↓ in pane B's walk reaches the lone removed passage's mark; Enter opens its face — C-49's words, then \"Put back in the current text\" (B3.history.put-back), the act focused — and Enter takes it: ONE `reinstate` of the passage's own I-run, acked; the test board's text holds the words where the words before them stand, pane A's rule outlines them and pane B's mark at them is gone (D5 K-102; FP-9, FP-11)", detail)
+    r.check(undo_ok, "B3-S7 · put-back: with a caret in pane A, Mod+Z takes the put-back back — one `delete`, the test board's text as it was and pane B's mark back — and Mod+Shift+Z places the same run again by its identity (D5 K-75)", detail)
+    r.check(moved_ok, "B3-S7 · put-back: after a word typed in pane A before the passage's place, the act places the passage where the words before it now stand — found at the press (P43)", detail)
+
+    def put_check(w):
+        g = seen()
+        ok = [x['words'] for x in g.get('removed') or []] == [' two'] and len(g.get('marks') or []) == 1 and 'put' in (g.get('rulesA') or []) and bool(g.get('put'))
+        return {'the mark left and the put-back outlined': (ok, {'removed': g.get('removed'), 'marks': g.get('marks'), 'rulesA': g.get('rulesA'), 'put': g.get('put')})}
+    if put_ok:
+        shoot('put-back', put_check)
+    else:
+        red('put-back', detail)
+
+    # ---- `published-since`: the preview armed to name the remaining passage by a member's identity -----------------------------
+    member = mine + '.7'
+    pub, frame_runs, armed_p, taken_p, armed_o, taken_o, written = {}, None, None, False, None, False, []
+    clicked3 = read_earlier(r2)
+    came3 = clicked3 and opened_at()
+    before2 = max([c for c in commits() if c < r2['at']], default=None)
+    came3 = came3 and before2 is not None and past_now().get('at') == before2
+    g2 = seen()
+    left = next((x for x in g2.get('removed') or [] if x['words'] == ' two'), None)
+    image = ctx.js('(async () => { const L = await import("./text/layer.js"), a = document.querySelector("#sceneB > article.dtext"), d = a && L.madeOf(a); return d ? d.image : null; })()') or []
+    contiguous = bool(image) and image[0]['pos'] == 1 and all(image[i]['pos'] == image[i - 1]['pos'] + image[i - 1]['width'] for i in range(1, len(image))) and all(x['prefix'].endswith('.0.1') for x in image)
+    if came3 and left and contiguous:
+        lo, hi = left['pos'], left['pos'] + left['width']
+        for x in image:
+            a0, a1 = x['pos'], x['pos'] + x['width']
+            for s0, s1 in ((a0, min(a1, lo)), (max(a0, lo), min(a1, hi)), (max(a0, hi), a1)):
+                if s1 <= s0:
+                    continue
+                if lo <= s0 and s1 <= hi:
+                    written.append({'origin': member, 'i_start': 1 + (s0 - lo), 'width': s1 - s0})
+                else:
+                    written.append({'origin': x['prefix'][:-len('.0.1')], 'i_start': x['ordinal'] + (s0 - a0), 'width': s1 - s0})
+        close_scene(); quiet()
+        seq_p = ctx.editor_seq()
+        armed_p = ctx.arm('history.past', answer={'draft': mine, 'at': before2, 'as_of': before2, 'state': written, 'sent': written, 'written': written, 'covered': left['width'], 'marker': None})
+        reclicked = read_earlier(r2)
+        reopened = reclicked and opened_at(before2)
+        previewed = reopened and wait_for(ctx, '(() => { const p = window.__skep.scene.past(); return !!p && !!p.preview; })()', 20)
+        consumed_p = ctx.consumed('history.past', seq_p)
+        taken_p = previewed and consumed_p
+        ctx.frames(3)
+        pub = {'reclicked': reclicked, 'reopened': reopened, 'previewed': previewed, 'consumed': consumed_p, 'at': past_now().get('at'), 'want': before2, 'figure': (past_now().get('figures') or {}).get('preview')}
+
+    def published_check(w):
+        to_passage()
+        g = seen()
+        news = g.get('news') or []
+        want = t(ctx, 'B3.history.published-new', {'E.k': member})
+        ok = (bool(taken_p) and [x['words'] for x in g.get('removed') or []] == [' two'] and [x['member'] for x in g.get('republished') or []] == [member]
+              and [(x['words'], x['string']) for x in news] == [(want, 'B3.history.published-new')])
+        return {'the line at the words published as new': (ok, {'news': news, 'want': want, 'republished': g.get('republished'), 'removed': g.get('removed'), 'preview': bool(g.get('preview'))})}
+    if taken_p:
+        shoot('published-since', published_check)
+        figures.setdefault('past_marks', {})['preview'] = (past_now().get('figures') or {}).get('preview')
+        quiet()
+        seq_o = ctx.editor_seq()
+        armed_o = ctx.arm('op', refusal={'kind': 'refused', 'name': 'bad_run', 'status': 200, 'code': 'bad_run', 'detail': None, 'op': 'reinstate', 'site': {}, 'body': None})
+        n5 = len(page_calls(ctx))
+        mk = next((x for x in seen().get('marks') or [] if any(y['pos'] == left['pos'] for y in x['members'])), None)
+        if mk:
+            ctx.js('((k) => { const b = document.querySelector(`#sceneB > .removed-at[data-mark="${k}"] button[data-removed]`); if (b) b.click(); })(%s)' % json.dumps(mk['key'])); ctx.frames(3)
+            ctx.js('((p) => { const b = document.querySelector(`#sceneB button[data-put="${p}"]`); if (b) b.click(); })(%d)' % left['pos']); ctx.frames(3)
+        wait_for(ctx, 'false', 2)
+        taken_o = ctx.consumed('op', seq_o)
+        kept(); quiet()
+        w5 = [x for x in writes_since(n5) if x['op'] == 'reinstate']
+        frame_runs = w5[0]['runs'] if w5 else None
+    else:
+        red('published-since', {'came': came3, 'left': left, 'contiguous': contiguous, 'armed': armed_p, 'reopen': pub, 'image': image[:4]})
+    runs_ok = bool(taken_o) and bool(frame_runs) and all(x.get('origin') == member and str(x.get('i_start', '')).startswith(member + '.0.1.') for x in frame_runs) and 'one zv two.' not in text_of()
+    r.check(runs_ok, "B3-S7 · published-since: the put-back of words the preview names by a member's identity sends a `reinstate` whose run names that member as its origin, its version kept — answered at the harness `bad_run`, so no member's run reaches the board, and nothing placed (M7 (c); the past states survey's R5)",
+            {'armed_preview': armed_p, 'preview_taken': taken_p, 'reopen': pub, 'armed_op': armed_o, 'op_taken': taken_o, 'runs': frame_runs, 'member': member, 'written': written[:6]})
+    close_scene()
+
+    # ---- `now-lines`: a line held while the history stands at its newest kept state, then dropped -----------------------------
+    quiet(); recentre(); ctx.settle(10); ctx.frames(2)
+    clicked4 = ctx.js('((s) => { const b = document.querySelector(s); if (b) b.click(); return !!b; })(%s)' % json.dumps(act_sel))
+    came4 = clicked4 and opened_at()
+    top = max(commits() or [0]) or None
+    if came4 and top:
+        ctx.js(ROW_CLICK % top)
+        landed(top)
+    before_n = past_now()
+    at_word = ctx.js(WORD_IN_PANE % (json.dumps('A'), json.dumps('first')))
+    held_ok, k = False, None
+    if at_word:
+        ctx.drv.click(at_word['x'], at_word['y']); ctx.frames(3)
+        k, held_ok, _ = hold_typed('Held now.', 'unreachable')
+        drop_caret()
+        ctx.frames(3)
+
+    def now_check(w):
+        P, lst = past_now(), (ctx.js(PAST_LIST) or {}).get('now')
+        ok = P.get('unkept') is True and lst == t(ctx, 'L.history.unkept') and (P.get('steps') or {}).get('later') == 'L.history.newest-kept' and P.get('why') is None and P.get('at') == top
+        return {'the lines follow the held words': (ok, {'unkept': P.get('unkept'), 'list': lst, 'steps': P.get('steps'), 'why': P.get('why'), 'at': P.get('at'), 'top': top})}
+    during = past_now()
+    if came4 and held_ok:
+        shoot('now-lines', now_check)
+    else:
+        red('now-lines', {'came': came4, 'top': top, 'held': held_ok, 'word': at_word})
+    dropped = drop_all(k)[1] if k is not None else False
+    ctx.frames(3)
+    after_n, after_list = past_now(), (ctx.js(PAST_LIST) or {}).get('now')
+    r.check(came4 and held_ok and before_n.get('unkept') is False and (before_n.get('why') or {}).get('id') == 'B3.history.now' and during.get('unkept') is True and dropped
+            and after_n.get('unkept') is False and after_list is None and (after_n.get('steps') or {}).get('later') == 'B3.history.now' and (after_n.get('why') or {}).get('id') == 'B3.history.now',
+            "B3-S7 · now-lines: at the newest kept state pane B says it is how the draft stands now; a line held there sets the list's top line and \"later ›\"'s reason and takes pane B's \"now\" away, and its drop takes the line away and pane B and \"later ›\" say again it is how the draft stands now (B3.history.now) — as pane A's corner's kept word moves (FP-33)",
+            {'before': {x: before_n.get(x) for x in ('unkept', 'why', 'steps', 'at')}, 'during': {x: during.get(x) for x in ('unkept', 'why', 'steps')},
+             'after': {x: after_n.get(x) for x in ('unkept', 'why', 'steps')}, 'after_list': after_list, 'held': held_ok, 'dropped': dropped})
+    close_scene()
+    calls = [c['name'] for c in page_calls(ctx)[calls0:]]
+    r.check('history.past' in calls and 'history.restore' not in calls, "B3-S7: a past state's preview read by `history.past` once pane B rests, a reading row; `history.restore` never called", dict(Counter(calls)))
+
+
 # a reading scene's pane as the person meets it, by its side (`A`, `B`): its text, the carets' marks standing in it, its span
 # focus and the spans drawn lit, its scroll, its corner's kept word, and whether the platform's focus stands in its text
 PANE_STATE = '''((side) => { const p = document.getElementById("scene" + side), a = p && p.querySelector(":scope > article.dtext"), P = (window.__skep.scene.panes() || {})[side.toLowerCase()] || {};
@@ -4382,7 +4902,7 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
     `pane-held-bars`: a line held moved at a word of pane A — its held bar and "held" once in the pane's edge at its top,
     held at the head and gone under it, both lifted as the line is discarded. Each row is shot in the state its check ends
     in. The rows' writes are their own typing, its undo, the pastes, the removals and the held lines, each taken back or
-    dropped; no `history.*` call is made."""
+    dropped; no `history.*` call is made but `history.past`, the preview a past state's rest reads."""
     mine, sid, quiet, recentre, caret_end, press, first_line, hold_typed, drop_all = (m[k] for k in ('mine', 'sid', 'quiet', 'recentre', 'caret_end', 'press', 'first_line', 'hold_typed', 'drop_all'))
     figures = m['figures']
     act_sel = m['corner'] + HISTORY_ACT
@@ -5042,7 +5562,7 @@ def pane_rows(ctx, r, shoot, red, ops_allowed, m):
     ctx.resize(*WIDE)
     # the rows called no history op of the shell's
     calls = [c['name'] for c in page_calls(ctx)[calls0:]]
-    r.check(not any(c.startswith('history.') for c in calls), "the editor pane's rows call no `history.*`: reads, their typing, its undo, the paste and the removals", dict(Counter(calls)))
+    r.check(not any(c.startswith('history.') and c != 'history.past' for c in calls), "the editor pane's rows call no `history.*` but the past state's preview, a reading row: reads, their typing, its undo, the paste and the removals", dict(Counter(calls)))
 
 
 def run(ctx):

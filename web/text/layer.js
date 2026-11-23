@@ -1774,6 +1774,8 @@ function headKey(d) {
 
 /** words' width in the corner's type — the client's face at the interface's size, P-REG's CORNER — in px, as the platform sets them (`measureRun`) */
 export const cornerPx = (/** @type {string} */ text) => measureRun(text, CORNER.px, 'normal', 'client');
+/** a string's width in px set in the reading face at the corner's size: a document's own words set among corner-size words — the list of a draft's past states' head naming its passage (SC's) */
+export const readingCornerPx = (/** @type {string} */ text) => measureRun(text, CORNER.px, 'normal', 'reading');
 
 /**
  * A string's width set in a face at the corner's size, in em of that size

@@ -6,8 +6,11 @@
 // stroke whose list stands, the stop's next passage, the passage its act last
 // went to and whether its appearance was said, a stop the reader returned to
 // with what its answer told and an act waiting on it, the panes' scrolls,
-// the margin's marks each editor pane stands and the first held mark in each
-// pane's view (`drawnMarks`, `heldAt`),
+// the margin's marks each editor pane and the held version stand and the
+// first held mark in each pane's view (`drawnMarks`, `heldAt`), the removed
+// ground last drawn and the list's head's height its day heads are held
+// beneath (`groundDrawn`, `headHeld`), the removed passages read for the
+// images they were read from (`marksFor`),
 // each pane's span focus, the selection kept aside for a setting of it and
 // the passage its last step carried, each pane's text — the record it was made from, the version it reads and
 // the address it names, the links and far ends and its owner's byline facts
@@ -353,7 +356,9 @@
 // the line's ending offers moves the focus into the editor pane holding the
 // kept caret, onto its span (`toCaret`). An editor pane carries the
 // margin's marks beside the words its draft holds that the board has not
-// kept (B3-S2; FP-31, FP-38), as T-LAYER reads them beside the pane's
+// kept (B3-S2; FP-31, FP-38), and so does the moved scene's held version,
+// each by its bytes' identity in the image the pane's own article was made
+// from, as T-LAYER reads them beside the pane's
 // article's lines (`paneMargin`), by the plane's one rule: each in the room
 // between its column's text and its edge's signs on the pane's facing side
 // at the pane's em, in the pane's content so its scroll carries them, a
@@ -487,7 +492,7 @@
 // at the feed's floor instead, the floor's words for it; "later ›" at the
 // newest kept state, "this is how the draft stands now", or that it is the
 // newest kept state and what was written since is not yet kept, where the
-// draft held such words as its history opened. Every state asked — a step's,
+// draft holds such words as the line is drawn. Every state asked — a step's,
 // a row's, "read it again"'s — goes through one entry (`askPast`): asked
 // anew, any reissue of the state asked before it ends with the line that
 // answered it; one read at a time, of the latest state asked, a press while
@@ -515,6 +520,9 @@
 // stand its line's clauses, each derived from the rows and the reads as they
 // stand (`pastLine`), held with the title at its document's head and none ever
 // folded (T-ARTICLE's `stateItems`): the links' word, after the state's hand;
+// the words saying the state holds none of the passage held, or part of it,
+// in the dead end's form, the passage held re-projected at every state pane
+// B lands on (`passageLineOf`; B3-S7);
 // where a newer row of the list shares the
 // shown row's recorded minute, "one of ⟨n⟩ changes that minute, not the
 // last", in the place of the words saying the state is how the draft stands
@@ -553,7 +561,13 @@
 // search index's floor never placing it; the list one stop of the scene's
 // ring, ↓ and ↑ along its acts (`standStops`, `listKey`), the focused row held
 // still as the list is written again (`writeList`); above them, where the draft
-// held words the board had not kept, "now — not yet kept". Rows arriving
+// holds words the board has not kept, "now — not yet kept", each of these
+// lines — that one, "later ›"'s reason and the words saying pane B's state is
+// how the draft stands now — derived from those words as they stand where it
+// is drawn, never kept from the act, and drawn again in one step, the list
+// and pane B's corner together, said nothing, wherever their standing
+// changes while the history stands (`pastKept`; FP-33); above it all, the
+// list's head (below). Rows arriving
 // after it stands — those below the history read's reach, read as it stands
 // down to the feed's first position, or the first one its files hold, and read
 // again once the board answers while the not-last clause's count waits on them
@@ -576,7 +590,9 @@
 // (`Pane.heldVersion`), derived as the scene opens (`heldSource`): once the
 // draft's flight has landed, its text at the base its held lines name, read
 // from the board's history (M-PUMP's `stateAt`), with those lines applied in
-// their order (M-DERIVE's `applyHeld`) — the text the page shows of the draft
+// their order (M-DERIVE's `applyHeld`), the bytes a line this window sent
+// inserts named as its edits named them (W-MACHINE's `heldNames`), so the
+// margin's marks stand in it by identity — the text the page shows of the draft
 // where it holds no line by then, the lines name more than one base, one does
 // not apply, or that history is reclaimed or busy; opened on a record, pane B
 // is that record. Its corner is titled by what it is at every fit, in the
@@ -753,6 +769,7 @@
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
 import * as WRITE from '../write/write.js';
+import * as MACHINE from '../write/machine.js';
 import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
@@ -760,19 +777,19 @@ import * as HOST from '../overlays/host.js';
 import * as SEL from '../overlays/selection.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
-import { drawChord, keyShortcut } from '../nav/keys.js';
+import { drawChord, keyShortcut, unwritableLine } from '../nav/keys.js';
 import { copyText, keptHTML, placeholderOf, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML, cornerLeadRuns, cornerTitle, titleRuns, kindWord, statedChain, notLastWords, inFlightWords, pastClauses } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn, pastSigns } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingLineOf, busy, whereOf, nameIn } from '../beams/held.js';
-import { SAMENESS, HOLD, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
+import { SAMENESS, HOLD, LABEL_MIN_PX, MARGIN, CORNER, cornerWidth } from '../plane/register.js';
 import { LINE_H, MEASURE, MEASURE_CPL, HEAD_CPL, CHAR_W, EDGE, EDGE_GAP, fitFor } from '../plane/layout.js';
-import { holdStack, LINE_BOX } from '../plane/labels.js';
+import { holdStack, LINE_BOX, cutWords, ELLIPSIS } from '../plane/labels.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
-import { applyHeld, recordAt, withLinks } from '../model/derive.js';
+import { applyHeld, recordAt, withLinks, stretchIn } from '../model/derive.js';
 import { elementIn, isElement } from '../text/span.js';
 import * as PAST from '../model/past.js';
-import { t, tHTML, tRuns, plural, joinRuns, runsText, asRuns, facedHTML, heard, asHeard, sentence, sentences, asSentence, fields, stoodAt, FIELD } from '../strings.js';
+import { t, tHTML, tRuns, plural, joinRuns, runsText, asRuns, facedHTML, addressedHTML, heard, asHeard, sentence, sentences, asSentence, fields, stoodAt, FIELD } from '../strings.js';
 import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../model/frames.js').ComparePair} ComparePair */
@@ -822,8 +839,9 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {number} from the position its read reached down to: rows below it are read as the scene stands (`readOlder`); 0 where every row is read
  * @property {boolean} bottom its read reached the feed's first position, or the first one the feed's files hold (M-PUMP's `HistoryRead.floor`): no row below `from` is to be read
  * @property {number | null} head the position its read reached up to (M-PUMP's `HistoryRead.head`): a return reads the rows written past it (`pastSince`); null where none is known
- * @property {number} asked the commit whose state the act asked — the last of the row below the top row, else of the top row — or, where its entry was left after a step or a row's act, the one asked last (`Left.asked`)
- * @property {boolean} unkept the draft held words the board had not kept as the act was taken: the list's top line says so
+ * @property {number} asked the commit whose state the act asked — the last of the row below the top row, else of the top row, else the commit before a removal the deletion face's act names — or, where its entry was left after a step or a row's act, the one asked last (`Left.asked`)
+ * @property {ISpan[]} passage the passage held — the span the act was taken at (B3-S7's ladder; N-GO's `history`) — by its bytes' identity; none where the act held none, or, where its entry was left after a step, the passage that step carried (`Left.passage`)
+ * @property {string} words the passage's own words, read where it was held: what the list's head names it by; '' where none is held
  * @property {{pages: number, read: number, readMs: number}} figures the history read's pages and rows and its time (FP-18)
  */
 
@@ -859,12 +877,16 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {boolean} running the scene reissues the asked state (`reissue`): pane B's corner carries the in-flight clause, the running mark after it (`pastLine`), and the asked row says "reading"
  * @property {boolean} again "read it again" is drawn beneath pane B's line (`againOf`): set where the line first stands saying the asked state could not be read and is not read again (`metBy`), and held until pane B shows the asked state (`landPast`)
  * @property {number | null} head the position the rows were first read up to (`PastHeld.head`): the act's, a return's past it (`pastSince`)
- * @property {boolean} unkept the list's top line says the draft holds words not yet kept
+ * @property {boolean | null} drawn whether the draft held words the board had not kept as the list and pane B's corner were last drawn (`writeList`): what a change of that is told against (`pastKept`); null before the list first stands
+ * @property {string} words the passage held's own words as read where it was held (`PastHeld.words`): what the list's head names it by where pane B holds no selection
+ * @property {boolean} whole the passage's words stand whole beneath the head, its act having opened them where neither pane holds the passage (`passageAct`); false once a state lands or the act folds them again
+ * @property {string | null} faced the removed passages' mark whose face stands whole in pane B, by its key (`RemovedMark.key`); null where every one stands compact
+ * @property {Preview | null} preview what the preview read of the state pane B shows told, once it rests there (`restPreview`): the runs a put-back sends; null until it answers, and where it was refused
  * @property {string | null} said the line's words as the status region last said them (`sayLine`); null where it said none
  * @property {number} from the position the rows read reach down to, every row above it read; 0 where every row is read
  * @property {boolean} bottom the rows read reach the feed's first position, or the first one the feed's files hold: no row below `from` is to be read (`readOlder`)
  * @property {boolean} reading rows below `from` are being read
- * @property {PastHeld['figures'] & {stateMs: number, at: number, older: {pages: number, read: number, ms: number} | null}} figures the reads' figures — the state read's time and the position it read at, set again where a reissue lands, and the read of the older rows once it lands (FP-18)
+ * @property {PastHeld['figures'] & {stateMs: number, at: number, older: {pages: number, read: number, ms: number} | null, preview?: {ms: number, refused: string | null}}} figures the reads' figures — the state read's time and the position it read at, set again where a reissue lands, the read of the older rows once it lands, and the preview's read once it answers (FP-18)
  * @property {string} html the list's markup as last written
  */
 
@@ -1103,6 +1125,7 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {number} updating the settings reading
  * @property {Array<() => void>} waiting the acts made while one reads, and the checks owner facts taken anew ask of the panes, in the order made (`whenSet`)
  * @property {PastList | null} past the list of the draft's past states, where the scene is a draft's history (`Held.past`); null on every other scene
+ * @property {ISpan[] | null} put the words a put-back last placed in the current text, by identity, outlined in pane A while its text holds them (`putBack`); null where none stands
  */
 
 /**
@@ -1187,6 +1210,13 @@ import { esc, byteOffsets, numeral, dayOf, timeOf, fingerprintCue } from '../uti
  * @property {Stop | null} stop the stop the platform's focus stood on — one the panes' `compare` draws by what it stood for, which a change of the page's class keeps (N-TRAIL's); null where it stood outside the scene, or on such a stop whose bytes its pane's image did not name
  * @property {Listed | null} [list] the stroke's list standing; null, or absent, where none stood
  * @property {number} [asked] at a draft's history, the commit whose state was asked last (`PastList.asked`), which a return asks again; absent at every other scene
+ * @property {ISpan[]} [passage] at a draft's history, the passage held as the reader left it, by its bytes' identity (`passageHeld`), which a return holds again; absent at every other scene
+ */
+
+/**
+ * @typedef {Object} Preview — what the preview (`history.past`) told of the state pane B shows (`restPreview`; the past states survey's R5): the shell's mapping, never the page's
+ * @property {number} at the commit the state stands for, whose position it was read at
+ * @property {import('../model/records.js').ImageRun[]} written the runs a put-back sends for each position of the state, as `written` names them — a member's words by the member that minted them, its version kept — each at the positions of pane B's text it covers, from 1 (`writtenImage`)
  */
 
 /** how far below the panes' tops the two ends are set level (px), where both can stand there */
@@ -1382,9 +1412,12 @@ export function attach(e, acts = {}) {
     // platform makes from Enter or Space at the act — the kept word opening its statement or closing it, a past state's
     // "read it again" asking its state again, a glyph or a head's count opening the corner whole, and one on the corner
     // opened closing it (FP-26)
-    p.addEventListener('mousedown', (ev) => { if (onCorner(ev)) ev.preventDefault(); });
-    // a click on a corner's act takes it; one on the pane's text, or a drag's release there, is the pointer's act on the text (`textAct`)
+    p.addEventListener('mousedown', (ev) => { if (onCorner(ev) || pastActAt(/** @type {Element | null} */ (ev.target))) ev.preventDefault(); });
+    // a click on a corner's act takes it; one on a past state's removed passages' mark or on its face's put-back takes that
+    // (`removedAct`, `putBack`); one on the pane's text, or a drag's release there, is the pointer's act on the text (`textAct`)
     p.addEventListener('click', (ev) => {
+      const tg = /** @type {HTMLElement | null} */ (ev.target), mk = tg && tg.closest ? /** @type {HTMLElement | null} */ (tg.closest('button[data-removed], button[data-put]')) : null;
+      if (mk && p === e.paneB) { if (mk.dataset.removed) removedAct(mk.dataset.removed); else if (mk.dataset.put) putBack(Number(mk.dataset.put)); return; }
       const on = onCorner(ev), side = p === e.paneB ? 'b' : 'a';
       if (on === 'act') act(side); else if (on === 'kept') keptAct(side); else if (on === 'history') historyAct(side, FOCUS.byKey(ev), /** @type {HTMLElement} */ (ev.target).closest('[data-history]')); else if (on === 'again') void readAgain(side);
       else if (on === 'earlier' || on === 'later') { if (side === 'b') void step(on === 'later' ? 1 : -1); } else if (on === 'whole') openWhole(side);
@@ -1929,7 +1962,9 @@ async function sourceOf(x, stands = () => true) {
  * among its lines, the draft's text at the base its held lines name, read from
  * the board's history (M-PUMP's `stateAt`), with those lines applied in their
  * order (M-DERIVE's `applyHeld`) — the bytes each inserts named by the page's
- * ordinals for that line (W-WRITE's `heldNames`) — its metadata the model's.
+ * ordinals for that line, a line this window sent by those its edits gave
+ * them, so the text the page shows and this one hold them by one identity
+ * (W-MACHINE's `heldNames`) — its metadata the model's.
  * The text the page shows of the draft (T-LAYER's `paneSource`) where it holds
  * no line by then, its lines name more than one base, one of them does not
  * apply, or the history at the base is reclaimed or its reconstructions stay
@@ -1953,7 +1988,7 @@ async function heldSource(addr, stands) {
     return { ...none, refused: s.refused, unheard: PUMP.unanswered(s.refused) ? s.refused : null };
   }
   const meta = REC.has(addr) ? REC.doc(addr).meta : null;
-  const out = applyHeld({ ...recordAt(addr, s.runs, s.at, { image: s.image }), meta }, rows, (x) => (REC.has(x) ? REC.doc(x) : null), WRITE.heldNames(addr));
+  const out = applyHeld({ ...recordAt(addr, s.runs, s.at, { image: s.image }), meta }, rows, (x) => (REC.has(x) ? REC.doc(x) : null), MACHINE.heldNames(addr));
   return out.stopped ? shown() : { d: out.doc, n: null, whole: true, refused: null, unheard: null };
 }
 
@@ -2430,7 +2465,7 @@ export function markKept() {
   }
   if (SIDES.some((side) => S[side].el && S[side].signs !== signs)) placeStatements(E, S);
   rebanded(E, S);
-  if (S.past) newestLinks(S);
+  if (S.past) { newestLinks(S); pastKept(E, S); }
 }
 
 /**
@@ -2677,12 +2712,13 @@ function sceneOf(pa, pb, pairs, held, got = null) {
   // each pane's first landing (`Pane.landed`): pane A's the passage held, by the bytes the opener names where its text holds them; pane B's the end set level there
   const own = (/** @type {ISpan[]} */ x) => (x.length ? x : null);
   pa.landed = own(held.ids && REC.placedIn(pa.d.image, held.ids).length ? held.ids : h.posA != null ? REC.identityIn(pa.d.image, h.posA, Math.max(1, h.widthA ?? 1)) : level.a != null ? REC.identityIn(pa.d.image, level.a, 1) : []);
-  pb.landed = own(level.b != null ? REC.identityIn(pb.d.image, level.b, 1) : []);
+  // a draft's history's pane B lands holding the passage its act held (`PastHeld.passage`), so each landing keeps it on its line
+  pb.landed = own(held.past && held.past.passage && held.past.passage.length ? held.past.passage : level.b != null ? REC.identityIn(pb.d.image, level.b, 1) : []);
   return {
     a: pa, b: pb, pairs, level, whole: !!h.wholeB, widthA: Math.max(1, h.widthA ?? 1),
     bands: [], lines: [], strokes: [], listing: null, relist: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null,
     fit: { cpl: MEASURE_CPL, corner: 'whole', px: READING_PX, stacked: false, outer: 0 }, link: held.link ?? null, hover: null, band: 0, size: '', updating: 0, waiting: [],
-    past: held.past && got ? pastListOf(held.past, got) : null,
+    past: held.past && got ? pastListOf(held.past, got) : null, put: null,
   };
 }
 
@@ -2875,8 +2911,9 @@ export async function reopen(o, as = {}) {
   /** @type {Opening} */
   const out = { shown: false, refused: null };
   if (!els) return out;
-  // a draft's history asks again the state asked last as the reader left it — a step's, a row's act's — else its act's
-  const held = o.held.past && was.asked != null ? { ...o.held, past: { ...o.held.past, asked: was.asked } } : o.held;
+  // a draft's history asks again the state asked last as the reader left it — a step's, a row's act's — else its act's, and
+  // holds again the passage held as it was left
+  const held = o.held.past && was.asked != null ? { ...o.held, past: { ...o.held.past, asked: was.asked, ...(was.passage && was.passage.length ? { passage: was.passage } : {}) } } : o.held;
   await HOST.opening(async (stands) => {
     const asked = held.past ?? null;
     const [ra, rb] = await Promise.all([paneAgain('a', was.panes.a, stands), asked ? pastAgain(was.panes.b, asked, stands) : paneAgain('b', was.panes.b, stands)]);
@@ -3044,7 +3081,7 @@ export function asLeft() {
   };
   const host = HOST.element(), at = document.activeElement;
   const list = S.listing && HOST.currentIs('stroke:' + S.listing.key) ? { key: S.listing.key, focus: !!host && !!at && host.contains(at) } : S.relist;
-  return { panes: { a: version(S.a), b: version(S.b) }, spots: { a: spot(S.a), b: spot(S.b) }, stop: stopOf(E, S), list, ...(S.past ? { asked: S.past.asked } : {}) };
+  return { panes: { a: version(S.a), b: version(S.b) }, spots: { a: spot(S.a), b: spot(S.b) }, stop: stopOf(E, S), list, ...(S.past ? { asked: S.past.asked, passage: passageHeld(S) } : {}) };
 }
 
 /**
@@ -3683,6 +3720,19 @@ function firstLineIn(P, pane) {
   return lo;
 }
 
+/**
+ * The first span in view of a reading scene's pane (`firstInView`): its first
+ * position; null where no scene stands, or none stands in view — the last rung
+ * of the passage a draft's history opens holding, where its act was made at
+ * that pane's corner (N-GO's `history`).
+ * @param {'a' | 'b'} side
+ * @returns {number | null}
+ */
+export function firstSpanIn(side) {
+  const E = els;
+  return scene && E ? firstInView(paneEl(E, side)) : null;
+}
+
 /** the first position of the first block of a pane's article whose box meets the pane's visible content below what a held head covers (`clearOf`) — the first span in view; null where none does */
 function firstInView(/** @type {HTMLElement} */ pane) {
   const art = articleIn(pane);
@@ -3943,10 +3993,12 @@ function headInView(E, side, target) {
 }
 
 /**
- * The margin's marks placed in the editor panes (see the head; B3-S2;
- * P-REG's `MARGIN`; FP-31, FP-37): in each pane that is its draft's editor
- * (`editor`), the marks T-LAYER reads beside its article's lines
- * (`paneMargin`) — each in the room between its column's text and its edge's
+ * The margin's marks placed in the editor panes and the held version (see the
+ * head; B3-S2; P-REG's `MARGIN`; FP-31, FP-37): in each pane that is its
+ * draft's editor (`editor`), or the moved scene's held version
+ * (`Pane.heldVersion`), the marks T-LAYER reads beside its article's lines
+ * (`paneMargin`), each placed by its bytes' identity in the image that pane's
+ * own article was made from — each in the room between its column's text and its edge's
  * signs on the pane's facing side, MARGIN.inset past the text at the pane's
  * em, a bar along its lines from the top of the first to the foot of the
  * last, a zero-length form a square on its line's middle, the refused
@@ -3956,7 +4008,7 @@ function headInView(E, side, target) {
  * zero-length form under it and a mark below the pane's visible bottom
  * hidden; the first held mark in each pane's view kept for the word "held"
  * (`heldAt`, `placeStatements`). An element is written only where its place,
- * its size or its stroke changed; the marks of a pane that is no editor, or
+ * its size or its stroke changed; the marks of a pane that is neither, or
  * whose draft holds none, removed. Nothing where the platform lays out no
  * pane. The loop runs it before O-DELETION reads a pane's lines, and the
  * scene's draw again before the edge's signs are placed.
@@ -3979,7 +4031,7 @@ function paneMarks(E, S, side) {
   heldAt[side] = null;
   /** @type {Map<string, HTMLElement>} */
   const standing = new Map([...pane.querySelectorAll(':scope > .margin-mark')].map((e) => [/** @type {HTMLElement} */ (e).dataset.key || '', /** @type {HTMLElement} */ (e)]));
-  const art = P.el && editor(P) && typeof pane.getBoundingClientRect === 'function' && pane.clientHeight > 0 ? articleIn(pane) : null;
+  const art = P.el && (editor(P) || P.heldVersion) && typeof pane.getBoundingClientRect === 'function' && pane.clientHeight > 0 ? articleIn(pane) : null;
   const segs = art ? LAYER.paneMargin(art.el) : [];
   if (art && segs.length) {
     const pr = pane.getBoundingClientRect(), origin = pr.top + pane.clientTop, top = origin + clearOf(pane), bottom = origin + pane.clientHeight;
@@ -5055,6 +5107,7 @@ export function draw() {
   placeStop(E, S);
   placeHeads(E, S);
   placeMargin();
+  placePastMarks(E, S);
   placeStatements(E, S);
   placeList(E, S);
   SEL.drawPanes();
@@ -5861,16 +5914,18 @@ const reads = (/** @type {PastList} */ L) => L.out != null || L.running;
  * floor's line, a hairline across the column labelled with the floor's words
  * (`floorWords`), beneath the row whose state stood at the floor, or its
  * folded day's head (M-PAST's `floorLine`), each row below it standing in
- * its place, opening nothing (`rowHTML`).
+ * its place, opening nothing (`rowHTML`). The head stands first, above the
+ * top line (`headHTML`), where a passage is named.
  * @param {PastList} L
+ * @param {Head | null} [head] what the head's first row names, and the room it is given (`headOf`); none where no passage is named
  * @returns {string}
  */
-export function listHTML(L) {
+export function listHTML(L, head = null) {
   const marked = askedOf(L), shown = PAST.dayHolding(L.days, L.at), asking = marked ? PAST.dayHolding(L.days, L.asked) : null;
   const line = L.cut ? PAST.floorLine(L.rows, L.cut.at) : null, words = line ? floorWords(L) : null;
   const cutRow = line ? PAST.rowHolding(L.rows, line.cut) : null, cutDay = line ? PAST.dayHolding(L.days, line.cut) : null;
   const floor = words ? `<div class="pl-floor" data-string="${esc(words.id)}">${esc(words.text)}</div>` : '';
-  let html = L.unkept ? `<div class="pl-now" data-string="L.history.unkept">${esc(t('L.history.unkept'))}</div>` : '';
+  let html = (head && head.words ? headHTML(head, L.whole) : '') + (WRITE.unkept(L.draft) ? `<div class="pl-now" data-string="L.history.unkept">${esc(t('L.history.unkept'))}</div>` : '');
   let open = false;
   for (const e of PAST.entriesOf(L.days, L.open)) {
     if (e.kind === 'day') {
@@ -5892,6 +5947,75 @@ export function listHTML(L) {
 }
 
 /**
+ * @typedef {Object} Head — what the list's head's first row names (`headOf`; B3-S7)
+ * @property {string} words the words of what the next press acts on, whole: pane B's selection's where one stands, else the passage held's as read where it was held
+ * @property {number} room the room the row gives its words, px
+ */
+
+/** the room the head's first row keeps before its words — its bar's and its padding, the style's `.pl-passage` — px */
+const HEAD_INSET = 9;
+/** the reader's spacing a line's words keep room for (WCAG 1.4.12), in em of their size: between letters, between words */
+const READER_LETTER_EM = 0.12, READER_WORD_EM = 0.16;
+
+/**
+ * The words the head's first row shows (see the head; B3-S7; FP-26): the
+ * words whole where they fit the row's room at the corner's size in the
+ * reading face, the reader's spacing among them; else the longest start of
+ * them that fits, cut between words, with "…" after it (P-LABEL's
+ * `cutWords`); the first word and "…" where no start does.
+ * @param {string} words
+ * @param {number} room px
+ * @param {(s: string) => number} [measure] a string's width set at the corner's size in the reading face, px (T-LAYER's `readingCornerPx`)
+ * @returns {string}
+ */
+export function headWords(words, room, measure = LAYER.readingCornerPx) {
+  const all = words.trim().replace(/\s+/g, ' ');
+  const spaced = (/** @type {string} */ s) => ([...s].length * READER_LETTER_EM + (s.match(/ /g) || []).length * READER_WORD_EM) * CORNER.px;
+  const fits = (/** @type {string} */ s) => measure(s) + spaced(s) <= room;
+  if (!all || fits(all)) return all;
+  return cutWords(all, fits) ?? all.split(' ')[0] + ELLIPSIS;
+}
+
+/**
+ * The list's head (see the head; B3-S7): its first row — one native button,
+ * a Tab stop of its own, named by the words whole — its words cut between
+ * words, never wrapping (`headWords`), its act the passage's (`passageAct`);
+ * beneath it the words whole where that act opened them (`PastList.whole`).
+ * Its second row, the stop's place and the passage's two step acts, is not
+ * drawn.
+ * @param {Head} h
+ * @param {boolean} whole
+ * @returns {string}
+ */
+function headHTML(h, whole) {
+  const all = h.words.trim().replace(/\s+/g, ' ');
+  return `<div class="pl-top"><button type="button" class="pl-passage" data-passage="1" aria-label="${esc(heard([{ text: all, face: 'reading' }]))}"${whole ? ' aria-expanded="true"' : ''}><span class="pl-words">${esc(headWords(all, h.room))}</span></button>${whole ? `<div class="pl-whole">${esc(all)}</div>` : ''}</div>`;
+}
+
+/**
+ * What the head's first row names now (see the head; B3-S7): what the next
+ * press acts on — pane B's selection's words, read from pane B's text, where
+ * one stands; else the passage held's words as read where it was held
+ * (`PastList.words`) — and the room the row gives them: the column's own
+ * content, as wide as its head's acts set on one line (`listPx`), where the
+ * list stands beside the panes; else the list's own width as laid out, the
+ * column's where the platform lays out none. None where neither names any.
+ * @param {Scene} S
+ * @returns {Head | null}
+ */
+function headOf(S) {
+  const L = S.past, P = S.b;
+  if (!L) return null;
+  const sel = P.el ? SEL.selected('b') : null;
+  const words = sel && sel.width > 0 ? REC.textOf(P.d.runs, sel.pos, sel.pos + sel.width) : L.words;
+  if (!words || !words.trim()) return null;
+  const column = Math.ceil(LAYER.cornerPx(LIST_HEAD.map((id) => t(id)).join(' ')));
+  const el = pastEl, laid = !!el && !listBeside(S.fit) && typeof getComputedStyle === 'function' && el.clientWidth > 0;
+  const inner = laid ? el.clientWidth - parseFloat(getComputedStyle(/** @type {HTMLElement} */ (el)).paddingLeft || '0') - parseFloat(getComputedStyle(/** @type {HTMLElement} */ (el)).paddingRight || '0') : column;
+  return { words, room: Math.max(0, inner - HEAD_INSET) };
+}
+
+/**
  * A past state's corner line (see the head; B3-S7): when the state pane B
  * shows stood — the time its row's last commit was made, as a sentence names
  * a time (ST's `stoodAt`), "not recorded" where the board lost it — whose hand
@@ -5902,7 +6026,8 @@ export function listHTML(L) {
  * when that state stood, in the title's form — "a time not recorded" where
  * its row holds none; why the links that stood on its words are not shown
  * where they are not (`PastList.links`), none while pane B stands as its
- * cover, which shows no words (`PastList.cover`); and its two one-state
+ * cover, which shows no words (`PastList.cover`); the words saying it holds
+ * none of the passage held, or part (`passageLineOf`); and its two one-state
  * steps, each inert at the end it cannot pass with its reason (`stepsOf`).
  * Derived, never kept.
  * @param {PastList} L
@@ -5915,8 +6040,24 @@ function pastLine(L) {
     notLast: PAST.notLastOf(L.rows, L.at, L.bottom),
     reading: reads(L) ? (asked && asked.time != null ? stoodAt(asked.time) : t('L.history.floor.untimed')) : null,
     links: L.links === 'read' || L.cover ? null : L.links,
+    passage: passageLineOf(L),
     steps: stepsOf(L),
   };
+}
+
+/**
+ * The words saying the state pane B shows holds none of the passage held, or
+ * part of it (see the head; B3-S7; `passageIn`), in the dead end's form; null
+ * where it holds all of it, none is held, pane B stands as its cover, or the
+ * list is not the standing scene's.
+ * @param {PastList} L
+ * @returns {{id: string, text: string} | null}
+ */
+function passageLineOf(L) {
+  const S = scene, which = S && S.past === L ? passageIn(S) : null;
+  if (!which) return null;
+  const id = which === 'none' ? 'B3.history.passage.none' : 'B3.history.passage.part';
+  return { id, text: t(id) };
 }
 
 /**
@@ -5936,9 +6077,9 @@ const stepBase = (L) => (reads(L) ? L.asked : L.at);
  * floor's words for that oldest state (`feedFloorWords`) — never the draft's
  * first state, which no row read tells; live where rows below are still to be
  * read, a press reading them first (`step`). "later ›" inert at the newest
- * kept state: "this is how the draft stands now", or, where the draft held
- * words the board had not kept as the history opened, that it is the newest
- * kept state and what was written since is not yet kept. Each counted from
+ * kept state: "this is how the draft stands now", or, where the draft holds
+ * words the board has not kept as it is drawn (W-WRITE's `unkept`), that it is
+ * the newest kept state and what was written since is not yet kept. Each counted from
  * where a step counts from (`stepBase`).
  * @param {PastList} L
  * @returns {{earlier: import('../text/article.js').StepAct, later: import('../text/article.js').StepAct}}
@@ -5949,7 +6090,7 @@ function stepsOf(L) {
   let earlier = null;
   if (line && from <= line.cut) earlier = floorWords(L);
   else if (PAST.stepFrom(L.rows, from, -1) == null && L.bottom) earlier = L.from <= 0 ? { id: 'B3.history.first', text: sentence('B3.history.first') } : feedFloorWords(L);
-  const later = PAST.stepFrom(L.rows, from, 1) == null ? (L.unkept ? { id: 'L.history.newest-kept', text: sentence('L.history.newest-kept') } : { id: 'B3.history.now', text: sentence('B3.history.now') }) : null;
+  const later = PAST.stepFrom(L.rows, from, 1) == null ? (WRITE.unkept(L.draft) ? { id: 'L.history.newest-kept', text: sentence('L.history.newest-kept') } : { id: 'B3.history.now', text: sentence('B3.history.now') }) : null;
   return { earlier: { inert: earlier && { id: earlier.id, text: asSentence(earlier) } }, later: { inert: later } };
 }
 
@@ -6019,7 +6160,7 @@ function pastWhyOf(L) {
     return u && { ...u, substituted: true, ...again };
   }
   const top = L.rows[0];
-  return !L.unkept && !L.cover && !!top && L.at === top.last && L.asked === top.last ? { id: 'B3.history.now', text: t('B3.history.now'), substituted: false } : null;
+  return !WRITE.unkept(L.draft) && !L.cover && !!top && L.at === top.last && L.asked === top.last ? { id: 'B3.history.now', text: t('B3.history.now'), substituted: false } : null;
 }
 
 /** the board as the status region names it (the ARIA mirror's board item), its ⟨board⟩ in a past state's line and its act's reason; '' where none is held */
@@ -6099,6 +6240,23 @@ export const pastOf = () => (scene && scene.past ? scene.past.draft : null);
 export function focusPast() { const E = els; if (E && scene && scene.past) FOCUS.land(E.paneB); }
 
 /**
+ * The state before a removal asked for pane B (`askPast`), where the scene
+ * stands on the draft's history: the newest commit of the rows read below the
+ * position the removal's `delete` was acked at — the deletion face's act made
+ * in the draft's own history scene (N-GO's `history`). False where the rows
+ * read hold none below it.
+ * @param {number} at the position the removal's `delete` was acked at
+ * @returns {boolean}
+ */
+export function showBefore(at) {
+  const S = scene, L = S && S.past;
+  const to = L ? PAST.commitsOf(L.rows).find((p) => p < at) : undefined;
+  if (!S || to === undefined) return false;
+  void askPast(S, to);
+  return true;
+}
+
+/**
  * The one line's second address while a draft's history stands (B3-S7;
  * C-363): "as it stood ⟨time⟩", the state pane B shows; null where none
  * stands.
@@ -6128,7 +6286,7 @@ function pastListOf(h, got) {
   const L = {
     draft: on.draft, entries: [...on.entries], rows, days: PAST.daysOf(rows), open: new Set(), opened: false, at: got.shown, asked: on.asked, out: null, fell: false, cover: false, cut: null,
     links: got.record.linksRead ? 'read' : 'arriving', met: null, floor: null, running: false, again: false,
-    head: on.head, unkept: on.unkept, said: null, from: on.from, bottom: on.bottom, reading: false, figures: { ...on.figures, stateMs: got.ms, at: got.state.at, older: null }, html: '',
+    head: on.head, drawn: null, words: on.words ?? '', whole: false, faced: null, preview: null, said: null, from: on.from, bottom: on.bottom, reading: false, figures: { ...on.figures, stateMs: got.ms, at: got.state.at, older: null }, html: '',
   };
   if (got.met) {
     metBy(L, got.met, got.floor);
@@ -6195,6 +6353,7 @@ function pastStood(S, lead) {
   sayLine(S, lead);
   void reissue(S);
   void restLinks(S);
+  void restPreview(S);
 }
 
 /**
@@ -6493,7 +6652,8 @@ export const inList = () => { const at = typeof document !== 'undefined' ? docum
 export function listKey(dir) {
   const el = pastEl, at = typeof document !== 'undefined' ? document.activeElement : null;
   if (!el || !at || !inList()) return false;
-  const stops = /** @type {HTMLElement[]} */ ([...el.querySelectorAll('button')]), k = stops.indexOf(/** @type {HTMLElement} */ (at));
+  const stops = /** @type {HTMLElement[]} */ ([...el.querySelectorAll('button:not([data-passage])')]), k = stops.indexOf(/** @type {HTMLElement} */ (at));
+  if (k < 0) return true;
   const to = stops[k + dir];
   if (to) FOCUS.land(to);
   return true;
@@ -6611,7 +6771,7 @@ function landPast(S, got, how = {}) {
   if (!L || !els) return null;
   const live = P.el ? SEL.selected('b') : null, carried = live ? idsIn(P, live.pos, live.width) : P.landed ?? [];
   const from = carried.length ? REC.placedIn(imageOf(P), carried) : [], to = carried.length ? REC.placedIn(got.record.image, carried) : [];
-  L.at = got.shown; L.again = false; L.fell = !!got.met; L.cover = false;
+  L.at = got.shown; L.again = false; L.fell = !!got.met; L.cover = false; L.whole = false; L.faced = null; L.preview = null;
   if (got.met) metBy(L, got.met, got.floor); else { L.met = null; L.floor = null; L.running = false; }
   L.links = got.record.linksRead ? 'read' : rest ? 'arriving' : 'unread';
   L.figures = { ...L.figures, stateMs: got.ms, at: got.state.at };
@@ -6623,7 +6783,7 @@ function landPast(S, got, how = {}) {
   showRow(S);
   const title = rest && !quiet ? cornerTitle(paneCorner(S.b).view) : null;
   if (!quiet && (title || said)) FOCUS.say(joinRuns(FIELD, [title ? titleRuns(title) : '', said ?? '']));
-  if (rest) void restLinks(S);
+  if (rest) { void restLinks(S); void restPreview(S); }
   return quiet ? said : null;
 }
 
@@ -6692,7 +6852,7 @@ function standList(E, S) {
     el.id = 'scenepast';
     el.addEventListener('click', (ev) => {
       const tg = /** @type {HTMLElement} */ (ev.target), h = /** @type {HTMLElement | null} */ (tg.closest('button[data-day]')), r = /** @type {HTMLElement | null} */ (tg.closest('button.pl-row'));
-      if (h && h.dataset.day) foldDay(h.dataset.day); else if (r && r.dataset.row) rowAct(Number(r.dataset.row));
+      if (tg.closest('button[data-passage]')) passageAct(); else if (h && h.dataset.day) foldDay(h.dataset.day); else if (r && r.dataset.row) rowAct(Number(r.dataset.row));
     });
     // the list one stop of the scene's ring: its stop the act the focus stands on (`standStops`); the focus in it pane B's,
     // whose selection is then the platform's live one (O-SELECTION's `focusIn`; Q4)
@@ -6728,7 +6888,8 @@ function standList(E, S) {
 function writeList(E, S, keep) {
   const L = S.past, el = pastEl;
   if (!L || !el) return;
-  const html = listHTML(L);
+  L.drawn = WRITE.unkept(L.draft);
+  const html = listHTML(L, headOf(S));
   if (html === L.html) return;
   const box = listBeside(S.fit) ? el : E.paneB;
   /** the first row or head standing in view, by its key, and its top on screen */
@@ -6761,7 +6922,8 @@ function keyOfStop(/** @type {HTMLElement} */ x) {
  */
 function standStops(el, at) {
   if (typeof el.querySelectorAll !== 'function') return;
-  const acts = /** @type {HTMLElement[]} */ ([...el.querySelectorAll('button')]);
+  for (const h of /** @type {HTMLElement[]} */ ([...el.querySelectorAll('button[data-passage]')])) h.tabIndex = 0;
+  const acts = /** @type {HTMLElement[]} */ ([...el.querySelectorAll('button:not([data-passage])')]);
   if (!acts.length) return;
   const stop = acts.find((b) => b === at) || acts.find((b) => b.hasAttribute('data-shown')) || acts[0];
   for (const b of acts) b.tabIndex = b === stop ? 0 : -1;
@@ -6790,7 +6952,13 @@ function placeList(E, S) {
   const el = pastEl;
   if (!el || !S.past || typeof el.getBoundingClientRect !== 'function') return;
   if (listBeside(S.fit)) el.style.removeProperty('--past-held'); else el.style.setProperty('--past-held', clearOf(E.paneB) + 'px');
+  // the head held at the list's top, the day heads and the floor line held beneath it (`--pl-top`)
+  const top = /** @type {HTMLElement | null} */ (el.querySelector(':scope > .pl-top')), h = (top && top.offsetHeight) || 0;
+  if (h !== headHeld) { headHeld = h; el.style.setProperty('--pl-top', h + 'px'); }
 }
+
+/** the head's height the list's day heads and floor line were last held beneath (`placeList`), px */
+let headHeld = -1;
 
 /**
  * A day folded or opened by the reader's act at its head — a click, the
@@ -6898,15 +7066,26 @@ async function readOlder(S) {
  * — each its key, its date, whether it is folded, the hands a folded head
  * names and its rows, each its positions, its time, its hand, its kind and its
  * landmark — the reads' figures, whether rows below are still read and
- * whether the rows read reach their bottom; null where the scene is no
- * draft's history.
+ * whether the rows read reach their bottom; the removed passages pane B
+ * marks, each with its words, the marks they stand as and the one whose face
+ * stands whole (`pastMarksOf`, `removedMarks`), the words a publication
+ * re-minted since, the passage held — its bytes, whether the state holds
+ * none of it or part, the words the list's head names and as they are cut
+ * there, and whether they stand whole beneath it — what the preview told
+ * and the words a put-back last placed; null where the scene is no draft's
+ * history.
  */
 export function past() {
-  const L = scene && scene.past;
-  if (!L) return null;
+  const S = scene, L = S && S.past;
+  if (!S || !L) return null;
   const line = pastLine(L), steps = stepsOf(L), cut = L.cut ? PAST.floorLine(L.rows, L.cut.at) : null;
+  const found = pastMarksOf(S), art = els ? articleIn(els.paneB) : null, head = headOf(S);
   return {
-    draft: L.draft, at: L.at, asked: L.asked, unkept: L.unkept, why: pastWhyOf(L), asking: L.out != null, out: L.out, cover: L.cover, met: L.met ? L.met.name : null, floor: L.floor, running: L.running, notLast: line.notLast, inFlight: line.reading,
+    removed: found.list.map((m) => ({ ...m, words: REC.textOf(S.b.d.runs, m.pos, m.pos + m.width) })), republished: found.republished.map((x) => ({ ...x })),
+    marks: removedMarks(found.list, art ? siteIn(art.el, S.b) : (pos) => pos).map((mk) => ({ key: mk.key, members: mk.members.map((x) => ({ ...x })) })), faced: L.faced,
+    passage: { ids: passageHeld(S).map((x) => ({ ...x })), in: passageIn(S), words: head ? head.words : null, cut: head ? headWords(head.words, head.room) : null, whole: L.whole },
+    preview: L.preview ? { at: L.preview.at, written: L.preview.written.map((x) => ({ ...x })) } : null, put: S.put ? S.put.map((x) => ({ ...x })) : null,
+    draft: L.draft, at: L.at, asked: L.asked, unkept: WRITE.unkept(L.draft), why: pastWhyOf(L), asking: L.out != null, out: L.out, cover: L.cover, met: L.met ? L.met.name : null, floor: L.floor, running: L.running, notLast: line.notLast, inFlight: line.reading,
     links: L.links, steps: { earlier: steps.earlier.inert ? steps.earlier.inert.id : null, later: steps.later.inert ? steps.later.inert.id : null },
     cut: L.cut && cut ? { at: L.cut.at, cut: cut.cut, below: cut.below, words: floorWords(L) } : null,
     from: L.from, bottom: L.bottom, reading: L.reading, figures: { ...L.figures },
@@ -6915,6 +7094,557 @@ export function past() {
     entries: L.entries.length,
   };
 }
+
+// ---- a past state's marks: the passage held, what the current text lost, the put-back (B3-S7) ---------------------------------
+
+/**
+ * The passage held now (see the head; B3-S7's ladder): pane B's selection by
+ * its bytes where one stands, else the passage pane B's last landing carried
+ * (`Pane.landed`) — the passage the act held, as each landing keeps it; none
+ * where neither stands.
+ * @param {Scene} S
+ * @returns {ISpan[]}
+ */
+function passageHeld(S) {
+  const P = S.b, sel = P.el ? SEL.selected('b') : null;
+  if (sel && sel.width > 0) { const ids = idsIn(P, sel.pos, sel.width); if (ids.length) return ids; }
+  return P.landed ?? [];
+}
+
+/**
+ * The list and pane B's corner drawn again in one step where whether the
+ * draft holds words the board has not kept moved since they were last drawn
+ * (see the head; FP-33, FP-38): pane B's corner marked where its items moved
+ * (`markCorner`), the heads' band set again, its region described anew — said
+ * nothing; and the list written again where its markup reads other than as
+ * last written, the rows in view held still (`writeList`) — that change, or
+ * the list's head following pane B's selection; nothing where the list has
+ * not stood. The app's loop runs it on each dirty frame while the scene
+ * stands (`markKept`).
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ */
+function pastKept(E, S) {
+  const L = S.past;
+  if (!L || L.drawn === null) return;
+  if (WRITE.unkept(L.draft) !== L.drawn) { markCorner(E, S, S.b); rebanded(E, S); namePane(E, S, S.b); }
+  writeList(E, S, true);
+}
+
+/**
+ * The passages of a past state the current text lacks (B3-S7 THE MARKS): the
+ * stretches of the state's text whose bytes the current text's image does not
+ * place, by the bytes' identity (M-REC's `changedBetween`), each at its first
+ * position in the state's text and its positions, neighbours joined; a
+ * position the preview names by another identity — words a publication
+ * re-minted since — taken by that one (`written`). None where the two texts
+ * hold the same bytes.
+ * @param {import('../model/records.js').ImageRun[]} now the current text's image
+ * @param {import('../model/records.js').ImageRun[]} past the state's image
+ * @param {import('../model/records.js').ImageRun[] | null} [written] the preview's runs over the state's positions (`Preview.written`)
+ * @returns {Array<{pos: number, width: number}>}
+ */
+export function removedIn(now, past, written = null) {
+  return REC.changedBetween(now, written && written.length ? written : past).placed;
+}
+
+/**
+ * The words a publication re-minted since a past state (B3-S7; C-238): each
+ * stretch of the state's text the preview names by another identity than the
+ * state's own (`Preview.written`), with the member that minted it, a member's
+ * version kept (M-ADDR's `homeOf`); neighbours of one member joined. None
+ * where the preview names every position by the state's own.
+ * @param {import('../model/records.js').ImageRun[]} past the state's image
+ * @param {import('../model/records.js').ImageRun[]} written
+ * @returns {Array<{pos: number, width: number, member: string}>}
+ */
+export function republished(past, written) {
+  /** @type {Array<{pos: number, width: number, member: string}>} */
+  const out = [];
+  for (const r of written) {
+    const own = REC.identityIn(past, r.pos, r.width);
+    if (own.length === 1 && own[0].prefix === r.prefix && own[0].ordinal === r.ordinal) continue;
+    const member = homeOf(r.prefix) || r.prefix, last = out[out.length - 1];
+    if (last && last.member === member && last.pos + last.width === r.pos) last.width += r.width; else out.push({ pos: r.pos, width: r.width, member });
+  }
+  return out;
+}
+
+/**
+ * The preview's runs as an image over the state's positions (`Preview.written`;
+ * the past states survey's R5): each run of `written` in V order, at the
+ * positions from 1 it covers, its identity the run's origin's content
+ * I-space — a member's by the member, its version kept — from its first
+ * ordinal.
+ * @param {import('../model/frames.js').IRun[]} written
+ * @returns {import('../model/records.js').ImageRun[]}
+ */
+export function writtenImage(written) {
+  let at = 1;
+  return written.map((r) => { const x = { pos: at, width: r.width, prefix: `${r.origin}.0.1`, ordinal: r.iStart }; at += r.width; return x; });
+}
+
+/**
+ * @typedef {Object} RemovedMark — the removed passages whose marks stand at one site of pane B, one line, drawn as one mark carrying their count (P44; `removedMarks`)
+ * @property {string} key its first passage's first position: what its element, its face and its act are keyed by
+ * @property {Array<{pos: number, width: number}>} members the passages, in the text's order
+ */
+
+/**
+ * The marks of removed passages (B3-S7; P44): the passages standing at one
+ * site — the line their first position stands on (`site`) — one mark, its
+ * members in the text's order; each mark keyed by its first member.
+ * @param {ReadonlyArray<{pos: number, width: number}>} list the removed passages, in the text's order (`removedIn`)
+ * @param {(pos: number) => string | number} site where a position's mark stands: its line
+ * @returns {RemovedMark[]}
+ */
+export function removedMarks(list, site) {
+  /** @type {Map<string | number, RemovedMark>} */
+  const at = new Map();
+  for (const m of list) {
+    const k = site(m.pos), had = at.get(k);
+    if (had) had.members.push({ pos: m.pos, width: m.width }); else at.set(k, { key: String(m.pos), members: [{ pos: m.pos, width: m.width }] });
+  }
+  return [...at.values()];
+}
+
+/** the removed passages and their marks as last read, for the images they were read from: read again only where either image, or the preview, moved (`pastMarksOf`) */
+let marksFor = { a: /** @type {unknown} */ (null), b: /** @type {unknown} */ (null), w: /** @type {unknown} */ (null), list: /** @type {Array<{pos: number, width: number}>} */ ([]), republished: /** @type {Array<{pos: number, width: number, member: string}>} */ ([]) };
+
+/**
+ * The removed passages pane B's past state holds that pane A's current text
+ * lacks, and the words a publication re-minted since (see the head; B3-S7):
+ * read off the two records the panes were set with, the preview's runs taken
+ * where it told of the state shown (`removedIn`, `republished`) — read again
+ * at every landing and at every setting of pane A, typing, a put-back and an
+ * undo among them, for each brings a new image; none while pane B stands as
+ * its cover, which holds no text, or shows no past state, or the scene is no
+ * draft's history.
+ * @param {Scene} S
+ * @returns {{list: Array<{pos: number, width: number}>, republished: Array<{pos: number, width: number, member: string}>}}
+ */
+function pastMarksOf(S) {
+  const L = S.past;
+  if (!L || L.cover || !pastShown(S.b) || !S.b.d.image.length) return { list: [], republished: [] };
+  const w = L.preview && L.preview.at === L.at ? L.preview.written : null;
+  if (marksFor.a !== S.a.d.image || marksFor.b !== S.b.d.image || marksFor.w !== w) {
+    marksFor = { a: S.a.d.image, b: S.b.d.image, w, list: removedIn(S.a.d.image, S.b.d.image, w), republished: w ? republished(S.b.d.image, w) : [] };
+  }
+  return { list: marksFor.list, republished: marksFor.republished };
+}
+
+/**
+ * The preview read once pane B rests on a past state (see the head; B3-S7; the
+ * past states survey's "Which read draws the pane"): `history.past` at the
+ * commit pane B shows — never the newest kept state, which the preview
+ * refuses as no past one — its `written` runs kept over the state's positions
+ * (`writtenImage`), so a put-back of words a publication re-minted since
+ * sends the member's identity and pane B says so at them (`Preview`); a
+ * refusal, a read's, leaves none. Nothing where pane B stands as its cover,
+ * the state shown is not the one asked, or a later state is shown or asked
+ * meanwhile.
+ * @param {Scene} S
+ * @returns {Promise<void>}
+ */
+async function restPreview(S) {
+  const L = S.past, s = REC.session();
+  if (!L || L.cover || !s || !pastShown(S.b) || (L.rows[0] && L.at === L.rows[0].last) || L.at !== L.asked) return;
+  const at = L.at, t0 = performance.now();
+  const out = await PUMP.preview(L.draft, at);
+  if (scene !== S || S.past !== L || L.at !== at) return;
+  L.figures = { ...L.figures, preview: { ms: performance.now() - t0, refused: 'refused' in out ? out.refused.name : null } };
+  L.preview = 'refused' in out ? null : { at, written: writtenImage(out.past.written) };
+  draw();
+}
+
+/**
+ * The words of a removed passage the put-back places, as the current text is
+ * to hold them (see the head; B3-S7; M7 (c)): its runs off the state's record,
+ * its identity the preview's where the preview told of the state shown — a
+ * member's words by the member, never the draft's — else the state's own
+ * (M-DERIVE's `stretchIn`); null where the state's record does not hold the
+ * passage whole.
+ * @param {Scene} S
+ * @param {{pos: number, width: number}} m
+ * @returns {import('../model/records.js').Took | null}
+ */
+function tookOf(S, m) {
+  const L = S.past, took = stretchIn(S.b.d, m.pos, m.width);
+  if (!took || !L || !L.preview || L.preview.at !== L.at) return took;
+  const ids = REC.identityIn(L.preview.written, m.pos, m.width);
+  if (!ids.length) return took;
+  let at = 1;
+  return { runs: took.runs, ids: ids.map((x) => { const r = { pos: at, width: x.width, prefix: x.prefix, ordinal: x.ordinal }; at += x.width; return r; }) };
+}
+
+/**
+ * Where a removed passage goes in the current text, found at the press
+ * (B3-S7: "where the words before it now stand in the current text,
+ * re-projected at the act"; P43): after the byte that stands before it in the
+ * state, where the current text the page shows places that byte; else before
+ * the byte after it; the text's first position where the passage opens the
+ * state and the current text holds no word; null where the current text
+ * places neither.
+ * @param {Scene} S
+ * @param {{pos: number, width: number}} m
+ * @returns {number | null}
+ */
+function putPlace(S, m) {
+  const L = S.past;
+  if (!L) return null;
+  const now = LAYER.shownOf(L.draft), image = S.b.d.image;
+  const before = m.pos > 1 ? REC.identityIn(image, m.pos - 1, 1) : [], after = REC.identityIn(image, m.pos + m.width, 1);
+  const b = before.length ? REC.placedIn(now.image, before) : [];
+  if (b.length) return b[0].pos + b[0].width;
+  const a = after.length ? REC.placedIn(now.image, after) : [];
+  if (a.length) return a[0].pos;
+  return !before.length && !after.length && now.from < 0 ? 1 : null;
+}
+
+/**
+ * Why the put-back cannot be taken now (B3-S7; FP-41; P47): the reason a
+ * key that would write in the draft is answered by where its board's drafts
+ * cannot be written now (N-KEYS' `unwritableLine`); null where it can.
+ * @param {Scene} S
+ * @returns {{id: string, text: string} | null}
+ */
+function putInert(S) {
+  const L = S.past;
+  return L ? unwritableLine(L.draft) : null;
+}
+
+/**
+ * The put-back (see the head; B3-S7 "put back in the current text"; D5
+ * K-102): the removed passage's words placed in the draft by their identity —
+ * the state's runs, or the member's the preview names (`tookOf`) — where the
+ * words before it stand in the current text at the press (`putPlace`), one
+ * placing by identity handed to W-WRITE, one step of its own, at no caret, its
+ * edits a burst of their own (W-WRITE's `placeSame`; FP-9, FP-11): the text
+ * shown holding them at once, so pane B's mark at them goes as pane A is set
+ * again (`followShown`), and pane A outlining them; the face folded, the focus
+ * back on pane B, and "put back — “⟨first words⟩”" said once (FP-36). Where
+ * the draft cannot be written now, inert, its reason said at every press
+ * (`putInert`); nothing where the current text holds the passage again, or
+ * places neither byte beside it. An act in the scene (`actedIn`).
+ * @param {number} pos the passage's first position in pane B's text
+ * @returns {boolean} the words were placed
+ */
+export function putBack(pos) {
+  const S = scene, E = els, L = S && S.past;
+  if (!S || !E || !L) return false;
+  actedIn(S);
+  const inert = putInert(S);
+  if (inert) { FOCUS.say(asSentence(inert), false, true); return false; }
+  const m = pastMarksOf(S).list.find((x) => x.pos === pos);
+  const took = m ? tookOf(S, m) : null, at = m ? putPlace(S, m) : null;
+  if (!m || !took || at == null) return false;
+  if (LAYER.placedShown(L.draft, took.ids.map((x) => ({ prefix: x.prefix, ordinal: x.ordinal, width: x.width }))).length) return false;
+  const words = REC.textOf(took.runs, 1, 1 + m.width);
+  if (!WRITE.placeSame(L.draft, [{ took }], at, 0, null)) return false;
+  L.faced = null;
+  S.put = took.ids.map((x) => ({ prefix: x.prefix, ordinal: x.ordinal, width: x.width }));
+  FOCUS.land(E.paneB);
+  FOCUS.say(tRuns('B3.undo.said.put-back', { 'first words': LAYER.firstWordsOf(words) }, { 'first words': 'reading' }), false, true);
+  markDirty();
+  return true;
+}
+
+/**
+ * A removed passages' mark's act (see the head; D5 K-102, K-59): its face
+ * opened whole — C-49's words and each passage's act — the face standing
+ * whole folded, and the first act the face holds focused as it opens (§4 rule
+ * 4); folded again where it stood whole, the focus back on the mark. An act
+ * in the scene (`actedIn`).
+ * @param {string} key the mark's key (`RemovedMark.key`)
+ */
+export function removedAct(key) {
+  const S = scene, E = els, L = S && S.past;
+  if (!S || !E || !L) return;
+  actedIn(S);
+  L.faced = L.faced === key ? null : key;
+  draw();
+  const at = /** @type {HTMLElement | null} */ (E.paneB.querySelector(L.faced ? `.removed-at[data-mark="${L.faced}"] button[data-put]` : `button[data-removed="${key}"]`));
+  if (at) FOCUS.land(at);
+}
+
+/**
+ * Esc's step at a past state's marks (see the head; FP-36): a removed
+ * passages' face standing whole folded, the focus on its mark; else the
+ * passage's words standing whole beneath the list's head folded. False where
+ * neither stands.
+ * @returns {boolean}
+ */
+export function foldPast() {
+  const S = scene, E = els, L = S && S.past;
+  if (!S || !E || !L) return false;
+  if (L.faced) { const key = L.faced; removedAct(key); return true; }
+  if (L.whole) { L.whole = false; writeList(E, S, true); return true; }
+  return false;
+}
+
+/** is an element a past state's mark or an act on its face, in pane B: a key's Enter and Space there are the button's own (N-KEYS') */
+export const pastActAt = (/** @type {Element | null} */ el) => !!el && !!scene && !!scene.past && !!els && els.paneB.contains(el) && typeof el.closest === 'function' && !!el.closest('.removed-at');
+
+/**
+ * The list's head's first row's act (see the head; B3-S7; FP-36): the passage
+ * held (`passageHeld`) brought into view in
+ * each pane holding it — the least scroll that stands its first line below
+ * what that pane's held head covers — its mark there the outline; where
+ * neither pane holds it, its words opened whole beneath the head, folded
+ * again by the act. An act in the scene (`actedIn`).
+ */
+export function passageAct() {
+  const S = scene, E = els, L = S && S.past;
+  if (!S || !E || !L) return;
+  actedIn(S);
+  const held = passageHeld(S);
+  const holding = held.length ? SIDES.filter((side) => REC.placedIn(imageOf(S[side]), held).length > 0) : [];
+  if (!holding.length) { L.whole = !L.whole; writeList(E, S, true); return; }
+  for (const side of holding) {
+    const P = S[side], pane = paneEl(E, side), at = REC.placedIn(imageOf(P), held)[0];
+    const line = at ? lineAt(pane, P.names, at.pos) : null;
+    if (line && typeof pane.getBoundingClientRect === 'function') {
+      const top = clearOf(pane), seen = line.top - pane.scrollTop;
+      if (seen < top || seen > pane.clientHeight - LINE_H * READING_PX) pane.scrollTop = Math.max(0, line.top - Math.max(LEVEL_AT, top));
+    }
+  }
+  draw();
+}
+
+/**
+ * Whether the state pane B shows holds the passage held (B3-S7, the passage
+ * held re-projected at every state the pane lands on): `none` where it holds
+ * none of it, `part` where some, null where all of it — or no passage is
+ * held, or pane B stands as its cover.
+ * @param {Scene} S
+ * @returns {'none' | 'part' | null}
+ */
+function passageIn(S) {
+  const L = S.past, held = L && !L.cover && pastShown(S.b) ? passageHeld(S) : [];
+  const want = held.reduce((n, x) => n + x.width, 0);
+  if (!want) return null;
+  const got = REC.placedIn(S.b.d.image, held).reduce((n, x) => n + x.width, 0);
+  return got === 0 ? 'none' : got < want ? 'part' : null;
+}
+
+/**
+ * A past state's marks placed in the panes (see the head; B3-S7), each frame
+ * the scene draws: in each pane, the passage held's mark — a rule along its
+ * lines at the column's edge, never the caret's shape — where the pane's text
+ * holds it (`passageHeld`) — the words saying the state holds none of it, or
+ * part, its corner's (`pastLine`); in pane B each removed passages' mark at its line's edge, the removed
+ * hue's struck dash a walk element, its count where it stands for several,
+ * and its face whole where its act opened it (`pastMarksOf`, `removedMarks`,
+ * `markHTML`), the passages beneath it in the removed ground, the platform's
+ * custom highlight; the line saying words were published as new since, at
+ * their first line; and in pane A, the words a put-back placed outlined, while
+ * its text holds them (`Scene.put`). Each element written only where its
+ * words changed, placed by translate in its pane's content so its scroll
+ * carries it, and hidden outside the room the pane gives it; the rest
+ * removed. Nothing where the scene is no draft's history.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ */
+function placePastMarks(E, S) {
+  const L = S.past;
+  for (const side of SIDES) {
+    const pane = paneEl(E, side);
+    /** @type {Map<string, HTMLElement>} */
+    const standing = new Map([...pane.querySelectorAll(':scope > .past-mark')].map((e) => [/** @type {HTMLElement} */ (e).dataset.key || '', /** @type {HTMLElement} */ (e)]));
+    if (L && typeof pane.getBoundingClientRect === 'function' && pane.clientHeight > 0) {
+      const art = articleIn(pane);
+      if (art) {
+        const P = S[side], made = LAYER.madeOf(art.el);
+        const held = passageHeld(S), placed = made && held.length ? REC.placedIn(made.image, held) : [];
+        placed.forEach((s, i) => ruleAt(E, side, art.el, standing, `rule ${i}`, s, 'passage'));
+        if (side === 'a' && S.put && made) REC.placedIn(made.image, S.put).forEach((s, i) => ruleAt(E, side, art.el, standing, `put ${i}`, s, 'put'));
+        if (side === 'b' && made) {
+          const found = pastMarksOf(S), siteOf = siteIn(art.el, P);
+          for (const mk of removedMarks(found.list, siteOf)) faceAt(E, standing, 'removed ' + mk.key, mk.members[0].pos, markHTML(S, mk), true);
+          for (const r of found.republished) faceAt(E, standing, 'new ' + r.pos, r.pos, `<div class="past-face new" data-string="B3.history.published-new">${addressedHTML(t('B3.history.published-new', { 'E.k': r.member }))}</div>`, false);
+          removedGround(art.el, P, found.list);
+        }
+      }
+    }
+    for (const e of standing.values()) e.remove();
+  }
+  if (S.put && !REC.placedIn(imageOf(S.a), S.put).length) S.put = null;
+}
+
+/**
+ * Where a position of pane B's text stands, for its mark's site (`removedMarks`):
+ * the top of the line its byte stands on, as the platform lays it out; the
+ * block holding it where the platform lays out no line.
+ * @param {HTMLElement} art
+ * @param {Pane} P
+ * @returns {(pos: number) => string | number}
+ */
+function siteIn(art, P) {
+  return (pos) => {
+    const r = LAYER.rangeIn(art, { addr: P.names, pos, width: 1 }), q = r ? [...r.getClientRects()].find((x) => x.height > 0) : null;
+    if (q) return Math.round(q.top);
+    const b = REC.blockIn(P.d.blocks, pos);
+    return b ? 'b' + b.pos : 'p' + pos;
+  };
+}
+
+/**
+ * A removed passages' mark's markup (see `placePastMarks`; O-DELETION's
+ * mark): its native button, named "removed here" with its count where it
+ * stands for several, described by its face's words, out of the Tab order —
+ * a walk element (`walkPane`; D5 K-102) — and, where its act opened it, its
+ * face whole: C-49's words, then each passage's act, "Put back in the current
+ * text", each passage's own words before its act where the mark stands for
+ * several (P44), each act inert with its reason where the draft cannot be
+ * written now (`putInert`; FP-41).
+ * @param {Scene} S
+ * @param {RemovedMark} mk
+ * @returns {string}
+ */
+function markHTML(S, mk) {
+  const L = /** @type {PastList} */ (S.past), whole = L.faced === mk.key, n = mk.members.length, inert = putInert(S);
+  const named = n > 1 ? fields(t('B3.removed-here'), numeral(n)) : t('B3.removed-here');
+  const act = (/** @type {{pos: number, width: number}} */ m) => `<button type="button" class="face-act" data-put="${m.pos}" data-string="B3.history.put-back"${inert ? ` aria-disabled="true" data-inert="${esc(inert.id)}" aria-description="${esc(heard(inert.text))}"` : ''}>${esc(t('B3.history.put-back'))}</button>`;
+  const member = (/** @type {{pos: number, width: number}} */ m) => (n > 1 ? `<div class="part member"><span class="words">${esc(REC.textOf(S.b.d.runs, m.pos, m.pos + m.width))}</span> ${act(m)}</div>` : `<div class="part acts">${act(m)}</div>`);
+  const face = whole ? `<div class="past-face removed-face"><div class="part" data-string="C-49">${esc(t('C-49'))}</div>${mk.members.map(member).join('')}</div>` : '';
+  return `<button type="button" class="removed-mark" data-removed="${mk.key}" data-string="B3.removed-here" tabindex="-1" title="${esc(t('B3.removed-here'))}" aria-label="${esc(heard(named))}" aria-expanded="${whole}" aria-description="${esc(heard(t('C-49')))}">${n > 1 ? `<span class="count">${esc(numeral(n))}</span>` : ''}</button>${face}`;
+}
+
+/**
+ * One past state's mark element placed beside the line holding a position of
+ * pane B's text (see `placePastMarks`): written where its markup changed —
+ * a focus on an act in it kept — at the line's edge past its block and the
+ * signs its edge holds, level with the line's middle, inside the room the
+ * pane gives a face, hidden where the line stands outside it; a face in it
+ * beside the mark where the room holds FACE_MIN_PX past it, else over the
+ * lines beneath, else above where the room beneath holds none.
+ * @param {NonNullable<typeof els>} E
+ * @param {Map<string, HTMLElement>} standing
+ * @param {string} key
+ * @param {number} pos
+ * @param {string} html
+ * @param {boolean} mark the element leads with a mark: its face stands after the mark
+ */
+function faceAt(E, standing, key, pos, html, mark) {
+  const S = /** @type {Scene} */ (scene), P = S.b, pane = E.paneB, line = paneLine(E, 'b', P, pos);
+  const el = markEl(pane, standing, key, html);
+  if (!line) { el.style.display = 'none'; return; }
+  const q = pane.getBoundingClientRect(), left = q.left + pane.clientLeft, origin = q.top + pane.clientTop - pane.scrollTop;
+  const x = Math.min(line.from.x + MARK_GAP, line.room.x + line.room.w - MARK_PX), y = line.line.y + line.line.h / 2 - MARK_PX / 2;
+  const off = y < line.room.y || y + MARK_PX > line.room.y + line.room.h;
+  el.style.display = off ? 'none' : '';
+  if (off) return;
+  el.style.transform = `translate(${Math.round(mark ? x - left : line.room.x + FACE_INSET - left)}px, ${Math.round((mark ? y : line.line.y + line.line.h + MARK_GAP) - origin)}px)`;
+  const face = /** @type {HTMLElement | null} */ (el.querySelector('.past-face'));
+  if (!face || !mark) { if (face && !mark) face.style.maxWidth = Math.max(0, Math.min(FACE_MAX_PX, line.room.w - 2 * FACE_INSET)) + 'px'; return; }
+  const space = line.room.x + line.room.w - FACE_INSET - (x + MARK_PX + MARK_GAP), beside = space >= FACE_MIN_PX;
+  face.style.maxWidth = (beside ? Math.min(FACE_MAX_PX, space) : Math.min(FACE_MAX_PX, line.room.w - 2 * FACE_INSET)) + 'px';
+  const f = face.getBoundingClientRect(), floor = line.room.y + line.room.h - FACE_INSET - f.height;
+  const fx = beside ? x + MARK_PX + MARK_GAP : Math.max(line.room.x + FACE_INSET, Math.min(line.line.x, line.room.x + line.room.w - FACE_INSET - f.width));
+  let fy = beside ? Math.max(line.room.y + FACE_INSET, Math.min(line.line.y, floor)) : line.line.y + line.line.h + MARK_GAP;
+  if (!beside && fy > floor) fy = Math.max(line.room.y + FACE_INSET, Math.min(line.line.y - MARK_GAP - f.height, floor));
+  face.style.left = Math.round(fx - x) + 'px'; face.style.top = Math.round(fy - y) + 'px';
+}
+
+/**
+ * The rule a passage takes along its lines at its column's edge in a pane
+ * (see `placePastMarks`; B3-S7's Feedback; FP-31): from the
+ * top of the first line a character of it stands on to the foot of the last,
+ * at the column's text's start, never the caret's shape — the passage held's,
+ * or the words a put-back placed (`kind`).
+ * @param {NonNullable<typeof els>} E
+ * @param {'a' | 'b'} side
+ * @param {HTMLElement} art
+ * @param {Map<string, HTMLElement>} standing
+ * @param {string} key
+ * @param {{pos: number, width: number}} s the stretch, a position of the pane's text
+ * @param {'passage' | 'put'} kind
+ */
+function ruleAt(E, side, art, standing, key, s, kind) {
+  const S = /** @type {Scene} */ (scene), P = S[side], pane = paneEl(E, side);
+  const rects = LAYER.textRangesIn(art, { addr: P.names, pos: s.pos, width: s.width }).flatMap((r) => [...r.getClientRects()]).filter((r) => r.height > 0);
+  const el = markEl(pane, standing, key, '');
+  el.classList.add('rule', kind);
+  if (!rects.length) { el.style.display = 'none'; return; }
+  const q = pane.getBoundingClientRect(), left = q.left + pane.clientLeft, origin = q.top + pane.clientTop - pane.scrollTop;
+  const body = /** @type {HTMLElement | null} */ (art.querySelector(':scope > .run')), col = (body || art).getBoundingClientRect();
+  const top = Math.min(...rects.map((r) => r.top)), bottom = Math.max(...rects.map((r) => r.bottom)), held = q.top + pane.clientTop + clearOf(pane);
+  const from = Math.max(top, held), h = bottom - from;
+  if (h < 1) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.style.transform = `translate(${Math.round(col.left - RULE_GAP - RULE_W - left)}px, ${Math.round(from - origin)}px)`;
+  el.style.height = Math.round(h) + 'px';
+}
+
+/**
+ * A past state's mark element in a pane's content, made where none stands at
+ * its key, its markup written only where it changed — a focus on a button in
+ * it kept (N-FOCUS's `keep`) — and taken off the elements to remove.
+ * @param {HTMLElement} pane
+ * @param {Map<string, HTMLElement>} standing
+ * @param {string} key
+ * @param {string} html
+ * @returns {HTMLElement}
+ */
+function markEl(pane, standing, key, html) {
+  let el = standing.get(key);
+  standing.delete(key);
+  if (!el) {
+    el = /** @type {HTMLElement} */ (document.createElement('div'));
+    el.className = 'past-mark' + (key.startsWith('removed ') ? ' removed-at' : '');
+    el.dataset.key = key;
+    if (key.startsWith('removed ')) el.dataset.mark = key.slice('removed '.length);
+    pane.appendChild(el);
+  }
+  const e = el;
+  if (markHTMLs.get(e) !== html) {
+    FOCUS.keep(e, (x) => { const d = /** @type {HTMLElement} */ (x).dataset; return d && d.removed ? 'mark:' + d.removed : d && d.put ? 'put:' + d.put : null; }, () => { e.innerHTML = html; });
+    markHTMLs.set(e, html);
+  }
+  return e;
+}
+
+/** each past state's mark element's markup as last written (`markEl`) */
+const markHTMLs = new WeakMap();
+
+/**
+ * The removed passages in pane B drawn in the removed ground (see
+ * `placePastMarks`): the platform's custom highlight over the ranges their
+ * characters stand in (T-LAYER's `textRangesIn`), drawn anew only where what
+ * it is drawn from changed; nothing where the platform draws no custom
+ * highlight — the mark at each line's edge says them there alone.
+ * @param {HTMLElement} art
+ * @param {Pane} P
+ * @param {Array<{pos: number, width: number}>} list
+ */
+function removedGround(art, P, list) {
+  if (!SEL.drawsHighlights()) return;
+  const key = `${removedGroundKey(art)}:${list.map((m) => `${m.pos}+${m.width}`).join(',')}`;
+  if (key === groundDrawn) return;
+  groundDrawn = key;
+  const reg = /** @type {any} */ (CSS).highlights, ranges = list.flatMap((m) => LAYER.textRangesIn(art, { addr: P.names, pos: m.pos, width: m.width }));
+  if (ranges.length) reg.set(REMOVED_GROUND, new (/** @type {any} */ (globalThis)).Highlight(...ranges)); else reg.delete(REMOVED_GROUND);
+}
+
+/** the custom highlight the removed passages' ground is drawn with (`removedGround`); the style's `::highlight(skep-removed)` */
+const REMOVED_GROUND = 'skep-removed';
+/** what the removed ground was last drawn from (`removedGround`) */
+let groundDrawn = '';
+/** an article's number for the removed ground's key: the ground drawn again over a new article */
+const groundIds = new WeakMap();
+let groundSerial = 0;
+const removedGroundKey = (/** @type {HTMLElement} */ art) => { let id = groundIds.get(art); if (id == null) { id = ++groundSerial; groundIds.set(art, id); } return id; };
+
+/** the removed ground taken down: no scene's pane B shows a removed passage */
+function removedGroundOff() {
+  if (groundDrawn && SEL.drawsHighlights()) /** @type {any} */ (CSS).highlights.delete(REMOVED_GROUND);
+  groundDrawn = '';
+}
+
+/** a removed passages' mark's side, the gap between a line's edge, the mark and its face, a face's widest and the room it needs beside its mark, and the room kept inside the pane's room (px; O-DELETION's) */
+const MARK_PX = 12, MARK_GAP = 4, FACE_MAX_PX = 280, FACE_MIN_PX = 140, FACE_INSET = 6;
+/** a passage's rule: its width, and its gap before the column's text (px) */
+const RULE_W = 2, RULE_GAP = 4;
 
 /**
  * End the scene where it stands, as a navigation act's departure ends it —
@@ -6945,6 +7675,7 @@ export function close() {
   drawnHits = [];
   drawnMarks = [];
   for (const side of SIDES) { stood[side].clear(); heldAt[side] = null; }
+  removedGroundOff();
   coverPlane(false);
   if (pastEl) { pastEl.remove(); els.paneB.classList.toggle('past-after', false); }
   setRoom(els);
@@ -7073,12 +7804,34 @@ export function editorLine(addr, site) {
   const at = typeof document !== 'undefined' ? document.activeElement : null, holding = SIDES.filter((s) => !!S[s].el && editor(S[s]) && S[s].names === addr);
   const side = holding.find((s) => textHolds(E, s, at)) ?? holding[0];
   if (!side) return null;
-  const P = S[side], art = /** @type {HTMLElement} */ (P.el), made = LAYER.madeOf(art), pane = paneEl(E, side);
-  if (!made || typeof pane.getBoundingClientRect !== 'function' || typeof art.getBoundingClientRect !== 'function') return null;
+  const P = S[side], art = /** @type {HTMLElement} */ (P.el), made = LAYER.madeOf(art);
+  if (!made) return null;
   const before = site.before.length ? REC.placedIn(made.image, site.before) : [], after = before.length || !site.after.length ? [] : REC.placedIn(made.image, site.after);
   const last = before[before.length - 1];
   const pos = last ? last.pos + last.width : after.length ? after[0].pos : !site.before.length && !site.after.length && P.d.from >= 0 ? P.d.from : null;
-  if (pos == null) return null;
+  return pos == null ? null : paneLine(E, side, P, pos);
+}
+
+/**
+ * The line of a pane's text a position stands on, where a face or a mark at
+ * it stands, on screen (`editorLine`; a past state's marks): the position
+ * held inside the text; the box of the glyph there, else of the last before
+ * it that sets one, sixteen positions back at most, as `lineAt` reads a line;
+ * where a face beside it leaves it, past its block's right edge and the signs
+ * its edge holds level with it; and the room a face stands inside — the
+ * pane's visible box below what its held head covers, clear of its corner
+ * beside its column and of its corner's foot on the side of the foot the line
+ * stands. Null where the platform lays out no article, no glyph sets the
+ * line, or its middle stands outside that room.
+ * @param {NonNullable<typeof els>} E
+ * @param {'a' | 'b'} side
+ * @param {Pane} P
+ * @param {number} pos a position of the pane's text
+ * @returns {EditorLine | null}
+ */
+function paneLine(E, side, P, pos) {
+  const art = P.el, made = art ? LAYER.madeOf(art) : null, pane = paneEl(E, side);
+  if (!art || !made || typeof pane.getBoundingClientRect !== 'function' || typeof art.getBoundingClientRect !== 'function') return null;
   const inText = P.d.from >= 0 ? Math.max(P.d.from, Math.min(pos, P.d.to - 1)) : pos;
   /** @type {{rect: DOMRect, pos: number} | null} the glyph the line is read from, and its position */
   let glyph = null;
@@ -7196,13 +7949,50 @@ function saySpan(P, b, all) {
  * @param {1 | -1} dir
  */
 function walkPane(E, P, dir) {
-  const all = elementsIn(P);
-  if (P.focus == null || !spanShown(E, P, P.focus)) { const b = spanInView(E, P); P.focus = b ? b.pos : null; }
-  const i = P.focus != null ? all.findIndex((b) => b.pos === P.focus) : -1, to = i < 0 ? null : all[i + dir];
+  const all = elementsIn(P), on = markOn(E, P);
+  if (!on && (P.focus == null || !spanShown(E, P, P.focus))) { const b = spanInView(E, P); P.focus = b ? b.pos : null; }
+  const stops = walkStops(E, P, all), k = on ? stops.findIndex((x) => x.mark === on) : stops.findIndex((x) => !x.mark && x.span.pos === P.focus);
+  const to = k < 0 ? null : stops[k + dir];
   if (!to) return;
-  P.focus = to.pos;
+  P.focus = to.span.pos;
   showSpan(E, P, false);
-  saySpan(P, to, all);
+  if (to.mark) {
+    // the mark a walk element (D5 K-102, K-59's form): the platform's focus on it, its name said
+    draw();
+    const b = /** @type {HTMLElement | null} */ (E.paneB.querySelector(`button[data-removed="${to.mark}"]`));
+    if (b) { FOCUS.land(b); FOCUS.say(b.getAttribute('aria-label') || ''); }
+    return;
+  }
+  if (on) FOCUS.land(paneEl(E, P.side));
+  saySpan(P, to.span, all);
+}
+
+/** the removed passages' mark the platform's focus stands on in a pane, by its key (`RemovedMark.key`); null where it stands on none */
+function markOn(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P) {
+  const at = typeof document !== 'undefined' ? /** @type {HTMLElement | null} */ (document.activeElement) : null;
+  return P.side === 'b' && at && at.dataset && at.dataset.removed && paneEl(E, P.side).contains(at) ? at.dataset.removed : null;
+}
+
+/**
+ * A pane's walk's stops in its text's order (`walkPane`; D5 K-60, K-102):
+ * each element of its walk, and, in a past state's pane B, after the element
+ * holding its first passage, each removed passages' mark (`pastMarksOf`,
+ * `removedMarks`) — a walk element of K-59's form.
+ * @param {NonNullable<typeof els>} E
+ * @param {Pane} P
+ * @param {Block[]} all the pane's elements, in order
+ * @returns {Array<{span: Block, mark: string | null}>}
+ */
+function walkStops(E, P, all) {
+  const S = scene, art = P.side === 'b' && S && S.past ? articleIn(E.paneB) : null;
+  const marks = art && S ? removedMarks(pastMarksOf(S).list, siteIn(art.el, P)) : [];
+  /** @type {Array<{span: Block, mark: string | null}>} */
+  const out = [];
+  for (const b of all) {
+    out.push({ span: b, mark: null });
+    for (const mk of marks) { const p = mk.members[0].pos; if (p >= b.pos && p < b.pos + b.width) out.push({ span: b, mark: mk.key }); }
+  }
+  return out;
 }
 
 /**

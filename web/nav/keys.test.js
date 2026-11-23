@@ -264,6 +264,12 @@ test('the one-state step of a draft\'s history reads Alt off the key on every pl
   for (const [chord, act] of [['Alt+↓', 'history.earlier'], ['Alt+↑', 'history.later'], ['↓', 'history.list.next'], ['↑', 'history.list.previous']]) assert.ok(rows.some((r) => r.id === 'K-102' && r.chord === chord && r.act === act && r.surface === 'scene'), `K-102's ${chord}`);
 });
 
+test('the passage\'s own steps are bound to nothing yet: no K-102 row binds Alt+Shift+↓ or Alt+Shift+↑, which step nothing one state at a time either — their presses land with the probe search (skep-frontend #675\'s design decision, #705; D5 K-102)', () => {
+  const ev = (/** @type {string} */ key) => /** @type {any} */ ({ key, altKey: true, shiftKey: true, metaKey: false, ctrlKey: false });
+  assert.deepEqual(rows.filter((r) => /Alt\+Shift\+[↓↑]/.test(r.chord) || r.act.startsWith('history.passage')), [], 'no row');
+  assert.deepEqual([KEYS.stateStep(ev('ArrowDown')), KEYS.stateStep(ev('ArrowUp'))], [0, 0], 'no one-state step either');
+});
+
 test('Mod+Shift+Enter is "read side by side" wherever it stands: the selection\'s slot, and in the LEAP box its row\'s "open beside" (D5 K-52, K-101)', () => {
   assert.deepEqual(rows.filter((r) => r.chord === 'Mod+Shift+Enter'), [{ id: 'K-101', chord: 'Mod+Shift+Enter', act: 'leap.beside', surface: 'box' }, { id: 'K-52', chord: 'Mod+Shift+Enter', act: 'selection.scene', surface: 'selection' }]);
 });

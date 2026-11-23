@@ -11,8 +11,9 @@
 // is one group, the groups in the text's order and each frame's positions
 // those of the text as it stands after the frames before it: a `delete` of
 // the bytes the place lost, first; then a `reinstate` of each stretch placed
-// there whose bytes the board holds — a put-back's, by their I-runs, never
-// an `insert` of new bytes; then an `insert` of each stretch of bytes the
+// there whose bytes the board holds — a put-back's, by their I-runs, each run
+// naming the document that minted it, a member's words the member with its
+// version kept, never an `insert` of new bytes; then an `insert` of each stretch of bytes the
 // page made, its `values` their text. A burst judged first (`Asked.judged`) —
 // a placing by identity, a paste of the same words — sends each place's
 // stretches the board holds before anything else of the place, in one
@@ -45,7 +46,7 @@
 
 import { applyEdits, placedAgain } from '../model/derive.js';
 import { isPage, textOf } from '../model/records.js';
-import { documentOf } from '../model/address.js';
+import { homeOf } from '../model/address.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Edit} Edit */
@@ -326,8 +327,8 @@ export function compose(a) {
   const id = () => frameId(a.load, n++);
   const iAt = (/** @type {ImageRun} */ r, /** @type {number} */ off) => `${r.prefix}.${r.ordinal + off}`;
   const widthOf = (/** @type {{runs: ImageRun[]}} */ ch) => ch.runs.reduce((w, r) => w + r.width, 0);
-  /** a `reinstate` of runs of the board's bytes at a position, each run naming the document that minted it */
-  const reinstate = (/** @type {number} */ at, /** @type {ImageRun[]} */ runs) => /** @type {ReinstateFrame} */ ({ op: 'reinstate', doc: addr, at: vpos(at), runs: runs.map((r) => ({ i_start: iAt(r, 0), origin: documentOf(r.prefix) || r.prefix, width: String(r.width) })), as_of: asOf, id: id() });
+  /** a `reinstate` of runs of the board's bytes at a position, each run naming the document that minted it — a member's words the member, its version kept (wire.md §Arrangement, `bad_run`) */
+  const reinstate = (/** @type {number} */ at, /** @type {ImageRun[]} */ runs) => /** @type {ReinstateFrame} */ ({ op: 'reinstate', doc: addr, at: vpos(at), runs: runs.map((r) => ({ i_start: iAt(r, 0), origin: homeOf(r.prefix) || r.prefix, width: String(r.width) })), as_of: asOf, id: id() });
   try {
     for (const pl of places(before, after)) {
       const left = unit(before, pl.lost - 1, piece), right = unit(before, pl.lost + pl.lostWidth, piece);

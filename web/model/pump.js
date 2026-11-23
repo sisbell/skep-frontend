@@ -1715,6 +1715,32 @@ export async function linksAt(addr, at, extent) {
 }
 
 /**
+ * A draft's past state's preview, read for an act and kept nowhere (B3-S7;
+ * the past states survey's R5, P10): `history.past` at a commit of the draft
+ * before its newest (shapes' `Past`) — the state's runs as read there, the
+ * same positions mapped through the person's correspondence records, and the
+ * runs a restore made now would send, each by the document that minted it —
+ * under the page's session at its class, the shell's own mapping and never
+ * the page's; refused the shell's `no_session` where no session stands, and
+ * `malformed_answer` where the answer is not one. Its refusals handed up as
+ * the shell answers them — `merge_refused` with an arm among them. It asks no
+ * write door. The read counts as a read in flight.
+ * @param {string} draft
+ * @param {number} at a commit of the draft, before its newest
+ * @returns {Promise<{past: import('./frames.js').Past} | {refused: Refusal}>}
+ */
+export async function preview(draft, at) {
+  const key = 'preview ' + draft;
+  inflight.add(key);
+  try {
+    const out = await atClass((x) => (x ? PORT.history.past({ session: x.session, draft, at }) : Promise.resolve({ refused: /** @type {Refusal} */ ({ kind: 'shell', name: 'no_session' }) })));
+    if ('refused' in out) return { refused: out.refused };
+    const past = F.decodePast(out.result);
+    return past ? { past } : { refused: /** @type {Refusal} */ ({ kind: 'shell', name: 'malformed_answer' }) };
+  } finally { inflight.delete(key); dirty(); }
+}
+
+/**
  * The feed's row at a position of the board's log, read for an act — the
  * floor a refusal of a history read names, the row whose time says when the
  * board keeps states back to (B3-S7): one row of `changes` after the position

@@ -6,10 +6,12 @@
 // position before the draft's next change (skep-frontend #688); whether a
 // row's state is not its minute's last (skep-frontend #696); and the one-state
 // step across the commits read, how long a commit's state stood, and where
-// the floor's line falls (B3-S7; D5 K-102; skep-frontend #663).
+// the floor's line falls (B3-S7; D5 K-102; skep-frontend #663); and the
+// passage's own step over the page's own changes, its ends and where it
+// stops deciding (B3-S7; skep-frontend #675).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { handOf, kindOf, landmarkOf, rowsOf, daysOf, openOnOpening, isFolded, entriesOf, arrive, versionOf, dayHolding, rowHolding, stoodUntil, notLastOf, stoodUntilAt, commitsOf, stepFrom, floorLine, isBelow, risen } from './past.js';
+import { handOf, kindOf, landmarkOf, rowsOf, daysOf, openOnOpening, isFolded, entriesOf, arrive, versionOf, dayHolding, rowHolding, stoodUntil, notLastOf, stoodUntilAt, commitsOf, stepFrom, floorLine, isBelow, risen, touches, passageStep } from './past.js';
 
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 
@@ -174,4 +176,77 @@ test('the floor\'s line falls beneath the newest commit at or before the floor �
   assert.deepEqual(STEPS.map((r) => isBelow(line, r)), [false, false, true], 'the rows above and below');
   assert.deepEqual(STEPS.map((r) => isBelow(null, r)), [false, false, false], 'no line, none below');
   assert.deepEqual([risen(null, 42), risen(42, 47), risen(47, 35), risen(47, 47)], [42, 47, 47, 47], 'the line only rises: a later refusal\'s lower floor leaves it where it stood');
+});
+
+// ---- the passage's own step (B3-S7; skep-frontend #675) ------------------------------------------------------------------
+
+/** the draft's bytes by identity, from an ordinal: `n` bytes of the draft's own I-space */
+const ids = (/** @type {number} */ ordinal, /** @type {number} */ n = 1) => [{ prefix: D + '.0.1', ordinal, width: n }];
+/** the passage held: ten bytes of the draft's own, 100 … 109 */
+const PASSAGE = ids(100, 10);
+/** one of the page's own changes at a position: what it placed and what it removed, each stretch with the byte either side */
+const own = (/** @type {number} */ at, /** @type {{placed?: Array<[number, number, number, number]>, removed?: Array<[number, number, number, number]>}} */ o) => {
+  const part = (/** @type {[number, number, number, number]} */ [from, n, before, after]) => ({ ids: ids(from, n), before: before ? ids(before) : [], after: after ? ids(after) : [] });
+  return { at, placed: (o.placed ?? []).map(part), removed: (o.removed ?? []).map(part) };
+};
+/** a draft's rows: its mint at 10, then one commit a minute at each position given */
+const draftRows = (/** @type {number[]} */ at, /** @type {Record<number, Partial<FeedUpdate>>} */ by = {}) => rowsOf([row(10, { op: 'create_new_document' }), ...at.map((p, i) => row(p, { time: NOON + (i + 1) * MIN, ...(by[p] ?? {}) }))]);
+/** every row read, from the feed's first position */
+const WHOLE = { from: 0, bottom: true, floor: null };
+
+test('a change touches the passage where it places or removes one of its bytes, or bytes between two of them; one beside it, a side outside it, touches nothing of it (B3-S7: "the nearest state in which the passage held … differs"; #675 Fix 3)', () => {
+  assert.equal(touches(own(1, { placed: [[104, 2, 0, 0]] }), PASSAGE), true, 'its own bytes placed');
+  assert.equal(touches(own(1, { removed: [[103, 1, 102, 104]] }), PASSAGE), true, 'one of its bytes removed');
+  assert.equal(touches(own(1, { placed: [[500, 3, 104, 105]] }), PASSAGE), true, 'bytes placed between two of its bytes');
+  assert.equal(touches(own(1, { removed: [[600, 2, 105, 106]] }), PASSAGE), true, 'a removal between two of its bytes');
+  assert.equal(touches(own(1, { placed: [[500, 3, 109, 110]] }), PASSAGE), false, 'bytes placed just after its last byte: beside it');
+  assert.equal(touches(own(1, { removed: [[600, 2, 99, 100]] }), PASSAGE), false, 'a removal just before its first byte: beside it');
+  assert.equal(touches(own(1, { placed: [[500, 3, 104, 0]] }), PASSAGE), false, 'bytes placed at the text\'s end after one of its bytes: one side outside it');
+});
+
+test('the passage\'s step decided off the page\'s own changes alone: earlier lands just below the newest change at or below the state counted from that touches the passage, next at the nearest above it, a change beside the passage passed over (#675 Fix 3)', () => {
+  const rows = draftRows([20, 30, 40, 50]);
+  const mine = [own(20, { placed: [[100, 10, 0, 0]] }), own(30, { removed: [[600, 2, 104, 105]] }), own(40, { placed: [[700, 4, 109, 110]] }), own(50, { placed: [[103, 2, 102, 105]] })];
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 50, -1, WHOLE), { to: 40 }, 'from the newest: its own change at 50 touches it, so the state before it');
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 40, -1, WHOLE), { to: 20 }, 'from 40: 40 beside it passed over, the removal inside it at 30, so the state before it');
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 20, 1, WHOLE), { to: 30 }, 'next from 20: the removal at 30');
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 30, 1, WHOLE), { to: 50 }, 'next from 30: 40 beside it passed over, 50');
+});
+
+test('with no change of the passage\'s on the way the step lands at the end it goes toward and is inert there — the draft\'s first state where every row is read, the newest at the other end (#675 Fix 3; B3-S7\'s ends)', () => {
+  const rows = draftRows([20, 30, 40]), mine = [own(20, { placed: [[700, 1, 0, 0]] }), own(30, { placed: [[701, 1, 700, 0]] }), own(40, { placed: [[702, 1, 701, 0]] })];
+  // the mint at 10 is no change of the page's: the oldest own change's state is the oldest the page decides — read from its first position, the draft's first state
+  const mineAll = [own(10, { placed: [[1, 1, 0, 0]] }), ...mine];
+  assert.deepEqual(passageStep(rows, mineAll, PASSAGE, 40, -1, WHOLE), { to: 10 }, 'earlier, no change of the passage\'s: the oldest commit read');
+  assert.deepEqual(passageStep(rows, mineAll, PASSAGE, 10, -1, WHOLE), { end: 'first' }, 'there: the draft\'s first state, inert');
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 20, 1, WHOLE), { to: 40 }, 'next, no change of the passage\'s: the newest');
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 40, 1, WHOLE), { end: 'now' }, 'there: the newest, inert');
+});
+
+test('at the feed\'s floor the oldest state read is the floor\'s end, never the draft\'s first state; with rows below still to be read the step is unknown there (#675 Fix 3; skep-frontend #729)', () => {
+  const rows = draftRows([20, 30]), mine = [own(10, { placed: [[1, 1, 0, 0]] }), own(20, { placed: [[700, 1, 0, 0]] }), own(30, { placed: [[701, 1, 700, 0]] })];
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 10, -1, { from: 8, bottom: true, floor: null }), { end: 'feed-floor' }, 'the rows read end at the feed\'s floor: its end, never first');
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 30, -1, { from: 8, bottom: false, floor: null }), { unknown: 10 }, 'rows below still to be read: unknown at the oldest read');
+});
+
+test('the floor\'s line stops the passage\'s step earlier at the commit standing at the floor, inert there (#675 Fix 3; skep-frontend #663: "Steps stop at the line")', () => {
+  const rows = draftRows([20, 30, 40]), mine = [own(10, { placed: [[1, 1, 0, 0]] }), own(20, { placed: [[100, 10, 0, 0]] }), own(30, { placed: [[700, 1, 0, 0]] }), own(40, { placed: [[701, 1, 700, 0]] })];
+  const floor = { from: 0, bottom: true, floor: 30 };
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 40, -1, floor), { to: 30 }, 'its change at 20 lies past the line: the step stops at the commit standing at the floor');
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 30, -1, floor), { end: 'floor' }, 'at the line: inert there');
+});
+
+test('a commit on the way the page did not make answers unknown there — the page\'s own changes cannot decide it — and a publication on the way is never the passage\'s change, passed over (#675 Fix 3 and its design decision)', () => {
+  const rows = draftRows([20, 30, 40, 50], { 30: { key: OTHER }, 40: { op: 'publish', docs: [D + '.1', D], key: undefined, attest: { alg: 'mldsa65-ed25519', sig: 'ab' } } });
+  const mine = [own(20, { placed: [[100, 10, 0, 0]] }), own(50, { placed: [[700, 1, 0, 0]] })];
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 50, -1, WHOLE), { unknown: 30 }, 'back from 50: 50 beside it, the publication at 40 passed over, then another hand\'s commit at 30');
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 20, 1, WHOLE), { unknown: 30 }, 'forward from 20: another hand\'s commit at 30');
+  const pubOnly = draftRows([20, 40, 50], { 40: { op: 'publish', docs: [D + '.1', D], key: undefined, attest: { alg: 'mldsa65-ed25519', sig: 'ab' } } });
+  assert.deepEqual(passageStep(pubOnly, mine, PASSAGE, 50, -1, WHOLE), { to: 10 }, 'the publication alone on the way: passed over, the passage\'s change at 20 found, the state before it');
+});
+
+test('a write the page made to another document between two of its own commits is no commit of the draft\'s: the step goes on over it (#675\'s tests)', () => {
+  // the draft's rows name 20 and 40; the page's write to another document at 30 is no row of the draft's narrowed feed
+  const rows = draftRows([20, 40]), mine = [own(20, { placed: [[100, 10, 0, 0]] }), own(40, { placed: [[700, 1, 0, 0]] })];
+  assert.deepEqual(passageStep(rows, mine, PASSAGE, 40, -1, WHOLE), { to: 10 }, 'back from 40 to its change at 20, the state before it');
 });

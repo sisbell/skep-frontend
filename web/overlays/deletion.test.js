@@ -9,7 +9,9 @@
 // through W-MACHINE, a removal faced where a burst's
 // `delete` takes kept text, none for a character removed inside its own open
 // burst, and at an undo only the words a dial carried; and a paste's face
-// raised, said at every paste, replaced and taken down at a change of class.
+// raised, said at every paste, replaced and taken down at a change of class;
+// and the face's act, "read it as it stood", after its parts where the
+// removal keeps the position its `delete` was acked at, and none before it.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as DELETION from './deletion.js';
@@ -154,4 +156,19 @@ test('a paste\'s face is raised where the paste was made, its words said in the 
   assert.deepEqual(DELETION.pasteFace(), { addr: '1.0.1.0.7', ...fault }, 'a later paste\'s face in its place');
   DELETION.classChanged();
   assert.equal(DELETION.pasteFace(), null, 'a change of the page\'s class takes it down');
+});
+
+test('the face whole carries its act, "read it as it stood", after its parts — a native button in the table\'s words, the removal named on it — where the removal keeps the position its `delete` was acked at; none before that ack, and none on a compact mark; its parts unchanged (B3-S4; C-354; the past states survey P8, U6; D5 K-58)', async () => {
+  const r = WRITE.addRemoval(D, { before: at(1), after: at(4), words: 'bc', ids: [{ prefix: `${D}.0.1`, ordinal: 2, width: 2 }] });
+  const parts = DELETION.partsOf({ shared: false, edition: null }).map((p) => p.id);
+  const unacked = DELETION.markup(D, r, true);
+  assert.ok(!unacked.includes('data-read'), `no position yet: no act — ${unacked}`);
+  assert.equal(await DELETION.readEarlier(D, r.id), false, 'its press opens nothing where the removal keeps no position');
+  WRITE.ackRemovals(D, [{ prefix: `${D}.0.1`, ordinal: 2, width: 2 }], 30);
+  const acked = WRITE.removalsOf(D)[0], whole = DELETION.markup(D, acked, true);
+  assert.equal(acked.at, 30, 'the position its delete was acked at');
+  assert.ok(whole.includes(`<button type="button" class="face-act" data-read="${acked.id}" data-doc="${D}" data-string="B3.deletion.read-earlier" aria-label="${heard(t('B3.deletion.read-earlier'))}">${t('B3.deletion.read-earlier')}</button>`), `the act, in the table's words: ${whole}`);
+  assert.deepEqual([...whole.matchAll(/class="part" data-string="([^"]+)"/g)].map((m) => m[1]), parts, 'the face\'s parts unchanged, in order, before it');
+  assert.ok(whole.indexOf('data-read') > whole.lastIndexOf('data-string="B3.deletion.private"'), 'after them');
+  assert.ok(!DELETION.markup(D, acked, false).includes('data-read'), 'a compact mark carries no act');
 });

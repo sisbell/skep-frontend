@@ -5235,7 +5235,7 @@ const NOT_ANSWERING = { kind: 'unreachable', name: 'unreachable', text: '' };
  * The draft's history opened over a port of its own (`GO.history`), the shared fake given back after: what was asked, in
  * order — each `changes` page's arguments, each feed row read at a position, each history read's position — and what the
  * act answered
- * @param {{refuse?: number[], busy?: number[], floor?: number, inside?: Record<number, number>, rows?: [number, number, number], feed?: object, part?: boolean, now?: object, at?: Element, before?: () => void}} [o] `refuse` the positions whose state the board refuses as reclaimed, the refusal naming `floor` as the oldest position it answers where one is given; `busy` those whose state it is busy on, at every ask; `inside` positions lying inside a commit, each refused `not_a_position` naming the committed position below it it maps to; `rows` the positions of the draft's mint, its typed line and its newest change — 30, 40 and 48 where none are given — the board's head 12 past the newest change, 60 at the least; `feed` the refusal the history's `changes` read meets; `part` the page holds the draft's text in part, and the board answers none of its reads at the head — refusing each with `now`, else not answering; `at` the act's element, handed to the act; `before` what stands as the act is taken
+ * @param {{refuse?: number[], busy?: number[], floor?: number, inside?: Record<number, number>, rows?: [number, number, number], feed?: object, part?: boolean, now?: object, at?: Element, before?: () => void, removal?: {at: number, ids: import('../model/records.js').ISpan[], words: string}}} [o] `refuse` the positions whose state the board refuses as reclaimed, the refusal naming `floor` as the oldest position it answers where one is given; `busy` those whose state it is busy on, at every ask; `inside` positions lying inside a commit, each refused `not_a_position` naming the committed position below it it maps to; `rows` the positions of the draft's mint, its typed line and its newest change — 30, 40 and 48 where none are given — the board's head 12 past the newest change, 60 at the least; `feed` the refusal the history's `changes` read meets; `part` the page holds the draft's text in part, and the board answers none of its reads at the head — refusing each with `now`, else not answering; `at` the act's element, handed to the act; `before` what stands as the act is taken; `removal` the removal a deletion face's act names, handed to the act
  * @param {(asked: string[]) => void} [during] read once the act has answered
  */
 async function historyOver(o = {}, during = () => {}) {
@@ -5269,7 +5269,7 @@ async function historyOver(o = {}, during = () => {}) {
   historyDraft(o.part ? 6 : undefined);
   try {
     if (o.before) o.before();
-    const opened = await GO.history(HISTORY_DRAFT, o.at ? { at: o.at } : {});
+    const opened = await GO.history(HISTORY_DRAFT, { ...(o.at ? { at: o.at } : {}), ...(o.removal ? { removal: o.removal } : {}) });
     during(asked);
     return { opened, asked };
   } finally { PORT.boot({ ...fake, subscribe() {}, onStream() {} }); }
@@ -5318,6 +5318,22 @@ test('where the draft holds words the board has not kept, its history opens on t
   assert.deepEqual(between.asked, ['changes under ' + HISTORY_DRAFT, 'state at 40', 'state at 47', 'state at 44'], 'the board naming 44, a position past the one asked: read there, where it lands');
   const under = await historyOver({ refuse: [40], floor: 45, inside: { 47: 44 } });
   assert.deepEqual(under.asked, ['changes under ' + HISTORY_DRAFT, 'state at 40', 'state at 47', 'row at 45'], 'the board naming 44, below the refusal\'s floor: never asked there, the newest kept state in its place, the feed\'s row at the floor read for its date');
+});
+
+test('the deletion face\'s act asks the state before the removal — the newest commit read below the position its `delete` was acked at — never the removal\'s own nor the row below the top; the rows read until they hold one (the past states survey P8, U6; B3-S7\'s second gesture site)', async () => {
+  const removal = { at: 40, ids: [{ prefix: HISTORY_DRAFT + '.0.1', ordinal: 3, width: 4 }], words: 'er w' };
+  const { asked } = await historyOver({ removal });
+  assert.deepEqual(asked, ['changes under ' + HISTORY_DRAFT, 'state at 30'], 'the removal acked at 40: the state at 30, the commit before it, asked');
+  const later = await historyOver({ removal: { ...removal, at: 48 } });
+  assert.deepEqual(later.asked, ['changes under ' + HISTORY_DRAFT, 'state at 40'], 'acked at 48: the state at 40');
+});
+
+test('the passage a draft\'s history opens holding is B3-S7\'s ladder: the selection standing in the draft where the act was made, by its bytes and its words as read there; else the span the caret stands in, else the walk\'s span in the draft, else the first span in view; none where no rung holds one (skep-frontend #675 Fix 1)', async () => {
+  historyDraft();
+  const sel = { addr: HISTORY_DRAFT, pos: 7, width: 5, ids: [{ prefix: HISTORY_DRAFT + '.0.1', ordinal: 7, width: 5 }] };
+  assert.deepEqual(GO.heldPassage(HISTORY_DRAFT, sel, null), { ids: sel.ids, words: 'words' }, 'the selection standing where the act was made (O-SELECTION\'s `asLeft`): its bytes, its words as read in the text shown');
+  assert.deepEqual(GO.heldPassage(HISTORY_DRAFT, null, null), { ids: [], words: '' }, 'no selection, no caret, no walk\'s span in the draft, none of it in view: none');
+  assert.deepEqual(GO.heldPassage(HISTORY_DRAFT, { addr: D, pos: 1, width: 3, ids: [{ prefix: D + '.0.1', ordinal: 1, width: 3 }] }, null), { ids: [], words: '' }, 'a selection in another document: no rung of this draft\'s');
 });
 
 test('a past state the board stays busy on opens no face at the act: the newest kept state stands in its place, read as the plane reads the draft — no history read of the newest asked, however busy the board — and the state asked is the scene\'s to reissue (issue #700\'s design decision; FP-25, FP-41)', async () => {

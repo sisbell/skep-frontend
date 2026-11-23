@@ -1184,6 +1184,19 @@ function unwritableSays(addr, e, ctx = { where: 'plane', byKey: true }) {
   return true;
 }
 
+/**
+ * The line a write in a draft that cannot be written now is answered by
+ * (`unwritableSays`): its reason's own line's string and words, the board
+ * named as its mirror item names it — what an act that writes there stands
+ * inert by (SC's put-back); null where the draft can be written.
+ * @param {string} addr
+ * @returns {{id: string, text: string} | null}
+ */
+export function unwritableLine(addr) {
+  const why = WRITE.unwritable(addr), b = REC.board();
+  return why ? { id: CARET_LINE[why.why], text: t(CARET_LINE[why.why], { board: b ? t('L.mirror.board.name', { node: '1', origin: b.origin }) : '' }) } : null;
+}
+
 /** the first key typed in a draft since a moved verdict came to stand on it — or the first paste or cut made there — followed by the verdict's line at the focus the key was made at, once per verdict (D6 BM-18; W-WRITE's `takeMovedKey`) */
 function movedSays(/** @type {string} */ addr, /** @type {Pressed} */ e, /** @type {Ctx} */ ctx = { where: 'plane', byKey: true }) {
   if (WRITE.takeMovedKey(addr)) HINT.show('B3.moved.first-key', null, hinted(e, ctx));
@@ -1726,7 +1739,12 @@ async function replay() {
  * so it is never the list's row step nor a pane's walk; at a caret the arrows
  * stay the caret's (K-71), Esc first. In the list ↓ and ↑ move the focus along
  * its rows and days' heads (SC's `listKey`), Enter a row's act, as the
- * platform activates its button.
+ * platform activates its button; the list's head's first row a stop of its
+ * own, the arrows moving nothing there. In a past state's pane a removed
+ * passages' mark is a stop of the pane's walk, ↓ and ↑ reaching it (SC's
+ * `key`), and Enter and Space at it and at its face's put-back are the
+ * button's own, as the platform activates it — the mark's opening its face
+ * with the act focused, the act's taking it (D5 K-102).
  * @param {KeyboardEvent} e
  * @param {string} chord
  * @param {Ctx} ctx
@@ -1762,6 +1780,8 @@ function sceneKey(e, chord, ctx) {
   if (chord === '←' && ctx.where !== 'caret') return () => { GO.closeScene(ctx.byKey); return true; };
   if (ctx.where === 'scene-acts') return printable(e) && e.key !== ' ' ? () => { actsSays(e, ctx); return true; } : null; // the button's own keys
   const side = ctx.pane;
+  // a past state's removed passages' mark and its face's put-back: Enter and Space the button's own, as the platform activates it (K-102)
+  if (side && ctx.where === 'scene' && (e.key === 'Enter' || e.key === ' ') && SCENE.pastActAt(/** @type {Element | null} */ (e.target))) return null;
   if (side && ctx.where === 'scene') {
     // the pane's own moves where no caret is live (K-60), the span focus with them
     if (PANE_MOVES.has(chord)) return () => { e.preventDefault(); SCENE.key(chord, side); return true; };
@@ -2221,7 +2241,9 @@ export function esc(landed = false, pointer = false) {
 
 /**
  * Esc's steps inside a reading scene before its close (see `esc`; D5 K-77,
- * K-61, K-63): the selection of the pane the focus is at — its text, its
+ * K-61, K-63): a past state's removed passages' face standing whole folded,
+ * else the passage's words standing whole beneath the list's head (SC's
+ * `foldPast`; FP-36); the selection of the pane the focus is at — its text, its
  * corner or its list of past states (SC's `focusedPane`) — ended (SC's
  * `unselect`), the other pane's standing; else a live caret standing in an
  * editor pane left — kept where it stood, its burst committed, its span the
@@ -2231,6 +2253,7 @@ export function esc(landed = false, pointer = false) {
  */
 function paneEsc() {
   const side = SCENE.focusedPane(), c = LAYER.caret();
+  if (SCENE.foldPast()) return true;
   if (side && SCENE.unselect(side)) return true;
   if (!c || !c.live || !LAYER.caretPane()) return false;
   LAYER.leaveCaret('esc');

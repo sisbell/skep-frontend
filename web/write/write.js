@@ -53,7 +53,13 @@
 // and W-WRITE tells it of none of them. Beside the stacks, each removal of
 // kept text a `delete` of the draft carried, or an undo decided at its press
 // (`removalsOf`, `addRemoval`; D6 BM-34, BM-51): what the deletion face is
-// drawn from; and those watching are told of an undo the board declined
+// drawn from, each given the position the board acked the `delete` that took
+// its words at once that ack lands, and never before (`ackRemovals`); the
+// changes of the draft the page made that the board acknowledged, frame by
+// frame, each its position and what it placed and removed by identity with
+// the byte either side — the page's own deltas, read only, kept for the
+// page's session as the stacks are, so a rebase drops none of them
+// (`ownChanges`, `addOwnChange`; B3-S7); and those watching are told of an undo the board declined
 // (`onDeclined`, `decline`; D6 BM-11), and of a placing by identity it
 // refused for its source (`onUnplaced`, `unplace`; B3-S5).
 // THE HELD LINES THIS WINDOW DID NOT SEND (`setReopened`; D6 BM-29): an
@@ -211,7 +217,10 @@ export const PASTE_MAX_BYTES = 1024 * 1024;
  * @property {ISpan[]} after the byte just after it; none at the text's end
  * @property {string} words the words removed
  * @property {ISpan[]} ids the bytes removed, by identity
+ * @property {number | null} at the position the board acked the `delete` that took its words at (`ackRemovals`): the state before it is the draft's commit before that position; null until that ack lands
  */
+
+/** @typedef {import('../model/past.js').OwnChange} OwnChange one change of a draft this page made, as the board acknowledged it (`ownChanges`; B3-S7's own deltas): the position acknowledged, each stretch it placed with the byte either side as the change left them, each it removed with the byte either side as it stood */
 
 /**
  * @typedef {Object} Edits — what is held of a draft's words
@@ -227,6 +236,7 @@ export const PASTE_MAX_BYTES = 1024 * 1024;
  * @property {Step[]} redo the redo stack, the step undone last its last
  * @property {Removal[]} removals the removals of kept text the deletion face stands at, in the order made (`addRemoval`)
  * @property {number} faced how many such removals the draft has had in the page's session
+ * @property {OwnChange[]} own the changes of the draft this page made that the board acknowledged, in the order acknowledged (`addOwnChange`)
  */
 
 /** @type {Map<string, KeptState>} each draft's kept state, by address (`setKept`) */
@@ -269,7 +279,8 @@ REC.keptAtEnding((addr) => unkept(addr));
  * state and held lines dropped — save, where the change ends the session, a
  * draft holding words the board has not kept (`unkept`) whose record the
  * model left as read, which stands whole with them. The edits stand; every
- * draft's stacks and the removals its deletion face stands at go.
+ * draft's stacks, the removals its deletion face stands at and its own
+ * changes go.
  * @param {boolean} ended the change ends the session
  */
 function classChanged(ended) {
@@ -277,7 +288,7 @@ function classChanged(ended) {
   for (const addr of [...kept.keys()]) if (!stays(addr)) kept.delete(addr);
   for (const addr of [...held.keys()]) if (!stays(addr)) held.delete(addr);
   for (const [addr, x] of drafts) if (!stays(addr) && x.lines.length) { x.lines = []; x.base = null; x.rev++; }
-  for (const x of drafts.values()) { x.undo = []; x.redo = []; x.removals = []; x.faced = 0; }
+  for (const x of drafts.values()) { x.undo = []; x.redo = []; x.removals = []; x.faced = 0; x.own = []; }
   last = null;
   for (const addr of [...flights.keys()]) endFlight(addr);
   bump();
@@ -332,7 +343,7 @@ export const editRev = (/** @type {string} */ addr) => (drafts.get(addr)?.rev ??
 /** a draft's edits with their counts, made where the draft holds none yet */
 function editsOf(/** @type {string} */ addr) {
   let x = drafts.get(addr);
-  if (!x) { x = { list: [], rev: 0, next: 1, steps: 0, lines: [], names: new Map(), islands: new Map(), base: null, undo: [], redo: [], removals: [], faced: 0 }; drafts.set(addr, x); }
+  if (!x) { x = { list: [], rev: 0, next: 1, steps: 0, lines: [], names: new Map(), islands: new Map(), base: null, undo: [], redo: [], removals: [], faced: 0, own: [] }; drafts.set(addr, x); }
   return x;
 }
 /** the identity of bytes the page made in a draft, as the model names them now (M-REC's `pageIds`) */
@@ -532,11 +543,55 @@ export const removalDocs = () => [...drafts].filter(([, x]) => x.removals.length
  * @returns {Removal}
  */
 export function addRemoval(addr, r) {
-  const x = editsOf(addr), made = { id: ++x.faced, before: r.before, after: r.after, words: r.words, ids: r.ids };
+  const x = editsOf(addr), made = { id: ++x.faced, before: r.before, after: r.after, words: r.words, ids: r.ids, at: null };
   x.removals = [...x.removals, made];
   bump();
   return made;
 }
+/**
+ * The position a `delete` of a draft was acked at given to each removal its
+ * deletion face stands at that holds none yet and whose bytes the `delete`
+ * took (see the head; the past states survey's U6): set by D6's machine as
+ * the frame's ack lands, never as the removal is made.
+ * @param {string} addr
+ * @param {readonly ISpan[]} ids the bytes the `delete` took, by identity
+ * @param {number} at the position the board acked it at
+ */
+export function ackRemovals(addr, ids, at) {
+  const x = drafts.get(addr);
+  if (!x || !ids.length || !x.removals.some((r) => r.at == null)) return;
+  const took = imageOf(ids);
+  let moved = false;
+  x.removals = x.removals.map((r) => { if (r.at != null || !REC.placedIn(took, r.ids).length) return r; moved = true; return { ...r, at }; });
+  if (moved) bump();
+}
+// ---- the page's own changes the board acknowledged -------------------------------
+
+/**
+ * The changes of a draft this page made that the board acknowledged (see the
+ * head; B3-S7's own deltas), in position order: each frame's position, and
+ * what it placed and removed by identity with the byte either side; none
+ * where the board acknowledged none since the page's class last changed.
+ * Read only: D6's machine alone adds to it.
+ * @param {string} addr
+ * @returns {readonly OwnChange[]}
+ */
+export const ownChanges = (addr) => /** @type {readonly OwnChange[]} */ (drafts.get(addr)?.own ?? []);
+/**
+ * A change of a draft's the board acknowledged added to the page's own (see
+ * the head; `ownChanges`): set by D6's machine as a frame's ack lands — the
+ * frame's answer, or the shell's word that its held line kept at a position —
+ * and never for a position no ack named. A second change at a position
+ * already held is joined to it.
+ * @param {string} addr
+ * @param {OwnChange} c
+ */
+export function addOwnChange(addr, c) {
+  if (!(c.at > 0) || (!c.placed.length && !c.removed.length)) return;
+  const x = editsOf(addr), had = x.own.find((o) => o.at === c.at);
+  x.own = had ? x.own.map((o) => (o === had ? { at: o.at, placed: [...o.placed, ...c.placed], removed: [...o.removed, ...c.removed] } : o)) : [...x.own, c].sort((a, b) => a.at - b.at);
+}
+
 /** removals of a draft's let go (`removalsOf`): those `which` names, their marks with them — the words back in the text */
 export function dropRemovals(/** @type {string} */ addr, /** @type {(r: Removal) => boolean} */ which) {
   const x = drafts.get(addr);

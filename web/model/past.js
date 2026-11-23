@@ -46,7 +46,14 @@
 // it whole, no row spanning it. Whether a row's state is not its
 // minute's last (`notLastOf`): a newer row shares its recorded minute, the
 // rows of that minute counted once the rows read pass the minute or reach
-// their bottom, and never where its time is lost.
+// their bottom, and never where its time is lost. The passage's own step
+// (`passageStep`): to the passage held's earlier or next change, decided off
+// the changes the page made that the board acknowledged (`OwnChange`), no
+// read made — the nearest that places or removes a byte of the passage, or
+// bytes between two of its bytes (`touches`) — a publication's row on the way
+// passed over, any other commit the page did not make, and rows below still
+// to be read, answered `unknown` there; with no change of the passage's on
+// the way, the end it goes toward, inert at it, the floor's line stopping it.
 // Rules: FP-1, FP-2, FP-6, FP-34.
 
 import { dayOf } from '../util.js';
@@ -447,6 +454,92 @@ export function arrive(held, came, open, day = dayOf) {
   const entries = [...held, ...came.filter((u) => !held.some((h) => h.position === u.position))];
   const rows = rowsOf(entries);
   return { entries, rows, days: daysOf(rows, day), open: new Set(open) };
+}
+
+/**
+ * @typedef {Object} OwnChange — one change of the draft the page made that the board acknowledged (W-WRITE's `ownChanges`): the position acknowledged, and what it placed and what it removed by identity, each stretch with the byte just before it and the byte just after it
+ * @property {number} at
+ * @property {Array<{ids: ISpan[], before: ISpan[], after: ISpan[]}>} placed
+ * @property {Array<{ids: ISpan[], before: ISpan[], after: ISpan[]}>} removed
+ */
+
+/** @typedef {import('./records.js').ISpan} ISpan */
+
+/** do two sets of bytes by identity share a byte */
+const shares = (/** @type {readonly ISpan[]} */ a, /** @type {readonly ISpan[]} */ b) => a.some((x) => b.some((y) => x.prefix === y.prefix && x.ordinal < y.ordinal + y.width && y.ordinal < x.ordinal + x.width));
+
+/**
+ * Does one of the page's own changes touch a passage (B3-S7's step to the
+ * passage's own change): it placed or removed one of the passage's bytes, or
+ * placed or removed bytes between two of them — the byte just before the
+ * stretch and the byte just after it both the passage's. A change beside the
+ * passage, one of its sides outside it, touches nothing of it.
+ * @param {OwnChange} c
+ * @param {readonly ISpan[]} passage the passage, by identity
+ * @returns {boolean}
+ */
+export function touches(c, passage) {
+  const inside = (/** @type {{before: ISpan[], after: ISpan[]}} */ s) => s.before.length > 0 && s.after.length > 0 && shares(s.before, passage) && shares(s.after, passage);
+  return [...c.placed, ...c.removed].some((s) => shares(s.ids, passage) || inside(s));
+}
+
+/**
+ * @typedef {{to: number} | {end: 'first' | 'floor' | 'feed-floor' | 'now'} | {unknown: number}} PassageStepped — where the passage's step goes (`passageStep`): the commit it lands at; the end it cannot pass, inert there — the draft's first state, the floor's line, the oldest state the feed's floor leaves read, the newest; or `unknown`, the commit where the page's own changes stop deciding it — one the page did not make, or the oldest read where rows below are still to be read
+ */
+
+/**
+ * The passage's step to its own earlier or next change (B3-S7; D5 K-102),
+ * decided off the page's own changes alone, no read made: earlier, the newest
+ * of them at or below `from` that touches the passage (`touches`), landing at
+ * the commit just below it; next, the nearest above `from`, landing at it.
+ * A publication's row on the way is passed over — it carries the passage
+ * through its correspondence and is never its change — and any other commit
+ * the page did not make answers `unknown` there, as the rows below the
+ * oldest read do while they are still to be read. With no change of the
+ * passage's on the way, the step lands at the end it goes toward: the oldest
+ * commit read, earlier, inert there as the draft's first state only where
+ * every row is read from the feed's first position, else at the feed's floor;
+ * the newest, next, inert there. Earlier, the floor's line stops it: at the
+ * commit standing at the floor, inert there.
+ * @param {readonly Row[]} rows newest first (`rowsOf`)
+ * @param {readonly OwnChange[]} own the page's own changes of the draft
+ * @param {readonly ISpan[]} passage the passage held, by identity
+ * @param {number} from the commit a step counts from
+ * @param {-1 | 1} dir -1 its earlier change, 1 its next
+ * @param {{from: number, bottom: boolean, floor: number | null}} reach the rows read: the position they reach down to, 0 where every row is read; whether they reach their bottom; and the commit steps stop at, the floor's line's (`floorLine`'s `cut`), null where none stands
+ * @returns {PassageStepped}
+ */
+export function passageStep(rows, own, passage, from, dir, reach) {
+  const all = [...commitsOf(rows)].reverse(), k = all.indexOf(from);
+  if (k < 0) return { unknown: from };
+  const mine = new Map(own.map((c) => [c.at, c]));
+  const published = new Set(rows.filter((r) => r.landmark && r.landmark.kind === 'version').flatMap((r) => r.positions));
+  const floor = reach.floor, oldest = all[0], newest = all[all.length - 1];
+  /** the commit the walk earlier stops at, held at the floor's line */
+  const held = (/** @type {number} */ at) => (floor != null && at < floor ? (from <= floor ? { end: /** @type {const} */ ('floor') } : { to: floor }) : { to: at });
+  if (dir < 0) {
+    for (let i = k; i >= 0; i--) {
+      const at = all[i];
+      if (floor != null && at < floor) return held(at);
+      if (published.has(at)) continue;
+      const c = mine.get(at);
+      if (!c) return { unknown: at };
+      if (!touches(c, passage)) continue;
+      if (i > 0) return held(all[i - 1]);
+      return !reach.bottom ? { unknown: at } : { end: reach.from <= 0 ? 'first' : 'feed-floor' };
+    }
+    if (!reach.bottom) return { unknown: oldest };
+    if (floor != null && from <= floor) return { end: 'floor' };
+    return from === oldest ? { end: reach.from <= 0 ? 'first' : 'feed-floor' } : held(oldest);
+  }
+  for (let i = k + 1; i < all.length; i++) {
+    const at = all[i];
+    if (published.has(at)) continue;
+    const c = mine.get(at);
+    if (!c) return { unknown: at };
+    if (touches(c, passage)) return { to: at };
+  }
+  return from === newest ? { end: 'now' } : { to: newest };
 }
 
 /**

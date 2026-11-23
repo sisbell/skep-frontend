@@ -1981,6 +1981,93 @@ test('D8, BM-24: under the death every word of a draft the board has not kept is
   assert.deepEqual(MACHINE.marksOf(E), [], 'a draft the page holds no record of: none');
 });
 
+/** the writes the page dialed, by op, its position and its words or runs (`dialed`), reads left out */
+const writes = (/** @type {Board['ops']} */ ops, from = 0) => dialed(ops.filter((o) => !o.frame.frame && o.frame.op !== 'retrieve_doc_v_span_set'), from);
+
+test('the page\'s own changes: each frame of a burst the board acked kept by the position it was acked at, what it placed and removed by identity with the byte either side — and a removal of kept text given the position its `delete` was acked at as that ack lands, never as the `delete` is composed (B3-S7\'s own deltas; skep-frontend #675 Fix 2; the past states survey U6)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const first = later();
+  const { ops } = boot((frame, n) => (n === 1 ? first.out : frame.op === 'insert' ? MINTED(own(D, 100), 21) : ACK(20 + n)));
+  read(D, 'abcdefgh');
+  WRITE.addEdit(D, { pos: 3, width: 2, text: 'X' }, { at: 5 });
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush();
+  assert.deepEqual(writes(ops).map((x) => x[0]), ['delete'], 'the burst\'s first frame dialed: the delete of "cd"');
+  assert.deepEqual(WRITE.removalsOf(D).map((r) => [r.words, r.at]), [['cd', null]], 'the removal made as the delete was composed, keeping no position: no ack yet');
+  assert.deepEqual(WRITE.ownChanges(D), [], 'nothing the board has not acknowledged is kept as the page\'s own');
+  first.give(ACK(20));
+  await flush(); await flush();
+  assert.deepEqual(WRITE.removalsOf(D).map((r) => [r.words, r.at]), [['cd', 20]], 'the position its delete was acked at, as that ack landed');
+  const c = (/** @type {number} */ n) => [{ prefix: `${D}.0.1`, ordinal: n, width: 1 }];
+  assert.deepEqual(WRITE.ownChanges(D), [
+    { at: 20, placed: [], removed: [{ ids: [{ prefix: `${D}.0.1`, ordinal: 3, width: 2 }], before: c(2), after: c(5) }] },
+    { at: 21, placed: [{ ids: REC.pageIds(D, 1, 1), before: c(2), after: c(5) }], removed: [] },
+  ], 'both frames, each at the position the board acked it at: the removal with the bytes either side, the insert with the units its anchors name');
+  // a read answered past the acks sets the text: the acked edits leave the list, the page's own changes stand
+  REC.takeDelivery(D, [{ pos: 1, width: 7, kind: 'content', text: 'abXefgh', ref: null, origin: null }], 22, { from: 1, runs: [{ iStart: own(D, 1), width: 2 }, { iStart: own(D, 100), width: 1 }, { iStart: own(D, 5), width: 4 }] });
+  assert.deepEqual([WRITE.edits(D).length, WRITE.ownChanges(D).map((x) => x.at)], [0, [20, 21]], 'the rebase dropped the edits, never the record');
+});
+
+test('a frame the board refused, or holds, is no change of the page\'s own: only an acknowledged position is kept; an undo\'s commit, acked, is (skep-frontend #675\'s design decision, Fix 2)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let refuse = true;
+  boot((frame, n) => (refuse ? REFUSED : frame.op === 'insert' ? MINTED(own(D, 100 * n), 30 + n) : ACK(30 + n)));
+  read(D, 'abcdef');
+  type(D, 7, 'g.');
+  await flush(); await flush();
+  assert.deepEqual([WRITE.islandsOf(D).length, WRITE.ownChanges(D)], [1, []], 'refused, kept as an island: no change of the page\'s own');
+  MACHINE._reset(); REC._reset(); WRITE._reset();
+  boot(() => HELD(7));
+  read(D, 'abcdef');
+  type(D, 7, 'g.');
+  await flush(); await flush();
+  assert.deepEqual(WRITE.ownChanges(D), [], 'held, the board has acknowledged no position: no change of the page\'s own');
+  MACHINE._reset(); REC._reset(); WRITE._reset();
+  refuse = false;
+  const b = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 30 + n) : ACK(30 + n)));
+  read(D, 'abcdef');
+  type(D, 7, 'g.');
+  await flush(); await flush();
+  const at0 = WRITE.ownChanges(D).map((x) => x.at);
+  assert.equal(at0.length, 1, 'the typing acked: one change');
+  MACHINE.undo(D);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([writes(b.ops).map((x) => x[0]), WRITE.ownChanges(D).length], [['insert', 'delete'], 2], 'the undo\'s inverse acked: kept as the page\'s own change too');
+});
+
+test('a put-back of a removed passage — a placing by identity made at no caret — is one step of its own, kind "put-back", sent as one `reinstate` of the same I-run in a burst of its own; its undo takes those bytes out, and its redo places them again by identity (B3-S7 "put back in the current text"; W-WRITE\'s `placeSame`; D5 K-75)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 30 + n) : ACK(30 + n)));
+  read(D, 'abcdef');
+  read(E, 'ABCDEFGH');
+  assert.equal(WRITE.placeSame(D, [{ took: took(E, 3, 4) }], 4, 0, null), 4);
+  assert.deepEqual([shown(D), stacks(D).undo], ['abcCDEFdef', [['put-back', false, 1]]], 'standing at once; one step of its own, a put-back');
+  await flush(); await flush();
+  assert.deepEqual(writes(ops), [['reinstate', 4, [[own(E, 3), '4']]]], 'one `reinstate` of the same I-run, alone');
+  const out = MACHINE.undo(D);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([out.how, shown(D), writes(ops, 1)], ['done', 'abcdef', [['delete', 4, '4']]], 'its undo: those bytes taken out, one delete');
+  const again = MACHINE.redo(D);
+  t.mock.timers.tick(MACHINE.PAUSE_MS);
+  await flush(); await flush();
+  assert.deepEqual([again.how, shown(D), writes(ops, 2)], ['done', 'abcCDEFdef', [['reinstate', 4, [[own(E, 3), '4']]]]], 'its redo: the same bytes placed again by identity');
+});
+
+test('a put-back of words a publication re-minted names the member that minted them, its version kept, as each run\'s origin — never the trunk, which the board refuses as no run of its (B3-S7; M7 (c); wire.md §Arrangement, `bad_run`)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { ops } = boot((frame, n) => (frame.op === 'insert' ? MINTED(own(D, 100 * n), 30 + n) : ACK(30 + n)));
+  read(D, 'abcdef');
+  const member = E + '.2';
+  const words = { runs: [{ pos: 1, width: 3, kind: /** @type {const} */ ('content'), text: 'XYZ', ref: null, origin: null }], ids: [{ pos: 1, width: 3, prefix: `${member}.0.1`, ordinal: 9 }] };
+  WRITE.placeSame(D, [{ took: words }], 7, 0, null);
+  await flush(); await flush();
+  assert.deepEqual(writes(ops).map((x) => x[0]), ['reinstate'], 'one `reinstate`');
+  const runs = ops.filter((o) => o.frame.op === 'reinstate').flatMap((o) => o.frame.runs);
+  assert.deepEqual(runs, [{ i_start: `${member}.0.1.9`, origin: member, width: '3' }], 'the run named by the member that minted it, its version component kept');
+});
+
 test('the window\'s own feed row is not news: the ack tells the model its position and the draft is read again as that act\'s feedback — the edits the read holds dropped as it sets the text, the text shown the same, no clause saying it is as last read and no word of how it was set — while another writer\'s row is news', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   // the board the fake port stands in for: the draft's text and the address of each of its bytes, moved by each insert it acks

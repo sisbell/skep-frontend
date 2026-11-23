@@ -356,7 +356,7 @@ export function reopen(left, at) {
  * @param {string} addr
  * @returns {import('../model/records.js').Block | null}
  */
-function firstInView(addr) {
+export function firstInView(addr) {
   const seen = visibleView(LINE.bottom());
   const meets = (/** @type {{x: number, y: number, w: number, h: number}} */ r) => r.w > 0 && r.h > 0 && r.x < seen.x + seen.w && seen.x < r.x + r.w && r.y < seen.y + seen.h && seen.y < r.y + r.h;
   return LAYER.shownOf(addr).blocks.find((b) => (LAYER.spanRects(addr, b.pos) || []).some(meets)) || null;

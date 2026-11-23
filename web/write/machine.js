@@ -58,8 +58,12 @@
 // (W-BURSTS's `Asked.judged`).
 // THE ANSWER: an `ack` raises the typed state to its `at` (BM-6), and an
 // insert's `ack_addr` is told to the model for each run of the page's
-// ordinals it carried (M-REC's `mint`); while it is awaited nothing changes
-// (BM-7). The shell's `held` answer (BM-8) keeps the line by its ordinal, the
+// ordinals it carried (M-REC's `mint`); each frame acknowledged — by its
+// ack, or by the shell's word that its held line kept at a position — is
+// told to W-WRITE as the page's own change there, what it placed and removed
+// by identity, and a delete's position given to the removals its words were
+// (`ownAcked`; W-WRITE's `addOwnChange`, `ackRemovals`); while it is awaited
+// nothing changes (BM-7). The shell's `held` answer (BM-8) keeps the line by its ordinal, the
 // frame it holds and the hold's cause; the held lines are read (`readHeld`)
 // before the flight ends, and every later burst is dialed the same way. Each
 // frame is a part of its burst answered on its own: once every frame of a
@@ -178,7 +182,9 @@
 // person about held words — a moved document's, the device's refusal of a
 // line, the death's — at those words; a line merely held marks nothing. Each
 // line this window sent is marked over its burst's own bytes, each it did not
-// over its frame's.
+// over its frame's; a text the held lines are applied to names the bytes a
+// line this window sent inserts by the ordinals its edits gave them
+// (`heldNames`), so those marks stand in it by identity.
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-11, FP-14, FP-23, FP-28, FP-29, FP-38.
 
 import * as PORT from '../bridge/port.js';
@@ -641,6 +647,48 @@ function mint(/** @type {string} */ addr, /** @type {Composed['pages']} */ pages
   for (const p of pages) { REC.mint(addr, p.page, p.width, past(start, before), at); before += p.width; }
 }
 
+/**
+ * A frame of a draft's the board acknowledged at a position, told to W-WRITE
+ * (see the head): the change it made added to the page's own record — an
+ * insert's bytes by the page's ordinals its values carry, a reinstate's by
+ * its runs, each with the units its anchors name either side; a delete's
+ * what it took out, with the byte either side (`addOwnChange`) — and a
+ * delete's position given to the removals its words were (`ackRemovals`).
+ * @param {Draft} d
+ * @param {Composed} f
+ * @param {number} at the position acknowledged
+ */
+function ownAcked(d, f, at) {
+  const fr = f.frame, a = /** @type {{before?: string | import('../bridge/shapes').AnchorPiece | null, after?: string | import('../bridge/shapes').AnchorPiece | null}} */ (f.anchors || {});
+  const placed = fr.op === 'insert' ? f.pages.flatMap((p) => REC.pageIds(d.addr, p.page, p.width)) : fr.op === 'reinstate' ? fr.runs.flatMap((r) => named(r.i_start, Number(r.width))) : [];
+  WRITE.addOwnChange(d.addr, {
+    at,
+    placed: placed.length ? [{ ids: placed, before: unitIds(d, a.before ?? null), after: unitIds(d, a.after ?? null) }] : [],
+    removed: f.lost && f.lost.ids.length ? [{ ids: f.lost.ids, before: f.lost.before, after: f.lost.after }] : [],
+  });
+  if (f.lost && f.lost.ids.length) WRITE.ackRemovals(d.addr, f.lost.ids, at);
+}
+
+/**
+ * The byte an anchor's edge names, by identity as the model names it now: an
+ * I-address; a piece of an insert the page composed — a frame of the burst
+ * out, or a held line of this window's — by the page's name for that byte;
+ * none where it names none so.
+ * @param {Draft} d
+ * @param {string | import('../bridge/shapes').AnchorPiece | null} edge
+ * @returns {ISpan[]}
+ */
+function unitIds(d, edge) {
+  if (typeof edge === 'string') return named(edge, 1);
+  if (!edge) return [];
+  for (const f of [...(d.out ? d.out.frames : []), ...[...d.lines.values()].map((l) => l.frame)]) {
+    if (f.frame.id !== edge.burst) continue;
+    let at = edge.offset;
+    for (const p of f.pages) { if (at < p.width) return REC.pageIds(d.addr, p.page + at, 1); at -= p.width; }
+  }
+  return [];
+}
+
 /** a frame of a burst acked at a position: the burst is acked whole once no frame of it is left (W-WRITE's `markAcked`) */
 function frameAcked(/** @type {Draft} */ d, /** @type {number} */ k, /** @type {number} */ at) {
   const b = d.open.get(k);
@@ -710,6 +758,7 @@ function answered(d, o, f, out) {
     if ('addr' in ack) mint(d.addr, f.pages, ack.addr, ack.at);
     o.acked.push({ frame: f, at: ack.at });
     frameAcked(d, o.k, ack.at);
+    ownAcked(d, f, ack.at);
   } else if (held) { d.lines.set(held.held, { k: o.k, frame: f, since: reads }); d.cause = held.cause; o.held = true; } else {
     const r = 'refused' in out ? out.refused : /** @type {Refusal} */ ({ kind: 'shell', name: 'malformed_answer' });
     // an undo's `reinstate` the board refuses `withheld` is declined (BM-11): no refused run stands of it
@@ -905,7 +954,7 @@ function landed(d, l, ats) {
   if (line) {
     d.lines.delete(l.held);
     if (l.addr && l.at != null) mint(d.addr, line.frame.pages, l.addr, l.at);
-    if (l.at != null) { d.typed = Math.max(d.typed ?? 0, l.at); ats.push(l.at); }
+    if (l.at != null) { d.typed = Math.max(d.typed ?? 0, l.at); ats.push(l.at); ownAcked(d, line.frame, l.at); }
     frameAcked(d, line.k, l.at ?? 0);
     if (d.open.has(line.k)) split(d, line.k, line.frame, l.at ?? 0);
     return;
@@ -1211,6 +1260,24 @@ export function marksOf(addr) {
   for (const i of islands) { const m = ofEdits('refused', (e) => e.island === i.id); if (m) out.push(m); }
   if (death) { const m = ofEdits('held', (e) => e.at == null && !e.based && e.island == null && !(e.sent != null && bursts.has(e.sent))); if (m) out.push(m); }
   return out;
+}
+
+/**
+ * The page's names for a draft's held lines' inserted bytes, as a text the
+ * lines are applied to names them (M-DERIVE's `Named`; SC's held version): a
+ * line this window sent by the page's ordinals its frame's values carry
+ * (`Composed.pages`) — the names its edits gave those bytes, so that text and
+ * the text the page shows hold them by one identity, and the margin marks
+ * them there (`marksOf`); any other line's by W-WRITE's (`heldNames`).
+ * @param {string} addr
+ * @returns {import('../model/derive.js').Named}
+ */
+export function heldNames(addr) {
+  const d = drafts.get(addr), other = WRITE.heldNames(addr);
+  return (held, width) => {
+    const l = d ? d.lines.get(held) : undefined, pages = l ? l.frame.pages : [];
+    return pages.length && pages.reduce((n, p) => n + p.width, 0) === width ? pages.flatMap((p) => REC.pageIds(addr, p.page, p.width)) : other(held, width);
+  };
 }
 
 /**
