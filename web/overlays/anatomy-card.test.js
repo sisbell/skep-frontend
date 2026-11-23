@@ -267,8 +267,8 @@ function cardPage() {
 test('the card: a key opens it on follow, the line standing before follow; the line\'s act shows it again under its id with the claims in the line\'s place, a focus held on the line going to follow', async () => {
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));
-  // the first edition's citation of 1.0.1.0.127 whole, from its own bytes at 11; 1.0.2's claim of it superseded, homed in 1.0.2's document
-  const D = '1.0.1.0.3', FAR = '1.0.1.0.127', TEXT = 'Tumbler.\n\nThe first field.';
+  // the first edition's citation of 1.0.1.0.185 whole, from its own bytes at 11; 1.0.2's claim of it superseded, homed in 1.0.2's document
+  const D = '1.0.1.0.3', FAR = '1.0.1.0.185', TEXT = 'Tumbler.\n\nThe first field.';
   REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
   REC.takeLinks(D, [L]);
@@ -301,8 +301,8 @@ test('the card: a key opens it on follow, the line standing before follow; the l
 test('the card\'s follow act reads "Follow to" the document it goes to, its name the same words, and a list\'s rows read the way the link runs said "to" or "from" and the far end first, then the type, drawn and named so — never by an arrow or the symbol drawn in them — rendered for the ear, the far document\'s own words kept as written (style S22; patterns K1; issue #626)', async () => {
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));
-  // the first edition's citation of 1.0.1.0.141 whole from its bytes at 11, and that document's citation of its bytes at 1 homed in it
-  const D = '1.0.1.0.3', FAR = '1.0.1.0.141', TEXT = 'Tumbler.\n\nThe first field.', TITLE = 'Notes — “dawn” → (draft)';
+  // the first edition's citation of 1.0.1.0.199 whole from its bytes at 11, and that document's citation of its bytes at 1 homed in it
+  const D = '1.0.1.0.3', FAR = '1.0.1.0.199', TEXT = 'Tumbler.\n\nThe first field.', TITLE = 'Notes — “dawn” → (draft)';
   const [OUT, IN] = [D + '.0.2.21', D + '.0.2.22'];
   REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
@@ -340,7 +340,7 @@ test('the card\'s follow act reads "Follow to" the document it goes to, its name
 test('at an end in a draft holding typed text the card quotes the words its bytes hold, stands at the end where the text shown holds it, is left by those bytes and reads no position of the typed text (FP-30, FP-36)', async () => {
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));
-  const D = '1.0.1.0.2', FAR = '1.0.1.0.127', L2 = D + '.0.2.1', TEXT = 'Tumbler.\n\nThe first field.';
+  const D = '1.0.1.0.2', FAR = '1.0.1.0.185', L2 = D + '.0.2.1', TEXT = 'Tumbler.\n\nThe first field.';
   REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
   REC.takeLinks(D, [L2]);
@@ -370,7 +370,7 @@ test('at an end in a draft holding typed text the card quotes the words its byte
 test('the card says when its link was made: "made" and the day of the commit that minted it, as its read answered, between the owner row and the lineage — "not recorded" where the board holds no reading of the time, "on or before" the later day where only an hour\'s anchor dates it and that hour crosses midnight — and never an age or a log position (issue #22\'s design decision: "The row reads \'made 12 March 2026\'. Drop the \'age\' label and any log position")', async () => {
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));
-  const D = '1.0.1.0.3', FAR = '1.0.1.0.127', TEXT = 'Tumbler.\n\nThe first field.';
+  const D = '1.0.1.0.3', FAR = '1.0.1.0.185', TEXT = 'Tumbler.\n\nThe first field.';
   REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
   // noon and half past eleven at night on the 12th of March 2026, in this machine's own time zone
@@ -412,8 +412,8 @@ test('the card says when its link was made: "made" and the day of the commit tha
 test('the card says beneath its far end\'s words what that end\'s text holds of its passage where it is not all of it in one piece — the line its landing says — and nothing where it is (issue #153)', async () => {
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));
-  // the first edition's citation of twenty-two of 1.0.1.0.127's bytes from its third, which an edit cut in two: four at 3, five at 20
-  const D = '1.0.1.0.3', FAR = '1.0.1.0.127', CUT = D + '.0.2.4';
+  // the first edition's citation of twenty-two of 1.0.1.0.185's bytes from its third, which an edit cut in two: four at 3, five at 20
+  const D = '1.0.1.0.3', FAR = '1.0.1.0.185', CUT = D + '.0.2.4';
   const TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'The far edition.\n\nIts cited passage stands here.';
   REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
@@ -445,7 +445,7 @@ test('an end LK draws at a withheld run: its card says the end is withheld and w
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));
   // a document of 1.0.1's: its first paragraph, then eight of 1.0.2's draft's bytes withheld from the reader, two of 1.0.1's citations on them
-  const D = '1.0.1.0.31', O = '1.0.2.0.9', FAR = '1.0.1.0.131', CITE = '1.1.0.1.0.1.0.3.13', TEXT = 'Tumbler.\n\n', n = TEXT.length;
+  const D = '1.0.1.0.89', O = '1.0.2.0.67', FAR = '1.0.1.0.189', CITE = '1.1.0.1.0.1.0.3.13', TEXT = 'Tumbler.\n\n', n = TEXT.length;
   REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text: TEXT, ref: null, origin: null }, { pos: n + 1, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }, { iStart: O + '.0.1.1', width: 8 }]);
   const [A, B] = [D + '.0.2.1', D + '.0.2.2'];
@@ -486,8 +486,8 @@ test('an end LK draws at a withheld run: its card says the end is withheld and w
 test('a far end naming its document whole is described by that document\'s label — its first line, as a box\'s label reads it — never by its text past that line, nor by a passage\'s words (issue #59\'s design decision: "describes the end by the document\'s label, never by a passage\'s words")', async () => {
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));
-  // the first edition's citation of 1.0.1.0.143 whole, which the index lists nowhere: its text two typed lines
-  const D = '1.0.1.0.3', FAR = '1.0.1.0.143', CITES = D + '.0.2.22';
+  // the first edition's citation of 1.0.1.0.201 whole, which the index lists nowhere: its text two typed lines
+  const D = '1.0.1.0.3', FAR = '1.0.1.0.201', CITES = D + '.0.2.22';
   const TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'Its first line.\n\nIts second line, which no label holds.';
   REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
@@ -560,7 +560,7 @@ function citing(link, far, stray = []) {
 test('"read side by side" at a far end the board will say nothing of stands inert, focusable, the far end\'s whole form its title; pressed, by Enter or by a click, it reads nothing and opens nothing: the card stands under its id with the act marked, the whole form\'s parts beneath its acts and said through the status region, the focus kept on the act where it held it and taken nowhere where it did not; the answer learned after the card opened is read at the press; the reason and the claims listed each stand through the other\'s act (issue #324; FP-34, FP-21)', async () => {
   const p = cardPage(), said = listening();
   HOST.attach(/** @type {any} */ (p.host));
-  const GHOST = '1.0.1.0.151', GONE = '1.0.1.0.3.0.2.41';
+  const GHOST = '1.0.1.0.209', GONE = '1.0.1.0.3.0.2.41';
   const { fake, drawn } = citing(GONE, GHOST, [{ active: true, claim: '1.0.2.0.5.0.2.1', home: '1.0.2.0.5', new: '1.0.2.0.5.0.2.2', old: GONE }]);
   const act = (/** @type {string} */ run, /** @type {boolean} */ byKey) => /** @type {any} */ (HOST.currentState()?.acts?.[run])(p.kid(run), byKey);
   await ANATOMY.open(drawn(), null, true);
@@ -596,7 +596,7 @@ test('"read side by side" at an end naming no far document stands inert with the
   const p = cardPage(), said = listening();
   HOST.attach(/** @type {any} */ (p.host));
   const LONE = '1.0.1.0.3.0.2.42', words = t('B1.invalid');
-  const { fake, drawn } = citing(LONE, '1.0.1.0.152');
+  const { fake, drawn } = citing(LONE, '1.0.1.0.210');
   await ANATOMY.open({ ...drawn(), far: '' }, null, true);
   assert.deepEqual([HOST.currentState()?.id, besideAs(p)], ['anatomy:' + LONE, { inert: true, title: words, told: false }], 'inert from its first frame, its reason its title');
   assert.ok(p.host.innerHTML.includes(`<div class="end far"><span class="k">${t('F.card.to').replace(/^./, (c) => c.toUpperCase())}</span><div class="quoted">${words}</div>`), `the far end's words on the card are the reason's, no address beside its name: ${p.host.innerHTML}`);
@@ -617,7 +617,7 @@ test('the owner row says "not known" where the page holds no owner for the link 
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));
   const UNOWNED = '1.0.1.0.3.0.2.44';
-  const { fake, drawn } = citing(UNOWNED, '1.0.1.0.153');
+  const { fake, drawn } = citing(UNOWNED, '1.0.1.0.211');
   await ANATOMY.open({ ...drawn(), link: { ...drawn().link, owner: null } }, null);
   assert.deepEqual(rows(p.host.innerHTML).find((r) => r.label === t('F.card.owner')), { label: 'Owner', value: 'not known' });
   assert.ok(p.host.innerHTML.includes('<b>Owner</b> <span data-string="F.card.owner.unknown">not known</span>'), `in the words' own string: ${p.host.innerHTML}`);
@@ -640,12 +640,12 @@ function inTurn(/** @type {Record<string, unknown>} */ s, /** @type {object} */ 
 test('the home row says what the page reads of the link\'s home in every frame the card shows — its kind by the one test, the home\'s metadata read with the card\'s other reads where nothing the page holds tells it and asked again across a drop, "not read" where that read failed and the next card asking it again, a version member by its trunk\'s listing with no read and no record made, a draft by the kind the page keeps of it once a row dropped its metadata, a refusal of it held in its own words with no kind — and never "published" by default (FP-39, FP-33, FP-34)', async () => {
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));
-  // a document of 1.0.1's citing 1.0.1.0.127 whole from its own bytes at 11, once from each home
-  const D = '1.0.1.0.60', FAR = '1.0.1.0.127', TEXT = 'Tumbler.\n\nThe first field.';
+  // a document of 1.0.1's citing 1.0.1.0.185 whole from its own bytes at 11, once from each home
+  const D = '1.0.1.0.118', FAR = '1.0.1.0.185', TEXT = 'Tumbler.\n\nThe first field.';
   // a draft the page holds nothing of; another, its first read refused for a reason that says nothing of it; one a drop overtakes
   // the read of; an edition the index lists, its second member the home; a draft read, then dropped by a row naming it; a
   // draft withheld from the reader; an address the board will say nothing of
-  const [UNTOLD, FAILS, OVERTAKEN, EDITION, DROPPED, HIDDEN, NOWHERE] = ['1.0.1.0.61', '1.0.1.0.62', '1.0.1.0.63', '1.0.1.0.64', '1.0.1.0.65', '1.0.1.0.66', '1.0.1.0.67'];
+  const [UNTOLD, FAILS, OVERTAKEN, EDITION, DROPPED, HIDDEN, NOWHERE] = ['1.0.1.0.119', '1.0.1.0.120', '1.0.1.0.121', '1.0.1.0.122', '1.0.1.0.123', '1.0.1.0.124', '1.0.1.0.125'];
   const MEMBER = EDITION + '.2', homes = [UNTOLD, FAILS, OVERTAKEN, MEMBER, DROPPED, HIDDEN, NOWHERE];
   const linkIn = (/** @type {string} */ home) => home + '.0.2.1';
   REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);

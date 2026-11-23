@@ -116,8 +116,8 @@ carrying it and Mod+Z taking it down; a mark in pane B clear of its corner; and 
 pane A as the scene opens over its draft (`pane-removal`). The margin's marks follow in the pane (B3-S2; skep-frontend
 #680): a refused run typed at a word of pane A (`pane-refused`), and a line held moved there (`pane-held-bars`).
 The whole document's entry is a figure (`whole_entry`): the seeded staging draft selected whole and copied through the
-copy door, on the first page. Its leap to that draft landing within the driver's evaluate is marked with #757 and counts
-as expected while it outlasts it, the entry then unmeasured.
+copy door, on the first page, once the leap to that draft has landed within the driver's evaluate, which is checked; a
+leap that outlasts it leaves the entry unmeasured.
 Undo, redo and the deletion face are driven there too (`undo_rows`): Mod+Z on
 an empty stack, its line and the constant sentence (`undo-lines`); a removal
 of kept words, the deletion face at its commit (`deletion-face`); the undo
@@ -218,7 +218,7 @@ import re
 import time
 from collections import Counter
 
-from . import DOC, STAGING, VERSIONED, XFAIL_LONG_DRAFT, Result, WINDOW, corner_fit, drawn_keys, heard, named_as, trunk_of
+from . import DOC, STAGING, VERSIONED, Result, WINDOW, corner_fit, drawn_keys, heard, named_as, trunk_of
 from .layout import EDGE_EM, HEAD_CH, READING_PX, SIDE_GAP_PX
 from .wire import READ_PATHS, READ_ROWS, read_ops
 
@@ -2270,7 +2270,7 @@ def whole_entry(ctx, r):
     is still owed. Beside it, for the positions the page held as it landed, the entry T-LAYER names for a copy of them
     (`namedIn`), no selection made. Reads alone: the caret and the selection are page state, and both are let go after.
     Its figures, the seconds the landing took among them. The landing is checked to come within the driver's evaluate
-    (120 s), marked with #757: a leap that outlasts it measures nothing more, and the case's next leap takes the jump over."""
+    (120 s): a leap that outlasts it measures nothing more, and the case's next leap takes the jump over."""
     t0 = time.time()
     try:
         ctx.leap(STAGING, 1)
@@ -2278,8 +2278,7 @@ def whole_entry(ctx, r):
     except TimeoutError:
         landed = False
     out = {'doc': STAGING, 'leap_s': round(time.time() - t0, 1)}
-    if not r.check(landed, "the leap to the seeded staging draft lands within the driver's 120 s (what the whole document's entry is measured on)",
-                   out, xfail=XFAIL_LONG_DRAFT):
+    if not r.check(landed, "the leap to the seeded staging draft lands within the driver's 120 s (what the whole document's entry is measured on)", out):
         return out
     try:
         d = ctx.js('(() => { const d = window.__skep.model.doc(%s); return {extent: d.extent, from: d.from, to: d.to}; })()' % json.dumps(STAGING))

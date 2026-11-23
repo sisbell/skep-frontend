@@ -36,7 +36,7 @@ import * as RENDER from './render.js';
 import { boardStatements } from './render.js';
 import * as LAYER from '../text/layer.js';
 import * as F from '../model/frames.js';
-import { boardCell, accountCell, docBox, accountAt, continuationCell, DOC_W } from './projection.js';
+import { boardCell, accountCell, docBox, accountAt, continuationCell, numberAtCell, DOC_W } from './projection.js';
 import { markScale, lodOf } from './lod.js';
 import { leadOf, firstRow, GUTTER } from './layout.js';
 import { COL, TARGET, ADDRESS, WINDOW, STRIP } from './register.js';
@@ -227,12 +227,12 @@ test('an account\'s counts on the plane are numerals, their thousands parted by 
   } finally { REC._reset(); WRITE._reset(); }
 });
 
-/** an account of sixty documents the index lists, each its first line "Notes on ⟨n⟩": at HOME the first 48 stand whole and the other twelve are its first continuation's one mark */
+/** an account of sixty documents the index lists, at its first sixty cells (P-PROJ's `numberAtCell`), each its first line "Notes on ⟨cell⟩": at HOME the first 48 stand whole and the other twelve are its first continuation's one mark */
 function sixty() {
   REC._reset(); WRITE._reset();
   REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
-  REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 60 }, (_, i) => ({ doc: `1.0.1.0.${i + 1}`, kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 60 }], state: { arm: 'complete' } }));
+  REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 60 }, (_, i) => ({ doc: `1.0.1.0.${numberAtCell(i + 1)}`, kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 60 }], state: { arm: 'complete' } }));
   CAM.setViewport(1440, 900);
   const { ctx } = recorder();
   RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
@@ -252,27 +252,27 @@ test('a continuation\'s mark holding two targets is two: its newest member\'s la
   try {
     const home = sixty();
     // the newest member's box showing its second version, its text held
-    const V = '1.0.1.0.60.2', text = 'Take two.';
+    const V = '1.0.1.0.118.2', text = 'Take two.';
     REC.takeSpanSet(V, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
     REC.takeDelivery(V, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
     const leap = GO.leapTo(V);
-    assert.equal(GO.shownIn('1.0.1.0.60'), V, 'the box shows its second version');
+    assert.equal(GO.shownIn('1.0.1.0.118'), V, 'the box shows its second version');
     CAM.set(home);
     await leap;
     // the walk resting on the account, as the launch leaves it: no ring on a member, which would name it in the count's place
     await WALK.restAt('1.0.1');
     RENDER.draw();
     const m = firstMark();
-    assert.deepEqual([m.k, m.n, m.newest, m.members.length], [1, 12, '1.0.1.0.60', 12], 'the first continuation, its twelve members, its newest the highest-numbered');
+    assert.deepEqual([m.k, m.n, m.newest, m.members.length], [1, 12, '1.0.1.0.118', 12], 'the first continuation, its twelve members, its newest the highest-numbered');
     assert.equal(m.lines.join(' '), markCount(12, true), 'its count says what it counts');
-    assert.deepEqual(m.newestLines, ['.0.60.2', 'Take two.'], 'its newest member\'s label as a box\'s label sets it, of the version its box shows: its address past the region\'s prefix, then its first line');
+    assert.deepEqual(m.newestLines, ['.0.118.2', 'Take two.'], 'its newest member\'s label as a box\'s label sets it, of the version its box shows: its address past the region\'s prefix, then its first line');
     const band = /** @type {{x: number, y: number, w: number, h: number}} */ (m.newestTarget);
     assert.ok(band && band.h >= TARGET.min && Math.abs(band.y + band.h - (m.rect.y + m.rect.h)) < 1e-6 && Math.abs(band.w - m.rect.w) < 1e-6, `the band across the mark's foot, a target tall: ${JSON.stringify({ band, rect: m.rect })}`);
     assert.ok(band.y - m.rect.y >= TARGET.min, 'the rest of the mark a target tall above it');
     const label = RENDER.stats.labels.find((l) => l.kind === 'newest' && l.place === m.key);
     assert.ok(label && label.lines.every((x) => x.rect.y >= band.y - 1e-6 && x.rect.y + x.rect.h <= band.y + band.h + 1e-6), 'the label inside its band');
     const atLabel = middleOf(band), atRest = { x: m.rect.x + m.rect.w / 2, y: m.rect.y + (band.y - m.rect.y) / 2 };
-    assert.deepEqual(RENDER.residueAtScreen(atLabel.x, atLabel.y), { account: '1.0.1', k: 1, key: '1.0.1:1', newest: '1.0.1.0.60', target: 'newest' }, 'a press on the band: the newest member');
+    assert.deepEqual(RENDER.residueAtScreen(atLabel.x, atLabel.y), { account: '1.0.1', k: 1, key: '1.0.1:1', newest: '1.0.1.0.118', target: 'newest' }, 'a press on the band: the newest member');
     assert.equal(RENDER.residueAtScreen(atRest.x, atRest.y)?.target, 'list', 'a press on the rest: the list');
     assert.equal(RENDER.residueAtScreen(m.rect.x - 5, atRest.y), null, 'off the mark: neither');
   } finally {
@@ -299,12 +299,12 @@ test('the walk\'s ring on a member the mark holds stands on the mark, and the ma
   try {
     const home = sixty();
     CAM.set(home);
-    await WALK.focusTo('1.0.1.0.55', null);
+    await WALK.focusTo('1.0.1.0.113', null);
     assert.ok(WALK.ringShown(), 'a landing put the walk there: the ring drawn');
     RENDER.draw();
     const m = firstMark();
     assert.ok(sameRect(RENDER.stats.ring, m.rect), `the ring on the mark, never on the member's own outline inside it: ${JSON.stringify([RENDER.stats.ring, m.rect])}`);
-    assert.equal(m.lines.join(' '), t('L.mark.member', { name: '.0.55', i: 7, n: 12 }), 'the member\'s name and place among the mark\'s twelve, in its count\'s place');
+    assert.equal(m.lines.join(' '), t('L.mark.member', { name: '.0.113', i: 7, n: 12 }), 'the member\'s name and place among the mark\'s twelve, in its count\'s place');
     await WALK.focusTo('1.0.1:1', null);
     RENDER.draw();
     assert.ok(sameRect(RENDER.stats.ring, firstMark().rect) && firstMark().lines.join(' ') === markCount(12, true), 'the mark\'s own stop: the ring on it, its count');

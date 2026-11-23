@@ -376,12 +376,13 @@
 // no read; a moment unfolded flies the camera alone.
 // The jump (FP-25): a jump flies at once wherever the plane can place its
 // destination (`placeable`: every address of the board the page opened,
-// before any read; another board's once a read brought what draws it) and no
-// failure is known (`known`): it takes its trail entry at the act — as
-// N-TRAIL's claim where its landing waits on a read, filled in by what it
-// reads (`settle`) — ends the chrome of the place it leaves, moves the walk
-// to the place it left for and flies there (`leave`), and is in the air
-// (`inAir`) until it lands. No landing ends chrome: a card shown while the
+// before any read; another board's once a read brought what draws it; never
+// one the projection gives no cell, a reserved number — P-PROJ's `hasCell`;
+// B11-S5) and no failure is known (`known`): it takes its trail entry at the
+// act — as N-TRAIL's claim where its landing waits on a read, filled in by
+// what it reads (`settle`) — ends the chrome of the place it leaves, moves
+// the walk to the place it left for and flies there (`leave`), and is in the
+// air (`inAir`) until it lands. No landing ends chrome: a card shown while the
 // jump is in the air stands over its landing, and one asked then opens
 // there. Nor does a failure: every face a read brings once it answered — a
 // failure learned in the air, the dead end or the withheld document a landing
@@ -423,12 +424,15 @@
 // ones its label and rows name it by first, then the rest of its one state
 // (O-FACES' `unregistered`; LK's `emptyAt`; FP-21) — and a jump to an address
 // the board's words alone. A
-// jump where only a read can place the destination reaches (`reachFor`): its
-// entry taken at the act, the camera still, its reaching face at the act's
-// site (O-FACES' `reaching`); Esc, Back and every later act abandon it, its
-// entry given back (`giveUp`; N-TRAIL's `giveBack`); its read refused, it
-// faces at the site and gives its entry back; answered, the camera leaves as
-// above.
+// jump where only a read can place the destination reaches (`reachFor`), as
+// does one to an address the projection gives no cell, whatever the page
+// holds of it: its entry taken at the act, the camera still, its reaching
+// face at the act's site (O-FACES' `reaching`); Esc, Back and every later act
+// abandon it, its entry given back (`giveUp`; N-TRAIL's `giveBack`); its read
+// refused, or answered for an address with no cell — faced as the fifth cell,
+// as a refusal saying nothing of the document is (B11-S5) — it faces at the
+// site and gives its entry back; answered for a place with a cell, the camera
+// leaves as above.
 // A cursor move (`moveCursor`; `back`, `forward`, `toTrailEntry`) is a
 // return, never an arrival by address (FP-21, FP-25): it restores each
 // version the entry kept — the one its walk stood in, the one its view read,
@@ -543,7 +547,7 @@ import * as PROV from '../overlays/provenance.js';
 import * as MARKLIST from '../overlays/mark-list.js';
 import * as HINT from '../overlays/hint.js';
 import * as FOCUS from './focus.js';
-import { accountCell, boardCell, continuationCell, continuationOf } from '../plane/projection.js';
+import { accountCell, boardCell, continuationCell, continuationOf, hasCell } from '../plane/projection.js';
 import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf, accountOf } from '../model/address.js';
 import { sameSpan } from '../text/span.js';
 import * as PAST from '../model/past.js';
@@ -1668,13 +1672,15 @@ function known(addr, reads, end = null, follows = !!end) {
 }
 
 /**
- * Can the plane place a document before any read of it (see the head)? On
- * the board the page opened every address has its place; on another board,
- * only once a read brought what draws it — its text, its metadata, or its
- * withheld box (P-RENDER's `drawsDoc`).
+ * Can the plane place a document before any read of it (see the head)? Never
+ * one the projection gives no cell, a reserved number (P-PROJ's `hasCell`;
+ * B11-S5); else on the board the page opened every address has its place; on
+ * another board, only once a read brought what draws it — its text, its
+ * metadata, or its withheld box (P-RENDER's `drawsDoc`).
  * @param {string} addr
  */
 function placeable(addr) {
+  if (!hasCell(addr)) return false;
   if (boardOf(addr) === boardNode()) return true;
   const d = REC.doc(addr);
   return d.from >= 0 || !!d.meta || d.refused === 'withheld';
@@ -1682,13 +1688,15 @@ function placeable(addr) {
 
 /**
  * A jump reaching (see the head; FP-25): its reaching face at the act's site
- * in the place
- * of what stands there, the camera still, its read made. Where the jump was
- * abandoned meanwhile, nothing; where its read answered, the camera may
- * leave; where the board refused it, the refusal faced at the site as
- * O-HOST's notice (`asNotice`) — the fifth cell, in the far end's words where
- * the jump is a follow (O-FACES' `Asked.far`), the withheld face, a
- * refusal's by its name — and the entry given back.
+ * in the place of what stands there, the camera still, its read made. Where
+ * the jump was abandoned meanwhile, nothing; where its read answered for a
+ * place the projection gives a cell, the camera may leave; where the board
+ * refused it, or answered for an address with no cell (P-PROJ's `hasCell`;
+ * B11-S5), the entry given back and the answer faced at the site as O-HOST's
+ * notice (`asNotice`) — the fifth cell, in the far end's words where the jump
+ * is a follow (O-FACES' `Asked.far`), at an answer with no cell and at a
+ * follow's refusal saying the board will say nothing of the document; else
+ * the refusal's face, the withheld face among them, by its name.
  * @param {number} act
  * @param {string} addr
  * @param {Entry | null} entry
@@ -1703,9 +1711,9 @@ async function reachFor(act, addr, entry, site, far = false) {
   const w = await PUMP.wholeOf(addr);
   if (!reach || reach.act !== act) return null;
   reach = null;
-  if (placeable(addr) || !w.refused) return { refused: w.refused };
+  if (hasCell(addr) && (placeable(addr) || !w.refused)) return { refused: w.refused };
   if (entry) TRAIL.giveBack(entry);
-  if (far && w.refused.name === 'doc_not_registered') FACES.unregistered(addr, at, { ...asNotice(act), far });
+  if (!w.refused || (far && w.refused.name === 'doc_not_registered')) FACES.unregistered(addr, at, { ...asNotice(act), far });
   else FACES.showRefusal(at, w.refused, addr, 'read', asNotice(act));
   return null;
 }
@@ -2497,8 +2505,10 @@ function sayFollowed(act, s, entry, placed, pos) {
  * whose failure is known at the act never leaves, its face at `site`, the
  * arrival standing — the door's link lit; one to
  * an address on a board the plane does not draw reaches for it first
- * (`reachFor`); where no board is held, none leaves, the no-board face at
- * `site` (see the head). Where the reader took the camera over while it was
+ * (`reachFor`), and one to an address the projection gives no cell reaches
+ * for it whatever the page holds of it, never leaving; where no board is
+ * held, none leaves, the no-board face at `site` (see the head). Where the
+ * reader took the camera over while it was
  * in the air its reads only mark; where an act was made while it read, it
  * goes on nowhere and faces nothing: its read fills its entry alone.
  * @param {string} addr a document address
@@ -2531,7 +2541,7 @@ export async function leapTo(addr, opts = {}) {
   const entry = opts.push === false ? null : TRAIL.push({ addr, pos, width: widthAt(runs, pos), view: viewFor(addr, pos), label: null, notice: waiting }, departure(), !!waiting, step);
   /** @type {Refusal | null} the refusal the text's whole read met, which a carried passage's line says it could not tell by */
   let met = null;
-  if (unread && !placeable(addr)) {
+  if (!hasCell(addr) || (unread && !placeable(addr))) {
     const read = await reachFor(act, addr, entry, site);
     if (!read) return null;
     met = read.refused; d = REC.doc(addr); unread = false;
@@ -2865,7 +2875,8 @@ export function arrived(member, at = null, newest = null) {
  * the overlay it was pressed from, the chrome under it standing. The control
  * the follow was pressed on, the anatomy card's follow or a "which" list's
  * row, is never its site. A far document on a board the plane does not draw
- * is reached for first (`reachFor`). Where the reader took the camera over
+ * is reached for first (`reachFor`), and one at an address the projection
+ * gives no cell too, never leaving. Where the reader took the camera over
  * while it was in the air its reads only mark; where an act was made while it
  * read, it goes on nowhere, faces nothing and lights nothing: its read fills
  * its entry alone. The entry it departs records the follow (see the head):

@@ -42,9 +42,9 @@ measured, not read off the DOM: the page's `visible` oracle says whether a
 block, a mark or a corner lies inside the clip the page draws and the
 viewport — text the DOM holds past a clip is shown to no one. The first
 edition's tail at HOME, and the connections into the mark with the count each
-carries, are marked with #643 and count as expected while it stands: each
-reads the account's first grid, which holds its home and its mailbox alone.
-The system account's editions against the census are marked with
+carries, read the account's first grid as HOME draws it: its home, its slots
+and its first ordinary documents whole, the first edition among them, and the
+mark past them. The system account's editions against the census are marked with
 sisbell/skep#1141 while the board's time document 1.1.0.1.0.4 holds no record
 and is all that differs: genesis places it published and memberless, no
 `/changes` row names it until the time writer's first record, and the index
@@ -52,7 +52,7 @@ lists no document a row never names."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, SECOND_ACCOUNT, WINDOW, XFAIL_FIRST_GRID, XFAIL_UNNAMED_BY_FEED, Result, edition
+from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, SECOND_ACCOUNT, WINDOW, XFAIL_UNNAMED_BY_FEED, Result, edition
 
 WS = re.compile(r'\s+')
 # the board's time document: genesis places it published and memberless, and the time writer's first record — made at the
@@ -132,7 +132,7 @@ def tails_home(ctx, r):
     tail = mine[0] if len(mine) == 1 else None
     r.check(v['lod'] == 'mid' and bool(v['ghost']) and tail is not None and sorted(tail['links']) == v['want'],
             'at HOME the first edition\'s box carries one tail, holding once each link the case\'s own reading joins it by to a document the plane draws nowhere — its citation of the ghost among them — drawn at either of the two',
-            {'tails': [[t['links'], t['label']] for t in mine], 'links': v['want'], 'cites_ghost': v['ghost'], 'lod': v['lod']}, xfail=XFAIL_FIRST_GRID)
+            {'tails': [[t['links'], t['label']] for t in mine], 'links': v['want'], 'cites_ghost': v['ghost'], 'lod': v['lod']})
     if tail is None:
         return {'tails': len(mine)}
     want = str(len(tail['links'])) if len(tail['links']) > 1 else tail['far'][0]
@@ -578,11 +578,11 @@ def run(ctx):
     r.figures['home_tail'] = tails_home(ctx, r)
     marks = [m for m in ctx.js('window.__skep.residues()') if m['account'] == '1.0.1']
     mark = marks[0] if len(marks) == 1 else None
-    r.check(mark is not None and mark['k'] == 1, 'at HOME the account\'s first continuation is drawn as ONE mark — its oldest 48 stand whole', [{k: m[k] for k in ('k', 'n', 'rect')} for m in marks])
+    r.check(mark is not None and mark['k'] == 1, 'at HOME the account\'s first continuation is drawn as ONE mark — the documents of its first grid stand whole: its home, its slots and its first ordinary documents', [{k: m[k] for k in ('k', 'n', 'rect')} for m in marks])
     if mark:
         members = mark['members']
         deep = ctx.js('window.__skep.model.places().filter(p => p.account === "1.0.1" && !p.system && window.__skep.depthOf(p.doc) >= 1).map(p => p.doc)')
-        r.check(set(deep) <= set(members) and mark['n'] == len(members), 'the mark counts what the continuation holds: every document past the oldest 48 the index lists (law 13)',
+        r.check(set(deep) <= set(members) and mark['n'] == len(members), 'the mark counts what the continuation holds: every document past its first grid the index lists (law 13)',
                 {'n': mark['n'], 'members': len(members), 'indexed': len(deep), 'missing': sorted(set(deep) - set(members), key=num)[:10]})
         newest = max(members, key=num)
         r.check(mark['newest'] == newest, 'the mark\'s representative is its newest member, the highest-numbered', {'newest': mark['newest'], 'expected': newest})
@@ -627,13 +627,13 @@ def run(ctx):
           return Object.fromEntries([...links].map(([a, s]) => [a, s.size]).filter(([, n]) => n > 0));
         })()''' % (json.dumps(members), json.dumps(sorted(into))))
         r.check(bool(linked) and into == linked, 'each document standing whole that a link joins to a document the mark holds — drawn at either of the two — is joined to the MARK by one connection counting those links, each once, and no other is',
-                {'drawn': into, 'links': linked}, xfail=XFAIL_FIRST_GRID)
+                {'drawn': into, 'links': linked})
         # the count on the stroke (foundations §2.1's register: "one connection drawn per document pair with its count"; P44 forbids a merged
         # mark that hides it): the numeral of LK's links, read apart from the canvas, where the connection holds two or more; none where one
         carried = {(c['b'] if c['a'] == mark['key'] else c['a']): c.get('label') for c in conns if mark['key'] in (c['a'], c['b'])}
         miscarried = {d: {'links': linked.get(d), 'carries': n} for d, n in carried.items() if n != (str(linked[d]) if linked.get(d, 0) >= 2 else None)}
         r.check(any(n >= 2 for n in linked.values()) and not miscarried, 'each connection into the mark carries its count on its stroke where it holds two links or more — the numeral of those links — and none where it holds one',
-                {'miscarried': miscarried, 'carried': carried}, xfail=XFAIL_FIRST_GRID)
+                {'miscarried': miscarried, 'carried': carried})
         r.figures['home_mark'] = dict({k: mark[k] for k in ('k', 'n', 'exact', 'newest', 'lines', 'rect')}, newest_lines=mark.get('newestLines'), newest_target=band, connections_to_mark={'drawn': into, 'links': linked, 'carried': carried})
         if band:
             r.figures['home_mark']['acts'] = mark_acts(ctx, r, mark, band, newest)

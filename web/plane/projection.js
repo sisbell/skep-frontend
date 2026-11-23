@@ -16,6 +16,17 @@
 // node's cell at the digit's slot and the parent's own accounts at the
 // separator's slot (slot 0).
 //
+// The document's digit is mapped before it is placed (B11-S3, O12;
+// `cellNumberOf`): the home page and the well-known slots 2 … 5 stand at
+// cells 1 … 5, and an ordinary document — numbered from
+// FIRST_ORDINARY_DOCUMENT, as skep's counter hands them out — at the cell
+// after them in mint order, so the account's first grid holds its home, its
+// slots and its first 43 ordinary documents. The reserved numbers between
+// take no cell (`hasCell`): a jump to one is answered where it was made
+// (N-GO's `placeable`), and anything else that asks where one stands is
+// answered the account's first cell, a finite place at depth 0 inside no
+// continuation.
+//
 // The continuations: an account's continuation k is the last cell of its
 // document grid k − 1 (`continuationCell`), holding every document at
 // continuation depth k and deeper (`withinContinuation`). Where the camera
@@ -71,6 +82,33 @@ export const G = [2, 3, 2, 3, 2, 7];
 export const LEAF = G.length - 1;
 /** the deepest continuation grid the arithmetic positions soundly (see the head) */
 export const DEPTH_SOUND = 11;
+/** skep's `LAST_NAMED_SLOT`: the last of the well-known slots 2 … 5, each of which takes its own number's cell */
+export const LAST_NAMED_SLOT = 5;
+/** skep's `FIRST_ORDINARY_DOCUMENT`: the first number an account's counter hands out after its home, the numbers between it and the slots reserved */
+export const FIRST_ORDINARY_DOCUMENT = 64;
+/** how far an ordinary document's number stands past its cell: the reserved numbers, which take none */
+const RESERVED = FIRST_ORDINARY_DOCUMENT - LAST_NAMED_SLOT - 1;
+
+/**
+ * The cell a document number takes among its account's document grids,
+ * counted from 1 in reading order through the continuations (see the head):
+ * the home page and the slots their own numbers, an ordinary document its
+ * number less the reserved numbers; null for a number that takes no cell — a
+ * reserved one, or one no document bears.
+ * @param {number} n a document's number: its address's document field
+ * @returns {number | null}
+ */
+export function cellNumberOf(n) {
+  if (n >= 1 && n <= LAST_NAMED_SLOT) return n;
+  return n >= FIRST_ORDINARY_DOCUMENT ? n - RESERVED : null;
+}
+
+/**
+ * The document number standing at a cell (`cellNumberOf`'s inverse).
+ * @param {number} c a cell, counted from 1
+ * @returns {number}
+ */
+export const numberAtCell = (c) => (c <= LAST_NAMED_SLOT ? c : c + RESERVED);
 
 /** [w, h] of one cell at each level, at depth 0 */
 export const CELL = (() => {
@@ -105,9 +143,10 @@ export function pathOf(key) {
 /**
  * Where a digit sits in its level's grid, in reading order with the
  * continuation: the usable cells are the first g²−1 (indices 0 … g²−2), the
- * last cell (index g²−1) holds the next grid. At the leaf the digit is
- * 1-based (document 1 is the first cell); elsewhere digit 0 is the
- * separator's slot (the first cell).
+ * last cell (index g²−1) holds the next grid. At the leaf the digit is a
+ * document's number, placed at the cell it takes (`cellNumberOf`; document 1
+ * is the first cell) — a number that takes none at the first cell, as the
+ * head says; elsewhere digit 0 is the separator's slot (the first cell).
  * @param {number} digit
  * @param {number} g cells across
  * @param {boolean} leaf
@@ -115,7 +154,7 @@ export function pathOf(key) {
  */
 export function slotOf(digit, g, leaf) {
   const U = g * g - 1;
-  const d = leaf ? digit - 1 : digit;
+  const d = leaf ? (cellNumberOf(digit) ?? 1) - 1 : digit;
   const k = Math.floor(d / U);
   const idx = d - k * U;
   return { k, idx, col: idx % g, row: Math.floor(idx / g) };
@@ -157,6 +196,18 @@ export function cellOfKey(key) {
   let c = _cellCache.get(key);
   if (!c) { c = cellOf(pathOf(key)); _cellCache.set(key, c); }
   return c;
+}
+
+/**
+ * Does the projection give an address a place of its own (see the head)?
+ * Every board's and account's; a document's, or anything under one, unless
+ * its number is reserved (`cellNumberOf`).
+ * @param {string} key
+ * @returns {boolean}
+ */
+export function hasCell(key) {
+  const p = pathOf(key);
+  return p.length <= LEAF || cellNumberOf(p[LEAF]) != null;
 }
 
 /**

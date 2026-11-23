@@ -127,7 +127,7 @@ import * as CAM from '../plane/camera.js';
 import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, EDGE_GAP, CHAR_W, LINE_H } from '../plane/layout.js';
 import { CORNER, ADDRESS, COL, HOLD, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, lineHeight, runsOf } from '../plane/labels.js';
-import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
+import { docBox, intersects, depthOfDoc, clearLeftOf, cellNumberOf, numberAtCell, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { CLAUSE_READING, articleHTML, faceRuns, cornerTitle, titleHTML, titleRuns, keptWord } from './article.js';
 import * as FACES from '../overlays/faces.js';
@@ -140,7 +140,7 @@ import { page } from '../test/dom.js';
 
 /** @typedef {import('../plane/layout.js').Fold} Fold */
 
-const D = '1.0.1.0.3', FAR = '1.0.1.0.127', OTHER_HOME = '1.0.2.0.5', CITE = '1.1.0.1.0.1.0.3.13';
+const D = '1.0.1.0.3', FAR = '1.0.1.0.185', OTHER_HOME = '1.0.2.0.5', CITE = '1.1.0.1.0.1.0.3.13';
 /** links per paragraph: their symbols take the article past the standard grid */
 const PER_BLOCK = 10;
 const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: doc.split('.').slice(0, 3).join('.'), whole: false, subspace: 1, ordinal: ord, positions: w });
@@ -609,12 +609,12 @@ test('the measure in force: every document folded at what the view holds — the
 
 // ---- what stands: every readable document, by line; the limit below reading size ------------------------------------
 
-/** the field: an account's first grid of documents, 1 … 48 (its 49th cell holds the continuation) */
+/** the field: an account's first grid of documents, at its cells 1 … 48 (its 49th cell holds the continuation) */
 const FIELD = '1.0.4';
 const ALL = Array.from({ length: 48 }, (_, i) => i + 1);
-/** the field's document `k` */
-const nth = (/** @type {number} */ k) => `${FIELD}.0.${k}`;
-/** a document's text delivered whole, its extent with it */
+/** the field's document at its cell `k` (P-PROJ's `numberAtCell`) */
+const nth = (/** @type {number} */ k) => `${FIELD}.0.${numberAtCell(k)}`;
+/** the text of the field's document at cell `k` delivered whole, its extent with it */
 function give(/** @type {number} */ k, /** @type {string} */ text) {
   const n = new TextEncoder().encode(text).length;
   REC.takeSpanSet(nth(k), [{ subspace: 1, ordinal: 1, positions: n }]);
@@ -626,19 +626,19 @@ const note = (/** @type {number[]} */ ks) => ks.forEach((k) => give(k, `Note ${k
 const faceOf = (/** @type {number} */ k) => LAYER.foldOf(REC.doc(nth(k))).fs;
 /** the viewport the policy is held on: five of the field's columns across and three rows down hold their first columns at em 7 */
 const VW = 5200, VH = 3600;
-/** the camera over the field's middle — document 25's first column, `dx` columns across — a line's size at `em` px */
+/** the camera over the field's middle — the first column of its document at cell 25, `dx` columns across — a line's size at `em` px */
 function view(/** @type {number} */ em, dx = 0) {
   const at = LAYER.centreOf(nth(25), null);
   CAM.set({ x: at.x + dx * DOC_CELL_W, y: at.y, scale: em / faceOf(16) });
 }
 /** the field's documents whose outlines meet the world the layer mounts in: the viewport, 40 px about it */
 const inView = () => { const v = CAM.viewportWorld(40); return ALL.filter((k) => intersects(LAYER.shapeOf(nth(k)), v)); };
-/** a frame, the walk's focus on document `focus`: the field's documents whose articles stand in the mount band after it */
+/** a frame, the walk's focus on the field's document at cell `focus`: the cells of the field's documents whose articles stand in the mount band after it */
 function frame(/** @type {number | null} */ focus = null) {
   LAYER.frame((addr) => focus != null && addr === nth(focus));
-  return LAYER.mountedAddrs().filter((a) => a.startsWith(FIELD + '.')).map((a) => Number(a.split('.').pop())).sort((x, y) => x - y);
+  return LAYER.mountedAddrs().filter((a) => a.startsWith(FIELD + '.')).map((a) => /** @type {number} */ (cellNumberOf(Number(a.split('.').pop())))).sort((x, y) => x - y);
 }
-/** frames until one mounts nothing afresh: the field's documents standing after them */
+/** frames until one mounts nothing afresh: the cells of the field's documents standing after them */
 function settle(/** @type {number | null} */ focus = null) {
   let now = frame(focus);
   for (let i = 0; i < 20 && LAYER.frameStats().mounted; i++) now = frame(focus);
@@ -881,7 +881,7 @@ test('a change of the page\'s class keeps the document the view reads standing, 
   const told = [];
   LAYER.readers({ vanished: (addr) => { told.push(addr); } });
   // D's later half a run of the draft's bytes, its image placing them in the draft's I-space
-  const DRAFT = '1.0.1.0.1003', CUT = Math.floor(EXTENT / 2);
+  const DRAFT = '1.0.1.0.1061', CUT = Math.floor(EXTENT / 2);
   REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: CUT }, { iStart: DRAFT + '.0.1.1', width: EXTENT - CUT }]);
   const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[f0.columns.length - 2];
@@ -1147,7 +1147,7 @@ test('while a press stands no standing article is set again, but a document reac
   const seen = inView();
   assert.ok(seen.some((k) => !before.has(nth(k))), 'the pan and the zoom bring documents into view that stood nowhere');
   assert.deepEqual(frame(), seen, 'under the press every one in view stands, at the readable em');
-  const kept = [...before.keys()].filter((a) => seen.includes(Number(a.split('.').pop())));
+  const kept = [...before.keys()].filter((a) => seen.includes(/** @type {number} */ (cellNumberOf(Number(a.split('.').pop())))));
   assert.ok(kept.length > 0, 'some standing before the press stand in view still');
   assert.deepEqual(unmoved(before), kept, 'none of those set again under the press, stale as they are');
   LAYER.press(false);
@@ -1272,7 +1272,7 @@ test('each withheld origin states itself once per document in view, in its colum
 }));
 
 test('a transcluded origin the reader reads states itself once per document in view in its column\'s edge — its key, the run\'s gesture to its source, and C-33\'s words for a draft\'s run in a published document, the origin\'s kind its metadata\'s word whatever the index lists it as — beside its first run in view, at that run\'s first line; its second run in view stands its key alone there; its lines hold its ground and its two hairlines and none of its words (issue #304\'s design decision: "Each origin, once per document in view"; FP-39)', () => onSigns(() => {
-  const X = '1.0.1.0.1003', key = `${t('L.origin-mark')} ${X}`;
+  const X = '1.0.1.0.1061', key = `${t('L.origin-mark')} ${X}`;
   // D's own paragraph, X's two typed lines — the newline between them X's own — D's own thirty paragraphs, X's third line, D's last
   const own1 = 'Tumbler.\n\n', q1 = 'quoted one\nquoted two', own2 = '\n\n' + Array.from({ length: 30 }, (_, i) => words(30, i)).join('\n\n') + '\n\n', q2 = 'quoted three', own3 = '\n\nAfter.';
   const [a, b, c, e, g] = [own1, q1, own2, q2, own3].map((x) => new TextEncoder().encode(x).length);
@@ -1312,7 +1312,7 @@ test('a transcluded origin the reader reads states itself once per document in v
 }));
 
 test('at a box showing a version whose metadata is unread, its box listed an edition, a draft\'s run carries C-33\'s words as the corner there says "published" — its origin\'s statement its key, then C-33\'s words — and a copy from it names that version itself, read at no plain address (FP-39, FP-27)', () => onSigns(() => {
-  const X = '1.0.1.0.1003', own1 = 'Tumbler.\n\n', q = 'quoted one', own2 = '\n\nAfter.';
+  const X = '1.0.1.0.1061', own1 = 'Tumbler.\n\n', q = 'quoted one', own2 = '\n\nAfter.';
   const [a, b, c] = [own1, q, own2].map((x) => new TextEncoder().encode(x).length), n = a + b + c;
   // D's second version, which its box shows: its own paragraph, a typed line of the draft X's, its own last — its text and its image held, no metadata read of it
   REC.takeSpanSet(D2, [{ subspace: 1, ordinal: 1, positions: n }]);
@@ -1447,7 +1447,7 @@ test('a stroke or a removal\'s mark leaving a line beside a margin\'s mark start
 // ---- C-67's clause, from what the model holds ---------------------------------------------------------------------------
 
 test('C-67\'s clause beneath a withheld origin reads the model whole: undecided while the lookup or a read a listed claim\'s admission waits on is out; where such a read failed — its home\'s metadata, or its link — "edition claims not read"; and the read that answers it decides the clause again (issue #186\'s design decision: "A blank there would read as \'no claim\'"; issue #272\'s: "Its words appear only when all their reads answer")', () => {
-  const O = '1.0.1.0.1003', H = '1.0.1.0.9', C = H + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
+  const O = '1.0.1.0.1061', H = '1.0.1.0.67', C = H + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
   const notRead = { id: 'L.clause.unread', text: t('L.clause.unread') };
   assert.equal(LAYER.clauseOf(O), CLAUSE_READING, 'the lookup not answered: undecided');
   REC.takeEditionClaims(O, [C]);
@@ -1576,7 +1576,7 @@ test('a copy over a span its article\'s image places in part names the bytes it 
 // ---- the zoom-in bound -------------------------------------------------------------------------------------------------
 
 test('a document set smaller than its place\'s standard raises the zoom-in bound to read it, and no size read after lowers it: a change of the page\'s class dropping the document\'s text takes no scale from under its reader', () => {
-  const RES = `1.0.1.0.${48 * (DEPTH_SOUND + 1) + 1}`, box = docBox(RES);
+  const RES = `1.0.1.0.${numberAtCell(48 * (DEPTH_SOUND + 1) + 1)}`, box = docBox(RES);
   CAM._reset(); CAM.setViewport(1440, 900);
   CAM.setDeepest(depthOfDoc(RES)); // the bound the app sets at boot over an index listing it
   const text = Array.from({ length: 2000 }, (_, i) => `Item ${i + 1}.`).join('\n\n'), n = new TextEncoder().encode(text).length;
@@ -1596,7 +1596,7 @@ test('a document set smaller than its place\'s standard raises the zoom-in bound
 });
 
 test('a standing article\'s symbols are marked heavier in place where every link one stands for is lit at an arrival — a text symbol its link, a withheld run\'s every end drawn at it — nothing rebuilt, and unmarked as the arrival goes; a span wholly inside a withheld run stands at the run\'s own boxes, never a line inside its gap (FP-30; issue #202)', () => {
-  const O = '1.0.2.0.9', TEXT1 = 'Tumbler.\n\n', n = TEXT1.length, RUN = n + 1;
+  const O = '1.0.2.0.67', TEXT1 = 'Tumbler.\n\n', n = TEXT1.length, RUN = n + 1;
   /** @type {Map<string, boolean>} each symbol's `heavier` mark as last set, by the links it stands for */
   const heavier = new Map();
   const sym = (/** @type {Record<string, string>} */ dataset) => ({ dataset, classList: { toggle: (/** @type {string} */ c, /** @type {boolean} */ on) => { if (c === 'heavier') heavier.set(dataset.link || dataset.links, on); } } });
@@ -1681,7 +1681,7 @@ test('a face arriving after the first layout is a re-set: the type measured agai
 }, 1440, 900));
 
 test('a document\'s kind is one test, which its corner\'s first slot and its box\'s edge read: its metadata\'s word where a read answered it, whatever its listing says; else the kind the model knows of its record; else its box\'s listing, a version taking its box\'s; and none where nothing answers, its slot being read then and not read where its metadata\'s read failed (issue #423\'s design decision: "It reads metadata where read, else the known kind, else the index\'s listing"; FP-33, FP-34)', () => {
-  const E = '1.0.1.0.8', U = '1.0.4.0.2';
+  const E = '1.0.1.0.66', U = '1.0.4.0.2';
   const meta = (/** @type {string} */ doc, /** @type {boolean} */ published) => ({ doc, published, owner: doc.split('.').slice(0, 3).join('.'), birth: published ? doc + '.1' : null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
   const at = (/** @type {string} */ addr) => [LAYER.isDraft(REC.doc(addr)), LAYER.kindOf(REC.doc(addr))];
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: 'd', standing: 'yours_to_read' }, { doc: E, kind: 'edition', label: 'e', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
@@ -1698,7 +1698,7 @@ test('a document\'s kind is one test, which its corner\'s first slot and its box
 });
 
 test('the one test is asked by a record or by an address, and each document\'s kind at a transcluded run is read by it: an origin\'s is its metadata\'s word whatever the index lists it as, and unknown where nothing tells it, no record made to ask; and a draft\'s run carries C-33\'s words in a document that test says is published — a version whose metadata is unread taking its box\'s listing — never in a draft, nor where nothing has told the document\'s kind (FP-39)', () => {
-  const X = '1.0.1.0.1003', Y = '1.0.1.0.1004', V = D + '.2', U = '1.0.4.0.2', NONE = '1.0.4.0.9';
+  const X = '1.0.1.0.1061', Y = '1.0.1.0.1062', V = D + '.2', U = '1.0.4.0.2', NONE = '1.0.4.0.67';
   const meta = (/** @type {string} */ doc, /** @type {boolean} */ published) => ({ doc, published, owner: doc.split('.').slice(0, 3).join('.'), birth: published ? doc + '.1' : null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: X, kind: 'draft', label: 'x', standing: 'yours_to_read' }, { doc: Y, kind: 'edition', label: 'y', standing: 'public' }], counts: [{ account: '1.0.1', documents: 3 }], state: { arm: 'complete' } }));
   assert.deepEqual([LAYER.originKind(X), LAYER.originKind(Y)], ['draft', 'edition'], 'no metadata read: each as the index lists it');
@@ -1734,7 +1734,7 @@ test('a box\'s label is its contents line: its first line leading, at its em, it
 
 test('a box\'s first line is read by one rule: its own text from its first position where the model holds it — a record\'s words by the record rule, bracketed, else its first typed line holding more than white space — else the index\'s first line at its bare address; none where none is known, and none at a version the model holds no text of (issue #23)', () => {
   const at = (/** @type {string} */ addr) => LAYER.firstOf(REC.doc(addr)).map((r) => [r.text, r.face]);
-  const U = '1.0.1.0.17', H = '1.0.1.0.1', V = D + '.3';
+  const U = '1.0.1.0.75', H = '1.0.1.0.1', V = D + '.3';
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'the index\'s words', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
   assert.deepEqual(at(D), [['the index\'s words', 'reading']], 'listed, no text held: the index\'s first line');
   assert.deepEqual(at(U), [], 'unlisted, nothing held: none');
@@ -1748,7 +1748,7 @@ test('a box\'s first line is read by one rule: its own text from its first posit
 });
 
 test('the status region names a document as the mirror\'s item finds it: its first line as the item says it — the document\'s own words quoted, the client\'s bracketed — NAME_WORDS of its words at the most, cut on a word with the quote or the bracket it closes with kept after the ellipsis, then the address it names; the address alone where no first line is known; a box by the version it shows (issue #369\'s design decision: "The name is the one the mirror uses: the first line\'s first six words, then the address")', () => {
-  const U = '1.0.1.0.17', H = '1.0.1.0.1', W = '1.0.1.0.19', V = D + '.3', P = D + '.2';
+  const U = '1.0.1.0.75', H = '1.0.1.0.1', W = '1.0.1.0.77', V = D + '.3', P = D + '.2';
   const text = (/** @type {string} */ addr, /** @type {string} */ words) => REC.takeDelivery(addr, [{ pos: 1, width: words.length, kind: 'content', text: words, ref: null, origin: null }]);
   text(D, 'Tumbler.\n\nThe first field.');
   assert.deepEqual([LAYER.mirrorLabel(REC.doc(D)).map((r) => r.text).join(''), LAYER.placeName(REC.doc(D), D)], ['"Tumbler."', `"Tumbler." ${D}`], 'a first line of one word: whole, quoted as the mirror quotes it, then the address');
@@ -1789,7 +1789,7 @@ test('a link\'s symbol is titled with its far end\'s state in its short form, a 
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
   REC.takeLinks(D, [L]);
   REC.takeLink({ addr: L, from: [span(D, 1, 3)], to: [span(FAR, 1, 5)], type: CITE });
-  REC.takeDelivery(FAR, [{ pos: 1, width: 10, kind: 'content', text: 'abcde\n\nfg\n', ref: null, origin: null }, { pos: 11, width: 30, kind: 'withheld', text: '', ref: null, origin: '1.0.2.0.6' }]);
+  REC.takeDelivery(FAR, [{ pos: 1, width: 10, kind: 'content', text: 'abcde\n\nfg\n', ref: null, origin: null }, { pos: 11, width: 30, kind: 'withheld', text: '', ref: null, origin: '1.0.2.0.64' }]);
   REC.takeImage(FAR, 1, [{ iStart: P + '1', width: 2 }, { iStart: P + '100', width: 5 }, { iStart: P + '4', width: 1 }, { iStart: P + '200', width: 32 }]);
   REC.takeProjection(L, 2, FAR, [{ pos: 1, width: 2 }, { pos: 8, width: 1 }]);
   LK.reveal(D, 2);
@@ -1821,7 +1821,7 @@ test('a kept document carries one clause by one rule: a draft holding its text "
 });
 
 test('a withheld origin\'s held claims carry no clause while none stand kept, and its statement carries none (issue #345)', () => {
-  const O = '1.0.1.0.1003';
+  const O = '1.0.1.0.1061';
   REC.takeEditionClaims(O, []);
   assert.equal(LAYER.claimsKeptIn(O), null, 'claims held, none kept: no clause');
   assert.equal(LAYER.keptRunsKey(), '', 'no origin\'s claims kept: nothing for a pane to place its statements again by');
@@ -3208,7 +3208,7 @@ test('a byte the text holds twice names no caret\'s place: after the draft\'s ow
 }, undefined, (frame) => (frame.op === 'reinstate' ? { refused: { kind: 'refused', name: 'withheld', status: 200, code: 'withheld', detail: null, op: 'reinstate', site: { addr: '1.0.1.0.2' }, body: null } } : undefined)));
 
 test('B3-S5 (i), W5: a paste whose entry names bytes no record at hand holds reads them by identity first — `retrieve_i` of their spans — and waits on it: their words read back as the plain text\'s, the same words are placed where the paste was made; a read refused `withheld` names the origin, `doc_not_registered` the source the board says nothing of, a position the document minted nothing at is the page\'s own fault, a read never answered is said so, and a draft changed at the paste\'s place while it was read is said so — each placing nothing', async () => {
-  const S = '1.0.1.0.30', at = (/** @type {number} */ n) => `${S}.0.1.${n}`;
+  const S = '1.0.1.0.88', at = (/** @type {number} */ n) => `${S}.0.1.${n}`;
   /** @type {string[]} */
   const asked = [];
   let answer = (/** @type {Record<string, any>} */ _frame) => /** @type {unknown} */ (undefined);
@@ -3354,7 +3354,7 @@ test('a span\'s rects at a reading scene\'s pane are read from that pane\'s arti
   dom.document.createRange = () => { const r = make(); /** @type {any} */ (r).getClientRects = () => [{ left: pane.contains(/** @type {any} */ (r.startContainer)) ? 500 : 100, top: 40, width: 30, height: 12 }]; return r; };
   assert.deepEqual(LAYER.spanRects(P, 9, 5, pane), [{ x: 500, y: 40, w: 30, h: 12 }], 'at the pane: the pane\'s article\'s');
   assert.deepEqual(LAYER.spanRects(P, 9, 5), [{ x: 100, y: 40, w: 30, h: 12 }], 'at the plane: the plane\'s');
-  assert.equal(LAYER.spanRects('1.0.1.0.99', 9, 5, pane), null, 'another address than the pane\'s article is made as: none');
+  assert.equal(LAYER.spanRects('1.0.1.0.157', 9, 5, pane), null, 'another address than the pane\'s article is made as: none');
 }));
 
 test('the span a range covers is read with its site — the plane where the plane\'s mounted article holds it, else the reading scene\'s pane\'s article holding it whole — and `spanOfRange`, the plane\'s alone, answers none of a pane\'s (issue #94)', () => onDraft(async ({ P, dom }) => {

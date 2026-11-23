@@ -33,7 +33,7 @@ import { memberOf } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
-const T = '1.0.1.0.43', T1 = T + '.1', T2 = T + '.2';
+const T = '1.0.1.0.101', T1 = T + '.1', T2 = T + '.2';
 // the edition and its first member: two paragraphs; its second member: a prologue set before them, which stands the second paragraph 24 positions later
 const TEXT = 'First.\n\nSecond paragraph.', PROLOGUE = 'Prologue added before.\n\n', TEXT2 = PROLOGUE + TEXT;
 /** the second paragraph, the passage held: its first position and its positions, in the edition */
@@ -59,20 +59,20 @@ const compared = (/** @type {string} */ member, /** @type {number} */ extent, /*
     { result: { as_of: 1, resp: 'compare', pairs: pairs.map(([u1, u2, width]) => ({ d1: doc, d2: member, u1: { ordinal: String(u1), subspace: '1' }, u2: { ordinal: String(u2), subspace: '1' }, width: String(width) })) } },
 });
 // another edition, U, of two members, each its text whole; the passage held where the list is opened on no position: its first block, whole
-const U = '1.0.1.0.44', U1 = U + '.1', U2 = U + '.2';
+const U = '1.0.1.0.102', U1 = U + '.1', U2 = U + '.2';
 const FIRST = { pos: 1, width: 'First.\n\n'.length };
 // another edition, V, of four members, the passage held its second paragraph: the first holding it whole; the second its first nine
 // positions and its first eight again — as many positions as the passage, never all of it; the third all of it in two pieces, its last
 // nine positions first; the fourth's extent the board does not answer
-const V = '1.0.1.0.45', V1 = V + '.1', V2 = V + '.2', V3 = V + '.3', V4 = V + '.4';
+const V = '1.0.1.0.103', V1 = V + '.1', V2 = V + '.2', V3 = V + '.3', V4 = V + '.4';
 // the open end: X, of four members, its third's metadata the board never answers, its fourth one a feed row names;
 // Y, of ten members, past the view's cap of eight, whose eleventh — past its end — the board does not answer while `beyond`
 // stands; Z, which the board does not answer at all
-const X = '1.0.1.0.46', X1 = X + '.1', X2 = X + '.2', X3 = X + '.3', X4 = X + '.4';
-const Y = '1.0.1.0.47', Z = '1.0.1.0.48';
+const X = '1.0.1.0.104', X1 = X + '.1', X2 = X + '.2', X3 = X + '.3', X4 = X + '.4';
+const Y = '1.0.1.0.105', Z = '1.0.1.0.106';
 // W, of three members, each holding its first paragraph: the board keeping no reading of its second's time, and not
 // answering its third's metadata
-const W = '1.0.1.0.49', W1 = W + '.1', W2 = W + '.2', W3 = W + '.3';
+const W = '1.0.1.0.107', W1 = W + '.1', W2 = W + '.2', W3 = W + '.3';
 /** a member's metadata as `reads` answers it, its time as the board answers it where it holds no reading */
 const untimed = (/** @type {string} */ doc, /** @type {string} */ trunk) => {
   const answer = /** @type {{result: Record<string, unknown>}} */ (reads(doc, TEXT, trunk)[FAKE.keyOf('op', { frame: F.docMetadata(doc) })]);

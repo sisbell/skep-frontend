@@ -53,8 +53,8 @@ test('the zoom-in bound reaches the reading scale of the deepest drawn place, at
 test('the bound reaches every size a document is set at, and only rises: a flight to read a document set smaller than its place\'s standard lands at its reading scale, and a larger size, a shallower place or no size lowers nothing (E18 (a))', async () => {
   CAM._reset(); CAM.setViewport(1440, 900);
   CAM.setDeepest(3);
-  const box = docBox('1.0.1.0.145'), fs = standardFs(box) / 10;
-  assert.equal(box.depth, 3, 'an account\'s 145th document stands in its third continuation');
+  const box = docBox('1.0.1.0.203'), fs = standardFs(box) / 10;
+  assert.equal(box.depth, 3, 'the document at an account\'s 145th cell stands in its third continuation');
   const to = CAM.viewAt({ x: box.x + box.w / 2, y: box.y + box.h / 2 }, fs, 12.5);
   assert.ok(to.scale > CAM.bounds().maxS, 'a tenth of its place\'s standard is read past the bound its place sets');
   CAM.reach(fs);

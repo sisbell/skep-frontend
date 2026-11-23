@@ -100,7 +100,7 @@ import * as LINE from '../line/line.js';
 import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
-import { accountCell, boardCell, docBox } from '../plane/projection.js';
+import { accountCell, boardCell, docBox, numberAtCell } from '../plane/projection.js';
 import { outlineRects, LINE_H } from '../plane/layout.js';
 import { t, tHTML, tRuns, addressedHTML, heard, opening } from '../strings.js';
 import { esc, byteLength } from '../util.js';
@@ -194,8 +194,8 @@ test('a click on a transcluded run\'s key in its column\'s edge — heading its 
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   try {
-    // the first edition's second paragraph ends in a run of the draft 1.0.1.0.1003 — positions 23 to 37 — which the draft's own text holds at 12
-    const D = '1.0.1.0.3', O = '1.0.1.0.1003';
+    // the first edition's second paragraph ends in a run of the draft 1.0.1.0.1061 — positions 23 to 37 — which the draft's own text holds at 12
+    const D = '1.0.1.0.3', O = '1.0.1.0.1061';
     const text = 'Tumbler.\n\nAs it says: the window run.', source = 'A source.\n\nthe window run.';
     const run = { addr: D, pos: 23, width: 15 };
     const fake = FAKE.create({
@@ -246,8 +246,8 @@ test('a press on an outlined run of an arrival in several runs, below its docume
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   try {
-    // the first edition's run at 23, fifteen positions, carried into the draft 1.0.1.0.7, which holds its first seven at 12 and its last eight at 30
-    const D = '1.0.1.0.3', O = '1.0.1.0.7';
+    // the first edition's run at 23, fifteen positions, carried into the draft 1.0.1.0.65, which holds its first seven at 12 and its last eight at 30
+    const D = '1.0.1.0.3', O = '1.0.1.0.65';
     const text = 'Tumbler.\n\nAs it says: the window run.', source = 'A source.\n\nthe window run, and then more words here.';
     const carried = { addr: D, pos: 23, width: 15 };
     const fake = FAKE.create({
@@ -305,7 +305,7 @@ test('a click on a link\'s symbol, or on a stretch it marks, opens the card of t
   try {
     // a citation homed in D from D's own "Tumbler", at 1, to O's "quoted", at O's 16 — a run of O that D's second paragraph ends
     // in, standing at D's 27: both its ends stand in D's article
-    const D = '1.0.1.0.21', O = '1.0.1.0.22', L = D + '.0.2.1', CITE = '1.1.0.1.0.1.0.3.13';
+    const D = '1.0.1.0.79', O = '1.0.1.0.80', L = D + '.0.2.1', CITE = '1.1.0.1.0.1.0.3.13';
     const text = 'Tumbler.\n\nThe window says quoted';
     const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
     const fake = FAKE.create({
@@ -382,7 +382,7 @@ test('a click on the one symbol a withheld run\'s ends merge into opens its one 
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   try {
     // a document of the reader's: its first paragraph, then eight of another account's draft's bytes withheld, two of the reader's citations on them
-    const D = '1.0.1.0.24', O = '1.0.2.0.19', FAR = '1.0.1.0.132', CITE = '1.1.0.1.0.1.0.3.13', text = 'Tumbler.\n\n', n = byteLength(text);
+    const D = '1.0.1.0.82', O = '1.0.2.0.77', FAR = '1.0.1.0.190', CITE = '1.1.0.1.0.1.0.3.13', text = 'Tumbler.\n\n', n = byteLength(text);
     const [A, B] = [D + '.0.2.1', D + '.0.2.2'];
     const fake = FAKE.create({
       ...Object.fromEntries([A, B].flatMap((l) => [
@@ -443,7 +443,7 @@ test('a click on C-67\'s pointer in a withheld origin\'s statement LEAPs to the 
   try {
     // a guest at 1.0.2's document, which windows a run of 1.0.1's draft O, twelve lines deep, and 1.0.1 published an edition, H,
     // whose claim on O passes: its FROM H's own bytes, which no span of O holds
-    const D = '1.0.2.0.6', O = '1.0.1.0.1004', H = '1.0.1.0.40', CLAIM = H + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14', RUN = 12 * 66;
+    const D = '1.0.2.0.64', O = '1.0.1.0.1062', H = '1.0.1.0.98', CLAIM = H + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14', RUN = 12 * 66;
     const text = 'Tumbler.\n\n', n = byteLength(text), edition = 'The published edition.', m = byteLength(edition);
     const fake = FAKE.create({
       // H read whole on the LEAP: its extent, its text, its image, its links — the claim among them, read already
@@ -519,7 +519,7 @@ test('a click on the read a corner offers makes the version move to that version
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   // E, an edition whose box a newer version's arrival pinned on its first member: each member read whole as a version move reads it
-  const E = '1.0.1.0.62', E1 = E + '.1', E2 = E + '.2', text = 'An edition.\n\nIts second paragraph.', n = byteLength(text);
+  const E = '1.0.1.0.120', E1 = E + '.1', E2 = E + '.2', text = 'An edition.\n\nIts second paragraph.', n = byteLength(text);
   const reads = (/** @type {string} */ doc) => ({
     [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
     [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: E1, birth_extent: String(n), placed: null, base_extent: null, source: null } },
@@ -570,7 +570,7 @@ test('a click on a corner\'s version statement opens its document\'s versions li
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   // E, an edition of one member read at its bare address, as the versions list reads it
-  const E = '1.0.1.0.63', E1 = E + '.1', text = 'An edition.\n\nIts second paragraph.', n = byteLength(text);
+  const E = '1.0.1.0.121', E1 = E + '.1', text = 'An edition.\n\nIts second paragraph.', n = byteLength(text);
   const reads = (/** @type {string} */ doc) => ({
     [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
     [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: E1, birth_extent: String(n), placed: null, base_extent: null, source: null } },
@@ -825,7 +825,7 @@ test('a wheel series under way as a jump\'s camera left is dropped whole — the
   const same = (/** @type {{x: number, y: number, scale: number}} */ a, /** @type {{x: number, y: number, scale: number}} */ b) => a.x === b.x && a.y === b.y && a.scale === b.scale;
   try {
     // a document whose text the page holds: a LEAP to it reads nothing and flies at once
-    const D = '1.0.1.0.61', text = 'A document the page holds.';
+    const D = '1.0.1.0.119', text = 'A document the page holds.';
     REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
     REC.takeDelivery(D, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
     CAM.setViewport(1440, 900);
@@ -903,7 +903,7 @@ test('a click on a byline\'s cut label opens it whole and a click again closes i
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   try {
     // another account's document, its owner's genesis entry labelled longer than the label's box
-    const D = '1.0.2.0.6', OWNER = '1.0.2', text = 'Tumbler.\n\n';
+    const D = '1.0.2.0.64', OWNER = '1.0.2', text = 'Tumbler.\n\n';
     REC.setSession(null);
     REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
     REC.takeDelivery(D, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
@@ -1011,10 +1011,11 @@ test('a click on a continuation\'s mark acts by the target it falls on: its newe
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   try {
-    // an account of sixty documents and nothing else: at HOME its first continuation, the twelve from the 49th, is one mark; its newest's text held, so a LEAP to it reads nothing
+    // an account of sixty documents at its first sixty cells and nothing else: at HOME its first continuation, the twelve from the 49th cell, is one mark;
+    // its newest's text held, so a LEAP to it reads nothing
     REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
-    REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 60 }, (_, i) => ({ doc: `1.0.1.0.${i + 1}`, kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 60 }], state: { arm: 'complete' } }));
-    const NEWEST = '1.0.1.0.60', text = 'Notes on 60';
+    REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 60 }, (_, i) => ({ doc: `1.0.1.0.${numberAtCell(i + 1)}`, kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 60 }], state: { arm: 'complete' } }));
+    const NEWEST = `1.0.1.0.${numberAtCell(60)}`, text = 'Notes on 60';
     REC.takeSpanSet(NEWEST, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
     REC.takeDelivery(NEWEST, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
     HOST.attach(/** @type {any} */ ({

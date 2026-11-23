@@ -60,7 +60,9 @@ export function lodOf(scale) {
 
 /**
  * The continuation a scale draws as each account's one mark: at HOME the
- * first, its oldest 48 documents standing whole (foundations §2.1).
+ * first, the documents of its first grid standing whole — its home, its slots
+ * and its first 43 ordinary documents (foundations §2.1; P-PROJ's
+ * `cellNumberOf`).
  * @param {number} scale the camera's scale
  * @returns {ResidueDepth}
  */

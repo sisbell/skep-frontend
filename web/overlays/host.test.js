@@ -79,9 +79,9 @@ const standing = () => HOST.currentState()?.id ?? null;
 test('a face is said through the one status region, save one whose words the landing that met it says where the focus lands (`told`: issue #153), heard there once', () => {
   let said = 0;
   FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() { said++; }, textContent: '' }) });
-  FACES.floating('1.0.1.0.127', null, null);
+  FACES.floating('1.0.1.0.185', null, null);
   assert.deepEqual([standing(), said], ['face:floating', 1], 'a face shown: said');
-  FACES.floating('1.0.1.0.127', null, null, true);
+  FACES.floating('1.0.1.0.185', null, null, true);
   assert.deepEqual([standing(), said], ['face:floating', 1], 'told by the landing\'s description: the status region not written again');
   HOST.dismiss();
 });
@@ -299,9 +299,9 @@ test('a face shown while the standing overlay\'s field holds the caret takes not
     globalThis.document.activeElement = /** @type {any} */ (field);
     assert.equal(HOST.typing(), true, 'the moment holds the caret');
     FACES.reading('1.0.1.0.3', null);
-    FACES.floating('1.0.1.0.127', null, null, true);
+    FACES.floating('1.0.1.0.185', null, null, true);
     assert.deepEqual([standing(), globalThis.document.activeElement], ['moment:m-171', /** @type {any} */ (field)], 'the moment stands, its field holding the focus');
-    assert.deepEqual(said, [heard(t('L.reading', { address: '1.0.1.0.3' })), 'The passage is no longer in the current text of 1.0.1.0.127.'], 'each face said, the one its landing would tell too, a sentence: no focus moves to tell it');
+    assert.deepEqual(said, [heard(t('L.reading', { address: '1.0.1.0.3' })), 'The passage is no longer in the current text of 1.0.1.0.185.'], 'each face said, the one its landing would tell too, a sentence: no focus moves to tell it');
     globalThis.document.activeElement = /** @type {any} */ ({ id: 'the answer button' });
     assert.equal(HOST.typing(), false, 'the focus on the moment\'s button: no caret held');
     FACES.invalidFollow(null);
@@ -332,7 +332,7 @@ test('an overlay\'s own completion is no act on the chrome: the reading face tak
 });
 
 test('an overlay drawn again in its place by the module that showed it is no act on the chrome: the dead end\'s face taking its version offer while a card reads leaves the card\'s opening standing, whose answer shows; a face no longer standing is never drawn again (issue #57)', async () => {
-  const FAR = '1.0.1.0.127', at = { span: { addr: FAR, pos: 1 }, sign: FAR }, offer = { k: 1, go: () => {} };
+  const FAR = '1.0.1.0.185', at = { span: { addr: FAR, pos: 1 }, sign: FAR }, offer = { k: 1, go: () => {} };
   const was = globalThis.HTMLElement;
   globalThis.HTMLElement = /** @type {any} */ (class {});
   try {
@@ -468,7 +468,7 @@ test('a change of the page\'s class takes down what the host wrote from what the
   try {
     /** @type {boolean | null} how the card's end ran: replaced, or dismissed */
     let ended = null;
-    HOST.show({ kind: 'card', id: 'anatomy:1.0.1.0.1003.0.2.1', anchor: null, html: '<span class="label">its passage</span>', acts: {}, onDismiss: (replaced) => { ended = replaced; } });
+    HOST.show({ kind: 'card', id: 'anatomy:1.0.1.0.1061.0.2.1', anchor: null, html: '<span class="label">its passage</span>', acts: {}, onDismiss: (replaced) => { ended = replaced; } });
     doc.activeElement = act;
     const r = slow();
     const o = HOST.opening(() => r.read, card('provenance:wrote'));
@@ -524,7 +524,7 @@ test('what a departure keeps of the overlay standing (issue #264\'s design decis
     fresh.answer('its origin');
     await asked;
     assert.equal(HOST.asLeft(), null, 'shown with nothing it is about: nothing');
-    FACES.floating('1.0.1.0.127', null, null);
+    FACES.floating('1.0.1.0.185', null, null);
     assert.equal(HOST.asLeft(), null, 'a face: nothing');
     TRAILLIST.open();
     assert.equal(HOST.asLeft(), null, 'the trail\'s list: nothing');

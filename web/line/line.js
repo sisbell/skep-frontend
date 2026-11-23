@@ -232,7 +232,7 @@ import { deathWords, noBoardWords } from '../overlays/faces.js';
 import { drawChord, trailChord, keyShortcut } from '../nav/keys.js';
 import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
-import { boardCell, accountAt, docBox, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
+import { boardCell, accountAt, docBox, numberAtCell, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
 import { memberOf, boardOf, accountOf, documentOf } from '../model/address.js';
 import { inFace, runsOf, runWidth, cutWords, LEAD_WORDS } from '../plane/labels.js';
 import { t, tHTML, tRuns, addressedHTML, facedHTML, lastRead, runningHTML, sentence, sentences, heard, joinRuns, asRuns, runsText, CLIENT_CLOSE } from '../strings.js';
@@ -825,10 +825,11 @@ const positionWords = (/** @type {number | null} */ p) => (p != null ? ' › ' +
 
 /**
  * The widest document the address segment names (see the head): a
- * sub-account's document at the deepest continuation the projection places
- * soundly (P-PROJ's DEPTH_SOUND), a member pinned.
+ * sub-account's document at the last cell the projection places soundly, in
+ * its deepest sound continuation (P-PROJ's DEPTH_SOUND, `numberAtCell`), a
+ * member pinned.
  */
-const WIDEST_DOC = `1.0.${G[3] * G[3] - 2}.${G[4] * G[4] - 2}.0.${(G[LEAF] * G[LEAF] - 1) * (DEPTH_SOUND + 1)}.99`;
+const WIDEST_DOC = `1.0.${G[3] * G[3] - 2}.${G[4] * G[4] - 2}.0.${numberAtCell((G[LEAF] * G[LEAF] - 1) * (DEPTH_SOUND + 1))}.99`;
 /** the widest place the address segment names, in characters of the line's identifier face: board › account › document */
 const PLACE_CH = `1 › ${accountOf(WIDEST_DOC)} › ${WIDEST_DOC}`.length;
 /** the widest words the address segment names, in characters of the line's identifier face: the widest place, then the position's words at a run of ten million positions */

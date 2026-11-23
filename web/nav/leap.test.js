@@ -49,7 +49,7 @@ import * as PUMP from '../model/pump.js';
 import * as WRITE from '../write/write.js';
 import * as MACHINE from '../write/machine.js';
 import { MAC } from './keys.js';
-import { accountCell, boardCell } from '../plane/projection.js';
+import { accountCell, boardCell, numberAtCell } from '../plane/projection.js';
 import { t, heard, fields } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -170,9 +170,9 @@ const key = (/** @type {string} */ k) => input.fire('keydown', { key: k, keyCode
 const type = (/** @type {string} */ text) => { input.value = text; input.fire('input'); };
 /** the key made n times */
 const press = (/** @type {string} */ k, /** @type {number} */ n) => { for (let i = 0; i < n; i++) key(k); };
-/** the index as a listing of `n` editions under the account, whose state is the given arm */
+/** the index as a listing of `n` editions under the account, at its first `n` cells (P-PROJ's `numberAtCell`), whose state is the given arm */
 const listing = (/** @type {number} */ n, arm = 'complete') => /** @type {any} */ ({
-  docs: Array.from({ length: n }, (_, i) => ({ doc: `1.0.1.0.${i + 1}`, kind: 'edition', label: `notes ${i + 1}`, standing: 'public' })),
+  docs: Array.from({ length: n }, (_, i) => ({ doc: `1.0.1.0.${numberAtCell(i + 1)}`, kind: 'edition', label: `notes ${i + 1}`, standing: 'public' })),
   counts: [{ account: '1.0.1', documents: n }], state: { arm },
 });
 /** the box opened, 30 editions in the index, and its text typed so 24 rows are listed, the first chosen: more than the list's view shows */
@@ -193,7 +193,7 @@ const offering = () => acts.map((a) => LEAP.currentRows()[Number(a.dataset.besid
 const pushed = (/** @type {string} */ addr, /** @type {string | null} */ label = null) => TRAIL.push({ addr, pos: null, width: null, view: { x: 0, y: 0, scale: 1 }, label, notice: null }, null);
 /** the turns a scene's opening, a teleport's walk and its flight take, the flight stepped to its end */
 const settled = async () => { for (let i = 0; i < 20; i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); } };
-const D = '1.0.1.0.3', FAR = '1.0.1.0.127';
+const D = '1.0.1.0.3', FAR = '1.0.1.0.185';
 
 beforeEach(() => {
   LEAP.close();
@@ -213,9 +213,9 @@ test('the box as opened holds the current address, selected, its levels beneath 
   input.selected = null;
   LEAP.takeAddress();
   assert.equal(input.selected, null, 'the address unchanged: nothing is written');
-  line = '1.0.2.0.9';
+  line = '1.0.2.0.67';
   LEAP.takeAddress();
-  assert.deepEqual(shown(), { open: true, value: '1.0.2.0.9', selected: true, rows: ['1', '1.0.2', '1.0.2.0.9'] }, 'the new address, selected, its own levels beneath it');
+  assert.deepEqual(shown(), { open: true, value: '1.0.2.0.67', selected: true, rows: ['1', '1.0.2', '1.0.2.0.67'] }, 'the new address, selected, its own levels beneath it');
 });
 
 test('a box opened at the levels the line\'s fold mark folds holds them while the line names the place it opened at, and takes the new address the line names once a landing changes it (issue #310\'s design decision: "The mark opens the address box at those levels")', () => {
@@ -225,9 +225,9 @@ test('a box opened at the levels the line\'s fold mark folds holds them while th
   LEAP.takeAddress();
   LEAP.takeAddress();
   assert.deepEqual([input.value, input.selected], ['1.0.1', null], 'the line naming the document it opened at: the folded levels kept, nothing written');
-  line = '1.0.2.0.9';
+  line = '1.0.2.0.67';
   LEAP.takeAddress();
-  assert.deepEqual(shown(), { open: true, value: '1.0.2.0.9', selected: true, rows: ['1', '1.0.2', '1.0.2.0.9'] }, 'a landing elsewhere: the new address the line names, selected');
+  assert.deepEqual(shown(), { open: true, value: '1.0.2.0.67', selected: true, rows: ['1', '1.0.2', '1.0.2.0.67'] }, 'a landing elsewhere: the new address the line names, selected');
 });
 
 test('each row\'s cells stand in their faces: its address the identifier\'s, a document\'s label the reading face\'s, a level\'s words the client\'s, a trail entry\'s number then its address, and its words its first line\'s — a draft\'s carrying no kind, a row only naming its document (issue #16; issue #423\'s design decision: "A face that only names a document carries no kind")', () => {
@@ -248,7 +248,7 @@ test('a box typed in, or with a row chosen, keeps its text and its rows as the a
   LEAP.open();
   input.value = 'artifact';
   input.fire('input');
-  line = '1.0.2.0.9';
+  line = '1.0.2.0.67';
   LEAP.takeAddress();
   assert.deepEqual([input.value, LEAP.currentRows().map((r) => r.kind)], ['artifact', []], 'typed in: its text and its answer kept');
   LEAP.close();
@@ -256,12 +256,12 @@ test('a box typed in, or with a row chosen, keeps its text and its rows as the a
   LEAP.open();
   key('ArrowDown');
   const chosen = shown();
-  line = '1.0.2.0.9';
+  line = '1.0.2.0.67';
   LEAP.takeAddress();
   assert.deepEqual(shown(), chosen, 'a row chosen by ↓: the box and its rows as they stood');
   LEAP.close();
   input.value = 'left as it closed';
-  line = '1.0.1.0.127';
+  line = '1.0.1.0.185';
   LEAP.takeAddress();
   assert.equal(input.value, 'left as it closed', 'closed: nothing written');
 });
@@ -272,13 +272,13 @@ test('an opening of the box standing open with its input holding the caret leave
   input.fire('input');
   input.selected = [3, 3];
   const rows = LEAP.currentRows();
-  line = '1.0.2.0.9';
+  line = '1.0.2.0.67';
   LEAP.open();
   assert.deepEqual([LEAP.isOpen(), input.value, input.selected, LEAP.currentRows(), globalThis.document.activeElement], [true, 'artifact', [3, 3], rows, /** @type {any} */ (input)], 'the box as it stood');
   LEAP.close();
   LEAP.open();
   const s = shown();
-  assert.deepEqual([s.open, s.value, s.selected], [true, '1.0.2.0.9', true], 'closed, it opens holding the current address, selected');
+  assert.deepEqual([s.open, s.value, s.selected], [true, '1.0.2.0.67', true], 'closed, it opens holding the current address, selected');
 });
 
 test('a landing never closes the box: a move the page makes leaves the focus in its input, and its close gives the focus to the landing, never to the element it was opened from (#171\'s rule 2; FP-20)', () => {
@@ -293,7 +293,7 @@ test('a landing never closes the box: a move the page makes leaves the focus in 
 
 test('a change of the page\'s class computes the rows standing in the box again from the model at once — none naming a document only the class it left could read, an edition read as published standing — its text, its caret and its focus as they stood, and once more as the new class\'s index answers; a trail entry\'s row reads its document\'s words from the model — the cover\'s at once where the change ends the session, none where the draft waits on its read, the cover\'s once a read withholds it (issues #177, #274, #350)', () => {
   const listing = (/** @type {Array<{doc: string, kind: string, label: string}>} */ docs) => /** @type {any} */ ({ docs: docs.map((d) => ({ ...d, standing: 'public' })), counts: [{ account: '1.0.1', documents: docs.length }], state: { arm: 'complete' } });
-  const DRAFT = { doc: '1.0.1.0.1003', kind: 'draft', label: 'notes the draft holds' }, EDITION = { doc: '1.0.1.0.3', kind: 'edition', label: 'notes on tumblers' };
+  const DRAFT = { doc: '1.0.1.0.1061', kind: 'draft', label: 'notes the draft holds' }, EDITION = { doc: '1.0.1.0.3', kind: 'edition', label: 'notes on tumblers' };
   /** the session reading both, the draft's entry on the trail */
   const signedIn = () => { REC._reset(); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' }); REC.takeIndex(listing([DRAFT, EDITION])); };
   const trailRow = () => LEAP.currentRows().find((r) => r.kind === 'trail' && r.addr === DRAFT.doc)?.sub;
@@ -387,7 +387,7 @@ test('a new list stands at the row it chooses or, with none chosen, at its top; 
     LEAP.open();
     assert.equal(rows.scrollTop, 0, 'reopened: no row chosen, the list at its top');
     /** @type {any} */ (rows).scrollTop = 40;
-    line = '1.0.2.0.9';
+    line = '1.0.2.0.67';
     LEAP.takeAddress();
     assert.equal(rows.scrollTop, 0, 'the box as opened taking a new address: its new levels from their top');
   } finally { REC._reset(); }
@@ -568,7 +568,7 @@ test('a rebuild keeps the focus on a row\'s act by its key — the document in v
   LEAP.open();
   const far = () => acts.find((a) => LEAP.currentRows()[Number(a.dataset.beside)].addr === FAR);
   far()?.focus();
-  view = '1.0.1.0.9';
+  view = '1.0.1.0.67';
   LEAP.takeReading();
   assert.equal(globalThis.document.activeElement, /** @type {any} */ (far()), 'another document in view: the act rebuilt, the focus on it again');
   view = FAR;
@@ -634,7 +634,7 @@ test('where no board is held the box opens empty and lists no board\'s level, it
     HOST.dismiss();
     view = '1.0.1.0.3';
     LEAP.open();
-    type('1.0.1.0.127');
+    type('1.0.1.0.185');
     besideKey();
     assert.deepEqual([LEAP.isOpen(), HOST.currentState()?.id, TRAIL.all().length], [false, 'face:no-board', 0], 'Mod+Shift+Enter on a typed address: the face, and no scene opened');
   } finally { HOST.dismiss(); REC._reset(); }
@@ -780,7 +780,7 @@ test('a Tab at the creation row\'s act is held while the answer to the text as t
 });
 
 test('Enter on the creation row mints through W-MACHINE — one `create_new_document`, then the typed line as the draft\'s first burst — closes the box, teleports to the draft as a trail entry, and says the mint in the one line: its address, that it is readable by the person alone, and at the first mint of the session that a document stays; the box\'s own Enter mints nothing (B3-S1 THE START; D5 K-31, K-33)', async () => {
-  const MINTED = ['1.0.1.0.41', '1.0.1.0.42'];
+  const MINTED = ['1.0.1.0.99', '1.0.1.0.100'];
   let n = 0;
   const { ops } = minting((f) => (f.op === 'create_new_document' ? { result: { resp: 'ack_addr', addr: MINTED[n++], at: 30 + n } } : f.op === 'insert' ? { result: { resp: 'ack_addr', addr: `${f.doc}.0.1.1`, at: 40 + n } } : { refused: { kind: 'refused', name: 'doc_not_registered' } }));
   try {
@@ -799,7 +799,7 @@ test('Enter on the creation row mints through W-MACHINE — one `create_new_docu
     await settled();
     assert.deepEqual(saidOf[1], [fields(MINTED[1], t('B3.mint.private')), 'B3.mint'], 'a later mint: the address and the creation copy alone');
     REC.setHealth(/** @type {any} */ ({ auth: { claimant: '1.0.1', local_trust: true } }), /** @type {any} */ (null));
-    MINTED.push('1.0.1.0.43');
+    MINTED.push('1.0.1.0.101');
     LEAP.open(); type('A third document');
     foot.fire('click', { target: startAct, detail: 0 });
     await settled();

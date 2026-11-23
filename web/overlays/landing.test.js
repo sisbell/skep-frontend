@@ -27,7 +27,7 @@ import { MAC, _platform, drawChord, keyShortcut } from '../nav/keys.js';
 import { t, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 
-const D = '1.0.1.0.3', FAR = '1.0.1.0.127';
+const D = '1.0.1.0.3', FAR = '1.0.1.0.185';
 const NEAR_TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'The far edition.\n\nIts cited passage stands here.';
 /** the reads of a document read whole — a draft, so no member is sought for an offer */
 const reads = (/** @type {string} */ doc, /** @type {string} */ text) => ({

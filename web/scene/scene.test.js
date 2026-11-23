@@ -289,7 +289,7 @@ test('a passage\'s counterparts: every shared stretch inside it, each clipped to
 });
 
 test('the position two versions share nearest a passage the second holds none of: the last of a stretch ending before the passage\'s first position, or the first of one beginning after it, whichever lies nearer — the one before where both lie as near — with its counterpart; none where they share nothing (issue #154)', () => {
-  // the board's 1.0.1.0.43 against its first member: positions 134 to 184 its own, the stretches either side shared
+  // the board's 1.0.1.0.101 against its first member: positions 134 to 184 its own, the stretches either side shared
   const shared = [pair(1, 1, 133), pair(185, 197, 1972)];
   assert.deepEqual(nearest(shared, 134), { a: 133, b: 133 }, 'the stretch before ends just before the passage: its last position, nearer than 185');
   assert.deepEqual(nearest(shared, 180), { a: 185, b: 197 }, 'the stretch after begins nearer: its first position, in the second\'s positions');
@@ -435,7 +435,7 @@ test('a stroke\'s name gives each change\'s characters on each side, read from t
 // ---- the lines between the panes -------------------------------------------------------------------------------------
 
 // the document in pane A, the one in pane B, and a third in neither
-const DOC_A = '1.0.1.0.3', DOC_B = '1.0.2.0.5', DOC_C = '1.0.3.0.7';
+const DOC_A = '1.0.1.0.3', DOC_B = '1.0.2.0.5', DOC_C = '1.0.3.0.65';
 /** the citation type, a commons type that is neither a record nor social: a passage link */
 const CITE = '1.1.0.1.0.1.0.3.13';
 /** a passage of a document, as a link's end names one */
@@ -483,7 +483,7 @@ test('a link both panes show is one line between its two ends, its end in pane A
 }));
 
 test('a link the owner of one pane\'s document made is drawn at each end in the mark its pane\'s document gives it — the owner\'s solid at that pane, another\'s dashed at the other — whichever pane is A and whatever either pane shows at its span, each end the mark its pane\'s symbol takes (issue #166\'s design decision: "Opening that view never recolours the link it opened on")', () => asReader('1.0.9', () => {
-  const P = '1.0.1.0.31', Q = '1.0.2.0.51', L = P + '.0.2.1';
+  const P = '1.0.1.0.89', Q = '1.0.2.0.109', L = P + '.0.2.1';
   REC.takeImage(P, 1, [{ iStart: P + '.0.1.1', width: 60 }]); REC.takeImage(Q, 1, [{ iStart: Q + '.0.1.1', width: 10 }]);
   REC.takeLinks(P, [L]); REC.takeLinks(Q, [L]);
   REC.takeLink({ addr: L, from: [passage(P, 50, 10)], to: [passage(Q, 1, 5)], type: CITE });
@@ -500,7 +500,7 @@ test('a link the owner of one pane\'s document made is drawn at each end in the 
 }));
 
 test('a link one pane alone shows is drawn at each end in the mark that end\'s pane\'s document gives it: a third party\'s dashed in their hue at both; pane B\'s document\'s owner\'s solid in the owner\'s at B and dashed as another\'s at A, whichever pane shows it', () => asReader('1.0.1', () => {
-  const theirs = linkBy('1.0.3.0.9.0.2.1', '1.0.3'), owners = linkBy(DOC_B + '.0.2.1', '1.0.2');
+  const theirs = linkBy('1.0.3.0.67.0.2.1', '1.0.3'), owners = linkBy(DOC_B + '.0.2.1', '1.0.2');
   const another = [HUE.others, true], owner = [HUE.owner, false];
   assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [endShown(theirs, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5))]), paneLinks(DOC_B, []))), [[theirs.addr, [50, 10], [1, 5], another, another, 1]], 'a third party\'s, shown at pane A');
   assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, []), paneLinks(DOC_B, [endShown(owners, passage(DOC_B, 1, 5), passage(DOC_A, 50, 10))]))), [[owners.addr, [50, 10], [1, 5], another, owner, 1]], 'pane B\'s document\'s owner\'s, shown at pane B');
@@ -533,7 +533,7 @@ test('a far end naming the other pane\'s document whole is that whole document, 
 }));
 
 test('the facing edge a whole document\'s ends meet stands in the one mark they merge into there — one link\'s own mark; several links\', the hue they share or the neutral one where their linkers differ, lighter only where every one was followed — one edge for each pane such ends meet, in the panes\' order, none for a band (P44; FP-30)', () => asReader('1.0.1', () => {
-  const mine = linkBy(DOC_A + '.0.2.1', '1.0.1'), theirs = linkBy('1.0.3.0.9.0.2.1', '1.0.3');
+  const mine = linkBy(DOC_A + '.0.2.1', '1.0.1'), theirs = linkBy('1.0.3.0.67.0.2.1', '1.0.3');
   /** a tie a link draws between the panes, its end in pane `side` whole, each end in the mark its pane's document gives it */
   const tie = (/** @type {{addr: string, owner: string}} */ l, /** @type {'a' | 'b'} */ side) => ({ link: l.addr, a: { whole: side === 'a' }, b: { whole: side === 'b' }, marks: { a: LK.markOf(/** @type {any} */ (l), DOC_A), b: LK.markOf(/** @type {any} */ (l), DOC_B) } });
   const band = { link: null, a: {}, b: {} };
@@ -715,7 +715,7 @@ test('a line homed in the readable pane whose far end lies in a pane showing a c
 }));
 
 test('a pane\'s cover stands at its article\'s head, level with its address — a covered document\'s article its head alone, holding no statement of its state — in px below the pane\'s content top, so it scrolls with the pane\'s text; none where the pane holds no article (FP-29; issue #239\'s design decision: "Remove the head\'s state line in every state")', () => {
-  const X = '1.0.2.0.61', platform = globalThis.document;
+  const X = '1.0.2.0.119', platform = globalThis.document;
   /** the address the article's head names, as the platform lays it out: 18 px tall, its top `top` px down the viewport */
   let top = 130;
   const named = { getBoundingClientRect: () => ({ top, height: 18 }) };
@@ -1105,7 +1105,7 @@ test('a focus the person moved out of the scene stays where they put it; one ope
 // ---- the scene, a step on the trail (N-GO's `toScene`, `closeScene`) -------------------------------------------------
 
 /** an address the board says nothing of: a scene opened on it is refused */
-const GONE = '1.0.1.0.29';
+const GONE = '1.0.1.0.87';
 Object.assign(script, { [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GONE) })]: NOT_REGISTERED });
 /** a face's parts as its markup sets them, in order: its words, then each part beneath them, each its string and its markup */
 const partsOf = (/** @type {string | undefined} */ html) => [...(html || '').matchAll(/<div class="(?:face-text|note)" data-string="([^"]*)">(.*?)<\/div>/g)].map((m) => [m[1], m[2]]);
@@ -1183,7 +1183,7 @@ test('leaving a scene\'s entry by a teleport records the scene, and Back onto th
 }));
 
 test('a scene opened from a link\'s end keeps that link with the passage held — on its trail entry, and through a Back that reopens it — the tie drawn whole between the stacked panes where nothing else is; one opened from a passage keeps none (issue #467\'s design decision: "failing that, the link the scene opened from")', () => onPage(async (p) => {
-  const C = '1.0.1.0.38', E = '1.0.1.0.39', C_TEXT = 'Eta.\n\nIts cited words.', E_TEXT = 'Theta.\n\nIts words.', X = C + '.0.2.1';
+  const C = '1.0.1.0.96', E = '1.0.1.0.97', C_TEXT = 'Eta.\n\nIts cited words.', E_TEXT = 'Theta.\n\nIts words.', X = C + '.0.2.1';
   const end = (/** @type {string} */ doc, /** @type {number} */ ord) => [{ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.3' }];
   Object.assign(script, reads(C, C_TEXT), reads(E, E_TEXT), compared(C, C_TEXT, E, E_TEXT), {
     [FAKE.keyOf('op', { frame: F.findLinksV(C, 1, C_TEXT.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [X] } },
@@ -1209,7 +1209,7 @@ test('a scene opened from a link\'s end keeps that link with the passage held �
 }));
 
 /** a draft of the session's account, which no index lists, read whole as its reads answer */
-const WRITING = '1.0.1.0.70', WRITING_TEXT = 'A draft.\n\nIts passage stands here.';
+const WRITING = '1.0.1.0.128', WRITING_TEXT = 'A draft.\n\nIts passage stands here.';
 Object.assign(script, { ...reads(WRITING, WRITING_TEXT, { published: false }), ...compared(WRITING, WRITING_TEXT, B, B_TEXT), ...compared(B, B_TEXT, WRITING, WRITING_TEXT) });
 
 test('a reading scene opened at a live caret keeps it (issue #556\'s design decision: "Opening a scene is a departure. It commits the open burst and keeps the caret"): the caret kept where it stood, in the editor pane holding its draft, its span that pane\'s span focus — no live caret under the scene — and the entry it opened over recording it; Esc there closes the scene, a Back that re-takes the editor pane\'s caret: the caret kept where it stood, its span holding the walk, so a printable key types at it (B3-S1\'s scene rule; D5 K-63, K-77)', () => onPage(async (p) => {
@@ -1420,7 +1420,7 @@ test('the dismissal a navigation act makes first, Esc, or an overlay shown, made
 }));
 
 test('the opening asks where the far end of each link crossing between the panes stands now — once per link and slot, beside the compare — and asks none it already holds', () => onPage(async (p) => {
-  const C = '1.0.1.0.8', E = '1.0.1.0.9', C_TEXT = 'Gamma.\n\nIts words.', E_TEXT = 'Epsilon.\n\nIts words.', X = C + '.0.2.1';
+  const C = '1.0.1.0.66', E = '1.0.1.0.67', C_TEXT = 'Gamma.\n\nIts words.', E_TEXT = 'Epsilon.\n\nIts words.', X = C + '.0.2.1';
   const end = (/** @type {string} */ doc, /** @type {number} */ ord) => [{ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.3' }];
   // the person's citation from C's first word to E's second paragraph, drawn at both; where each of its ends stands now
   Object.assign(script, reads(C, C_TEXT), reads(E, E_TEXT), compared(C, C_TEXT, E, E_TEXT), {
@@ -1448,7 +1448,7 @@ test('the opening asks where the far end of each link crossing between the panes
 
 // an edition of two members read at its bare address, its third member published later; a draft edited between two reads;
 // a version opened at its member's address
-const ED = '1.0.1.0.5', ED2 = ED + '.2', ED3 = ED + '.3', DR = '1.0.1.0.6', VE = '1.0.1.0.7', VE1 = VE + '.1', LDR = DR + '.0.2.1';
+const ED = '1.0.1.0.5', ED2 = ED + '.2', ED3 = ED + '.3', DR = '1.0.1.0.64', VE = '1.0.1.0.65', VE1 = VE + '.1', LDR = DR + '.0.2.1';
 const ED_TEXT = 'The edition.\n\nIts second version holds this.', ED3_TEXT = 'The edition.\n\nIts third version holds this.\n\nAnd a new end.';
 /** the edition's first paragraph and its separator, shared by its second and third members */
 const ED_HEAD = 'The edition.\n\n'.length;
@@ -1633,7 +1633,7 @@ test('the page\'s own death takes down at once every pane whose document the vie
 
 test('the page\'s own death keeps a pane whose document the view stood on and the session read as published standing on its text at once — the run of a draft\'s bytes it windows a withheld run from that moment, none of the draft\'s bytes, no tie — and takes the draft\'s pane down to its cover at once; each read again at the guest\'s class and set from that read (issue #274\'s design decision: "Drafts and runs from drafts go to covers")', () => onPage(async (p) => {
   // KE, an edition windowing a run of the draft DR2's bytes, its image placing them in DR2's I-space; both on the trail
-  const KE = '1.0.1.0.30', DR2 = '1.0.1.0.31';
+  const KE = '1.0.1.0.88', DR2 = '1.0.1.0.89';
   const KE_HEAD = 'Kept words.\n\n', RUN = 'The draft says this.', KE_TAIL = '\n\nAfter it.', KE_TEXT = KE_HEAD + RUN + KE_TAIL, DR2_TEXT = RUN + '\n\nMore of the draft.';
   const image = [{ i_start: KE + '.0.1.1', width: String(KE_HEAD.length) }, { i_start: DR2 + '.0.1.1', width: String(RUN.length) }, { i_start: `${KE}.0.1.${KE_HEAD.length + 1}`, width: String(KE_TAIL.length) }];
   Object.assign(script, reads(KE, KE_TEXT, { image }), { [FAKE.keyOf('op', { frame: F.docMetadata(KE + '.1') })]: metadata(KE + '.1', true, KE_TEXT.length) }, reads(DR2, DR2_TEXT, { published: false }), compared(KE, KE_TEXT, DR2, DR2_TEXT));
@@ -1669,7 +1669,7 @@ test('the page\'s own death keeps a pane whose document the view stood on and th
 
 test('a refresh after a row naming nothing reaches every pane: an edition read at its bare address whose chain the refresh counted past the member its text is pinned at once — "version 2 of 3", the arrival said once — and read nowhere at its bare address; the draft beside it read again in its place (issue #212)', () => onPage(async (p) => {
   // an edition of two members read at its bare address, and a draft, neither met before; the third member minted since, which no row named
-  const RE = '1.0.1.0.11', RE2 = RE + '.2', DR9 = '1.0.1.0.12';
+  const RE = '1.0.1.0.69', RE2 = RE + '.2', DR9 = '1.0.1.0.70';
   const RE_TEXT = 'The refreshed.\n\nIts second version holds this.', DR9_TEXT = 'A note.\n\nIts words.';
   Object.assign(script, reads(RE, RE_TEXT, { members: 2 }), reads(RE2, RE_TEXT), reads(DR9, DR9_TEXT, { published: false }), compared(RE, RE_TEXT, DR9, DR9_TEXT), compared(RE2, RE_TEXT, DR9, DR9_TEXT));
   await SCENE.open(RE, DR9);
@@ -1691,7 +1691,7 @@ test('a refresh after a row naming nothing reaches every pane: an edition read a
 }));
 
 test('a row naming a pane\'s document the plane shows too — kept there while the plane reads it again — sets the pane from that read\'s answer, never from the text the row left standing, the pane reading none of its text again itself (issue #285)', () => onPage(async (p) => {
-  const DK = '1.0.1.0.17', DK_V1 = 'A kept note.\n\nIts first words.', DK_V2 = 'A kept note.\n\nWords set first.\n\nIts first words.';
+  const DK = '1.0.1.0.75', DK_V1 = 'A kept note.\n\nIts first words.', DK_V2 = 'A kept note.\n\nWords set first.\n\nIts first words.';
   Object.assign(script, reads(DK, DK_V1, { published: false }), compared(VE1, VE_TEXT, DK, DK_V1));
   await SCENE.open(VE1, DK);
   // the plane under the scene: the account's documents in view, the note among them
@@ -1719,7 +1719,7 @@ function lineOver() {
 }
 
 test('a pane set while the plane\'s read again of its document waits on the board is set again from the read made at the daemon\'s running, its corner saying until then that it is as last read, at the page\'s clock as the row came, and why — never left on the text the row left standing; the pane and the plane\'s box, naming one address, one place the one line says once as it appears and once, changed, as both are set (issues #345, #367, #369)', () => onPage(async (p) => {
-  const DQ = '1.0.1.0.19', DQ_V1 = 'A waiting note.\n\nIts first words.', DQ_V2 = 'A waiting note.\n\nWords set later.\n\nIts first words.';
+  const DQ = '1.0.1.0.77', DQ_V1 = 'A waiting note.\n\nIts first words.', DQ_V2 = 'A waiting note.\n\nWords set later.\n\nIts first words.';
   Object.assign(script, reads(DQ, DQ_V1, { published: false }), compared(VE1, VE_TEXT, DQ, DQ_V1));
   await SCENE.open(VE1, DQ);
   lineOver();
@@ -1812,7 +1812,7 @@ async function unheardRow(doc, o) {
 }
 
 test('a row naming a draft pane\'s document the plane does not show, whose read the board did not answer, leaves the pane on its text, kept and saying why, until the read made at the daemon\'s running sets it — the clause lifting, the pane reported kept to the one line until then and set, changed, after — and a second running asks it nothing (issues #369, #370)', () => onPage(async (p) => {
-  const DU = '1.0.2.0.23', V1 = 'An unheard note.\n\nIts first words.', V2 = 'An unheard note.\n\nWords set while the board was out.\n\nIts first words.';
+  const DU = '1.0.2.0.81', V1 = 'An unheard note.\n\nIts first words.', V2 = 'An unheard note.\n\nWords set while the board was out.\n\nIts first words.';
   const unanswered = fake.unanswered.length;
   try {
     const u = await unheardRow(DU, { before: V1, after: V2, silent: F.retrieveDocVSpanSet(DU), position: 60 });
@@ -1841,7 +1841,7 @@ test('a row naming a draft pane\'s document the plane does not show, whose read 
 }));
 
 test('a pane\'s setting the board did not answer is asked again once UNREACHED_MS has passed where no running comes, and nothing of it before (issue #370)', () => onPage(async (p) => {
-  const DW = '1.0.2.0.25', V1 = 'A patient note.\n\nIts first words.', V2 = 'A patient note.\n\nWords that waited.\n\nIts first words.';
+  const DW = '1.0.2.0.83', V1 = 'A patient note.\n\nIts first words.', V2 = 'A patient note.\n\nWords that waited.\n\nIts first words.';
   try {
     const u = await unheardRow(DW, { before: V1, after: V2, silent: F.retrieveDocVSpanSet(DW), position: 61 });
     const from = fake.asked.length;
@@ -1855,7 +1855,7 @@ test('a pane\'s setting the board did not answer is asked again once UNREACHED_M
 }));
 
 test('a setting whose `compare` the board did not answer sets nothing — pane B on its text and the runs of shared identity as they were, never the new text with none — until the read made at the daemon\'s running sets the text and its runs together (issue #370)', () => onPage(async (p) => {
-  const DS = '1.0.2.0.26', V1 = 'A shared note.\n\nIts first words.', V2 = 'A shared note.\n\nNew words.\n\nIts first words.';
+  const DS = '1.0.2.0.84', V1 = 'A shared note.\n\nIts first words.', V2 = 'A shared note.\n\nNew words.\n\nIts first words.';
   const silent = F.compare([{ doc: VE1, spans: [{ ordinal: 1, positions: VE_TEXT.length }] }], [{ doc: DS, spans: [{ ordinal: 1, positions: V2.length }] }]);
   try {
     const u = await unheardRow(DS, { before: V1, after: V2, silent, position: 62, runs: { before: [[1, 1, 10]], after: [[1, 1, 10], [13, 25, 5]] } });
@@ -1869,7 +1869,7 @@ test('a setting whose `compare` the board did not answer sets nothing — pane B
 }));
 
 test('a setting whose text the board did not answer, its extent answered, keeps the pane on its text — never a pane with no text — until the read made at the daemon\'s running sets it (issue #370)', () => onPage(async (p) => {
-  const DT = '1.0.2.0.27', V1 = 'A silent text.\n\nIts first words.', V2 = 'A silent text.\n\nWords it held back.\n\nIts first words.';
+  const DT = '1.0.2.0.85', V1 = 'A silent text.\n\nIts first words.', V2 = 'A silent text.\n\nWords it held back.\n\nIts first words.';
   try {
     const u = await unheardRow(DT, { before: V1, after: V2, silent: F.retrieveV(DT, 1, V2.length), position: 63 });
     assert.deepEqual([wordsIn(p.paneB, 'b'), p.paneB.placed.length], [['A silent text.', 'Its first words.'], 1], 'its text not answered: pane B on its text, set nowhere again');
@@ -1883,7 +1883,7 @@ test('a setting whose text the board did not answer, its extent answered, keeps 
 }));
 
 test('a scene opened on a document whose text the board did not answer opens nothing and answers the board\'s silence — never a pane with no text (issue #370)', () => onPage(async () => {
-  const DX = '1.0.1.0.28', TEXT = 'A note never heard.\n\nIts words.';
+  const DX = '1.0.1.0.86', TEXT = 'A note never heard.\n\nIts words.';
   const unanswered = fake.unanswered.length;
   Object.assign(script, reads(VE1, VE_TEXT), reads(DX, TEXT, { published: false }), { [FAKE.keyOf('op', { frame: F.retrieveV(DX, 1, TEXT.length) })]: UNREACHABLE });
   const o = await SCENE.open(VE1, DX);
@@ -1892,7 +1892,7 @@ test('a scene opened on a document whose text the board did not answer opens not
 }));
 
 test('a setting of an edition at its bare address whose chain\'s probe the board did not answer sets nothing — the pane naming the member its text is, never its bare address — until the read made at the daemon\'s running sets it (issue #370)', () => onPage(async (p) => {
-  const EU = '1.0.1.0.32', EU_TEXT = 'An edition probed.\n\nIts words.', member = FAKE.keyOf('op', { frame: F.docMetadata(EU + '.2') });
+  const EU = '1.0.1.0.90', EU_TEXT = 'An edition probed.\n\nIts words.', member = FAKE.keyOf('op', { frame: F.docMetadata(EU + '.2') });
   Object.assign(script, reads(VE1, VE_TEXT), reads(EU, EU_TEXT, { members: 2 }), compared(EU, EU_TEXT, VE1, VE_TEXT));
   await SCENE.open(EU, VE1);
   standOnNothing();
@@ -1914,7 +1914,7 @@ test('a setting of an edition at its bare address whose chain\'s probe the board
 
 test('a setting whose owner\'s byline facts the board did not answer sets nothing — never a byline left saying the board is out — until the read made at the daemon\'s running sets it with them (issue #370; FP-34)', () => onPage(async (p) => {
   // a draft of another account's, which its metadata says that account owns, whose byline's facts are read at that account
-  const DB = '1.0.4.0.33', V1 = 'Another\'s note.\n\nIts first words.', V2 = 'Another\'s note.\n\nWords written since.\n\nIts first words.';
+  const DB = '1.0.4.0.91', V1 = 'Another\'s note.\n\nIts first words.', V2 = 'Another\'s note.\n\nWords written since.\n\nIts first words.';
   const keys = FAKE.keyOf('op', { frame: F.keySet('1.0.4') }), owned = (/** @type {string} */ text) => ({ [FAKE.keyOf('op', { frame: F.docMetadata(DB) })]: { result: { ...metadata(DB, false, text.length).result, owner: '1.0.4' } } });
   Object.assign(script, reads(VE1, VE_TEXT), reads(DB, V1, { published: false }), owned(V1), compared(VE1, VE_TEXT, DB, V1), { [keys]: UNREACHABLE });
   await SCENE.open(VE1, DB);
@@ -1933,7 +1933,7 @@ test('a setting whose owner\'s byline facts the board did not answer sets nothin
 }));
 
 test('a setting whose owner\'s byline cause a row touching a doc 1 kept as held, its read again not answered, sets nothing — never the cause standing taken as read — until the read made at the daemon\'s running sets it (FP-23, FP-34)', () => onPage(async (p) => {
-  const DK = '1.0.1.0.37', V1 = 'A kept byline.\n\nIts first words.', V2 = 'A kept byline.\n\nWords written since.\n\nIts first words.';
+  const DK = '1.0.1.0.95', V1 = 'A kept byline.\n\nIts first words.', V2 = 'A kept byline.\n\nWords written since.\n\nIts first words.';
   const keys = FAKE.keyOf('op', { frame: F.keySet('1.0.1') }), answer = script[keys];
   Object.assign(script, reads(VE1, VE_TEXT), reads(DK, V1, { published: false }), compared(VE1, VE_TEXT, DK, V1));
   await SCENE.open(VE1, DK);
@@ -1956,7 +1956,7 @@ test('a setting whose owner\'s byline cause a row touching a doc 1 kept as held,
 
 test('a row writing an edition claim on the origin of a withheld run a pane shows sets the pane again, its statement the one the claims decide now, though the row names neither the pane\'s document nor the origin (issues #272, #288)', () => onPage(async (p) => {
   // a draft windowing a run withheld from the reader, wide enough that its gap holds its key; the claim a row writes later
-  const WR = '1.0.1.0.21', OW = '1.0.1.0.1005', HOME = '1.0.1.0.22', CLAIM = HOME + '.0.2.1', WR_HEAD = 'A window.\n\n', RUN = 12 * 66, N = WR_HEAD.length + RUN;
+  const WR = '1.0.1.0.79', OW = '1.0.1.0.1063', HOME = '1.0.1.0.80', CLAIM = HOME + '.0.2.1', WR_HEAD = 'A window.\n\n', RUN = 12 * 66, N = WR_HEAD.length + RUN;
   const lookup = FAKE.keyOf('op', { frame: F.editionClaimsAt(OW) }), claims = (/** @type {string[]} */ addrs) => ({ result: { as_of: 1, resp: 'addrs', addrs } });
   Object.assign(script, reads(VE1, VE_TEXT), {
     [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(WR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + N }] } },
@@ -1987,7 +1987,7 @@ test('a row writing an edition claim on the origin of a withheld run a pane show
 
 test('a pane holds a transcluded run the reader reads as one run across the typed lines its own newline breaks — its ground, its two hairlines, none of its words — and the statement the plane\'s one rule makes for it from the pane\'s record is its key and C-33\'s words as lines, nothing a control (issue #304)', () => onPage(async (p) => {
   // a published document windowing two typed lines of a draft, the newline between them the draft's own
-  const WE = '1.0.1.0.77', X = '1.0.1.0.1077', HEAD = 'A window.\n\n', RUN = 'quoted one\nquoted two', TAIL = '\n\nAfter.', TEXT = HEAD + RUN + TAIL;
+  const WE = '1.0.1.0.135', X = '1.0.1.0.1135', HEAD = 'A window.\n\n', RUN = 'quoted one\nquoted two', TAIL = '\n\nAfter.', TEXT = HEAD + RUN + TAIL;
   const image = [{ i_start: WE + '.0.1.1', width: String(HEAD.length) }, { i_start: X + '.0.1.1', width: String(RUN.length) }, { i_start: `${WE}.0.1.${HEAD.length + 1}`, width: String(TAIL.length) }];
   Object.assign(script, reads(VE1, VE_TEXT), reads(WE, TEXT, { image }), compared(VE1, VE_TEXT, WE, TEXT));
   REC.takeMetadata(X, { doc: X, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
@@ -2144,8 +2144,8 @@ test('what pane B\'s passages holding the near passage\'s material hold of the p
   assert.deepEqual(sharedHeld([pair(14, 1, 7)], { pos: 14, width: 7 }, image, stood), { held: { holds: 'none', places: 0 }, at: null, count: 1 }, 'none of it: another passage holds the material');
   assert.deepEqual(sharedHeld([], { pos: 14, width: 7 }, image, stood), { held: { holds: 'none', places: 0 }, at: null, count: 0 }, 'nothing shared');
   // a passage crossing from a transcluded run into the document's own bytes, held by one run of the text
-  const crossed = [{ pos: 1, width: 10, prefix: '1.0.1.0.9.0.1', ordinal: 50 }, { pos: 11, width: 10, prefix: '1.0.1.0.4.0.1', ordinal: 1 }];
-  const passage = [{ prefix: '1.0.1.0.9.0.1', ordinal: 55, width: 5 }, { prefix: '1.0.1.0.4.0.1', ordinal: 1, width: 3 }];
+  const crossed = [{ pos: 1, width: 10, prefix: '1.0.1.0.67.0.1', ordinal: 50 }, { pos: 11, width: 10, prefix: '1.0.1.0.4.0.1', ordinal: 1 }];
+  const passage = [{ prefix: '1.0.1.0.67.0.1', ordinal: 55, width: 5 }, { prefix: '1.0.1.0.4.0.1', ordinal: 1, width: 3 }];
   assert.deepEqual(sharedHeld([pair(1, 6, 8)], { pos: 1, width: 8 }, crossed, passage).held, { holds: 'all', places: 1 }, 'its two spans one passage, held whole by the run holding both');
 });
 
@@ -2288,7 +2288,7 @@ test('a returned stroke whose texts hold its change in part, two changes standin
 }));
 
 test('a returned stop whose pane holds no text — withheld from the reader — is answered at once that nothing could tell, in FP-21\'s words, the focus kept on it; a scene that read its `compare` before showing answers its stroke as it shows', () => onPage(async (p) => {
-  const WH = '1.0.1.0.13', was = script[FAKE.keyOf('op', { frame: BOTH })];
+  const WH = '1.0.1.0.71', was = script[FAKE.keyOf('op', { frame: BOTH })];
   Object.assign(script, { [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(WH) })]: WITHHELD });
   const draft = { doc: WH, src: WH, names: WH, shows: WH, kind: /** @type {const} */ ('draft'), k: null, n: null, read: null };
   const stop = { ...SHARED_STOP, at: { board: '', doc: WH, member: null, plain: false, pos: null, width: null, ids: own(WH, 14, 7) } };
@@ -2388,10 +2388,10 @@ const wireImage = (/** @type {Array<[string, number, number]>} */ runs) => runs.
 /** a paragraph minted before a text by an edit */
 const LEAD = 'A new lead.\n\n';
 /** bytes an edit minted, in a document of their own */
-const MINTED = '1.0.1.0.99';
+const MINTED = '1.0.1.0.157';
 
 /** a carried passage's source and the text it lands in: the source's "Its passage", eleven bytes from its 14th, which the landing text holds in two pieces — its first four at the landing's 14th, its last seven at its 22nd, a word minted between them */
-const SRC = '1.0.1.0.61', DST = '1.0.1.0.62', CARRIED = { addr: SRC, pos: 14, width: 11 };
+const SRC = '1.0.1.0.119', DST = '1.0.1.0.120', CARRIED = { addr: SRC, pos: 14, width: 11 };
 const SRC_TEXT = 'The source.\n\nIts passage stands here.', DST_TEXT = 'The origin.\n\nIts new passage stands here.';
 Object.assign(script, reads(SRC, SRC_TEXT, { published: false }), reads(DST, DST_TEXT, { published: false, image: wireImage([[DST, 1, 13], [SRC, 14, 4], [DST, 14, 4], [SRC, 18, 7], [DST, 18, 13]]) }), {
   // the carry's `compare` (N-GO's `heldIn`): the passage against the landing text whole
@@ -2417,7 +2417,7 @@ test('"read side by side" at a carried passage\'s landing sets the passage level
 }));
 
 /** a citation's near document, quoting the far end's passage whole — the far document's own "Its passage", eleven bytes from its 14th — and the far document, which holds that passage in two pieces, a word minted between them */
-const QUOTING = '1.0.1.0.63', QUOTED = '1.0.1.0.64', QUOTE_LINK = QUOTING + '.0.2.1';
+const QUOTING = '1.0.1.0.121', QUOTED = '1.0.1.0.122', QUOTE_LINK = QUOTING + '.0.2.1';
 const QUOTING_TEXT = 'The near.\n\nIts passage, quoted.', QUOTED_TEXT = 'The origin.\n\nIts new passage stands here.';
 Object.assign(script, reads(QUOTING, QUOTING_TEXT, { published: false, image: wireImage([[QUOTING, 1, 11], [QUOTED, 14, 11], [QUOTING, 12, 9]]) }), reads(QUOTED, QUOTED_TEXT, { published: false, image: wireImage([[QUOTED, 1, 17], [QUOTED, 38, 4], [QUOTED, 18, 20]]) }), {
   [FAKE.keyOf('op', { frame: F.project(QUOTE_LINK, 2, QUOTED) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.14', width: '0.4' }, { start: '1.22', width: '0.7' }] } },
@@ -2487,7 +2487,7 @@ const timesAsked = (/** @type {object} */ frame) => fake.asked.filter((k) => k =
 const overOwnAccount = () => { CAM.setViewport(1440, 900); CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85)); };
 
 test('a pane\'s owner facts read that a row touching a doc 1 overtook is asked again before the pane is set, the pane stating them from the moment it shows — never an empty slot no read fills (FP-34)', () => onPage(async (p) => {
-  const DO = '1.0.1.0.45', TEXT = 'An owned note.\n\nIts first words.', facts = F.keySet('1.0.5'), unanswered = fake.unanswered.length;
+  const DO = '1.0.1.0.103', TEXT = 'An owned note.\n\nIts first words.', facts = F.keySet('1.0.5'), unanswered = fake.unanswered.length;
   Object.assign(script, reads(VE1, VE_TEXT), ownedDraft(DO, TEXT, '1.0.5'), compared(VE1, VE_TEXT, DO, TEXT), unsignedAt('1.0.5'));
   overOwnAccount();
   try {
@@ -2505,7 +2505,7 @@ test('a pane\'s owner facts read that a row touching a doc 1 overtook is asked a
 }));
 
 test('a pane set while its owner\'s facts are not held — a row touching a doc 1 dropped them after its reads — has them read as it shows, its slots being read while the read is out, and is set again with them once they land (FP-34)', () => onPage(async (p) => {
-  const DG = '1.0.1.0.46', TEXT = 'A guarded note.\n\nIts first words.', facts = F.keySet('1.0.7'), unanswered = fake.unanswered.length;
+  const DG = '1.0.1.0.104', TEXT = 'A guarded note.\n\nIts first words.', facts = F.keySet('1.0.7'), unanswered = fake.unanswered.length;
   const cmp = F.compare([{ doc: VE1, spans: [{ ordinal: 1, positions: VE_TEXT.length }] }], [{ doc: DG, spans: [{ ordinal: 1, positions: TEXT.length }] }]);
   Object.assign(script, reads(VE1, VE_TEXT), ownedDraft(DG, TEXT, '1.0.7'), compared(VE1, VE_TEXT, DG, TEXT), unsignedAt('1.0.7'));
   standOnNothing();
@@ -2528,7 +2528,7 @@ test('a pane set while its owner\'s facts are not held — a row touching a doc 
 }));
 
 test('owner facts the page takes anew — the plane reading again the cause a row touching a doc 1 left behind — reach a pane on a document that owner holds, which is set again with them once, the plane and the pane stating one byline (FP-23, FP-33, FP-34)', () => onPage(async (p) => {
-  const D6 = '1.0.1.0.47', TEXT = 'A note of another\'s.\n\nIts first words.', unanswered = fake.unanswered.length;
+  const D6 = '1.0.1.0.105', TEXT = 'A note of another\'s.\n\nIts first words.', unanswered = fake.unanswered.length;
   Object.assign(script, reads(VE1, VE_TEXT), ownedDraft(D6, TEXT, '1.0.6'), compared(VE1, VE_TEXT, D6, TEXT), unsignedAt('1.0.6'));
   await SCENE.open(VE1, D6);
   assert.ok(String(shownIn(p.paneB, 'b').innerHTML).includes(labelSlot('F.slot.unsigned')), 'pane B opens on its owner\'s facts: unsigned');
@@ -2550,7 +2550,7 @@ test('owner facts the page takes anew — the plane reading again the cause a ro
 }));
 
 test('a pane\'s corner\'s act whose own reads take its owner\'s facts anew lands as asked, the version it reads in the pane\'s place — never lost to a setting those facts ask — and the other pane, its byline made with facts that say the same, is set nowhere again (FP-23, FP-34)', () => onPage(async (p) => {
-  const EP = '1.0.1.0.48', EP2 = EP + '.2', EP3 = EP + '.3', NP = '1.0.1.0.50', unanswered = fake.unanswered.length;
+  const EP = '1.0.1.0.106', EP2 = EP + '.2', EP3 = EP + '.3', NP = '1.0.1.0.108', unanswered = fake.unanswered.length;
   const EP2_TEXT = 'An edition.\n\nIts second version.', EP3_TEXT = 'An edition.\n\nIts third version.', NP_TEXT = 'A note beside it.', head = 'An edition.\n\n'.length;
   Object.assign(script, reads(EP2, EP2_TEXT), reads(EP3, EP3_TEXT), reads(NP, NP_TEXT),
     compared(EP2, EP2_TEXT, NP, NP_TEXT), compared(EP2, EP2_TEXT, EP3, EP3_TEXT, [[1, 1, head]]), compared(EP3, EP3_TEXT, NP, NP_TEXT));
@@ -2586,7 +2586,7 @@ const draftOf = (/** @type {string} */ addr, /** @type {string} */ text) => {
 };
 
 test('a pane opened from a record the page derived — the kept text with a held line applied — shows that record\'s text and reads nothing from the board for it: no whole read, no chain, no `compare` and no far end placed; its corner a draft\'s with its kept slot empty and no version act; leaving keeps the record itself in the entry, and a reopening shows it again, reading nothing (B3-S2, B3-S7; D6 BM-14, BM-29; FP-23)', () => onPage(async (p) => {
-  const H = '1.0.1.0.44', H_TEXT = 'The kept text.\n\nIts passage stands here.';
+  const H = '1.0.1.0.102', H_TEXT = 'The kept text.\n\nIts passage stands here.';
   const rows = F.decodeHeldRows([{ held: 1, doc: H, base: 5, frame: { op: 'insert', at: { ordinal: '17', subspace: '1' }, values: ['Held words. '] }, cause: 'unreachable', sent: false, time: 1 }]);
   assert.ok(rows && rows.length === 1, 'the held row decoded');
   const held = applyHeld(draftOf(H, H_TEXT), /** @type {NonNullable<typeof rows>} */ (rows));
@@ -2616,7 +2616,7 @@ test('a pane opened from a record the page derived — the kept text with a held
 // ---- the moved scene's held version (D6 BM-14; B3-S2) -----------------------------------------------------------------
 
 /** a draft the moved scene opens on, read from the board, and its text: a line held while it moved inserts "Held words. " before its second paragraph */
-const G = '1.0.1.0.91', G_TEXT = 'The kept text.\n\nIts passage stands here.';
+const G = '1.0.1.0.149', G_TEXT = 'The kept text.\n\nIts passage stands here.';
 Object.assign(script, reads(G, G_TEXT, { published: false }), compared(G, G_TEXT, G, G_TEXT, [[1, 1, G_TEXT.length]]));
 /** G's one line held moved: "Held words. " before its second paragraph, at 17 */
 const MOVED_ROW = [{ held: 1, doc: G, base: 5, frame: { op: 'insert', doc: G, at: { ordinal: '17', subspace: '1' }, values: ['Held words. '] }, cause: 'moved', sent: true, time: 1 }];
@@ -2871,7 +2871,7 @@ test('each pane is named by its corner\'s first item, then its address: the bar\
 }));
 
 test('a pane\'s kind is said once in the status region where its corner\'s slot fills while the platform\'s focus stands in the pane — a record opened with its kind being read, its box listed a draft — the corner and the bar\'s words its name leads with written again in place; nothing said where the focus stands elsewhere (issue #423\'s design decision: "If it fills while the focus is in that document, the status region says so once"; FP-36)', () => onPage(async (p) => {
-  const X = '1.0.1.0.72', Y = '1.0.1.0.73';
+  const X = '1.0.1.0.130', Y = '1.0.1.0.131';
   const listing = (/** @type {Array<{doc: string, kind: string}>} */ extra) => REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: A, kind: 'edition', label: 'a', standing: 'public' }, { doc: B, kind: 'edition', label: 'b', standing: 'public' }, ...extra.map((x) => ({ ...x, label: x.doc, standing: 'yours_to_read' }))], counts: [{ account: '1.0.1', documents: 2 + extra.length }], state: { arm: 'complete' } }));
   /** a record the page holds of a document whose kind nothing has told: listed nowhere, no metadata read */
   const untold = (/** @type {string} */ addr) => ({ ...draftOf(addr, 'An untold note.'), kind: /** @type {const} */ ('unknown'), derived: { from: addr, rows: [], edits: 0, at: null } });
@@ -3056,7 +3056,7 @@ test('"who wrote this?" over a span shown after typing opens its side-by-side on
 // ---- a pane's kind, by the one test ----------------------------------------------------------------------------------
 
 /** a listed edition of two members, read at its bare address, and its first member */
-const LE = '1.0.1.0.81', LE1 = LE + '.1', LE2 = LE + '.2';
+const LE = '1.0.1.0.139', LE1 = LE + '.1', LE2 = LE + '.2';
 const LE_TEXT = 'A listed edition.\n\nIts second version holds this.', LE1_TEXT = 'A listed edition.\n\nIts first version held this.';
 /** the edition's first paragraph and its separator, which both its members hold */
 const LE_HEAD = 'A listed edition.\n\n'.length;
@@ -3092,7 +3092,7 @@ test('a pane on a listed edition whose own metadata the board does not answer is
 }));
 
 test('a row naming an edition a pane reads at its bare address, read again while the board does not answer its metadata, leaves the pane the edition the one test says it is, never a draft — its chain probed again from its first member — so a newer member\'s arrival pins it at once to the member its text is, said once, and reads nothing at the bare address (FP-23, FP-39)', () => onPage(async (p) => {
-  const LF = '1.0.1.0.82', LF1 = LF + '.1', LF2 = LF + '.2', LF_TEXT = 'An unlisted edition.\n\nIts second version holds this.';
+  const LF = '1.0.1.0.140', LF1 = LF + '.1', LF2 = LF + '.2', LF_TEXT = 'An unlisted edition.\n\nIts second version holds this.';
   const meta = FAKE.keyOf('op', { frame: F.docMetadata(LF) }), unanswered = fake.unanswered.length;
   Object.assign(script, reads(LF, LF_TEXT, { members: 2 }), reads(LF2, LF_TEXT), compared(LF, LF_TEXT, B, B_TEXT), compared(LF2, LF_TEXT, B, B_TEXT), {
     [FAKE.keyOf('op', { frame: F.docMetadata(LF1) })]: metadata(LF1, true, LF_TEXT.length),
@@ -3124,7 +3124,7 @@ test('a row naming an edition a pane reads at its bare address, read again while
 // ---- a draft's history: a past state beside the current text (B3-S7; skep-frontend #661, #662, #617) ----------------------
 
 /** a draft of the session's account, text the person may edit: its current text, and its feed rows — its mint, a typed line, and its newest change, the line's last word — one bare hand, minutes apart */
-const PASTD = '1.0.1.0.96', PAST_TEXT = 'Its first line. Its newest words.', PAST_AT = 40, PAST_OLD = 'Its first line.';
+const PASTD = '1.0.1.0.154', PAST_TEXT = 'Its first line. Its newest words.', PAST_AT = 40, PAST_OLD = 'Its first line.';
 const PAST_T0 = Date.UTC(2026, 10, 16, 9);
 const PAST_ROWS = [[30, 'create_new_document', PAST_T0], [PAST_AT, 'insert', PAST_T0 + 2 * 60000], [48, 'insert', PAST_T0 + 5 * 60000]].map(([at, op, time]) => ({ position: at, at, op, docs: [PASTD], class: 'drafts', key: 'bare', time }));
 /** the draft's state at a position as the board answers it: its first `n` bytes, the draft's own — and the links that stood on them, none */
@@ -3855,7 +3855,7 @@ test('a return to a draft\'s history whose state asked the board stays busy on, 
 
 test('where no state before the newest is readable — reclaimed at its row and where it last stood, the refusal naming its floor — pane B\'s line and the list\'s floor mark say no earlier state is readable on the board, which keeps states back to the date of the feed\'s row at that floor, said once and naming no position; "a time not recorded" where that row\'s time was lost; where no row at the floor is read, the time the state shown stood (issue #700\'s design decision; FP-34)', () => onPage(async (p) => {
   await onTrail(p);
-  const T46 = PAST_T0 + 4 * 60000, rowKey = FAKE.keyOf('changes', { session: 's-1', since: 45, limit: 1 }), other = '1.0.1.0.97';
+  const T46 = PAST_T0 + 4 * 60000, rowKey = FAKE.keyOf('changes', { session: 's-1', since: 45, limit: 1 }), other = '1.0.1.0.155';
   const restore = pastAnswering({ [PAST_AT]: { floor: 46 }, 47: { floor: 46 } });
   /** the line pane B's corner and the list's floor mark carry, the feed's row at the floor answered so */
   const lineWith = async (/** @type {unknown} */ answer) => {
@@ -4271,7 +4271,7 @@ test('a step\'s read refused at the board\'s floor stands the floor\'s line — 
   const T42 = PAST_T0 + 3 * 60000, rowKey = FAKE.keyOf('changes', { session: 's-1', since: 41, limit: 1 });
   const PUB = { position: 25, at: 25, op: 'publish', docs: [PASTD + '.1', PASTD], class: 'published', attest: { alg: 'mldsa65-ed25519', sig: 'ab' }, time: PAST_T0 - 60000 };
   const restore = pastAnswering({ ...STEP_STATES, 30: { floor: 42 } });
-  script[rowKey] = { result: { entries: [{ ...pastRow(42, T42), docs: ['1.0.1.0.97'] }], next: 42, head: 60 } };
+  script[rowKey] = { result: { entries: [{ ...pastRow(42, T42), docs: ['1.0.1.0.155'] }], next: 42, head: 60 } };
   try {
     assert.equal(await stepsOpened(p, [PUB, ...STEP_ROWS]), true, 'the scene shows');
     await SCENE.step(-1);
@@ -4304,7 +4304,7 @@ test('a step refused at the floor\'s line a read out across a change of the page
   await onTrail(p);
   const T42 = PAST_T0 + 3 * 60000, rowKey = FAKE.keyOf('changes', { session: 's-1', since: 41, limit: 1 });
   let restore = pastAnswering(STEP_STATES), release = () => {};
-  script[rowKey] = { result: { entries: [{ ...pastRow(42, T42), docs: ['1.0.1.0.97'] }], next: 42, head: 60 } };
+  script[rowKey] = { result: { entries: [{ ...pastRow(42, T42), docs: ['1.0.1.0.155'] }], next: 42, head: 60 } };
   try {
     assert.equal(await stepsOpened(p), true, 'the scene shows');
     await SCENE.step(1);
@@ -4445,9 +4445,9 @@ test('a hand is named by its fields, each in its face: a key of the reader\'s ow
 // ---- the editor pane: a pane holding the current text of a draft of the person's own ------------------------------------
 
 /** two drafts of the session's account and a draft of another's, each read whole as its reads answer */
-const E1 = '1.0.1.0.141', E1_TEXT = 'An own draft.\n\nIts second span stands here.\n   \nA third span to walk to.';
-const E2 = '1.0.1.0.142', E2_TEXT = 'Another own draft.\n\nIts words.';
-const O = '1.0.2.0.143', O_TEXT = 'Their draft.\n\nIts words are theirs.';
+const E1 = '1.0.1.0.199', E1_TEXT = 'An own draft.\n\nIts second span stands here.\n   \nA third span to walk to.';
+const E2 = '1.0.1.0.200', E2_TEXT = 'Another own draft.\n\nIts words.';
+const O = '1.0.2.0.201', O_TEXT = 'Their draft.\n\nIts words are theirs.';
 Object.assign(script, reads(E1, E1_TEXT, { published: false }), reads(E2, E2_TEXT, { published: false }), reads(O, O_TEXT, { published: false }),
   { [FAKE.keyOf('op', { frame: F.docMetadata(O) })]: { result: { ...metadata(O, false, O_TEXT.length).result, owner: '1.0.2' } } }, unsignedAt('1.0.2'),
   compared(E1, E1_TEXT, E2, E2_TEXT), compared(E2, E2_TEXT, E1, E1_TEXT), compared(E1, E1_TEXT, B, B_TEXT), compared(E1, E1_TEXT, O, O_TEXT));
@@ -5258,7 +5258,7 @@ test('a copy where the platform holds no range copies the focused pane\'s select
 }));
 
 // a draft of another account's, read again whole as a row names it, its second text minting words before its old ones
-const SD = '1.0.2.0.171', SD_HEAD = 'A scene draft.\n\n', SD_OLD = 'Its first words.', SD_NEW = 'Words set before them.\n\n';
+const SD = '1.0.2.0.229', SD_HEAD = 'A scene draft.\n\n', SD_OLD = 'Its first words.', SD_NEW = 'Words set before them.\n\n';
 const SD_V1 = SD_HEAD + SD_OLD, SD_V2 = SD_HEAD + SD_NEW + SD_OLD;
 const SD_V2_IMAGE = [
   { i_start: SD + '.0.1.1', width: String(SD_HEAD.length) },
@@ -5380,12 +5380,12 @@ test('an overlay anchored at a pane\'s span stands below that span\'s first line
   try {
     assert.deepEqual(card({ addr: names.a, pos: 5, width: 6, site: 'a' }), [140, 138], 'below its first line in pane A\'s article');
     assert.notDeepEqual(card({ addr: names.a, pos: 5, width: 6 }), [140, 138], 'the same span at the plane: not there');
-    assert.deepEqual(card({ addr: '1.0.1.0.99', pos: 5, width: 6, site: 'a' }), [300, 200], 'none of it in pane A\'s article: at the pane\'s box');
+    assert.deepEqual(card({ addr: '1.0.1.0.157', pos: 5, width: 6, site: 'a' }), [300, 200], 'none of it in pane A\'s article: at the pane\'s box');
   } finally { HOST.dismiss(); }
 }));
 
 // an edition of two members read at its bare address beside pane A, its first member lacking its second's last paragraph
-const RE = '1.0.1.0.172', RE1 = RE + '.1', RE2 = RE + '.2';
+const RE = '1.0.1.0.230', RE1 = RE + '.1', RE2 = RE + '.2';
 const RE_TEXT = 'A read edition.\n\nIts second version holds this.', RE1_TEXT = 'A read edition.\n\nIts first version held this.';
 
 test('a version read in a pane\'s place carries that pane\'s own selection, never the platform\'s range standing in the other pane: the version lacking its words says so (issue #94\'s design decision: "Every reader asks the overlay for the focused site\'s selection, or for a named site\'s"; FP-22)', () => onPageWithText(async (p, dom) => {
@@ -5580,7 +5580,7 @@ test('the selection\'s own "which" list at a pane follows it: the pane set again
 // ---- an editor pane through the board's events (FP-23, FP-38) -----------------------------------------------------------
 
 /** two drafts of the session's account, each read whole beside VE1, a row naming either read for the edition claims it wrote: none */
-const EK = '1.0.1.0.145', EK2 = '1.0.1.0.146', EK_TEXT = 'A kept draft.\n\nIts words stand.';
+const EK = '1.0.1.0.203', EK2 = '1.0.1.0.204', EK_TEXT = 'A kept draft.\n\nIts words stand.';
 Object.assign(script, reads(VE1, VE_TEXT), ...[EK, EK2].flatMap((d) => [reads(d, EK_TEXT, { published: false }), compared(VE1, VE_TEXT, d, EK_TEXT), { [FAKE.keyOf('op', { frame: F.editionLinksIn(d) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } } }]));
 
 /**
@@ -5660,7 +5660,7 @@ test('an editor pane follows the text shown while a setting of it reads: its `co
 // ---- a past state's marks, the passage held and the put-back (B3-S7; skep-frontend #617, #675, #708) ---------------------
 
 /** a draft whose newest change removed a passage: its current text — its own bytes 1 … 11 and 24 … 36 — and its state before that change, holding "Gone words. " at 12, its bytes 12 … 23 */
-const RMD = '1.0.1.0.98', RM_PAST = 'Keep this. Gone words. Then the end.', RM_NOW = 'Keep this. Then the end.', RM_AT = 40, RM_MEMBER = RMD + '.1';
+const RMD = '1.0.1.0.156', RM_PAST = 'Keep this. Gone words. Then the end.', RM_NOW = 'Keep this. Then the end.', RM_AT = 40, RM_MEMBER = RMD + '.1';
 const RM_ROWS = [[30, 'create_new_document', PAST_T0], [RM_AT, 'insert', PAST_T0 + 2 * 60000], [48, 'delete', PAST_T0 + 5 * 60000]].map(([at, op, time]) => ({ position: at, at, op, docs: [RMD], class: 'drafts', key: 'bare', time }));
 Object.assign(script, reads(RMD, RM_NOW, { published: false, image: [{ i_start: RMD + '.0.1.1', width: '11' }, { i_start: RMD + '.0.1.24', width: '13' }] }), {
   [FAKE.keyOf('op', { frame: F.opAt(RM_AT, F.retrieveDocVSpanSet(RMD)) })]: { result: { as_of: RM_AT, resp: 'span_set', set: [{ start: '1.1', width: '0.' + RM_PAST.length }] } },

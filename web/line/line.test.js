@@ -66,11 +66,11 @@ import * as LINE from './line.js';
 import { drawChord, trailChord, keyShortcut } from '../nav/keys.js';
 
 const D = '1.0.1.0.3';
-/** the account's 49th document, its first continuation's first: its room a seventh of a depth-0 document's across */
-const C1 = '1.0.1.0.49';
+/** the document at the account's 49th cell, its first continuation's first: its room a seventh of a depth-0 document's across */
+const C1 = '1.0.1.0.107';
 const C1_TEXT = 'Tumbler.\n\nThe first field.';
 /** a depth-0 document of more columns than its room holds at the standard size: set a step smaller than its neighbours */
-const LONG = '1.0.1.0.40';
+const LONG = '1.0.1.0.98';
 const LONG_TEXT = Array.from({ length: 340 }, (_, i) => `Item ${i + 1} of an edition longer than its room's twelve columns.`).join('\n\n');
 /** the reads of a document read whole, all its text one run of its own: its extent, its metadata, its text, its image, its links (none) */
 const reads = (/** @type {string} */ doc, /** @type {string} */ text) => ({
@@ -84,11 +84,11 @@ const reads = (/** @type {string} */ doc, /** @type {string} */ text) => ({
 const script = {
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.30' }] } },
   [FAKE.keyOf('op', { frame: F.docMetadata(D) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: D, published: true, owner: '1.0.1', birth: D + '.1', birth_extent: '30', placed: null, base_extent: null, source: null } },
-  [FAKE.keyOf('op', { frame: F.retrieveV(D, 1, 30) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }] } },
-  [FAKE.keyOf('op', { frame: F.image(D, 1, 30) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }] } },
+  [FAKE.keyOf('op', { frame: F.retrieveV(D, 1, 30) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1061', width: '4' } }] } },
+  [FAKE.keyOf('op', { frame: F.image(D, 1, 30) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1061.0.1.1', width: '4' }] } },
   [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
   // the edition claims on the withheld run's origin: none
-  [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1003') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1061') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
   ...reads(C1, C1_TEXT),
   ...reads(LONG, LONG_TEXT),
 };
@@ -250,7 +250,7 @@ test('at far scale the line names the board, the whole board in view at its clam
 /** the near band: a depth-0 document's standard em at 14 px */
 const NEAR = 14 / STANDARD_FS;
 /** the centre of the cell of a document the index does not list */
-const unlisted = () => { const c = docBox('1.0.1.0.30'); return { x: c.x + c.w / 2, y: c.y + c.h / 2 }; };
+const unlisted = () => { const c = docBox('1.0.1.0.88'); return { x: c.x + c.w / 2, y: c.y + c.h / 2 }; };
 
 test('nearer than mid the line names the account or the board the walk stands on as mid scale names it, the document\'s fields blank, and the box opens holding it — the account a re-take over no document stood it on among them (issue #141)', async () => {
   const named = (/** @type {string} */ text, /** @type {string} */ addr) => ({ text, place: text, label: [], slot: 0, addr, doc: null, pos: null, member: null, whole: false, strip: false, window: null });
@@ -435,7 +435,7 @@ test('where an arrival in several runs stands in the document named, the strip o
   pieces = { addr: D, runs: [{ pos: 3, width: 4 }, { pos: 15, width: 5 }], current: 1 };
   assert.deepEqual(runs(), [[false, ...at(D, 3, 4)], [true, ...at(D, 15, 5)]], 'each run an extent along the strip, the landing\'s filled');
   assert.ok(/<span class="strip-run[^"]*"[^>]*><\/span><span class="strip-mark"/.test(host.innerHTML), 'the position marked over them');
-  pieces = { ...pieces, addr: '1.0.1.0.127' };
+  pieces = { ...pieces, addr: '1.0.1.0.185' };
   assert.deepEqual(runs(), [], 'an arrival in another document: none in this one\'s strip');
   // a continuation document at near, below its own reading scale
   await PUMP.loadWhole(C1);
@@ -790,7 +790,7 @@ test('a restart whose call again is refused leaves the page in the guest state b
 test('a death of an arm whose words this page does not hold — seeded, blocked, unreachable — reads the guest line in the death arm\'s place, its sign-in among it, said assertively; "signed out" the page\'s own close\'s alone (issue #175: "\'signed out\' stays on the sign-out path alone")', () => {
   const was = REC.session(), guest = t('B1.guest-line');
   try {
-    for (const reason of [{ arm: 'seeded', account: '1.0.1.1', as_of: 9, writer: 'fp-2' }, { arm: 'blocked', record: '1.0.1.0.7', ground: null }, { arm: 'unreachable', text: 'refused' }]) {
+    for (const reason of [{ arm: 'seeded', account: '1.0.1.1', as_of: 9, writer: 'fp-2' }, { arm: 'blocked', record: '1.0.1.0.65', ground: null }, { arm: 'unreachable', text: 'refused' }]) {
       REC.setSession(was);
       REC.sessionDied(/** @type {import('../bridge/shapes').DeathReason} */ (reason));
       const seg = LINE.actingSegment();
@@ -805,7 +805,7 @@ test('a death of an arm whose words this page does not hold — seeded, blocked,
 });
 
 test('at a document a read refused — a covered draft among them — the line names no position, no strip and no window at its reading scale, and a change of the page\'s class takes down the transient the strip\'s act left, which quotes the text it was made at (issue #177: "no length, ticks or window")', async () => {
-  const W = '1.0.1.0.8';
+  const W = '1.0.1.0.66';
   const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
   FOCUS.attach({ live: /** @type {any} */ (live) });
   LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
@@ -1320,7 +1320,7 @@ test('while the board lags past a second the line carries its clause in the kept
 });
 
 test('a change of the page\'s class is said once, as the reads it asked answer: the ending\'s words, then the documents it covered — never the ending alone first, and nothing while they read; a document the view stood on, read again at the new class past a second, is said nothing of as its clause appears or lifts, the change\'s own message speaking for its cause (issues #177, #369: "One status message says the session ended and what is covered")', async () => {
-  const DR = '1.0.1.0.6', flush = () => new Promise((r) => setTimeout(r, 0));
+  const DR = '1.0.1.0.64', flush = () => new Promise((r) => setTimeout(r, 0));
   const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
   FOCUS.attach({ live: /** @type {any} */ (live) });
   LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
@@ -1364,7 +1364,7 @@ test('a change of the page\'s class that covers more documents than it names say
   const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
   FOCUS.attach({ live: /** @type {any} */ (live) });
   LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
-  const was = REC.session(), drafts = Array.from({ length: 7 }, (_, i) => `1.0.1.0.${80 + i}`);
+  const was = REC.session(), drafts = Array.from({ length: 7 }, (_, i) => `1.0.1.0.${138 + i}`);
   try {
     REC.setSession({ session: 's-628', principal: 1, account: '1.0.1' });
     // seven drafts the session read, none of them in view: the page's own close covers each at once

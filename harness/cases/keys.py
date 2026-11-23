@@ -321,16 +321,12 @@ flavors and removes its selection, each a page-local edit; at a span holding
 no caret, an edition, another's document and an unwritable draft each says
 its line and places nothing, a cut at text the person may not edit and both
 in a field left to the platform (`paste_and_cut`; D5 K-93; B3-S5).
-
-The step into a document of the account's first grid that is not its first
-(`stepped_in`) is marked with #643 and counts as expected while it stands:
-that grid holds the account's home and its mailbox alone.
 """
 import json
 import re
 import time
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, XFAIL_FIRST_GRID, Result, account_of, corner_fit, drawn_keys, edition, heard, item_words, key_fingerprint, named_as, trunk_of
+from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, LAST_NAMED_SLOT, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, corner_fit, drawn_keys, edition, first_grid, heard, item_words, key_fingerprint, named_as, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -798,22 +794,25 @@ def press_holds(ctx, r):
         ctx.drv.release(*ph['start'])
         ctx.frames(2)
         whole_again(ctx)
-    # a fresh mount under a press places no range over the drag: the selection stands in another document mounted beside the first edition —
-    # the view built at em 8.5, past the readable em where an article takes the pointer, between the first edition's
-    # outline and the room of the document after it in its row, the one in view with the largest face past the mount
-    # threshold; the least pan takes it out of the layer's view (the viewport and 40 px about it, 10 px clear), the gate's
-    # door drops its text as a row naming a document out of view does, a press in the first edition, then the camera back
-    # brings it into view with the button down
-    ctx.leap(DOC, WINDOW[0])
-    f3, b4 = ctx.js('window.__skep.fold(%s)' % json.dumps(DOC)), ctx.js('window.__skep.boxOf(%s)' % json.dumps(edition(2)))
-    ctx.set_view((f3['outline']['x'] + f3['outline']['w'] + b4['x']) / 2, f3['columns'][0]['y'] + f3['columns'][0]['h'] / 2, ctx.js('window.__skep.scaleFor(%s, "em", 8.5)' % json.dumps(DOC)))
+    # a fresh mount under a press places no range over the drag: the selection stands in another document mounted beside the
+    # edition pressed — the account's second edition, which opens its first grid's second row with the third beside it (the
+    # first edition ends the first row, the agent space's home, a record alone, in the next cell) — the view built at em 8.5,
+    # past the readable em where an article takes the pointer, between the pressed edition's outline and the room of the
+    # document after it in its row, the one in view with the largest face past the mount threshold; the least pan takes it
+    # out of the layer's view (the viewport and 40 px about it, 10 px clear), the gate's door drops its text as a row naming
+    # a document out of view does, a press in the pressed edition, then the camera back brings it into view with the
+    # button down
+    pressed = edition(2)
+    ctx.leap(pressed)
+    f3, b4 = ctx.js('window.__skep.fold(%s)' % json.dumps(pressed)), ctx.js('window.__skep.boxOf(%s)' % json.dumps(edition(3)))
+    ctx.set_view((f3['outline']['x'] + f3['outline']['w'] + b4['x']) / 2, f3['columns'][0]['y'] + f3['columns'][0]['h'] / 2, ctx.js('window.__skep.scaleFor(%s, "em", 8.5)' % json.dumps(pressed)))
     cam0 = ctx.camera()
     near = ctx.js('''(() => { const c = window.__skep.view.camera(), p = window.__skep.view.viewport();
       return window.__skep.model.places().filter((q) => { if (q.system || q.doc === %s) return false; const b = window.__skep.fold(q.doc).outline;
           const x = (b.x - c.x) * c.scale + p.VW / 2, y = (b.y - c.y) * c.scale + p.VH / 2;
           return x < p.VW && x + b.w * c.scale > 0 && y < p.VH && y + b.h * c.scale > 0; })
         .map((q) => ({doc: q.doc, from: window.__skep.model.doc(q.doc).from, em: c.scale / window.__skep.scaleFor(q.doc, 'em', 1)}))
-        .filter((q) => q.from >= 0).sort((a, b) => b.em - a.em); })()''' % json.dumps(DOC))
+        .filter((q) => q.from >= 0).sort((a, b) => b.em - a.em); })()''' % json.dumps(pressed))
     beside = None
     if near:
         ctx.set_view(cam0['x'], cam0['y'], cam0['scale'] * max(1.0, (ctx.js('window.__skep.constants.MOUNT_EM') + 0.2) / near[0]['em']))
@@ -821,7 +820,7 @@ def press_holds(ctx, r):
             para = next((b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(near[0]['doc'])) if b['kind'] == 'para' and len(b['text']) >= 20), None)
             if para:
                 beside = (near[0]['doc'], para['pos'], len(para['text'][:20].encode('utf8')))
-    r.check(beside is not None, 'another document in view beside the first edition at the landing mounts once its face is past the mount threshold, with a paragraph to select',
+    r.check(beside is not None, 'another document in view beside the edition pressed mounts once its face is past the mount threshold, with a paragraph to select',
             {'near': near[:4], 'mounted': ctx.js('window.__skep.mountedAddrs()')})
     if beside:
         other = beside[0]
@@ -836,9 +835,9 @@ def press_holds(ctx, r):
         ctx.set_view(out['x'], out['y'], s)
         mounted = ctx.js('window.__skep.mountedAddrs()')
         kept = ctx.js('window.__skep.mountedLines(%s)' % json.dumps(other))
-        ph, seen = phrase_at(ctx, DOC)
-        r.check(other in mounted and bool(kept) and DOC in mounted and ph is not None,
-                'the least pan takes the document holding the selection out of the view: its article stands for the lines holding the selection (issue #122), and the first edition shows a phrase',
+        ph, seen = phrase_at(ctx, pressed)
+        r.check(other in mounted and bool(kept) and pressed in mounted and ph is not None,
+                'the least pan takes the document holding the selection out of the view: its article stands for the lines holding the selection (issue #122), and the edition pressed shows a phrase',
                 dict(seen, mounted=mounted, kept=kept, other=other, pan_px=(dx, dy)))
         # the gate's door drops its text, as a row naming a document out of view does (reads alone): its article is taken down, out of view
         ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(other))
@@ -858,16 +857,16 @@ def press_holds(ctx, r):
             ctx.frames(2)
             during = ctx.js('({mounted: window.__skep.mountedAddrs(), platform: window.__skep.platformSelection(), selection: window.__skep.selection()})')
             span = during['platform']['span']
-            r.check(other in during['mounted'] and not during['platform']['collapsed'] and bool(span) and span['addr'] == DOC and abs(span['pos'] - ph['p0']) <= 3,
+            r.check(other in during['mounted'] and not during['platform']['collapsed'] and bool(span) and span['addr'] == pressed and abs(span['pos'] - ph['p0']) <= 3,
                     'the document holding the selection, back in the layer\'s view with the button down, mounts afresh — a document past the mount threshold stands as the view asks, a press standing or none — and no range is placed over the drag: the platform\'s selection is still the drag\'s',
                     dict(during, before=before, other=other))
             ctx.drv.release(*ph['half'])
             ctx.frames(2)
             after = ctx.js('({sel: window.__skep.selection(), platform: window.__skep.platformSelection()})')
             sel = after['sel']
-            r.check(bool(sel) and sel['addr'] == DOC and abs(sel['pos'] - ph['p0']) <= 3 and after['platform']['span'] == sel,
-                    'the release takes the drag: the page\'s selection is the first edition\'s phrase, the platform\'s with it', dict(after, other=other))
-            figures['fresh_mount'] = {'other': other, 'pan_px': (dx, dy), 'kept': kept, 'before': before, 'during': during, 'after': after}
+            r.check(bool(sel) and sel['addr'] == pressed and abs(sel['pos'] - ph['p0']) <= 3 and after['platform']['span'] == sel,
+                    'the release takes the drag: the page\'s selection is the pressed edition\'s phrase, the platform\'s with it', dict(after, other=other))
+            figures['fresh_mount'] = {'pressed': pressed, 'other': other, 'pan_px': (dx, dy), 'kept': kept, 'before': before, 'during': during, 'after': after}
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')
     ctx.set_view(cam0['x'], cam0['y'], cam0['scale'])
@@ -2447,8 +2446,7 @@ def stepped_in(ctx, r):
     first. The step stands the walk on it as one stop, framed short of its reading scale — its own em under 8 — its
     mirror item collapsed, and pushes nothing; → there is Enter's act, one trail entry pushed, the document at the
     reading size (em READING_PX); Mod+[ returns to HOME's entry at the stop's view, the walk on the document whole and its
-    item collapsed; Mod+] returns into it at the reading size. The step ends at the first edition's landing. Its entry
-    into a document never the first is marked with #643: the first grid holds the account's home and its mailbox alone"""
+    item collapsed; Mod+] returns into it at the reading size. The step ends at the first edition's landing"""
     def seen():
         """the walk, its place among its siblings, the trail, the camera and the current item as the page stands"""
         return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), i = document.getElementById("walk-" + S.mirror.index());
@@ -2468,8 +2466,9 @@ def stepped_in(ctx, r):
     t0, scale = home['trail'], home['cam']['scale']
     acct = home['focus']['addr'] if home['focus'] and home['focus']['kind'] == 'account' else None
     listed = {q['doc'] for q in ctx.js('window.__skep.model.places()')}
-    # the account's first grid, which HOME draws whole: its 49th cell holds the continuation, drawn there as one mark
-    grid = [a for a in ('%s.0.%d' % (acct, n) for n in range(1, 49)) if acct and a in listed]
+    # the account's first grid, which HOME draws whole — its home, its slots, then its first ordinary documents: its 49th cell
+    # holds the continuation, drawn there as one mark
+    grid = [a for a in first_grid(acct) if a in listed] if acct else []
     target = next((a for a in sorted(grid, key=lambda a: a != DOC) if (framed_whole(a) or 0) >= 8 and depths(a)), None)
     r.check(bool(acct) and bool(target), 'Mod+Shift+H stands the walk on the acting account, a listed document of its first grid framed whole at an em of 8 or more, its room holding empty depths below its outline (what the step stands on)',
             {'home': home['focus'], 'target': target})
@@ -2494,7 +2493,7 @@ def stepped_in(ctx, r):
     whole = framed_whole(doc) if doc else None
     r.check(bool(doc) and stop['index'] > 0 and whole is not None and whole >= 8,
             '→ at HOME\'s account, the view\'s centre over %s\'s outline, enters that document — never the account\'s first — one whose outline framed whole would read at an em of 8 or more (K-3; what the step\'s checks stand on)' % target,
-            {'target': target, 'first': first, 'stop': stop['focus'], 'index': stop['index'], 'framed_whole_em': whole}, xfail=XFAIL_FIRST_GRID)
+            {'target': target, 'first': first, 'stop': stop['focus'], 'index': stop['index'], 'framed_whole_em': whole})
     if not doc:
         ctx.leap(DOC, WINDOW[0])
         return
@@ -2617,7 +2616,8 @@ def retake_holds(ctx, r):
                               mark: !!s.querySelector(".strip-mark"), window: !!s.querySelector(".strip-window")} : null}; })()''')
     near = ctx.js('window.__skep.scaleFor(%s, "em", 12.5)' % json.dumps(DOC))
     drawn = set(ctx.js('import("./model/records.js").then((R) => R.known())'))
-    free = next(((acct, '%s.0.%d' % (acct, n)) for acct in ('1.0.1', SECOND_ACCOUNT) for n in range(1, 49) if '%s.0.%d' % (acct, n) not in drawn), None)
+    # an ordinary document's cell of a first grid no document stands in: a number not minted
+    free = next(((acct, a) for acct in ('1.0.1', SECOND_ACCOUNT) for a in first_grid(acct)[LAST_NAMED_SLOT:] if a not in drawn), None)
     label, board = ctx.js('window.__skep.boardLabelCell("1")'), ctx.js('window.__skep.boardCell("1")')
     states = {}
     chord(ctx, '0', mods=('Meta',))

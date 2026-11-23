@@ -44,12 +44,20 @@ PAGE_ORIGIN = 'http://127.0.0.1:8731'
 # FIRST_ORDINARY on, and the seed mints through that counter alone, in one order — the staging draft D, the editions, the
 # draft W — so every seeded document's number is derived here and named nowhere else
 FIRST_ORDINARY = 64          # skep's `FIRST_ORDINARY_DOCUMENT`: an account's first number after its home; 2–63 are reserved, its mailbox at 2
+LAST_NAMED_SLOT = 5          # skep's `LAST_NAMED_SLOT`: the well-known slots are 2–5, and 6–63 are named by nothing and take no cell
+FIRST_GRID = 48              # the cells of an account's first grid, its 49th the continuation (the plane's `G`: 7 × 7 at a document's digit)
 EDITIONS = 1000              # the seed's editions at the gate
 
 
 def edition(n):
     """the seed's n-th edition, counted from 1"""
     return '1.0.1.0.%d' % (FIRST_ORDINARY + n)
+
+
+def first_grid(account):
+    """the documents an account's first grid holds, in reading order (B11-S3; the plane's `cellNumberOf`): its home and its
+    slots at cells 1–5, then its ordinary documents from FIRST_ORDINARY at the cells after them"""
+    return ['%s.0.%d' % (account, n) for n in [*range(1, LAST_NAMED_SLOT + 1), *range(FIRST_ORDINARY, FIRST_ORDINARY + FIRST_GRID - LAST_NAMED_SLOT)]]
 
 
 # the staging draft D, the claimant's first ordinary document: 6.27 MB at the owner's seed, every edition's bytes inserted
@@ -519,14 +527,9 @@ def read_ops():
 XFAIL_BEAM_LABELS = ("page: each bundle's label is set at its first beam's end, so stubs bound for different documents that land near "
                      "each other on the view's border, below the saturation the merge per direction waits for, set their labels over "
                      "one another — what stands there is the design's to rule (web/beams/beams.js `draw`)")
-XFAIL_FIRST_GRID = ("#643: the plane places a document by its raw number, so an account's first grid holds its home and its mailbox "
-                    "alone, and every document from 64 stands one or two continuations deeper (the plane's `slotOf`)")
 XFAIL_DASHED_OUTLINE = ("#756: the plane strokes each account's region and the board's as a dashed outline around its whole cell, however "
                         "far past the view it reaches, so the frame's raster grows sevenfold a continuation deeper (P-RENDER's "
                         "`drawAccountFrames`, `drawBoard`)")
-XFAIL_LONG_DRAFT = ("#757: a leap to a draft waits on reading its links one at a time, and each answer plans its held article again, "
-                    "counting every link at every block, so a long draft holding many links does not land (N-GO's `leapTo`, "
-                    "T-LAYER's `folded`)")
 # a boundary the shell's index draws, not the page
 XFAIL_UNNAMED_BY_FEED = ("sisbell/skep#1141: the board index lists only the documents a `/changes` row names, so the system account's "
                          "time document 1.1.0.1.0.4, which genesis places published and memberless and no row names until the time "

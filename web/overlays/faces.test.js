@@ -213,7 +213,7 @@ test('a withheld run\'s whole wording is a card made from its placeholder\'s rec
   REC.takeDelivery(W, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 240, kind: 'withheld', text: '', ref: null, origin: X }]);
   const run = REC.doc(W).blocks[1];
   // two edition claims of 1.0.2's on X, each homed in a published edition of theirs: one over its own bytes, one quoting X
-  const R20 = '1.1.0.1.0.1.0.3.14', EDITION = '1.0.2.0.9', OWN = EDITION + '.0.2.1', QUOTES = '1.0.2.0.11.0.2.1';
+  const R20 = '1.1.0.1.0.1.0.3.14', EDITION = '1.0.2.0.67', OWN = EDITION + '.0.2.1', QUOTES = '1.0.2.0.69.0.2.1';
   for (const [c, from] of /** @type {Array<[string, string]>} */ ([[OWN, EDITION + '.0.1.1'], [QUOTES, X + '.0.1.1']])) {
     REC.takeLink({ addr: c, from: [resolveSpan({ start: from, width: '0.0.0.0.0.0.0.20' })], to: [resolveSpan(unitSpan(X))], type: R20 });
     const home = /** @type {string} */ (homeOf(c));
@@ -275,7 +275,7 @@ test('"who wrote this?" and "who uses this?" asked of a document the reader may 
 
 test('a withheld document\'s own words carry C-67\'s pointer where the edition claims on it decide one, its act the LEAP the caller hands in: where the model holds none, the claims read before the face shows — once, nothing standing while they are out — and the face shown once they answer, the pointer in its first frame; shown again compact, the pointer one act away with the arm (issue #179\'s design decision: "the pointer to any claimed published edition the reader can open"; issue #186\'s: "Make this read together with the reads that draw the face. That way the clause is in the face\'s first frame")', async () => {
   // 1.0.2's draft X2, in its sub-account, withheld from the reader; its edition E2, published, claiming X2 from E2's own bytes
-  const X2 = '1.0.2.1.0.4', E2 = '1.0.2.0.12', CLAIM = E2 + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
+  const X2 = '1.0.2.1.0.4', E2 = '1.0.2.0.70', CLAIM = E2 + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
   const lookup = FAKE.keyOf('op', { frame: F.editionClaimsAt(X2) });
   const fake = FAKE.create({
     [lookup]: { result: { as_of: 1, resp: 'addrs', addrs: [CLAIM] } },
@@ -314,8 +314,8 @@ test('a withheld document\'s own words carry C-67\'s pointer where the edition c
 test('every face and card stating a withheld origin carries C-67\'s clause in the same words beneath the arm — the document\'s own words and a run\'s card alike: the QUOTING sibling a line, with or without a LEAP; "edition claims not read" where the board refused the lookup another way or did not answer it; nothing where it refused the lookup as withheld from the reader — each face reading the claims before it shows, the description a landing at the document says carrying the clause too (issue #186\'s design decision: "One fact, one placement"; "A blank there would read as \'no claim\'"; "If the board refuses the read for documents withheld from the reader, no face carries the clause")', async () => {
   // 1.0.2's drafts in its sub-account, withheld from the reader, each with a run of it 1.0.1's edition W windows; E, 1.0.2's
   // published edition, claiming the first by quoting it
-  const W = '1.0.1.0.17', E = '1.0.2.0.13', QUOTES = E + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
-  const [QUOTED, REFUSED, UNANSWERED, HIDDEN] = ['1.0.2.1.0.6', '1.0.2.1.0.7', '1.0.2.1.0.8', '1.0.2.1.0.9'];
+  const W = '1.0.1.0.75', E = '1.0.2.0.71', QUOTES = E + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
+  const [QUOTED, REFUSED, UNANSWERED, HIDDEN] = ['1.0.2.1.0.64', '1.0.2.1.0.65', '1.0.2.1.0.66', '1.0.2.1.0.67'];
   const lookup = (/** @type {string} */ origin) => FAKE.keyOf('op', { frame: F.editionClaimsAt(origin) });
   const fake = FAKE.create({
     [lookup(QUOTED)]: { result: { as_of: 1, resp: 'addrs', addrs: [QUOTES] } },
@@ -360,7 +360,7 @@ test('every face and card stating a withheld origin carries C-67\'s clause in th
 
 test('a withheld run\'s card reads the claims on its origin before it shows, where the model holds none: nothing stands while they are out, and the card shows once, its clause in its first frame (issue #186\'s design decision: "Make this read together with the reads that draw the face")', async () => {
   // a run of 1.0.2's draft X4 in 1.0.1's edition W4; 1.0.2's edition E4 claiming X4 from E4's own bytes
-  const X4 = '1.0.2.1.0.10', W4 = '1.0.1.0.18', E4 = '1.0.2.0.14', CLAIM = E4 + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
+  const X4 = '1.0.2.1.0.68', W4 = '1.0.1.0.76', E4 = '1.0.2.0.72', CLAIM = E4 + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
   const fake = FAKE.create({
     [FAKE.keyOf('op', { frame: F.editionClaimsAt(X4) })]: { result: { as_of: 1, resp: 'addrs', addrs: [CLAIM] } },
     [FAKE.keyOf('op', { frame: F.readLink(CLAIM) })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: E4 + '.0.1.1', width: '0.0.0.0.0.0.0.20' }], [{ start: X4, width: '0.0.0.0.0.1' }], [{ start: R20, width: '0.0.0.0.0.0.0.0.1' }]] } } },
@@ -398,16 +398,16 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
     [board('history_busy'), 'B3.history.busy'],
     [board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), 'B3.history.reclaimed', { board: 'board 1', time: '2 minutes' }],
     [board('slot_too_large'), 'B3.slot_too_large'],
-    [board('source_not_registered'), 'B3.source_not_registered', { address: '1.0.2.0.9' }],
+    [board('source_not_registered'), 'B3.source_not_registered', { address: '1.0.2.0.67' }],
     [board('dangling_source'), 'B3.dangling_source'],
     [board('bad_target'), 'B3.bad_target'], [board('original_not_resident'), 'B3.original_not_resident'],
-    [board('published_target'), 'C-45', { D: '1.0.2.0.9' }],
+    [board('published_target'), 'C-45', { D: '1.0.2.0.67' }],
   ];
   /** the names whose face says words were lost (#533): the own-bug entry, the held store's bound, the hand-over's */
   const LOSS = ['out_of_bounds', 'empty_content', 'not_content_subspace', 'held_full', 'answers_lost'];
   for (const [r, id, values] of cases) {
     let copied = 0;
-    const face = FACES.wordsFor(r, 'write', { addr: '1.0.2.0.9', board: 'board 1', time: '2 minutes', copy: () => { copied++; } });
+    const face = FACES.wordsFor(r, 'write', { addr: '1.0.2.0.67', board: 'board 1', time: '2 minutes', copy: () => { copied++; } });
     assert.deepEqual([face.id, face.text], [id, t(id, values || {})], `${r.name}: its entry's words, filled from the caller`);
     assert.ok(!face.text.includes('⟨'), `${r.name}: no token left unfilled where the caller fills them: ${face.text}`);
     if (!LOSS.includes(r.name)) { assert.deepEqual([face.acts, face.head], [[], undefined], `${r.name}: no head and no act`); continue; }
@@ -418,7 +418,7 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
   const bare = FACES.wordsFor(shell('answers_lost', [{ last: 'unreachable', elapsed_ms: 120480 }]), 'write');
   assert.equal(bare.text, STRINGS['B3.answers_lost'].text, 'a token the refusal does not carry and no caller fills stands as the design writes it');
   // history_reclaimed's tokens never stand unfilled: the board as the line names it, a time not recorded — never the floor's position
-  const reclaimed = FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), 'read', { addr: '1.0.2.0.9' });
+  const reclaimed = FACES.wordsFor(board('history_reclaimed', [{ body: { error: 'history_reclaimed', floor: 2048 } }]), 'read', { addr: '1.0.2.0.67' });
   assert.deepEqual([reclaimed.id, reclaimed.text], ['B3.history.reclaimed', t('B3.history.reclaimed', { board: t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), time: t('L.history.floor.untimed') })],
     'history_reclaimed with no board and no time handed in: the board this page holds, "a time not recorded" (issue #688)');
   assert.ok(!reclaimed.text.includes('⟨') && !reclaimed.text.includes('2048'), `no token and no log position: ${reclaimed.text}`);
@@ -437,14 +437,14 @@ test('each of the editor\'s refusal names maps to its entry\'s words — the thr
     assert.deepEqual(FACES.wordsFor(shell(name), 'write'), { id: 'L.refused', text: t('L.refused', { name }), acts: [] }, `${name}: no entry drafted for it — the generic refusal line`);
   }
   // the editor's faces shown at an act's site are named by the refusal, carry its entry and offer nothing
-  FACES.showRefusal(null, board('arrangement_moved'), '1.0.2.0.9', 'write');
+  FACES.showRefusal(null, board('arrangement_moved'), '1.0.2.0.67', 'write');
   assert.deepEqual([faceShown()?.id, faceShown()?.words, faceShown()?.acts], ['face:arrangement_moved', ['B3.moved', t('B3.moved')], []]);
   HOST.dismiss();
 });
 
 test('a refusal is worded by the class of the request refused, which every caller names and none defaults: a write keeps every name\'s words, its fallback "⟨name⟩ — refused; nothing was written"; a read keeps each name\'s whose words do not speak of writing, and a name whose words do, or that has none, takes the one read cause — the board\'s silence, a withheld document\'s words of the document the board names, a fault in this client at a request the code calls ill-formed, else the board\'s refusal of the read, the last two with the code after them in the identifier\'s face — with no "not kept" head and no act; a face answering a read, the sign-in\'s and an undo\'s among them, draws and says it, never a write\'s words (issue #723\'s design decision; FP-34)', () => {
   const board = (/** @type {string} */ name, /** @type {object} */ more = {}) => /** @type {Refusal} */ ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'retrieve_v', site: {}, body: null, ...more });
-  const BOARD = t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), D = '1.0.2.0.9';
+  const BOARD = t('L.mirror.board.name', { node: '1', origin: /** @type {{origin: string}} */ (REC.board()).origin }), D = '1.0.2.0.67';
   /** the read cause's stretches where it names a code: its words, then the code as a field in the identifier's face */
   const coded = (/** @type {string} */ id, /** @type {string} */ name) => [{ text: id === 'L.history.unread.fault' ? t(id) : t(id, { board: BOARD }), face: 'client' }, { text: FIELD, face: 'client' }, { text: name, face: 'ident' }];
   /** a read's face in the read cause's place: the board refusing the read, the code after it */
@@ -572,15 +572,15 @@ test('the undo chord reading where its step stands says so at the act\'s site in
 
 test('a refusal whose entry stands alone at its face is set as a sentence — no link at the address, the passage no longer where it was — and the fifth cell\'s words stand as written, a sentence of their own, the address filled (style S1, S2)', () => {
   const board = (/** @type {string} */ name) => /** @type {Refusal} */ ({ kind: 'refused', name, status: 200, code: name, detail: null, op: 'project', site: {}, body: null });
-  assert.deepEqual(['not_a_link', 'range_not_present', 'doc_not_registered'].map((name) => FACES.wordsFor(board(name), 'read', { addr: '1.0.2.0.9' })), [
+  assert.deepEqual(['not_a_link', 'range_not_present', 'doc_not_registered'].map((name) => FACES.wordsFor(board(name), 'read', { addr: '1.0.2.0.67' })), [
     { id: 'B1.not_a_link', text: 'There\'s no link at this address, or none you can see.', acts: [] },
     { id: 'B1.range_not_present', text: 'The text there has moved, so that passage is no longer where it was.', acts: [] },
-    { id: 'B1.doc_not_registered', text: 'This board says nothing about 1.0.2.0.9: not even whether a document is there, published, or withheld from you.', acts: [] },
+    { id: 'B1.doc_not_registered', text: 'This board says nothing about 1.0.2.0.67: not even whether a document is there, published, or withheld from you.', acts: [] },
   ]);
 });
 
 test('the fifth cell answering a follow says the far end\'s whole form in its one state — its first words the short form its label names it by, each later part beneath them, heard in that order, no act — and at a typed address the board\'s words alone (issue #224\'s design decision: "The label is always the face\'s first words, shown and spoken")', () => {
-  const at = { span: { addr: '1.0.1.0.3', pos: 11, width: 5 } }, GONE = '1.0.1.0.9', THEIRS = '1.0.2.0.99';
+  const at = { span: { addr: '1.0.1.0.3', pos: 11, width: 5 } }, GONE = '1.0.1.0.67', THEIRS = '1.0.2.0.157';
   readAs(READERS[0]);
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: '1.0.1.0.3', kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
   /** the notes beneath the face's words: each one's string and its words as a person reads them */
@@ -606,7 +606,7 @@ test('the fifth cell answering a follow says the far end\'s whole form in its on
 });
 
 test('the face of a passage the person\'s own removal took says so in the decision\'s words and offers one act, "put back in the current text", the put-back handed in; a notice no longer standing to be shown shows nothing (foundations §2.3)', () => {
-  const D = '1.0.1.0.44', at = { span: { addr: D, pos: 12 }, sign: D };
+  const D = '1.0.1.0.102', at = { span: { addr: D, pos: 12 }, sign: D };
   let back = 0;
   FACES.removed(D, at, () => { back++; }, true);
   const f = faceShown(), o = HOST.currentState();
@@ -620,7 +620,7 @@ test('the face of a passage the person\'s own removal took says so in the decisi
 });
 
 test('the dead end\'s face — its words a sentence — offers the version offer handed in: "Version ⟨k⟩ is the last that has it." above its act, "Read version ⟨k⟩", its number filled and no token left, its act the version move — and no act where none is; drawn again in its place as the offer is found, still told by its landing, the line naming the version said once and the face\'s own words not again; a face no longer standing at that document never drawn again (issue #57)', () => {
-  const FAR = '1.0.1.0.127', at = { span: { addr: FAR, pos: 1 }, sign: FAR }, words = 'The passage is no longer in the current text of 1.0.1.0.127.', label = 'Read version 3', last = 'Version 3 is the last that has it.';
+  const FAR = '1.0.1.0.185', at = { span: { addr: FAR, pos: 1 }, sign: FAR }, words = 'The passage is no longer in the current text of 1.0.1.0.185.', label = 'Read version 3', last = 'Version 3 is the last that has it.';
   /** @type {boolean[]} the version moves the act asked for: whether a key made each */
   const moves = [];
   const offer = { k: 3, go: (/** @type {boolean} */ byKey) => { moves.push(byKey); } };
@@ -634,7 +634,7 @@ test('the dead end\'s face — its words a sentence — offers the version offer
   assert.equal(live.textContent, last, 'the line naming the version said through the status region, the face\'s own words not again');
   o?.acts?.a0(/** @type {any} */ ({}), true);
   assert.deepEqual(moves, [true], 'its act the version move handed in, told a key made it');
-  FACES.offered('1.0.1.0.128', offer);
+  FACES.offered('1.0.1.0.186', offer);
   assert.equal(HOST.currentState(), o, 'an offer for another document draws nothing over it');
   HOST.dismiss();
   FACES.floating(FAR, at, offer);
@@ -656,7 +656,7 @@ test('at the line\'s sign-in act a death\'s face says its arm\'s words — the m
     HOST.dismiss();
   }
   /** @type {import('../bridge/shapes').DeathReason[]} the arms whose faces read records this page does not read */
-  const wordless = [{ arm: 'seeded', account: '1.0.1.1', as_of: 9, writer: 'fp-2' }, { arm: 'blocked', record: '1.0.1.0.7', ground: null }, { arm: 'unreachable', text: 'refused' }];
+  const wordless = [{ arm: 'seeded', account: '1.0.1.1', as_of: 9, writer: 'fp-2' }, { arm: 'blocked', record: '1.0.1.0.65', ground: null }, { arm: 'unreachable', text: 'refused' }];
   for (const reason of wordless) {
     FACES.deathFace(reason, null);
     assert.deepEqual([FACES.deathWords(reason), HOST.currentState()], [null, null], `the ${reason.arm} arm: no words, so no face — never the sign-out's`);
@@ -929,7 +929,7 @@ test('a walk\'s moment the shell raises where the reader stands at a surface of 
 });
 
 test('a face that arrives without the reader\'s act folds nothing: the unfold is an act, so a jump in the air as it is made faces nothing over the moment when its read answers (issue #182: "A face that arrives without the reader\'s act folds nothing")', async () => {
-  const page = momentPage(), GONE = '1.0.1.0.902';
+  const page = momentPage(), GONE = '1.0.1.0.960';
   const frame = F.retrieveDocVSpanSet(GONE);
   const fake = FAKE.create({ [FAKE.keyOf('op', { frame })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } } });
   PORT.boot(fake);
@@ -954,7 +954,7 @@ test('a face that arrives without the reader\'s act folds nothing: the unfold is
 
 // placed last: the endings drop every read the tests above hold
 test('the withheld face at a COVERED document — one the class the page left read, withheld from the class it reads at now — while the ending stands says the one line\'s words for that ending in the arm\'s place, and offers the line\'s sign-in act, faced where the face stood: "signed out" for the page\'s own close; "could not reconnect as ⟨account⟩ after a restart" leading the guest line for a re-acquire refused — never the entitlement arm (issue #177: "sign-in is offered in the one line\'s words for that ending"); and so at any document whose text the page holds as the ending stands (issue #179: "Its text is on screen … Where the session ended, show the session-ended notice, offer sign-in"); the words those faces name its state by — the ending\'s, else the withheld box\'s — the cause a past state\'s line gives (issue #702)', () => {
-  const Y = '1.0.1.0.8', at = { span: { addr: Y, pos: 1 }, sign: Y };
+  const Y = '1.0.1.0.66', at = { span: { addr: Y, pos: 1 }, sign: Y };
   /** @type {Array<[string, () => void, {id: string, text: string}, string]>} each ending, its words and the face its sign-in act shows */
   const endings = [
     ['the page\'s own close', () => REC.sessionDied({ arm: 'closed' }), { id: 'C-137.signed-out', text: t('C-137.signed-out') }, 'face:session:closed'],
@@ -981,7 +981,7 @@ test('the withheld face at a COVERED document — one the class the page left re
     // a document read after the page's own close, then withheld: its text on screen, access changed after it was read
     readAs(READERS[0]);
     REC.sessionDied({ arm: 'closed' });
-    const Z = '1.0.1.0.14';
+    const Z = '1.0.1.0.72';
     REC.takeSpanSet(Z, [{ subspace: 1, ordinal: 1, positions: 4 }]);
     REC.takeDelivery(Z, [{ pos: 1, width: 4, kind: 'content', text: 'Seen', ref: null, origin: null }]);
     REC.takeRefused(Z, 'withheld');
@@ -1002,8 +1002,8 @@ test('the withheld face at a COVERED document — one the class the page left re
 
 test('the withheld face at a covered document carries C-67\'s clause beneath the ending\'s words, read at the class the page reads at now: nothing stands while the claims are read, then the box\'s words, the ending\'s and the clause together — the pointer an act beside the sign-in, the QUOTING sibling, "edition claims not read", nothing where the lookup was refused as withheld from the reader — the description a landing there says carrying the clause too; a cover the change made whose read is still owed is read first, nothing shown where that read lifts it (issue #274\'s design decision: "the ending\'s words, and beneath them the clause read at the new class, appear together")', async () => {
   // drafts of 1.0.1's the session read, each withheld at the guest's class; E, 1.0.1's published edition, claiming the first from E's own bytes and quoting the second
-  const [POINTED, QUOTED, REFUSED, HIDDEN, LIFTED, CONFIRMED] = ['1.0.1.0.21', '1.0.1.0.22', '1.0.1.0.23', '1.0.1.0.24', '1.0.1.0.25', '1.0.1.0.26'];
-  const E = '1.0.1.0.27', OWN = E + '.0.2.1', QUOTES = E + '.0.2.2', R20 = '1.1.0.1.0.1.0.3.14';
+  const [POINTED, QUOTED, REFUSED, HIDDEN, LIFTED, CONFIRMED] = ['1.0.1.0.79', '1.0.1.0.80', '1.0.1.0.81', '1.0.1.0.82', '1.0.1.0.83', '1.0.1.0.84'];
+  const E = '1.0.1.0.85', OWN = E + '.0.2.1', QUOTES = E + '.0.2.2', R20 = '1.1.0.1.0.1.0.3.14';
   const lookup = (/** @type {string} */ origin) => FAKE.keyOf('op', { frame: F.editionClaimsAt(origin) });
   /** a claim's link as `read_link` answers it: from twenty bytes at `from`, to the origin whole, typed R20 */
   const claimLink = (/** @type {string} */ from, /** @type {string} */ origin) => ({ result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: from, width: '0.0.0.0.0.0.0.20' }], [{ start: origin, width: '0.0.0.0.0.1' }], [{ start: R20, width: '0.0.0.0.0.0.0.0.1' }]] } } });
@@ -1166,7 +1166,7 @@ test('where the page URL\'s `port` names no port, why no board is held is the po
 // ---- the faces of words the board has not kept (B3-S2; D6 BM-10 … BM-27; the statement decision §8 case 5) ----------------
 
 /** a draft of the session's account, read: the document the unkept faces stand at */
-const UD = '1.0.1.0.77';
+const UD = '1.0.1.0.135';
 /** a held line of the draft as `held(session)` lists it, decoded */
 const unkeptRow = (/** @type {number} */ held, /** @type {Record<string, any>} */ more = {}) => /** @type {import('../model/frames.js').HeldLine[]} */ (F.decodeHeldRows([{ held, doc: UD, base: 7, frame: { op: 'insert', doc: UD, at: { ordinal: '1', subspace: '1' }, values: ['held words'], as_of: 7, id: 'p.' + held }, cause: 'unreachable', sent: false, time: held, ...more }]))[0];
 /** the board's verdict on a refused run, as the shell hands it up */
@@ -1283,7 +1283,7 @@ test('the face\'s acts are made by their keys at the corner: an inert one says i
   assert.equal(FACES.faceAct(UD, 'send'), true);
   await new Promise((r) => setTimeout(r, 0));
   assert.equal(live.textContent, reason, 'pressed again: said again');
-  assert.deepEqual([FACES.faceAct(UD, 'copy'), FACES.faceAct('1.0.1.0.78', 'send')], [false, false], 'no act of that key; no face at that corner');
+  assert.deepEqual([FACES.faceAct(UD, 'copy'), FACES.faceAct('1.0.1.0.136', 'send')], [false, false], 'no act of that key; no face at that corner');
   live.textContent = '';
   const f = /** @type {NonNullable<ReturnType<typeof FACES.cornerFace>>} */ (FACES.cornerFace(UD));
   assert.deepEqual([FACES.answerAtFace(UD), live.textContent, HOST.currentState(), WRITE.heldOf(UD).length], [true, heard(faceWords(f)), null, 1], 'a press answered at the face: its words whole said, as a screen reader hears them, no overlay, its line held still');
@@ -1413,7 +1413,7 @@ test('BM-16, BM-27: what a discard did is said after it, each a line of its own 
 
 
 test('a paste\'s face says, in its entry\'s words set as a sentence, why nothing was placed — the source withheld, its origin named; the board saying nothing of it, by its built words; not read; the draft changed while it was read; and a fault of the page\'s own, `dangling_source`, `bad_run`, `too_many_runs`, `empty_result` or a read\'s own refusal, in a line of its own that promises no held words — or that the words, not the passage they came with, were placed as new words, a source the page holds named by its label; the quote\'s "holds nothing to quote" never said at a paste (B3-S5; the paste survey\'s P6, O6, O11)', () => {
-  const S = '1.0.1.0.30';
+  const S = '1.0.1.0.88';
   /** @type {Array<[string, string | null, string, Record<string, string>?]>} each case's name, the document named, the string its face shows and the values its words take */
   const cases = [
     ['withheld', S, 'B3.paste.withheld', { origin: S }],
@@ -1428,7 +1428,7 @@ test('a paste\'s face says, in its entry\'s words set as a sentence, why nothing
   }
   assert.ok(!/held here/.test(t('L.paste.fault')) && /nothing was placed/.test(t('L.paste.fault')), 'the page\'s own fault says nothing was placed and never that words are held');
   assert.notEqual(FACES.pasteWords('dangling_source', S).id, 'B3.dangling_source', 'never the quote\'s words at a paste');
-  const H = '1.0.1.0.31';
+  const H = '1.0.1.0.89';
   REC.takeSpanSet(H, [{ subspace: 1, ordinal: 1, positions: 15 }]);
   REC.takeDelivery(H, [{ pos: 1, width: 15, kind: 'content', text: 'A held source.\n', ref: null, origin: null }]);
   const label = LAYER.boxName(H).name;

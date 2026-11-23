@@ -17,7 +17,7 @@ import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as PORT from '../bridge/port.js';
 import * as FAKE from '../test/fake-port.js';
-import { accountCell } from '../plane/projection.js';
+import { accountCell, numberAtCell } from '../plane/projection.js';
 import { t, markCount } from '../strings.js';
 import { byteLength } from '../util.js';
 
@@ -34,7 +34,9 @@ const hostEl = {
 /** a port that answers nothing: every call it is asked is one the list made */
 const fake = FAKE.create({});
 
-/** the account's documents 1 … 100, each its first line "Notes on ⟨n⟩": at HOME its first continuation — the 49th on, fifty-two of them — is one mark */
+/** the account's documents at its cells 1 … 100 (P-PROJ's `numberAtCell`), each its first line "Notes on ⟨cell⟩": at HOME its first continuation — from the 49th cell, fifty-two of them — is one mark */
+const AT = (/** @type {number} */ cell) => `1.0.1.0.${numberAtCell(cell)}`;
+
 before(() => {
   PORT.boot(fake);
   globalThis.document = /** @type {any} */ ({ activeElement: null, body: null, getElementById: () => null, addEventListener() {} });
@@ -42,7 +44,7 @@ before(() => {
   REC._reset();
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
-  REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 100 }, (_, i) => ({ doc: `1.0.1.0.${i + 1}`, kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 100 }], state: { arm: 'complete' } }));
+  REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 100 }, (_, i) => ({ doc: AT(i + 1), kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 100 }], state: { arm: 'complete' } }));
   CAM.setViewport(1440, 900);
   CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
   HOST.attach(/** @type {any} */ (hostEl));
@@ -62,12 +64,12 @@ test('the list opens at the mark with the walk on the mark\'s stop: its members 
     await opened(false);
     assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr], ['mark', '1.0.1:1'], 'the walk on the mark\'s stop: the list\'s opener');
     assert.ok(host.html.startsWith(`<span class="label">${markCount(52, true)} · <span class="id">1.0.1</span></span>`), `its caption: ${host.html.slice(0, 120)}`);
-    assert.deepEqual(rows(), Array.from({ length: 12 }, (_, i) => [`m${i}`, `1.0.1.0.${100 - i}`, `Notes on ${100 - i}`]), 'a page of its members, the newest — the highest-numbered — first');
+    assert.deepEqual(rows(), Array.from({ length: 12 }, (_, i) => [`m${i}`, AT(100 - i), `Notes on ${100 - i}`]), 'a page of its members, the newest — the highest-numbered — first');
     assert.ok(host.html.includes(`data-run="more">${t('B1.show-more')}</button>`), 'more to show');
     /** @type {any} */ (HOST.currentState()?.acts)?.more(null, false);
     assert.deepEqual(rows().length, 24, 'a page more');
     for (let i = 0; i < 3; i++) /** @type {any} */ (HOST.currentState()?.acts)?.more(null, false);
-    assert.deepEqual([rows().length, rows()[51], host.html.includes('data-run="more"'), host.html.includes('<span class="end">·</span>')], [52, ['m51', '1.0.1.0.49', 'Notes on 49'], false, true], 'every member, its oldest last, the end marked');
+    assert.deepEqual([rows().length, rows()[51], host.html.includes('data-run="more"'), host.html.includes('<span class="end">·</span>')], [52, ['m51', AT(49), 'Notes on 49'], false, true], 'every member, its oldest last, the end marked');
     assert.equal(host.focused, null, 'opened by a press: the focus taken by none of its rows');
     assert.deepEqual(fake.asked, [], 'no read made');
   } finally { HOST.dismiss(); }
@@ -78,7 +80,7 @@ test('opened by a key the list takes the focus on its newest row; a row\'s act i
     await opened(true);
     assert.deepEqual([HOST.currentState()?.takeFocus, host.focused], [true, 'm0'], 'the newest row takes the focus');
     // the newest's text held: the LEAP reads nothing
-    const NEWEST = '1.0.1.0.100', text = 'Notes on 100';
+    const NEWEST = AT(100), text = 'Notes on 100';
     REC.takeSpanSet(NEWEST, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
     REC.takeDelivery(NEWEST, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
     TRAIL._reset();

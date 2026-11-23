@@ -30,7 +30,7 @@ test('the mount threshold sits below the canvas\'s readable em, with hysteresis 
   assert.ok(UNMOUNT_EM < MOUNT_EM);
 });
 
-test('at HOME the first continuation is one mark and the oldest 48 stand whole (foundations §2.1)', () => {
+test('at HOME the first continuation is one mark and the documents of the first grid stand whole (foundations §2.1)', () => {
   CAM.setViewport(1440, 900);
   const home = CAM.viewForCell(accountCell('1.0.1'), 0.85);
   assert.deepEqual(residueDepth(home.scale), { k: 1, fade: 0, held: 1 });

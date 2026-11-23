@@ -474,16 +474,12 @@ which the case finds by its own reads, and the first span in view, which
 reads the article's blocks here, and the stretch a version lacks, which the
 harness's own reads of the board decide here; the thresholds are here. The
 beam-label check is marked with the page issue it waits on and counts as
-expected while that stands; so are (vii)'s connections at HOME and at
-mid-extents, HOME's label rule, and the pinned edition's history strip at
-mid, marked with #643: the account's first grid holds its home and its
-mailbox alone, and the edition stands two continuations deeper, its box too
-small for a strip."""
+expected while that stands."""
 import json
 import math
 import re
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, XFAIL_FIRST_GRID, Result, account_of, corner_fit, edition, heard
+from . import BEAMED, DOC, FAR_LEAP, FIRST_ORDINARY, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, edition, first_grid, heard
 
 LEVELS_EM = [9, 12, 18, 30]
 # the room about the viewport the text layer stands a document's lines in (issue #122: a document stands by line) — the
@@ -1027,7 +1023,7 @@ def labels_hold(r, name, v):
     if name in ('mid-extents', 'home'):
         hidden = [[c['place'], c['count'], left.get(c['place'])] for c in conns if c['count'] >= 2 and c['label'] != str(c['count'])]
         r.check(any(c['count'] >= 2 for c in conns) and not hidden, f'{name}: (vii) no count is hidden — every mid connection holding two links or more carries it',
-                {'hidden': hidden, 'connections': [[c['place'], c['count'], c['label']] for c in conns][:12]}, xfail=XFAIL_FIRST_GRID)
+                {'hidden': hidden, 'connections': [[c['place'], c['count'], c['label']] for c in conns][:12]})
     if name == 'home':
         # the label rule (F-9; foundations §2.1: drawn only where its place holds it): a document's label stands in its
         # outline's first row (issue #15), so it is set wherever that row holds its address at the floor — past its region's
@@ -1042,7 +1038,7 @@ def labels_hold(r, name, v):
         must = [q for q in whole if holds(q)]
         r.check(bool(must) and set(must) <= labelled and set(whole) <= labelled | named,
                 'home: every document standing whole in the visible view whose outline\'s first row holds its address at the label floor carries its label, and every other is named left out by the rule that left it out',
-                {'in_view': len(whole), 'rows_holding': len(must), 'unlabelled': sorted(set(must) - labelled)[:8], 'unnamed': sorted(set(whole) - labelled - named)[:8]}, xfail=XFAIL_FIRST_GRID)
+                {'in_view': len(whole), 'rows_holding': len(must), 'unlabelled': sorted(set(must) - labelled)[:8], 'unnamed': sorted(set(whole) - labelled - named)[:8]})
         r.check(any(m['lines'] for m in v['marks']), 'home: the continuation drawn as one mark carries its count', [m['lines'] for m in v['marks']])
     if name == 'whole-board':
         named = {(l['kind'], l['place']) for l in labels}
@@ -3360,7 +3356,7 @@ def version_holds(ctx, r):
     pixels = (strip or {}).get('pixels') or {}
     r.check(got == want and (chain['members'] or 0) >= 2 and near_rgb(pixels.get('start'), rgb(reg['ink'])) and near_rgb(pixels.get('end'), rgb(reg['ink'])) and near_rgb(pixels.get('tick'), rgb(reg['land'])),
             'at mid the box\'s history strip marks its %s members, version 1 held in the window mark closed at both ends — its edges and member 1\'s tick in their own colours on the canvas — and the last member in the head\'s triangle where the board ended the chain there (issue #241)' % chain['members'],
-            {'strip': got, 'want': want, 'pixels': pixels, 'rect': strip and strip['rect'], 'window': strip and strip['window'], 'ink': reg}, xfail=XFAIL_FIRST_GRID)
+            {'strip': got, 'want': want, 'pixels': pixels, 'rect': strip and strip['rect'], 'window': strip and strip['window'], 'ink': reg})
     seen['strip'] = {'strip': got, 'pixels': pixels}
     for _ in range(out):
         ctx.drv.key('=', code='Equal', mods=('Meta',))
@@ -5754,12 +5750,16 @@ def run(ctx):
     outside = [d for d, b in boxes if d.startswith('1.0.1.0.') and not (b['x'] >= cell['x'] - 1e-6 and b['y'] >= cell['y'] - 1e-6 and b['x'] + b['w'] <= cell['x'] + cell['w'] + 1e-6 and b['y'] + b['h'] <= cell['y'] + cell['h'] + 1e-6)]
     r.check(not outside, 'every document box lies inside its account\'s cell', outside[:5])
     r.figures['boxes_checked'] = len(boxes)
-    # reading order (foundations §2.1): the first seven documents of an account share the first row, the eighth starts the next; document 1 is in the first column
-    row = [ctx.js('window.__skep.boxOf(%s)' % json.dumps('1.0.1.0.%d' % k)) for k in range(1, 9)]
+    # reading order (foundations §2.1; B11-S3): an account's home and its slots 2–5 hold its first five cells and its ordinary documents
+    # the cells after them, so its first row holds documents 1–5 and the first two ordinary ones, and the third ordinary one starts the
+    # next row; document 1 is in the first column
+    row = [ctx.js('window.__skep.boxOf(%s)' % json.dumps(a)) for a in first_grid('1.0.1')[:8]]
     eps = 1e-6
-    r.check(all(abs(row[k]['y'] - row[0]['y']) < eps for k in range(1, 7)), 'documents 1–7 lie along the first row of their account\'s grid', [round(b['y']) for b in row[:7]])
-    r.check(all(row[k]['x'] > row[k - 1]['x'] for k in range(1, 7)), 'documents 1–7 advance along the row', [round(b['x']) for b in row[:7]])
-    r.check(abs(row[7]['x'] - row[0]['x']) < eps and row[7]['y'] > row[0]['y'], 'document 8 starts the second row under document 1', {'d1': (round(row[0]['x']), round(row[0]['y'])), 'd8': (round(row[7]['x']), round(row[7]['y']))})
+    firsts = '1–5, %d and %d' % (FIRST_ORDINARY, FIRST_ORDINARY + 1)
+    r.check(all(abs(row[k]['y'] - row[0]['y']) < eps for k in range(1, 7)), 'documents %s lie along the first row of their account\'s grid' % firsts, [round(b['y']) for b in row[:7]])
+    r.check(all(row[k]['x'] > row[k - 1]['x'] for k in range(1, 7)), 'documents %s advance along the row' % firsts, [round(b['x']) for b in row[:7]])
+    r.check(abs(row[7]['x'] - row[0]['x']) < eps and row[7]['y'] > row[0]['y'], 'document %d starts the second row under document 1' % (FIRST_ORDINARY + 2),
+            {'d1': (round(row[0]['x']), round(row[0]['y'])), 'd%d' % (FIRST_ORDINARY + 2): (round(row[7]['x']), round(row[7]['y']))})
     r.check(row[0]['x'] < cell['x'] + cell['w'] / 7 and row[0]['y'] < cell['y'] + cell['h'] / 7, 'document 1 lies in the first cell of the grid', {'d1': (round(row[0]['x']), round(row[0]['y'])), 'cell': (round(cell['x']), round(cell['y']))})
     # THE LABELS: at each of S3's thresholds over the first edition, then with its box risen under the one line, then at HOME and at WHOLE BOARD
     box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))

@@ -99,7 +99,7 @@ import * as LANDING from '../overlays/landing.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
 import * as HINT from '../overlays/hint.js';
 import * as INPUT from '../app/input.js';
-import { docBox, depthOfDoc, DEPTH_SOUND, accountCell, boardCell, continuationCell } from '../plane/projection.js';
+import { docBox, depthOfDoc, DEPTH_SOUND, numberAtCell, accountCell, boardCell, continuationCell } from '../plane/projection.js';
 import { LOD_TXT_LO, markScale } from '../plane/lod.js';
 import { standardFs, placeOf, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
@@ -122,20 +122,20 @@ const deadAt = (/** @type {number} */ k) => sentence('F.floating.member', { k })
 /** words as the first words of a sentence: their first letter a capital (style S1) */
 const opened = (/** @type {string} */ words) => words.charAt(0).toUpperCase() + words.slice(1);
 
-const D = '1.0.1.0.3', FAR = '1.0.1.0.127', CITE = '1.1.0.1.0.1.0.3.13';
+const D = '1.0.1.0.3', FAR = '1.0.1.0.185', CITE = '1.1.0.1.0.1.0.3.13';
 const NEAR_TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'The far edition.\n\nIts cited passage stands here.';
 // C: a document whose text the page does not hold until a LEAP reads it whole; GONE: an address the board answers for with nothing
-const C = '1.0.1.0.5', GONE = '1.0.1.0.9';
+const C = '1.0.1.0.5', GONE = '1.0.1.0.67';
 const C_TEXT = 'A third edition, longer than the first two.\n\nIts text is read whole on the LEAP\'s ask, and its face fitted to it.\n\nA last paragraph.';
-// DEEP: the account's 145th document, in its third continuation, a grid deeper than FAR, the deepest the index lists; RES: a member of
-// the residue past the sound depth, its two thousand one-line paragraphs filling its room's columns three steps past, setting it far
-// smaller than its place's standard
-const DEEP = '1.0.1.0.145', RES = `1.0.1.0.${48 * (DEPTH_SOUND + 1) + 1}`;
+// DEEP: the document at the account's 145th cell, in its third continuation, a grid deeper than FAR, the deepest the index lists; RES:
+// a member of the residue past the sound depth, its two thousand one-line paragraphs filling its room's columns three steps past,
+// setting it far smaller than its place's standard
+const DEEP = '1.0.1.0.203', RES = `1.0.1.0.${numberAtCell(48 * (DEPTH_SOUND + 1) + 1)}`;
 const DEEP_TEXT = 'A note minted after the page booted.', RES_TEXT = Array.from({ length: 2000 }, (_, i) => `Item ${i + 1}.`).join('\n\n');
 // LONG: an edition longer than a column — a hundred and twenty paragraphs of a line each, folded into its room's columns
-const LONG = '1.0.1.0.40', LONG_TEXT = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1} of an edition longer than one column.`).join('\n\n');
-/** the account's 49th document, its first continuation's first: its room a seventh of a depth-0 document's across, its type with it */
-const CONT = '1.0.1.0.49', CONT_TEXT = 'A continuation note.\n\nIts second paragraph.';
+const LONG = '1.0.1.0.98', LONG_TEXT = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1} of an edition longer than one column.`).join('\n\n');
+/** the document at the account's 49th cell, its first continuation's first: its room a seventh of a depth-0 document's across, its type with it */
+const CONT = '1.0.1.0.107', CONT_TEXT = 'A continuation note.\n\nIts second paragraph.';
 const NEAR_EXTENT = NEAR_TEXT.length, FAR_EXTENT = FAR_TEXT.length;
 const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
 const whole = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null });
@@ -186,7 +186,7 @@ const HIDDEN_PROJ = D + '.0.2.11', SIZED_LINK = D + '.0.2.12';
 const TWICE = D + '.0.2.13';
 // a citation from the first edition of three of MANY's bytes from its twelfth (MANY_LINK): MANY's text held, its image not — its
 // projection refused for its size, and its image too, whole, each half of it answering
-const MANY = '1.0.1.0.50', MANY_TEXT = 'A text of many runs.', MANY_LINK = D + '.0.2.14';
+const MANY = '1.0.1.0.108', MANY_TEXT = 'A text of many runs.', MANY_LINK = D + '.0.2.14';
 /** the two citations taken into the model, drawn at the first edition */
 const takeRefusedProjections = () => {
   REC.takeLinks(D, [HIDDEN_PROJ, SIZED_LINK]);
@@ -196,10 +196,10 @@ const takeRefusedProjections = () => {
 // two citations from the first edition met late — each far document's extent held as a viewport's read leaves it, so the follow
 // consults nothing before the projection, which answers — whose far document's text the board, once the follow reads it, answers for
 // with nothing (GONE_LATE) or withholds from the reader (HIDDEN_LATE)
-const GONE_LATE = '1.0.1.0.13', DEAD_LATE = D + '.0.2.8', HIDDEN_LATE = '1.0.2.0.7', LOCKED_LATE = D + '.0.2.9', LATE_EXTENT = 20;
+const GONE_LATE = '1.0.1.0.71', DEAD_LATE = D + '.0.2.8', HIDDEN_LATE = '1.0.2.0.65', LOCKED_LATE = D + '.0.2.9', LATE_EXTENT = 20;
 // a citation from the first edition of a passage of TURNED, 1.0.2's draft whose text the page read and the board now withholds from
 // the reader — its access changed after the text was read
-const TURNED = '1.0.2.0.8', TURNED_TEXT = 'A draft read before its owner withdrew it.', TURNED_LINK = D + '.0.2.18';
+const TURNED = '1.0.2.0.66', TURNED_TEXT = 'A draft read before its owner withdrew it.', TURNED_LINK = D + '.0.2.18';
 /** the turned citation taken into the model, drawn at the first edition, TURNED's text held and its read refused `withheld` since */
 const takeTurned = () => {
   REC.takeSpanSet(TURNED, [{ subspace: 1, ordinal: 1, positions: TURNED_TEXT.length }]);
@@ -253,7 +253,7 @@ const usesCited = F.findDocsContaining([{ doc: D, spans: [{ ordinal: 11, positio
 // WINDOWS: the account's edition windowing, after its first paragraph, a run of ORIGIN — 1.0.2's draft, withheld from the
 // reader — at RUN; EDITION: 1.0.2's published edition, whose claim on ORIGIN (EDITION_CLAIM) passes, its FROM EDITION's own
 // bytes; QUOTING_CLAIM: 1.0.2's other edition claim on ORIGIN, its FROM ORIGIN's bytes
-const WINDOWS = '1.0.1.0.30', ORIGIN = '1.0.2.0.2', EDITION = '1.0.2.0.9', EDITION_CLAIM = EDITION + '.0.2.1', QUOTING_CLAIM = '1.0.2.0.11.0.2.1';
+const WINDOWS = '1.0.1.0.88', ORIGIN = '1.0.2.0.2', EDITION = '1.0.2.0.67', EDITION_CLAIM = EDITION + '.0.2.1', QUOTING_CLAIM = '1.0.2.0.69.0.2.1';
 const WINDOWS_TEXT = 'Tumbler.\n\n', RUN = WINDOWS_TEXT.length + 1, EDITION_TEXT = 'The edition 1.0.2 published of the draft.';
 /** the windowing edition, its run, and ORIGIN's two edition claims with their homes taken into the model, read whole as a landing's read leaves them */
 function takeWindows() {
@@ -265,7 +265,7 @@ function takeWindows() {
   const R20 = '1.1.0.1.0.1.0.3.14', theirs = (/** @type {object} */ end) => ({ ...end, account: '1.0.2' });
   REC.takeLink({ addr: EDITION_CLAIM, from: [theirs(span(EDITION, 1, EDITION_TEXT.length))], to: [theirs(whole(ORIGIN))], type: R20 });
   REC.takeLink({ addr: QUOTING_CLAIM, from: [theirs(span(ORIGIN, 1, 240))], to: [theirs(whole(ORIGIN))], type: R20 });
-  for (const home of [EDITION, '1.0.2.0.11']) REC.takeMetadata(home, { doc: home, published: true, owner: '1.0.2', birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
+  for (const home of [EDITION, '1.0.2.0.69']) REC.takeMetadata(home, { doc: home, published: true, owner: '1.0.2', birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
   REC.takeEditionClaims(ORIGIN, [QUOTING_CLAIM, EDITION_CLAIM]);
 }
 
@@ -573,7 +573,7 @@ test('a link naming the far document whole outlines the document\'s first positi
 
 test('Back across a follow made at a link\'s end drawn at a withheld run marks the whole run — outlined at its start, its whole extent, never an offset inside its gap — lights the link, and stands the walk on the run\'s item, which Back\'s light marks; Forward lights the far end, the run no longer marked (issue #202\'s design decision: "Arriving by a link that ends here marks the whole run, lights the symbol and puts focus on the run")', async () => {
   // RD, held whole: its first paragraph, then eight of a draft's bytes withheld from the reader; the person's citation of FAR whole on three of them
-  const RD = '1.0.1.0.41', O = '1.0.2.0.29', RL = RD + '.0.2.1', text = 'Tumbler.\n\n', n = text.length, RUN = n + 1;
+  const RD = '1.0.1.0.99', O = '1.0.2.0.87', RL = RD + '.0.2.1', text = 'Tumbler.\n\n', n = text.length, RUN = n + 1;
   REC.takeSpanSet(RD, [{ subspace: 1, ordinal: 1, positions: n + 8 }]);
   REC.takeMetadata(RD, { doc: RD, published: true, owner: '1.0.1', birth: RD + '.1', birthExtent: n + 8, placed: null, baseExtent: null, source: null, asOf: 1 });
   REC.takeDelivery(RD, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: RUN, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);
@@ -607,7 +607,7 @@ test('Back across a follow made at a link\'s end drawn at a withheld run marks t
 
 test('Back to the place where Back\'s light outlined a withheld run, an edit setting bytes before the run while the reader was away, outlines the run where its bytes stand now — never the positions it was outlined at — the walk on it (issue #294)', async () => {
   // RW, a draft held whole: its first paragraph, then eight of a draft's bytes withheld from the reader; the person's citation of FAR whole on three of them
-  const RW = '1.0.1.0.46', O = '1.0.2.0.31', RL = RW + '.0.2.1', text = 'Tumbler.\n\n', lead = 'A new lead.\n', RUN = text.length + 1, k = lead.length;
+  const RW = '1.0.1.0.104', O = '1.0.2.0.89', RL = RW + '.0.2.1', text = 'Tumbler.\n\n', lead = 'A new lead.\n', RUN = text.length + 1, k = lead.length;
   /** RW set again as its words, then the withheld run, and the image over both, each run `[the document whose I-space it lies in, ordinal, width]` */
   const setRW = (/** @type {string} */ words, /** @type {Array<[string, number, number]>} */ image) => REC.setAgain(RW, {
     spans: [{ subspace: 1, ordinal: 1, positions: words.length + 8 }],
@@ -629,7 +629,7 @@ test('Back to the place where Back\'s light outlined a withheld run, an edit set
     await run(GO.back());
     assert.deepEqual(marks(), [{ addr: RW, pos: RUN, runs: [{ pos: RUN, width: 8 }], link: RL }, [RL]], 'Back\'s light: the whole run outlined from its start');
     await run(GO.leapTo(D));
-    setRW(lead + text, [['1.0.1.0.99', 1, k], [RW, 1, text.length]]);
+    setRW(lead + text, [['1.0.1.0.157', 1, k], [RW, 1, text.length]]);
     await run(GO.back());
     assert.deepEqual(marks(), [{ addr: RW, pos: RUN + k, runs: [{ pos: RUN + k, width: 8 }], link: RL }, []], 'Back to it: the run outlined where its bytes stand now, the move lighting nothing of its own');
     assert.deepEqual(walkAt(), ['block', RW, RUN + k], 'the walk on the run where it stands');
@@ -853,12 +853,12 @@ test('Back across a carry lights the passage carried where the carry was made, n
   assert.deepEqual(GO.backLight(), { addr: D, runs: [{ pos: 11, width: 5 }], end: null }, 'where Back\'s light stands, for the mirror');
   try {
     // D as a later edit leaves it: three bytes minted before its own, so the passage carried from D's 11 stands at 14
-    REC.takeImage(D, 1, [{ iStart: '1.0.1.0.99.0.1.1', width: 3 }, { iStart: D + '.0.1.1', width: NEAR_EXTENT - 3 }]);
+    REC.takeImage(D, 1, [{ iStart: '1.0.1.0.157.0.1.1', width: 3 }, { iStart: D + '.0.1.1', width: NEAR_EXTENT - 3 }]);
     assert.deepEqual(GO.arrivalMark(), { addr: D, pos: 14, runs: [{ pos: 14, width: 5 }], link: null }, 'placed again as it is read: at 14, never the 11 it was carried from');
     // D holding its own first thirteen bytes alone: the passage's first three
-    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 13 }, { iStart: '1.0.1.0.99.0.1.1', width: NEAR_EXTENT - 13 }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 13 }, { iStart: '1.0.1.0.157.0.1.1', width: NEAR_EXTENT - 13 }]);
     assert.deepEqual(GO.arrivalMark(), { addr: D, pos: 11, runs: [{ pos: 11, width: 3 }], link: null }, 'the part of it the text still holds');
-    REC.takeImage(D, 1, [{ iStart: '1.0.1.0.99.0.1.1', width: NEAR_EXTENT }]);
+    REC.takeImage(D, 1, [{ iStart: '1.0.1.0.157.0.1.1', width: NEAR_EXTENT }]);
     assert.deepEqual([GO.arrivalMark(), GO.backLight(), faceShown()], [null, null, null], 'none of it: nothing lit, and no face');
   } finally {
     REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: NEAR_EXTENT }]);
@@ -929,7 +929,7 @@ test('a LEAP carrying parts of a span carries them alone, joined in the text\'s 
 
 test('a follow\'s LEAP to the source of the words it carries, a source whose text the page holds and the board now withholds, never leaves: no entry and no flight, its own withheld words at the act\'s site named by the follow\'s caption, no link lit — as a follow to such a far end (issue #572\'s design decision; issue #179\'s)', async () => {
   // a draft of 1.0.2's the page read before its owner withdrew it, a source of words the first edition carries
-  const WITHDRAWN = '1.0.2.0.77', text = 'A source read before its owner withdrew it.';
+  const WITHDRAWN = '1.0.2.0.135', text = 'A source read before its owner withdrew it.';
   REC.takeSpanSet(WITHDRAWN, [{ subspace: 1, ordinal: 1, positions: text.length }]);
   REC.takeDelivery(WITHDRAWN, [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }]);
   REC.takeRefused(WITHDRAWN, 'withheld');
@@ -1424,6 +1424,77 @@ test('a LEAP to an address on a board the plane does not draw reaches for it: it
   assert.deepEqual(fake.unanswered, []);
 });
 
+// RESERVED: a number of the account's reserved block, which the projection gives no cell, the board answering for it with nothing;
+// CITING: an edition holding a citation of a passage of it (RESERVED_LINK); ANSWERED: another reserved number, whose reads the board
+// answers as a document's
+const RESERVED = '1.0.1.0.7', CITING = '1.0.1.0.64', CITING_TEXT = 'A citation of a reserved number.', RESERVED_LINK = CITING + '.0.2.1';
+const ANSWERED = '1.0.1.0.8', ANSWERED_TEXT = 'A document at a reserved number.';
+Object.assign(script, reads(CITING, CITING_TEXT, [RESERVED_LINK]), reads(ANSWERED, ANSWERED_TEXT, []), {
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(RESERVED) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
+});
+/** the words of the face the host shows, as a person reads them: its words, then each part beneath them, in order */
+const faceWords = () => (hostEl.innerHTML.match(/<div class="(?:face-text|note)"[^>]*>.*?<\/div>/g) || []).map((m) => m.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')).join(' ');
+
+test('a LEAP to a reserved number — an address the projection gives no cell — never leaves: its entry taken at the act, the camera still, a reaching face at the act\'s site; the board saying nothing of it, the fifth cell faced there in the board\'s words, its entry given back and the walk where it stood; a LEAP to it again known at the act, nothing asked (B11-S5)', async () => {
+  await run(GO.leapTo(D));
+  const site = { span: { addr: D, pos: 11, width: 5 } }, signed = { ...site, sign: D };
+  const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view(), walked = walkAt();
+  REC.invalidate(RESERVED);
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(RESERVED) });
+  const leap = GO.leapTo(RESERVED, { site });
+  assert.deepEqual([addrs(), CAM.flying(), GO.inAir(), GO.isReaching()], [[...before, RESERVED], false, false, true], 'its entry taken at the act, the camera still, nothing in the air');
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['reaching:' + RESERVED, signed], 'reaching, at the act\'s site');
+  release();
+  await run(leap);
+  assert.deepEqual([addrs(), TRAIL.cursorIndex(), faceShown()?.id, HOST.currentState()?.anchor, faceWords()], [before, cursor, 'face:doc_not_registered', signed, t('B1.doc_not_registered', { address: RESERVED })], 'the fifth cell at the act\'s site in the board\'s words, its entry given back');
+  assert.deepEqual([same(CAM.view(), at), walkAt()], [true, walked], 'the camera never left, the walk where it stood');
+  HOST.dismiss();
+  const from = fake.asked.length;
+  await run(GO.leapTo(RESERVED, { site }));
+  assert.deepEqual([fake.asked.slice(from), addrs(), faceShown()?.id, same(CAM.view(), at)], [[], before, 'face:doc_not_registered', true], 'again: known at the act, nothing asked, no entry, the camera still');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow of a link whose far end is a reserved number never leaves: its entry taken at the act and the camera still, reaching at the link\'s own bytes; the board saying nothing of it, the far end\'s words faced there, its entry given back and the link not counted as followed (B11-S5; FP-25)', async () => {
+  REC.takeLink({ addr: RESERVED_LINK, from: [span(CITING, 3, 8)], to: [span(RESERVED, 1, 5)], type: CITE, age: UNDATED });
+  await PUMP.loadWhole(CITING);
+  await run(GO.leapTo(CITING));
+  const s = /** @type {import('../links/links.js').Shown} */ (LK.shown(CITING).find((x) => x.link.addr === RESERVED_LINK));
+  assert.equal(s && s.far, RESERVED, 'the citation drawn at its near document, its far end the reserved number');
+  const signed = { span: { addr: CITING, pos: s.pos, width: s.width }, sign: CITING };
+  const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view();
+  REC.invalidate(RESERVED);
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(RESERVED) });
+  const following = GO.follow(s);
+  assert.deepEqual([addrs(), CAM.flying(), GO.inAir(), GO.isReaching()], [[...before, RESERVED], false, false, true], 'its entry taken at the act, the camera still');
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['reaching:' + RESERVED, signed], 'reaching, at the link\'s own bytes');
+  release();
+  await run(following);
+  assert.deepEqual([addrs(), TRAIL.cursorIndex(), faceShown()?.id, HOST.currentState()?.anchor], [before, cursor, 'face:doc_not_registered', signed], 'the fifth cell at the link\'s own bytes, its entry given back');
+  assert.equal(faceWords(), LK.emptyAt(RESERVED).whole.map((p) => p.text).join(' '), 'in the far end\'s words');
+  assert.deepEqual([same(CAM.view(), at), LK.visited(RESERVED_LINK)], [true, false], 'the camera never left, the link not counted as followed');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP to a reserved number the board answers as a document never leaves: answered at its read, or held by the page already, the camera stays, its entry given back and the fifth cell faced at the act\'s site in the board\'s words (B11-S5)', async () => {
+  await run(GO.leapTo(D));
+  const site = { span: { addr: D, pos: 11, width: 5 } }, signed = { ...site, sign: D };
+  const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view(), walked = walkAt();
+  REC.invalidate(ANSWERED);
+  for (const what of ['answered at its read', 'held by the page']) {
+    const leap = GO.leapTo(ANSWERED, { site });
+    assert.deepEqual([CAM.flying(), GO.inAir(), GO.isReaching()], [false, false, true], `${what}: reaching, the camera still`);
+    await run(leap);
+    assert.deepEqual([addrs(), TRAIL.cursorIndex(), faceShown()?.id, HOST.currentState()?.anchor, faceWords()], [before, cursor, 'face:doc_not_registered', signed, t('B1.doc_not_registered', { address: ANSWERED })], `${what}: the fifth cell at the act's site, its entry given back`);
+    assert.deepEqual([same(CAM.view(), at), walkAt()], [true, walked], `${what}: the camera never left, the walk where it stood`);
+    HOST.dismiss();
+  }
+  assert.equal(REC.doc(ANSWERED).extent, ANSWERED_TEXT.length, 'the page holds what the board answered');
+  assert.deepEqual(fake.unanswered, []);
+});
+
 test('a Back reaching a LEAP\'s entry while it reads puts the arrival out as it is made, lighting the step it crossed, and goes on nowhere once Forward has been made: the ring where Forward\'s landing put the walk', async () => {
   unread();
   await run(GO.leapTo(D));
@@ -1656,7 +1727,7 @@ test('a jump to the entry behind lights as Back does and one to the entry ahead 
 });
 
 test('every return to a failed jump\'s entry asks its read again (issue #228\'s design decision: "Returning to it asks again"): its reading face stands where the failure\'s did while the read is out; the board still saying nothing of the address, the fifth cell there again, the entry holding it; the board not answering, that refusal\'s face, never the word it gave before; and once the board answers for a document there, the return lands on it with no face, the entry\'s notice taken off (FP-25)', async () => {
-  const NEW = '1.0.1.0.33', NEW_TEXT = 'A note made where the board said nothing.';
+  const NEW = '1.0.1.0.91', NEW_TEXT = 'A note made where the board said nothing.';
   const answered = draftReads(NEW, NEW_TEXT), spans = FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(NEW) });
   Object.assign(script, answered);
   script[spans] = { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
@@ -1811,7 +1882,7 @@ const REORDERED_RUNS = [{ pos: 5, width: 5 }, { pos: 25, width: 5 }];
 
 // a citation from the first edition of twenty bytes of UNNAMED's text, which its projection places in two runs of nine positions
 // together, and whose bytes the board will not name: its image refused, whole and run by run, by a name that says nothing of it
-const UNNAMED = '1.0.1.0.51', UNNAMED_TEXT = 'A text whose own bytes the board will not name here.', UNNAMED_LINK = D + '.0.2.17';
+const UNNAMED = '1.0.1.0.109', UNNAMED_TEXT = 'A text whose own bytes the board will not name here.', UNNAMED_LINK = D + '.0.2.17';
 Object.assign(script, {
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(UNNAMED) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + UNNAMED_TEXT.length }] } },
   [FAKE.keyOf('op', { frame: F.docMetadata(UNNAMED) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: UNNAMED, published: false, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } },
@@ -2074,7 +2145,7 @@ test('wherever a follow meets a far end the board will say nothing of — known 
   takeDead(); takeLate(DEAD_LATE, GONE_LATE, 19);
   // PROJ_DEAD: a citation of PROJ_GONE, whose extent the page holds, its projection refused `doc_not_registered`; REACH_DEAD: a
   // citation of REACH_GONE, on board 2, which the plane does not draw
-  const PROJ_GONE = '1.0.1.0.14', PROJ_DEAD = D + '.0.2.30', REACH_DEAD = D + '.0.2.31';
+  const PROJ_GONE = '1.0.1.0.72', PROJ_DEAD = D + '.0.2.30', REACH_DEAD = D + '.0.2.31';
   REC.invalidate(PROJ_GONE); REC.takeSpanSet(PROJ_GONE, [{ subspace: 1, ordinal: 1, positions: LATE_EXTENT }]);
   REC.takeLinks(D, [PROJ_DEAD, REACH_DEAD]);
   REC.takeLink({ addr: PROJ_DEAD, from: [span(D, 13, 2)], to: [span(PROJ_GONE, 3, 4)], type: CITE });
@@ -3069,7 +3140,7 @@ test('a version move keeps a selection shrunk where the version holds only part 
   REC.takeMembers(FAR, 2);
   await sharedBytes();
   // FAR2's bytes FAR's own but FAR_HALVES' last five, which it holds none of
-  REC.takeImage(FAR2, 1, [{ iStart: FAR + '.0.1.1', width: FAR_HELD.pos + 4 }, { iStart: '1.0.1.0.99.0.1.1', width: 5 }, { iStart: `${FAR}.0.1.${FAR_HELD.pos + 10}`, width: FAR_EXTENT - FAR_HELD.pos - 9 }]);
+  REC.takeImage(FAR2, 1, [{ iStart: FAR + '.0.1.1', width: FAR_HELD.pos + 4 }, { iStart: '1.0.1.0.157.0.1.1', width: 5 }, { iStart: `${FAR}.0.1.${FAR_HELD.pos + 10}`, width: FAR_EXTENT - FAR_HELD.pos - 9 }]);
   try {
     await run(GO.leapTo(FAR));
     SEL.select(FAR, FAR_HALVES.pos, FAR_HALVES.width);
@@ -3206,7 +3277,7 @@ test('a newer version\'s arrival carries the selection standing in the trunk to 
     // the bare address read again, as the newer head: other bytes at the selection's positions
     REC.takeSpanSet(FAR, [{ subspace: 1, ordinal: 1, positions: FAR_EXTENT }]);
     REC.takeDelivery(FAR, [{ pos: 1, width: FAR_EXTENT, kind: 'content', text: FAR_TEXT, ref: null, origin: null }]);
-    REC.takeImage(FAR, 1, [{ iStart: '1.0.1.0.99.0.1.1', width: FAR_EXTENT }]);
+    REC.takeImage(FAR, 1, [{ iStart: '1.0.1.0.157.0.1.1', width: FAR_EXTENT }]);
     GO.surfacesAcross();
     const card = HOST.currentState();
     assert.deepEqual([SEL.selected(), card?.id, card?.anchor], [{ addr: FAR2, pos: FAR_HELD.pos, width: FAR_HELD.width }, 'selection', { span: { addr: FAR2, pos: FAR_HELD.pos, width: FAR_HELD.width } }], 'the selection on the member at the same positions, its card drawn again over it');
@@ -3405,7 +3476,7 @@ test('a newer version\'s arrival takes its member\'s position from its feed row 
 // ---- THE ARRIVAL'S MARK: the corner offers the newer version (issue #240) --------------------------------------------
 
 // TRI: an edition of four members, each its text whole, which a version move to it reads
-const TRI = '1.0.1.0.61', TRI_TEXT = 'An edition read at its bare address.\n\nIts second paragraph.';
+const TRI = '1.0.1.0.119', TRI_TEXT = 'An edition read at its bare address.\n\nIts second paragraph.';
 /** TRI's k-th member */
 const tri = (/** @type {number} */ k) => `${TRI}.${k}`;
 Object.assign(script, ...[TRI, tri(1), tri(2), tri(3), tri(4)].map((a) => reads(a, TRI_TEXT, [])));
@@ -3531,7 +3602,7 @@ test('an arrival standing at an edition read at its bare address stays outlined 
 // REWRITTEN, DROPPED: two drafts of eighty paragraphs, which an edit sets a paragraph of new bytes before while the reader is
 // away: the first's text set again in one step, as a refresh sets it (M-REC's `setAgain`); the second's dropped, as a feed row
 // drops it, and read again as Back reaches it
-const REWRITTEN = '1.0.1.0.42', DROPPED = '1.0.1.0.43';
+const REWRITTEN = '1.0.1.0.100', DROPPED = '1.0.1.0.101';
 const EIGHTY = Array.from({ length: 80 }, (_, i) => `Line ${i + 1} of a draft an edit rewrites above the reader.`).join('\n\n');
 const INSERTED = 'A paragraph an edit set before the rest.\n\n';
 Object.assign(script, reads(REWRITTEN, EIGHTY, []), reads(DROPPED, EIGHTY, []));
@@ -3576,7 +3647,7 @@ test('Back lands on the passage the reader left after an edit set new bytes befo
   REC.setAgain(REWRITTEN, {
     spans: [{ subspace: 1, ordinal: 1, positions: k + EIGHTY.length }],
     text: { runs: [{ pos: 1, width: k + EIGHTY.length, kind: 'content', text: INSERTED + EIGHTY, ref: null, origin: null }], asOf: 2 },
-    image: { from: 1, runs: [{ iStart: '1.0.1.0.99.0.1.1', width: k }, { iStart: REWRITTEN + '.0.1.1', width: EIGHTY.length }] },
+    image: { from: 1, runs: [{ iStart: '1.0.1.0.157.0.1.1', width: k }, { iStart: REWRITTEN + '.0.1.1', width: EIGHTY.length }] },
   });
   assert.ok(!samePassage(under(REWRITTEN, left), { ...was, pos: was.pos + k }), 'the view left now reads another line');
   await run(GO.back());
@@ -3598,7 +3669,7 @@ test('Back to a passage whose text a feed row dropped while the reader was away 
   Object.assign(script, {
     [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DROPPED) })]: { result: { as_of: 2, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } },
     [FAKE.keyOf('op', { frame: F.retrieveV(DROPPED, 1, text.length) })]: { result: { as_of: 2, resp: 'delivery', items: [{ content: text }] } },
-    [FAKE.keyOf('op', { frame: F.image(DROPPED, 1, text.length) })]: { result: { as_of: 2, resp: 'runs', runs: [{ i_start: '1.0.1.0.99.0.1.1', width: String(k) }, { i_start: DROPPED + '.0.1.1', width: String(EIGHTY.length) }] } },
+    [FAKE.keyOf('op', { frame: F.image(DROPPED, 1, text.length) })]: { result: { as_of: 2, resp: 'runs', runs: [{ i_start: '1.0.1.0.157.0.1.1', width: String(k) }, { i_start: DROPPED + '.0.1.1', width: String(EIGHTY.length) }] } },
     [FAKE.keyOf('op', { frame: F.findLinksV(DROPPED, 1, text.length) })]: { result: { as_of: 2, resp: 'addrs', addrs: [] } },
   });
   const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(DROPPED) });
@@ -3634,7 +3705,7 @@ test('Back puts the walk where it stood as the reader left the entry, never on t
 // CUT: a draft of eighty paragraphs whose line the reader left an edit changes while they are away, its text set again in one
 // step as a refresh sets it (M-REC's `setAgain`); LAPSE: the same draft's twin, its text dropped and the board not answering
 // it while `lapse` reads `out`, then answering it as an edit left it, a paragraph of new bytes set before the rest
-const CUT = '1.0.1.0.44', LAPSE = '1.0.1.0.45', FOREIGN = '1.0.1.0.98';
+const CUT = '1.0.1.0.102', LAPSE = '1.0.1.0.103', FOREIGN = '1.0.1.0.156';
 /** the reads of a draft read whole: as `reads` answers them, its metadata a draft's, so no version is offered */
 const draftReads = (/** @type {string} */ doc, /** @type {string} */ text) => ({
   ...reads(doc, text, []),
@@ -3949,7 +4020,7 @@ test('Back to a draft where a landing outlined and labelled a passage in two pie
   const labelled = (/** @type {number} */ from) => ({ addr: CUT, pos: from, words, kind: t('F.kind.draft'), runs: [{ pos: from, width: 8, words: piece(1) }, { pos: from + 8 + w, width: width - 8, words: piece(2) }] });
   assert.deepEqual([GO.arrivalMark()?.runs, GO.described()], [runs, labelled(at)], 'both pieces outlined and labelled where the LEAP named them, the landing at piece 1');
   await run(GO.leapTo(FAR));
-  setDraft(CUT, INSERTED + pieced, [['1.0.1.0.99', 1, k], [CUT, 1, cut], [FOREIGN, 1, w], [CUT, cut + 1, EIGHTY.length - cut]]);
+  setDraft(CUT, INSERTED + pieced, [['1.0.1.0.157', 1, k], [CUT, 1, cut], [FOREIGN, 1, w], [CUT, cut + 1, EIGHTY.length - cut]]);
   await run(GO.back());
   assert.deepEqual(GO.arrivalMark(), { addr: CUT, pos: at + k, runs: runs.map((r) => ({ pos: r.pos + k, width: r.width })), link: null }, 'Back: both pieces outlined where their bytes stand now');
   assert.deepEqual([GO.described(), GO.landingLine(), walkAt()], [labelled(at + k), words, ['block', CUT, at + k]], 'their labels on them there, the landing and the walk on piece 1');
@@ -3958,7 +4029,7 @@ test('Back to a draft where a landing outlined and labelled a passage in two pie
 });
 
 test('Back to a place whose outline named no bytes — the door\'s link landing on a draft held with no image — outlines it as the reader left it while that text stands as it was, and nothing once the text is set again, never the positions it was outlined at (issue #294)', async () => {
-  const DW = '1.0.1.0.47', LINK = DW + '.0.2.1', text = 'A note held with no image.\n\nIts outlined words stand here.\n\nA last line.', lead = 'A new lead.\n';
+  const DW = '1.0.1.0.105', LINK = DW + '.0.2.1', text = 'A note held with no image.\n\nIts outlined words stand here.\n\nA last line.', lead = 'A new lead.\n';
   const P = text.indexOf('outlined') + 1, W = 'outlined'.length, outlined = { addr: DW, pos: P, runs: [{ pos: P, width: W }], link: LINK };
   // the board not answering its image, which the landing's whole read asks: the draft stands held with no image
   script[FAKE.keyOf('op', { frame: F.image(DW, 1, text.length) })] = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
@@ -3985,7 +4056,7 @@ test('Back to a place whose outline named no bytes — the door\'s link landing 
 
 // NEIGHBOUR: a draft past the sound depth, in the room every document there shares; GHOSTED: an address in that room the board
 // says nothing about
-const NEIGHBOUR = '1.0.1.0.590', GHOSTED = '1.0.1.0.600';
+const NEIGHBOUR = '1.0.1.0.648', GHOSTED = '1.0.1.0.658';
 Object.assign(script, draftReads(NEIGHBOUR, EIGHTY), {
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GHOSTED) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
 });
@@ -4420,7 +4491,7 @@ test('a departure names the link\'s end the walk stands on by the bytes it holds
 });
 
 test('Back across a follow made at a withheld run a draft holds below typed words marks the whole run where the text shown holds it, the walk on its item there (FP-30; issue #515)', async () => {
-  const RD = '1.0.1.0.48', O = '1.0.2.0.30', RL = RD + '.0.2.1', text = 'Tumbler.\n\n', n = text.length, RUN = n + 1;
+  const RD = '1.0.1.0.106', O = '1.0.2.0.88', RL = RD + '.0.2.1', text = 'Tumbler.\n\n', n = text.length, RUN = n + 1;
   REC.takeSpanSet(RD, [{ subspace: 1, ordinal: 1, positions: n + 8 }]);
   REC.takeMetadata(RD, { doc: RD, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
   REC.takeDelivery(RD, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: RUN, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);
@@ -4646,7 +4717,7 @@ test('a failure a jump\'s read learns in the air rebuilds the mirror where the w
 // ---- A TEXT SET AGAIN UNDER THE READER (FP-21, FP-36) ---------------------------------------------------------------
 
 /** a document the tests below land in and set again, read whole on the LEAP: its own bytes, 1 to its length */
-const SETA = '1.0.1.0.23', SETA_TEXT = 'A note set again.\n\nIts passage stands here.\n\nA last line.';
+const SETA = '1.0.1.0.81', SETA_TEXT = 'A note set again.\n\nIts passage stands here.\n\nA last line.';
 /** SETA set again as its reads land (M-REC's `setAgain`): its text and its image, each run `[ordinal, width]` of SETA's own I-space */
 const setSeta = (/** @type {string} */ text, /** @type {Array<[number, number]>} */ image) => REC.setAgain(SETA, {
   spans: [{ subspace: 1, ordinal: 1, positions: text.length }], text: { runs: [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }], asOf: 9 },
@@ -4895,7 +4966,7 @@ test('the passage being read gone from the text its document is set again as lan
 });
 
 test('a change of the page\'s class (issue #177: "Keep every place, and cover the material"): the arrival goes — its outline, its labels, its line, its descriptions — and no entry keeps it or a notice, so Back and Forward restore none of it; no entry holds a document\'s words, each read from the model as it is shown — nothing for the draft the session read until a read answers it, then "[withheld · ⟨owner⟩]" — and Back to the draft\'s entry reads it first, then lands on its covered box framed whole, the walk on it and its withheld face there, offering the sign-in in the ending\'s words; once covered, the face at once', async () => {
-  const DR = '1.0.1.0.21', DR_TEXT = 'The draft the session reads.\n\nIts second paragraph.';
+  const DR = '1.0.1.0.79', DR_TEXT = 'The draft the session reads.\n\nIts second paragraph.';
   const platform = { getElementById: globalThis.document.getElementById };
   /** @type {any} */ (globalThis.document).getElementById = () => null;
   Object.assign(script, reads(DR, DR_TEXT, []));
@@ -5022,7 +5093,7 @@ test('where no board is held the launch names no place — no trail entry, the w
 });
 
 test('a teleport commits the open burst of every draft as it departs — a LEAP, and Back across it — before the camera leaves; with no burst open it asks nothing (D5 K-73; D6 BM-4)', async () => {
-  const DRAFT = '1.0.1.0.1013';
+  const DRAFT = '1.0.1.0.1071';
   /** @type {string[]} */
   const committed = [];
   WRITE.machine({ commit: (addr) => committed.push(addr), typed() {}, ended() {}, leaving() {} });
@@ -5046,7 +5117,7 @@ test('a teleport commits the open burst of every draft as it departs — a LEAP,
 // placed last: each takes the session, the key store and the trail for its own and puts the shared ones back
 
 /** the launch's draft and edition, and the key this device signs with */
-const LW = '1.0.1.0.61', LE = '1.0.1.0.62', KEY = 'a'.repeat(64), OTHER = 'b'.repeat(64);
+const LW = '1.0.1.0.119', LE = '1.0.1.0.120', KEY = 'a'.repeat(64), OTHER = 'b'.repeat(64);
 const LW_TEXT = 'First line of the draft.\n\nA second paragraph, the one written last.', LE_TEXT = 'A published first line.\n\nIts second paragraph.';
 /** the board's head as the launch's tests hold it: the page's place on the feed raised to it, past every row the tests above took */
 const feedHead = () => { REC.reachFeed(9100); return /** @type {number} */ (REC.feedAt()); };
@@ -5213,7 +5284,7 @@ test('the launch never flies the reader unbidden: where an act was made while it
 // ---- a draft's history (B3-S7; skep-frontend #661) -------------------------------------------------------------------
 
 /** a draft of the session's account as the page holds it, text it may edit: its extent, its text — its first `held` bytes, all of them where none is given — their image, its kind */
-const HISTORY_DRAFT = '1.0.1.0.61', HISTORY_TEXT = 'Older words. Newer.';
+const HISTORY_DRAFT = '1.0.1.0.119', HISTORY_TEXT = 'Older words. Newer.';
 function historyDraft(held = HISTORY_TEXT.length) {
   const W = HISTORY_DRAFT, n = HISTORY_TEXT.length;
   REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: n }], 50);
@@ -5412,7 +5483,7 @@ test('while the board is not answering the act is inert: nothing committed and n
 });
 
 test('the newest change\'s place a history scene levels at: each stretch one text holds that the other does not, at its place in each — the past state\'s after the byte standing before it there — the pair nearest the caret, else the first; none where the two hold the same bytes (skep-frontend #661)', () => {
-  const W = '1.0.1.0.62.0.1', at = (/** @type {Array<[number, number]>} */ runs) => { let pos = 1; return runs.map(([ordinal, width]) => { const r = { pos, width, prefix: W, ordinal }; pos += width; return r; }); };
+  const W = '1.0.1.0.120.0.1', at = (/** @type {Array<[number, number]>} */ runs) => { let pos = 1; return runs.map(([ordinal, width]) => { const r = { pos, width, prefix: W, ordinal }; pos += width; return r; }); };
   // the past state "abcdefghij"; now "abc" + 3 typed bytes + "defg" + "j" (hi removed) + 2 typed bytes
   const past = at([[1, 10]]), now = at([[1, 3], [40, 3], [4, 4], [10, 1], [50, 2]]);
   assert.deepEqual(GO.changeNear(past, now, null), { a: 4, b: 4 }, 'nothing near: the first, the typed bytes after "abc", at 4 in each');
@@ -5422,7 +5493,7 @@ test('the newest change\'s place a history scene levels at: each stretch one tex
 });
 
 test('opening a reading scene is a departure that keeps the caret (issue #556\'s design decision: "Opening a scene is a departure. It commits the open burst and keeps the caret … So no live caret ever stands under a scene"): a live caret kept where it stood, at the act, before the departure records it — the entry it departs holding the kept caret — and every draft\'s open burst committed by that departure', async () => {
-  const SD = '1.0.1.0.152', OTHER_DRAFT = '1.0.1.0.153', TEXT = 'A draft a scene opens over.\n\nIts second line.';
+  const SD = '1.0.1.0.210', OTHER_DRAFT = '1.0.1.0.211', TEXT = 'A draft a scene opens over.\n\nIts second line.';
   held(SD, TEXT, [[1, TEXT.length]]);
   /** @type {string[]} */
   const committed = [];

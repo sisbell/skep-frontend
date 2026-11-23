@@ -1311,7 +1311,7 @@ async function landed(/** @type {Promise<unknown> | null} */ act = null) {
 const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.pos]; };
 
 /** the draft whose bytes a document's second line quotes (`onQuote`), its text, and where that line stands in it */
-const X = '1.0.1.0.1003', SOURCE = 'A source.\n\nSecond line here.', AT_X = 12;
+const X = '1.0.1.0.1061', SOURCE = 'A source.\n\nSecond line here.', AT_X = 12;
 
 /**
  * The test run on `onPlane`'s page with a document's second line, "Second line here." at 14 to 30, made X's bytes from
@@ -1476,7 +1476,7 @@ test('two runs of one source the document\'s own newline parts are one target, t
 
 test('runs of two sources are two targets: the slot counts them and follow asks which, a row per source in reading order — each naming the words of the selection its runs hold and its origin as the column\'s edge does — each row carrying its own source\'s words alone (issue #572\'s design decision; D5 K-51)', () => onQuote(O, [[14, 7, 7]], async ({ said, fake }) => {
   // "Second " X's 12 to 18, "line here." Y's from its 5th, the newline after it O's own
-  const Y = '1.0.1.0.1004';
+  const Y = '1.0.1.0.1062';
   quoting(O, TEXT, [[O + '.0.1.1', 13], [`${X}.0.1.12`, 7], [`${Y}.0.1.5`, 10], [O + '.0.1.31', 1]]);
   SEL.select(O, 14, 17);
   assert.ok(/** @type {string} */ (slotIn('follow').button).includes(`${esc(t('B1.follow'))} 2 <kbd>`), 'the follow slot counts its two targets');
@@ -1495,7 +1495,7 @@ test('runs of two sources are two targets: the slot counts them and follow asks 
 
 test('a source\'s row carries the words of the selection its runs hold where they stand, though the document holds the same bytes again elsewhere: never stretched across both copies (issue #572\'s design decision; FP-21)', () => onQuote(O, [], async ({ fake }) => {
   // "Second " X's 12 to 18 twice — O's first line, and the start of its second — then "line here." Y's from its 5th
-  const Y = '1.0.1.0.1004';
+  const Y = '1.0.1.0.1062';
   quoting(O, 'Second \n\nSecond line here.\n', [[`${X}.0.1.12`, 7], [O + '.0.1.8', 2], [`${X}.0.1.12`, 7], [`${Y}.0.1.5`, 10], [O + '.0.1.27', 1]]);
   SEL.select(O, 10, 17);
   assert.equal(await KEYS.dispatch(MOD_ENTER, PLANE), true);
@@ -1536,7 +1536,7 @@ test('a link drawn at a transcluded run and the run\'s source are two targets: t
 }, { [FAKE.keyOf('op', { frame: F.project(D + '.0.2.9', 2, D) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.5' }] } } }));
 
 /** a draft of another account's the board withholds from the reader, and the published edition of its owner's that claims it */
-const W = '1.0.2.0.9', W_OWNER = '1.0.2', W_EDITION = '1.0.2.0.40', W_CLAIM = W_EDITION + '.0.2.1';
+const W = '1.0.2.0.67', W_OWNER = '1.0.2', W_EDITION = '1.0.2.0.98', W_CLAIM = W_EDITION + '.0.2.1';
 /** the board's answers withholding W from the reader: its span set and its metadata refused */
 const W_REFUSED = {
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(W) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
@@ -2676,9 +2676,9 @@ test('B3-S5 (i): a paste event reads skep\'s own entry beside its plain text as 
   const differs = FACES.pasteWords('differs', O);
   assert.deepEqual([shown().slice(0, 10), WRITE.edits(D).at(-1)?.text, DELETION.pasteFace(), said.at(-1)], ['FirstFixst', 'Fixst', { addr: D, ...differs }, heard(differs.text)],
     'the same lengths, other words: the plain text placed as new bytes, and the paste\'s face standing where it was made, said');
-  WRITE.unplace(D, { name: 'withheld', origin: '1.0.1.0.9', site: { before: [], after: [] } });
-  assert.deepEqual(DELETION.pasteFace(), { addr: D, ...FACES.pasteWords('withheld', '1.0.1.0.9') }, 'refused for its source after the act: its face in the place of the one standing');
-  WRITE.unplace(D, { name: 'withheld', origin: '1.0.1.0.9', site: null });
+  WRITE.unplace(D, { name: 'withheld', origin: '1.0.1.0.67', site: { before: [], after: [] } });
+  assert.deepEqual(DELETION.pasteFace(), { addr: D, ...FACES.pasteWords('withheld', '1.0.1.0.67') }, 'refused for its source after the act: its face in the place of the one standing');
+  WRITE.unplace(D, { name: 'withheld', origin: '1.0.1.0.67', site: null });
   assert.deepEqual(DELETION.pasteFace()?.id, 'B3.paste.withheld', 'one made at no caret raises none');
   DELETION._reset();
 }));
@@ -2686,7 +2686,7 @@ test('B3-S5 (i): a paste event reads skep\'s own entry beside its plain text as 
 test('B3-S5 (i): a paste whose source no record at hand holds waits on its read by identity, and every key pressed meanwhile is held and made after it, in order — the paste placed first; a paste held meanwhile, as a paste is while a jump is in the air, keeps both flavors, read as its event was dispatched; a read refused places nothing and raises the paste\'s face (FP-25; the paste survey\'s P3, W5)', () => onPlane(async ({ said }) => {
   REC.setBoard({ board: 'b-1', name: '', origin: ORIGIN });
   DELETION._reset();
-  const S = '1.0.1.0.30', frame = F.retrieveI([{ start: S + '.0.1.4', width: 3 }]);
+  const S = '1.0.1.0.88', frame = F.retrieveI([{ start: S + '.0.1.4', width: 3 }]);
   const entry = JSON.stringify({ board: ORIGIN, doc: S, member: null, plain: false, pos: null, width: null, ids: [{ prefix: S + '.0.1', ordinal: 4, width: 3 }], version: PASSAGE.VERSION, lengths: [3] });
   const fake = FAKE.create({ [FAKE.keyOf('op', { frame })]: { result: { as_of: 9, items: ['x', 'y', 'z'].map((ch, i) => ({ at: `${S}.0.1.${4 + i}`, value: { content: ch } })), resp: 'i_delivery' } } });
   PORT.boot(fake);
@@ -2720,7 +2720,7 @@ test('B3-S5 (i): a paste whose source no record at hand holds waits on its read 
 test('a paste whose source is read by identity places its caret as it lands owing the frame its line brought clear — and owing nothing where a pointer\'s or the camera\'s act was made while it read, so no camera moves for it (issue #703\'s design decision; FP-25, FP-37)', () => onPlane(async () => {
   REC.setBoard({ board: 'b-1', name: '', origin: ORIGIN });
   DELETION._reset();
-  const S = '1.0.1.0.30';
+  const S = '1.0.1.0.88';
   /** skep's own entry naming three of S's bytes from `ordinal`, the read by identity that answers it, and its answer: "xyz" */
   const sourced = (/** @type {number} */ ordinal) => {
     const frame = F.retrieveI([{ start: `${S}.0.1.${ordinal}`, width: 3 }]);
@@ -2786,7 +2786,7 @@ test('a paste event is answered by the test its keydown reads, so one that arriv
 test('B3-S5 at a published target: Mod+V\'s keydown at the walk\'s span of an edition of the person\'s own is left to the platform, and its paste event — the chord\'s, or a menu\'s with no keydown, alike — places nothing and sends nothing: C-45 at the focus naming the document, its staging act beneath it standing inert, and between them, where skep\'s own entry is this board\'s and names as where its words were read a draft of the person\'s own the page holds a record of, C-241\'s statement naming that draft as the status region names its box — by the document the entry names, never the documents its bytes were minted in — said after C-45; C-45 alone where the entry names an edition, another\'s draft, a draft the page holds nothing of — no record made to name it — or another board, is malformed, or is absent; and the staging act\'s press shows and says its reason at every press (FP-27, FP-35, FP-39, FP-41; D5 K-72, K-93; the paste survey\'s P8)', () => onPlane(async ({ said }) => {
   REC.setBoard({ board: 'b-1', name: '', origin: ORIGIN });
   /** a draft of the person's own the index lists by its label, its text never read; and one the page holds nothing of */
-  const L = '1.0.1.0.8', U = '1.0.1.0.9';
+  const L = '1.0.1.0.66', U = '1.0.1.0.67';
   listed([[E, 'edition']]);
   REC.takeIndex(/** @type {any} */ ({ docs: [[D, 'draft', null], [O, 'draft', null], [E, 'edition', null], [L, 'draft', 'Field notes']].map(([doc, kind, label]) => ({ doc, kind, label, standing: kind === 'draft' ? 'yours_to_read' : 'public' })),
     counts: [{ account: '1.0.1', documents: 3 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
@@ -2823,7 +2823,7 @@ test('B3-S5 at a published target: Mod+V\'s keydown at the walk\'s span of an ed
     // the draft is the document the entry says its words were read in, never the one its bytes were minted in
     assert.deepEqual(paste(entry(D, E + '.0.1'))[2], whole, 'words read in D whose bytes the edition minted: D named');
     assert.deepEqual(paste(entry(L))[2], { ...whole, beneath: statement(L) }, 'a draft of the person\'s own the index lists, its text never read: named by its index row\'s label');
-    assert.equal(statement(L), 'These words come from your draft "Field notes" 1.0.1.0.8 — pasted here, they would go into the next version, staged first in a draft of this document; publishing that version asks what of your draft goes public.');
+    assert.equal(statement(L), 'These words come from your draft "Field notes" 1.0.1.0.66 — pasted here, they would go into the next version, staged first in a draft of this document; publishing that version asks what of your draft goes public.');
     // C-45 alone
     const alone = { id: 'C-45', words: c45, whole: c45, open: true, writing: null, offered: STAGED };
     for (const [what, own] of /** @type {Array<[string, string | null]>} */ ([

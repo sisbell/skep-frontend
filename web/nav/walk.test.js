@@ -80,7 +80,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { withheldBlockHTML, entitlementArm, articleHTML, copyText, itemLength, CLAUSE_READING } from '../text/article.js';
-import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, continuationCell, DOC_W } from '../plane/projection.js';
+import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, continuationCell, numberAtCell, DOC_W } from '../plane/projection.js';
 import { lodOf, residueDepth, markScale, LOD_TXT_LO } from '../plane/lod.js';
 import { placeOf, STANDARD_FS, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
@@ -106,27 +106,27 @@ const reads = (/** @type {string} */ doc, /** @type {Array<Record<string, unknow
   [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, extent) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
 });
 /** a third document, held in part as the viewport's read leaves it — its extent and its first paragraph — the rest of its text read on the walk's ask */
-const G = '1.0.1.0.7';
+const G = '1.0.1.0.65';
 const G_TEXT = 'First.\n\nSecond.\n\nThird.';
-/** the account's 49th document, its first continuation's first: its room a seventh of a depth-0 document's across, its type with it */
-const C1 = '1.0.1.0.49';
+/** the document at the account's 49th cell, its first continuation's first: its room a seventh of a depth-0 document's across, its type with it */
+const C1 = '1.0.1.0.107';
 const C1_TEXT = 'Tumbler.\n\nThe first field.';
 /** a document longer than a column: a hundred and twenty paragraphs of a line each, folded into its room's columns */
-const H = '1.0.1.0.40';
+const H = '1.0.1.0.98';
 const H_TEXT = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1} of an edition longer than one column.`).join('\n\n');
 /** a document windowing two runs of one origin withheld from the reader, at 11 and 27, a paragraph between them */
-const R2 = '1.0.1.0.41', R2_ORIGIN = '1.0.2.0.8';
+const R2 = '1.0.1.0.99', R2_ORIGIN = '1.0.2.0.66';
 /** a published document windowing a draft the reader reads: one run of it across two typed lines at 11 — the newline between them the draft's own — and a second at 44, a paragraph of the document's own between them */
-const T2 = '1.0.1.0.42', T2_ORIGIN = '1.0.1.0.1007', T2_TEXT = 'Tumbler.\n\nquoted one\nquoted two\n\nBetween.\n\nquoted three';
+const T2 = '1.0.1.0.100', T2_ORIGIN = '1.0.1.0.1065', T2_TEXT = 'Tumbler.\n\nquoted one\nquoted two\n\nBetween.\n\nquoted three';
 // D: three spans: 1 "Tumbler.\n\n" (10), 11 "The first field." (16), 27 a withheld run (4)
 const script = {
-  ...reads(D, [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }], 30, [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }]),
+  ...reads(D, [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1061', width: '4' } }], 30, [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1061.0.1.1', width: '4' }]),
   ...reads(E, [{ content: E_TEXT }], E_TEXT.length, [{ i_start: E + '.0.1.1', width: String(E_TEXT.length) }]),
   ...reads(G, [{ content: G_TEXT }], G_TEXT.length, [{ i_start: G + '.0.1.1', width: String(G_TEXT.length) }]),
   ...reads(H, [{ content: H_TEXT }], H_TEXT.length, [{ i_start: H + '.0.1.1', width: String(H_TEXT.length) }]),
   ...reads(C1, [{ content: C1_TEXT }], C1_TEXT.length, [{ i_start: C1 + '.0.1.1', width: String(C1_TEXT.length) }]),
   // the edition claims on D's withheld run's origin: none
-  [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1003') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1061') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
   // R2: two runs of one withheld origin, a paragraph between them
   ...reads(R2, [{ content: 'Tumbler.\n\n' }, { withheld: { origin: R2_ORIGIN, width: '6' } }, { content: 'Between.\n\n' }, { withheld: { origin: R2_ORIGIN, width: '6' } }], 32,
     [{ i_start: R2 + '.0.1.1', width: '10' }, { i_start: R2_ORIGIN + '.0.1.1', width: '6' }, { i_start: R2 + '.0.1.11', width: '10' }, { i_start: R2_ORIGIN + '.0.1.7', width: '6' }]),
@@ -308,6 +308,8 @@ test('a walk key whose flight a later walk key cut short ends: the walk on the s
   assert.deepEqual(walkAt(), ['block', D, 27]);
 });
 
+/** the account's documents at its first `n` cells, in record order: its home, its slots, then its ordinary documents (P-PROJ's `numberAtCell`) */
+const firstCells = (/** @type {number} */ n) => Array.from({ length: n }, (_, i) => '1.0.1.0.' + numberAtCell(i + 1));
 /** the index listing the documents given, all of account 1.0.1 */
 const index = (/** @type {string[]} */ docs) => REC.takeIndex(/** @type {any} */ ({ docs: docs.map((doc) => ({ doc, kind: 'edition', label: doc, standing: 'public' })), counts: [{ account: '1.0.1', documents: docs.length }], state: { arm: 'complete' } }));
 
@@ -373,8 +375,8 @@ test('the mirror\'s item at a withheld run says the run\'s own part — its kind
   const d = REC.doc(W), run = d.blocks[1], node = { kind: /** @type {const} */ ('block'), addr: W, pos: run.pos, link: null };
   assert.deepEqual([run.kind, run.origin], ['withheld', O]);
   // two edition claims of the owner's, each homed in a published edition of theirs: one over its own fresh bytes, one quoting the draft
-  const R20 = '1.1.0.1.0.1.0.3.14', OWN = '1.0.1.0.9.0.2.1', QUOTES = '1.0.1.0.11.0.2.1';
-  for (const [c, from] of /** @type {Array<[string, string]>} */ ([[OWN, '1.0.1.0.9.0.1.1'], [QUOTES, O + '.0.1.1']])) {
+  const R20 = '1.1.0.1.0.1.0.3.14', OWN = '1.0.1.0.67.0.2.1', QUOTES = '1.0.1.0.69.0.2.1';
+  for (const [c, from] of /** @type {Array<[string, string]>} */ ([[OWN, '1.0.1.0.67.0.1.1'], [QUOTES, O + '.0.1.1']])) {
     REC.takeLink({ addr: c, from: [resolveSpan({ start: from, width: '0.0.0.0.0.0.0.20' })], to: [resolveSpan(unitSpan(O))], type: R20 });
     const home = /** @type {string} */ (homeOf(c));
     REC.takeMetadata(home, { doc: home, published: true, owner, birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
@@ -642,7 +644,7 @@ test('each document\'s item in the mirror says whether it is expanded — at its
 });
 
 test('the mirror\'s item at a link whose far end floats says "its passage is not in ⟨D⟩\'s current text", as its symbol and its stub do; one whose far end stands somewhere says nothing of it', () => {
-  const L = D + '.0.2.1', FAR = '1.0.1.0.127';
+  const L = D + '.0.2.1', FAR = '1.0.1.0.185';
   const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
   REC.takeLinks(D, [L]);
   REC.takeLink({ addr: L, from: [span(D, 11, 3)], to: [span(FAR, 8, 4)], type: '1.1.0.1.0.1.0.3.13' });
@@ -651,7 +653,7 @@ test('the mirror\'s item at a link whose far end floats says "its passage is not
   REC.takeProjection(L, 2, FAR, []);
   assert.ok(item().includes(floating), item());
   // FAR's text as an edit left it: other bytes, then the passage's four from FAR's 20
-  REC.takeImage(FAR, 1, [{ iStart: '1.0.1.0.99.0.1.1', width: 19 }, { iStart: FAR + '.0.1.8', width: 4 }, { iStart: '1.0.1.0.99.0.1.20', width: 20 }]);
+  REC.takeImage(FAR, 1, [{ iStart: '1.0.1.0.157.0.1.1', width: 19 }, { iStart: FAR + '.0.1.8', width: 4 }, { iStart: '1.0.1.0.157.0.1.20', width: 20 }]);
   try {
     REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 2 }]);
     const part = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) });
@@ -662,12 +664,12 @@ test('the mirror\'s item at a link whose far end floats says "its passage is not
 });
 
 test('the mirror\'s item at a link whose far end\'s text holds part of its passage in two runs, that text showing withheld text, says the line whole — the rest maybe under the withheld text — counting no runs, its words opening on the short form its symbol and its stub say (issue #242\'s design decision: "Stubs and symbols show the start of the card\'s and mirror\'s full phrase")', () => {
-  const L = D + '.0.2.1', FAR = '1.0.1.0.127';
+  const L = D + '.0.2.1', FAR = '1.0.1.0.185';
   const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
   REC.takeLinks(D, [L]);
   REC.takeLink({ addr: L, from: [span(D, 11, 3)], to: [span(FAR, 8, 4)], type: '1.1.0.1.0.1.0.3.13' });
   // FAR's text: twenty positions holding the passage's first two bytes at 3 and its last at 12, other bytes about them, then ten withheld from the reader
-  REC.takeDelivery(FAR, [{ pos: 1, width: 20, kind: 'content', text: 'The far text, twenty', ref: null, origin: null }, { pos: 21, width: 10, kind: 'withheld', text: '', ref: null, origin: '1.0.2.0.6' }]);
+  REC.takeDelivery(FAR, [{ pos: 1, width: 20, kind: 'content', text: 'The far text, twenty', ref: null, origin: null }, { pos: 21, width: 10, kind: 'withheld', text: '', ref: null, origin: '1.0.2.0.64' }]);
   REC.takeImage(FAR, 1, [{ iStart: FAR + '.0.1.100', width: 2 }, { iStart: FAR + '.0.1.8', width: 2 }, { iStart: FAR + '.0.1.102', width: 7 }, { iStart: FAR + '.0.1.11', width: 1 }, { iStart: FAR + '.0.1.109', width: 18 }]);
   try {
     REC.takeProjection(L, 2, FAR, [{ pos: 3, width: 2 }, { pos: 12, width: 1 }]);
@@ -681,7 +683,7 @@ test('the mirror\'s item at a link whose far end\'s text holds part of its passa
 });
 
 test('the mirror\'s item at a link names its far end as its tail and its card do: its address alone while nothing is answered of its document, then the words the board\'s answer gives (issue #132)', () => {
-  const L = D + '.0.2.2', GHOST = '1.0.1.0.1049578', THEIRS = '1.0.2.0.99';
+  const L = D + '.0.2.2', GHOST = '1.0.1.0.1049636', THEIRS = '1.0.2.0.157';
   const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: doc.split('.').slice(0, 3).join('.'), whole: false, subspace: 1, ordinal: ord, positions: w });
   REC.takeLinks(D, [L]);
   REC.takeLink({ addr: L, from: [span(D, 12, 3)], to: [span(GHOST, 1, 4)], type: '1.1.0.1.0.1.0.3.13' });
@@ -721,7 +723,7 @@ test('the items Back\'s light stands on carry aria-current="location" — each s
   // a citation of the person's from D's "first", its far end another document whole
   const L = D + '.0.2.9', span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
   REC.takeLinks(D, [L]);
-  REC.takeLink({ addr: L, from: [span(D, 15, 5)], to: [{ start: '1.0.1.0.127', width: '0.0.0.0.1', doc: '1.0.1.0.127', account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null }], type: '1.1.0.1.0.1.0.3.13' });
+  REC.takeLink({ addr: L, from: [span(D, 15, 5)], to: [{ start: '1.0.1.0.185', width: '0.0.0.0.1', doc: '1.0.1.0.185', account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null }], type: '1.1.0.1.0.1.0.3.13' });
   const key = /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === L)).key;
   /** @type {import('./walk.js').Located | null} where Back's light stands, as N-GO answers it */
   let at = { addr: D, runs: [{ pos: 13, width: 3 }], end: null };
@@ -1025,7 +1027,7 @@ test('a link\'s item whose far end the board will say nothing of is named by the
     querySelector: (/** @type {string} */ sel) => hidden.get(sel.slice(1)) || null,
   };
   // the person's citation from D's "first" of a passage of an address in their own account, never minted
-  const L = D + '.0.2.13', GHOST = '1.0.1.0.1049578', TYPE = '1.1.0.1.0.1.0.3.13';
+  const L = D + '.0.2.13', GHOST = '1.0.1.0.1049636', TYPE = '1.1.0.1.0.1.0.3.13';
   const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
   REC.takeLinks(D, [L]);
   REC.takeLink({ addr: L, from: [span(D, 15, 5)], to: [span(GHOST, 1, 4)], type: TYPE });
@@ -1186,7 +1188,7 @@ test('a camera move that ends over no document\'s region re-takes the place hold
   const near = 14 / STANDARD_FS, whole = CAM.viewForCell(boardCell('1'), 0.92).scale, label = boardLabelCell('1'), board = boardCell('1');
   /** @type {Array<[string, {x: number, y: number}, number, boolean, Array<string | number | null>]>} each place, the point the camera stands over, its scale, whether the walk's document stands in view there, the walk's element after the re-take */
   const places = [
-    ['the cell of a document the index does not list, at the near band', middle(docBox('1.0.1.0.30')), near, false, ['account', '1.0.1', null]],
+    ['the cell of a document the index does not list, at the near band', middle(docBox('1.0.1.0.88')), near, false, ['account', '1.0.1', null]],
     ['the board\'s label cell, at the near band', middle(label), near, false, ['board', '1', null]],
     ['the board\'s label cell, at the whole board\'s scale, where the grain stops at the account and no document is kept', middle(label), whole, true, ['board', '1', null]],
     ['past the board\'s left edge, at the near band', { x: board.x - 2000, y: board.y + board.h / 2 }, near, false, ['board', '1', null]],
@@ -1216,18 +1218,18 @@ test('a document\'s region holds its corner\'s strip: a re-take over the strip t
 });
 
 test('where the plane draws a continuation as one mark, the account\'s level holds one stop for the mark before its members, each a stop still in record order, the mark\'s named by its count\'s words; stepping onto it and among its members flies the camera to the mark, never framing a member, and reads none (issue #42\'s design decision: "every member stays a stop, in record order, after one stop for the mark itself")', async () => {
-  index(Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)));
+  index(firstCells(60));
   try {
     CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
     await WALK.focusTo('1.0.1:1', null);
     const sibs = WALK.siblingsNow();
-    assert.deepEqual([walkAt(), sibs.length, sibs.findIndex((n) => n.kind === 'mark')], [['mark', '1.0.1:1', null], 61, 48], 'the mark\'s stop, after the oldest 48, before its twelve');
-    assert.deepEqual(sibs.slice(49).map((n) => [n.kind, n.addr]), Array.from({ length: 12 }, (_, i) => ['document', '1.0.1.0.' + (49 + i)]), 'its members after it, in record order');
+    assert.deepEqual([walkAt(), sibs.length, sibs.findIndex((n) => n.kind === 'mark')], [['mark', '1.0.1:1', null], 61, 48], 'the mark\'s stop, after the first grid\'s 48, before its twelve');
+    assert.deepEqual(sibs.slice(49).map((n) => [n.kind, n.addr]), firstCells(60).slice(48).map((a) => ['document', a]), 'its members after it, in record order');
     assert.equal(WALK.nameOf(sibs[48], 48, sibs.length), `${markCount(12, true)}. Item 49 of 61.`, 'named by its count, a sentence, its place one after it');
     const asked = fake.asked.length, c = continuationCell('1.0.1', 1), toMark = { x: c.x + c.w / 2, y: c.y + c.h / 2, scale: markScale(1, CAM.cam.scale) };
     for (const step of [1, 2]) {
       await run(WALK.key('down'));
-      assert.deepEqual(walkAt(), ['document', '1.0.1.0.' + (48 + step), null], `↓ ${step}: the member`);
+      assert.deepEqual(walkAt(), ['document', firstCells(60)[47 + step], null], `↓ ${step}: the member`);
       const v = CAM.view();
       assert.ok(Math.abs(v.x - toMark.x) < 1e-6 && Math.abs(v.y - toMark.y) < 1e-6 && Math.abs(v.scale / toMark.scale - 1) < 1e-9, `↓ ${step}: the camera on the mark at a scale drawing it, never the member framed: ${JSON.stringify(v)}`);
       assert.deepEqual(residueDepth(v.scale), { k: 1, fade: 0, held: 1 }, `↓ ${step}: the member inside the mark drawn there`);
@@ -1240,20 +1242,20 @@ test('where the plane draws a continuation as one mark, the account\'s level hol
 
 test('a re-take over a continuation\'s mark keeps a focus already on one of its members — a span in one taken to the member whole — and else takes the mark, never the member under the view\'s centre (issue #42\'s design decision, changing #141 there)', async () => {
   await PUMP.loadWhole(C1);
-  index(Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)));
+  index(firstCells(60));
   try {
     const home = CAM.viewForCell(accountCell('1.0.1'), 0.85), over = (/** @type {string} */ doc) => at(middle(docBox(doc)), home.scale);
     await WALK.focusTo(D, 15);
-    over('1.0.1.0.52');
+    over('1.0.1.0.110');
     await WALK.retakeFromView(true);
     assert.deepEqual(walkAt(), ['mark', '1.0.1:1', null], 'the walk on another document: the mark, never the member under the centre');
-    await WALK.focusTo('1.0.1.0.55', null);
-    over('1.0.1.0.52');
+    await WALK.focusTo('1.0.1.0.113', null);
+    over('1.0.1.0.110');
     await WALK.retakeFromView(true);
-    assert.deepEqual(walkAt(), ['document', '1.0.1.0.55', null], 'on a member: kept');
+    assert.deepEqual(walkAt(), ['document', '1.0.1.0.113', null], 'on a member: kept');
     await WALK.focusTo(C1, 11);
     assert.deepEqual(walkAt(), ['block', C1, 11]);
-    over('1.0.1.0.52');
+    over('1.0.1.0.110');
     await WALK.retakeFromView(true);
     assert.deepEqual(walkAt(), ['document', C1, null], 'on a span of a member: the member whole');
   } finally {
@@ -1262,7 +1264,7 @@ test('a re-take over a continuation\'s mark keeps a focus already on one of its 
 });
 
 test('a landing at a continuation\'s mark stands on its stop where the plane draws the mark at the scale the camera is bound for, and on the mark\'s account where it draws none: at far scale, which draws clusters and no mark', async () => {
-  index(Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)));
+  index(firstCells(60));
   try {
     CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
     await WALK.focusTo('1.0.1:1', null);
@@ -1296,7 +1298,7 @@ test('→ steps in to the child drawn under the centre of the view the camera is
     // the account at HOME's scale
     index([D, E, H]);
     assert.deepEqual(await stepIn('1.0.1', middle(LAYER.shapeOf(E)), home.scale), ['document', E, null], 'at the account: the document whose region holds the centre, never its first');
-    assert.deepEqual(await stepIn('1.0.1', middle(docBox('1.0.1.0.30')), home.scale), ['document', D, null], 'over a cell no listed document stands in: the first');
+    assert.deepEqual(await stepIn('1.0.1', middle(docBox('1.0.1.0.88')), home.scale), ['document', D, null], 'over a cell no listed document stands in: the first');
     await WALK.focusTo('1.0.1', null);
     at(middle(LAYER.shapeOf(E)), CAM.viewForCell(boardCell('1'), 0.92).scale / 4);
     assert.equal(lodOf(CAM.cam.scale).name, 'far');
@@ -1304,7 +1306,7 @@ test('→ steps in to the child drawn under the centre of the view the camera is
     assert.deepEqual(walkAt(), ['document', D, null], 'at far scale, which draws clusters and no document, over E\'s region: the first');
     // a flight bound for E's region, not yet stepped, from over a cell no listed document stands in: read where it is bound
     await WALK.focusTo('1.0.1', null);
-    at(middle(docBox('1.0.1.0.30')), home.scale);
+    at(middle(docBox('1.0.1.0.88')), home.scale);
     void CAM.fly({ ...middle(LAYER.shapeOf(E)), scale: home.scale }, 300);
     await run(WALK.key('in'));
     assert.deepEqual(walkAt(), ['document', E, null], 'a flight bound for E\'s region: E');
@@ -1317,7 +1319,7 @@ test('→ steps in to the child drawn under the centre of the view the camera is
     assert.ok(off.y > r.y + r.h && (LAYER.posAt(H, off.x, off.y) ?? 0) > later.pos, 'ten ems below H\'s outline, off its region, the fold\'s nearest line holding a late position');
     assert.deepEqual(await stepIn(H, off, reading), ['block', H, 1], 'the centre off the document\'s region: its first span');
     // a continuation the plane draws as one mark: the centre over its cell
-    index(Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)));
+    index(firstCells(60));
     assert.deepEqual(await stepIn('1.0.1', middle(continuationCell('1.0.1', 1)), markScale(1, home.scale)), ['mark', '1.0.1:1', null], 'at the account: the mark\'s stop, never its first document');
   } finally {
     index([D, E]);
@@ -1349,7 +1351,7 @@ test('the walk keeps the document it stands in while that document\'s region mee
     await WALK.retakeFromView(true);
     assert.deepEqual(walkAt(), ['document', H, null], 'kept whole at mid');
     // the near band over a cell the index lists nothing in, far from H: the account
-    at(middle(docBox('1.0.1.0.30')), 14 / STANDARD_FS);
+    at(middle(docBox('1.0.1.0.88')), 14 / STANDARD_FS);
     await WALK.retakeFromView(true);
     assert.deepEqual(walkAt(), ['account', '1.0.1', null], 'H out of view: the account holding the centre');
     assert.equal(WALK.kept(), false, 'an account is never kept');
@@ -1390,10 +1392,10 @@ test('the element under a view\'s centre, read at a view the camera does not sta
   const home = CAM.viewForCell(accountCell('1.0.1'), 0.85), d = REC.doc(H), f = LAYER.foldOf(d), later = d.blocks[Math.floor(d.blocks.length / 2)], near = 14 / STANDARD_FS;
   /** @type {Array<[string, string[], {x: number, y: number, scale: number}, Array<string | number | null>]>} each place: what the index lists, the view, the element there */
   const places = [
-    ['a continuation\'s mark', Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)), { ...middle(continuationCell('1.0.1', 1)), scale: markScale(1, home.scale) }, ['mark', '1.0.1:1', null]],
+    ['a continuation\'s mark', firstCells(60), { ...middle(continuationCell('1.0.1', 1)), scale: markScale(1, home.scale) }, ['mark', '1.0.1:1', null]],
     ['a span at its document\'s reading scale', [D, E, H], { ...LAYER.centreOf(H, later.pos), scale: 12.5 / f.fs }, ['block', H, later.pos]],
     ['a document whole at mid', [D, E, H], { ...middle(LAYER.shapeOf(H)), scale: 120 / DOC_W }, ['document', H, null]],
-    ['an account', [D, E], { ...middle(docBox('1.0.1.0.30')), scale: near }, ['account', '1.0.1', null]],
+    ['an account', [D, E], { ...middle(docBox('1.0.1.0.88')), scale: near }, ['account', '1.0.1', null]],
     ['the board', [D, E], { ...middle(boardLabelCell('1')), scale: near }, ['board', '1', null]],
   ];
   try {
@@ -1415,7 +1417,7 @@ test('the element under a view\'s centre, read at a view the camera does not sta
 });
 
 /** a draft of the session's account, three typed lines each a span of the walk: Alpha at 1, Bravo at 14, Charlie at 27 */
-const T = '1.0.1.0.15';
+const T = '1.0.1.0.73';
 const T_TEXT = 'Alpha line.\n\nBravo line.\n\nCharlie line.';
 
 test('in a draft holding typed text the walk follows the text shown: its stops are that text\'s blocks at their positions there, a typed line among them — the re-take and → stand on the block the text shown sets under the view\'s centre, ↓ from the line above a typed line lands on the typed line, and a step flies to the line the text shown sets its span on (issues #501, #526)', async () => {
@@ -1591,9 +1593,9 @@ test('in a draft holding typed text a link\'s stop of the walk stands at its fir
 });
 
 test('the count, the article\'s symbols and the mirror name the same ends, two lying inside a withheld run among them (issue #202: "Add a test that the count, the symbols and the mirror agree for an end inside a withheld run"): the presence words count three; the text\'s end is its own symbol and the run\'s two one symbol at the run carrying both; the document\'s links the text\'s end alone, the run\'s item counting its two and holding them a level below, → entering them and ← back; Back\'s light at one marks the run\'s item', async () => {
-  const W = '1.0.2.0.6', O = '1.0.1.0.1003', CITE = '1.1.0.1.0.1.0.3.13', text = 'Tumbler.\n\n', n = byteLength(text), RUN = n + 1;
+  const W = '1.0.2.0.64', O = '1.0.1.0.1061', CITE = '1.1.0.1.0.1.0.3.13', text = 'Tumbler.\n\n', n = byteLength(text), RUN = n + 1;
   const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => resolveSpan({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w });
-  const far = resolveSpan(unitSpan('1.0.1.0.127'));
+  const far = resolveSpan(unitSpan('1.0.1.0.185'));
   // W, held whole: its first paragraph, then eight of O's bytes withheld from the reader; W's owner's three links, one on its own words and two on O's
   REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: n + 8 }]);
   REC.takeMetadata(W, { doc: W, published: true, owner: '1.0.2', birth: W + '.1', birthExtent: n + 8, placed: null, baseExtent: null, source: null, asOf: 1 });
@@ -1739,7 +1741,7 @@ test('a kept document\'s mirror item carries the clause its corner or the one li
 });
 
 test('a document\'s mirror item voices its corner\'s state whole, its kind leading — at the bare address, an older pin, a pin on the newest version, a document with no versions — the version its box shows and the count of its chain next, before its venue\'s clause and R20\'s teaching, and is written again in place as a newer version\'s arrival counts the chain again, nothing rebuilt (issue #239\'s design decision: "The ARIA mirror\'s item for a document voices the corner\'s state, whole"; foundations §3.1)', async () => {
-  const D1 = D + '.1', D2 = D + '.2', N = '1.0.1.0.9', TEXT2 = 'Tumbler.\n\nThe second version.', unasked = fake.unanswered.length;
+  const D1 = D + '.1', D2 = D + '.2', N = '1.0.1.0.67', TEXT2 = 'Tumbler.\n\nThe second version.', unasked = fake.unanswered.length;
   Object.assign(script, reads(D2, [{ content: TEXT2 }], TEXT2.length, [{ i_start: D2 + '.0.1.1', width: String(TEXT2.length) }]));
   await PUMP.loadWhole(D2);
   // D's first member read, its chain counted to its end at two; N published with no member yet
@@ -1902,7 +1904,7 @@ test('the page\'s own death takes the mirror down at once where the view stood o
   globalThis.document = /** @type {any} */ ({ activeElement: null });
   const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
   // the session's index: the two editions, and a draft of the account's no read has answered for
-  const DRAFT = '1.0.1.0.21';
+  const DRAFT = '1.0.1.0.79';
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: E, kind: 'edition', label: 'e', standing: 'public' }, { doc: DRAFT, kind: 'draft', label: 'the draft', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 3 }], state: { arm: 'complete' } }));
   try {
     WALK.attach(/** @type {any} */ (mirror));
@@ -1937,7 +1939,7 @@ test('the walk on a draft the session read stays on it once the guest\'s read an
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });
   const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
-  const DR = '1.0.1.0.13', TEXT = 'The draft\'s own words.\n\nAnd more.';
+  const DR = '1.0.1.0.71', TEXT = 'The draft\'s own words.\n\nAnd more.';
   // DR's reads under the session; the guest's read of its extent refused, withheld
   Object.assign(script, reads(DR, [{ content: TEXT }], TEXT.length, [{ i_start: DR + '.0.1.1', width: String(TEXT.length) }]));
   try {
@@ -1966,7 +1968,7 @@ test('a change of the page\'s class keeps the walk on the span it stood on where
   globalThis.document = /** @type {any} */ ({ activeElement: null });
   const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
   // K, an edition windowing a run of the draft DF's bytes, its image placing them in DF's I-space
-  const K = '1.0.1.0.9', DF = '1.0.1.0.12', HEAD = 'Kept.\n\n', RUN = 'Draft words here.', TAIL = '\n\nEnd.', TEXT = HEAD + RUN + TAIL, AT = HEAD.length + 1;
+  const K = '1.0.1.0.67', DF = '1.0.1.0.70', HEAD = 'Kept.\n\n', RUN = 'Draft words here.', TAIL = '\n\nEnd.', TEXT = HEAD + RUN + TAIL, AT = HEAD.length + 1;
   Object.assign(script, reads(K, [{ content: TEXT }], TEXT.length, [{ i_start: K + '.0.1.1', width: String(HEAD.length) }, { i_start: DF + '.0.1.1', width: String(RUN.length) }, { i_start: `${K}.0.1.${AT}`, width: String(TAIL.length) }]), {
     [FAKE.keyOf('op', { frame: F.editionClaimsAt(DF) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
   });
@@ -2007,7 +2009,7 @@ test('where no board is held the walk\'s root names none: it says why, in the wo
     why = { id: 'L.boards-unread', text: t('L.boards-unread') };
     assert.equal(WALK.mirrorItem(0), heard(sentences(sentence('L.boards-unread'), item)), 'the list refused: its words, a sentence, heard');
     // the view's centre over a cell of 1.0.1's the index lists nothing in: the grid would find the account there
-    const cell = docBox('1.0.1.0.30'), centre = { x: cell.x + cell.w / 2, y: cell.y + cell.h / 2 };
+    const cell = docBox('1.0.1.0.88'), centre = { x: cell.x + cell.w / 2, y: cell.y + cell.h / 2 };
     /** @type {Array<[string, number]>} */
     const scales = [['far', CAM.viewForCell(boardCell('1'), 0.92).scale / 4], ['near', 14 / STANDARD_FS]];
     for (const [band, scale] of scales) {
@@ -2037,7 +2039,7 @@ test('an account\'s mirror item says its counts in a sentence and, where it hold
 });
 
 test('the mirror\'s counts are numerals whose nouns agree with them — "1 account", "1 document, 1 link", a document of "12,345 positions" — and a span\'s position before its document\'s extent stands as drawn (style S17, S18)', () => {
-  const ONE = '1.0.12', OD = ONE + '.0.1', FAR = ONE + '.0.2', L = OD + '.0.2.1', BIG = '1.0.1.0.61';
+  const ONE = '1.0.12', OD = ONE + '.0.1', FAR = ONE + '.0.2', L = OD + '.0.2.1', BIG = '1.0.1.0.119';
   const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: ONE, whole: false, subspace: 1, ordinal: ord, positions: w });
   const board = () => WALK.nameOf({ kind: 'board', addr: '1', pos: null, link: null }, 0, 1);
   const listing = (/** @type {Array<{doc: string, account: string}>} */ docs) => REC.takeIndex(/** @type {any} */ ({ docs: docs.map((x) => ({ doc: x.doc, kind: 'edition', label: x.doc, standing: 'public' })), counts: [...new Set(docs.map((x) => x.account))].map((account) => ({ account, documents: docs.filter((x) => x.account === account).length })), state: { arm: 'complete' } }));
@@ -2127,7 +2129,7 @@ test('the kind of the document the walk stands in is said once in the status reg
   globalThis.document = /** @type {any} */ (page);
   WALK.attach(/** @type {any} */ ({ innerHTML: '', tabIndex: 0, contains: (/** @type {unknown} */ x) => x === item, setAttribute() {}, classList: { toggle() {} }, querySelectorAll: () => [] }));
   // two documents of an account the index lists nothing for, never read: their kinds being read
-  const U = '1.0.7.0.6', V = '1.0.7.0.8';
+  const U = '1.0.7.0.64', V = '1.0.7.0.66';
   const meta = (/** @type {string} */ doc, /** @type {boolean} */ published) => ({ doc, published, owner: '1.0.7', birth: published ? doc + '.1' : null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
   try {
     await WALK.focusTo(U, null);
@@ -2234,7 +2236,7 @@ test('the walk\'s panel shows after a walk key\'s move while the plane holds the
 });
 
 test('Esc at a live caret, and a walk key at one, ask the draft\'s open burst committed as the text is left; a zoom past its reading scale leaves the caret kept and commits nothing — that burst commits at its own pause (D5 K-73, K-77; D6 BM-4, BM-5)', async () => {
-  const W = '1.0.1.0.44', text = 'First line.\n\nSecond line here.\n', n = byteLength(text);
+  const W = '1.0.1.0.102', text = 'First line.\n\nSecond line here.\n', n = byteLength(text);
   REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: n }]);
   REC.takeMetadata(W, /** @type {any} */ (F.decodeDocMetadata({ as_of: 1, resp: 'doc_metadata', doc: W, published: false, owner: '1.0.1' })));
   REC.takeDelivery(W, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }], 1, { from: 1, runs: [{ iStart: W + '.0.1.1', width: n }] });

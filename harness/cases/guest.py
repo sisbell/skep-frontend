@@ -141,7 +141,8 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     words, C-67's clause beneath them as the claims on the draft the page read
     at the guest's class decide it, decided here from those reads (issue
     #274), and the sign-in its act, the walk on it; no label or mark drawing a
-    draft at HOME but those covers, counted in their continuation's mark; the
+    draft at HOME but those covers — the staging draft a box of its own in its
+    account's first grid, the rest counted in their continuation's mark; the
     window run a withheld block with none of its text; none of the owner's bytes
     anywhere in the page;
 (h) the owner's page opened once more stands a reading scene on the first

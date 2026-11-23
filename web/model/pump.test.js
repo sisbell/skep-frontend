@@ -104,18 +104,18 @@ const D = '1.0.1.0.3';
 const script = {
   [FAKE.keyOf('boards', {})]: { result: [{ board: 'b-1', name: 'http://127.0.0.1:8642', origin: 'http://127.0.0.1:8642' }] },
   [FAKE.keyOf('session', { board: 'b-1' })]: { result: { session: 's-1', principal: 1, account: '1.0.1', writes: true } },
-  [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [{ doc: D, kind: 'edition', label: '# skep-ux-design', standing: 'public' }, { doc: '1.0.1.0.127', kind: 'edition', label: 'far', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'at_the_floor', floor: 8265 } } },
+  [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [{ doc: D, kind: 'edition', label: '# skep-ux-design', standing: 'public' }, { doc: '1.0.1.0.185', kind: 'edition', label: 'far', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'at_the_floor', floor: 8265 } } },
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.30' }] } },
   [FAKE.keyOf('op', { frame: F.docMetadata(D) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: D, published: true, owner: '1.0.1', birth: D + '.1', birth_extent: '30', placed: null, base_extent: null, source: null } },
-  [FAKE.keyOf('op', { frame: F.retrieveV(D, 1, 30) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }] } },
-  [FAKE.keyOf('op', { frame: F.image(D, 1, 30) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }] } },
+  [FAKE.keyOf('op', { frame: F.retrieveV(D, 1, 30) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1061', width: '4' } }] } },
+  [FAKE.keyOf('op', { frame: F.image(D, 1, 30) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1061.0.1.1', width: '4' }] } },
   [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [D + '.0.2.1'] } },
-  [FAKE.keyOf('op', { frame: F.readLink(D + '.0.2.1') })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' }], [{ start: '1.0.1.0.127', width: '0.0.0.0.1' }], [{ start: '1.1.0.1.0.1.0.3.13', width: '0.0.0.0.0.0.0.0.1' }]] } } },
-  [FAKE.keyOf('op', { frame: F.project(D + '.0.2.1', 2, '1.0.1.0.127') })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.100' }] } },
+  [FAKE.keyOf('op', { frame: F.readLink(D + '.0.2.1') })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' }], [{ start: '1.0.1.0.185', width: '0.0.0.0.1' }], [{ start: '1.1.0.1.0.1.0.3.13', width: '0.0.0.0.0.0.0.0.1' }]] } } },
+  [FAKE.keyOf('op', { frame: F.project(D + '.0.2.1', 2, '1.0.1.0.185') })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.100' }] } },
   // a second link's far end, which the far document's text now holds in two runs
-  [FAKE.keyOf('op', { frame: F.project(D + '.0.2.2', 2, '1.0.1.0.127') })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.3', width: '0.4' }, { start: '1.20', width: '0.5' }] } },
+  [FAKE.keyOf('op', { frame: F.project(D + '.0.2.2', 2, '1.0.1.0.185') })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.3', width: '0.4' }, { start: '1.20', width: '0.5' }] } },
   // the edition claims on the withheld run's origin: none
-  [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1003') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1061') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
 };
 
 /** the byline's facts of 1.0.1, the owner of the documents the tests read, held from the start: the reads a test holds the view to are its documents' own — the byline's reads are held by the tests that make them (`readAccount`) */
@@ -137,11 +137,11 @@ test('the model after a scripted cold open and a whole read, over the fake port'
   assert.ok(d);
   assert.equal(d.extent, 30);
   assert.deepEqual(d.blocks.map((x) => [x.pos, x.kind]), [[1, 'para'], [11, 'para'], [27, 'withheld']]);
-  assert.deepEqual(d.origins, [{ pos: 27, width: 4, doc: '1.0.1.0.1003' }]);
+  assert.deepEqual(d.origins, [{ pos: 27, width: 4, doc: '1.0.1.0.1061' }]);
   assert.equal(REC.link(D + '.0.2.1')?.type, '1.1.0.1.0.1.0.3.13');
-  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.1', 2, '1.0.1.0.127'), { runs: [{ pos: 1, width: 100 }] });
-  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.2', 2, '1.0.1.0.127'), { runs: [{ pos: 3, width: 4 }, { pos: 20, width: 5 }] }, 'an end the text holds in two runs: both, never the first alone');
-  assert.deepEqual(REC.projection(D + '.0.2.2', 2, '1.0.1.0.127'), [{ pos: 3, width: 4 }, { pos: 20, width: 5 }], 'held in the model, the view reading it as its own');
+  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.1', 2, '1.0.1.0.185'), { runs: [{ pos: 1, width: 100 }] });
+  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.2', 2, '1.0.1.0.185'), { runs: [{ pos: 3, width: 4 }, { pos: 20, width: 5 }] }, 'an end the text holds in two runs: both, never the first alone');
+  assert.deepEqual(REC.projection(D + '.0.2.2', 2, '1.0.1.0.185'), [{ pos: 3, width: 4 }, { pos: 20, width: 5 }], 'held in the model, the view reading it as its own');
   assert.deepEqual(fake.unanswered, [], 'every call the pump made was a read the script expected');
   assert.ok(fake.calls().every((c) => c.name !== 'op' || true));
   // the feed keeps the index and invalidates
@@ -149,7 +149,7 @@ test('the model after a scripted cold open and a whole read, over the fake port'
   assert.equal(REC.doc(D).from, -1);
   fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
   assert.equal(REC.session(), null);
-  assert.deepEqual([REC.snapshot().index.map((p) => p[0]), REC.indexState()], [[D, '1.0.1.0.127'], null], 'the death keeps the editions the session\'s index listed, read as published, its state gone');
+  assert.deepEqual([REC.snapshot().index.map((p) => p[0]), REC.indexState()], [[D, '1.0.1.0.185'], null], 'the death keeps the editions the session\'s index listed, read as published, its state gone');
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual([REC.snapshot().index.length, REC.indexState()?.arm], [2, 'at_the_floor'], 'the listing read again in the guest form names the board\'s two editions, its state the guest\'s');
 });
@@ -195,13 +195,13 @@ test('a page takes the events of its own board alone, and none before it knows i
   REC.takeIndex(indexAt('at_the_floor'));
   REC.setDaemon('running');
   const all = (/** @type {string} */ board) => {
-    fake.fire('feed', { board, update: minting('1.0.1.0.77', 'published') });
+    fake.fire('feed', { board, update: minting('1.0.1.0.135', 'published') });
     fake.fire('index', { board, session: null, state: { arm: 'complete' } });
     fake.fire('mode', { board, mode: 'ENFORCING', claimant: '1.0.1', local_trust: false });
     fake.fire('daemon', { board, state: 'unreachable' });
   };
   const untouched = (/** @type {string} */ why) => {
-    assert.equal(REC.place('1.0.1.0.77'), undefined, why + ': no place minted');
+    assert.equal(REC.place('1.0.1.0.135'), undefined, why + ': no place minted');
     assert.equal(REC.countOf('1.0.1').documents, 1, why + ': no count raised');
     assert.equal(REC.indexState()?.arm, 'at_the_floor', why + ': the index\'s state kept');
     assert.equal(REC.countsExact(), false, why + ': the counts still lower bounds');
@@ -214,7 +214,7 @@ test('a page takes the events of its own board alone, and none before it knows i
   all('b-2');
   untouched('another board\'s events');
   all('b-1');
-  assert.equal(REC.place('1.0.1.0.77')?.kind, 'edition', 'its own board\'s row mints the place');
+  assert.equal(REC.place('1.0.1.0.135')?.kind, 'edition', 'its own board\'s row mints the place');
   assert.equal(REC.countOf('1.0.1').documents, 2);
   assert.equal(REC.countsExact(), true, 'its own board\'s index state taken');
   assert.equal(REC.mode(), 'ENFORCING');
@@ -227,20 +227,20 @@ test('a guest, or a page whose session ended, takes no drafts row and no session
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.takeIndex(indexAt('at_the_floor'));
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
-  assert.equal(REC.place('1.0.1.0.1013'), undefined, 'another session\'s draft is not in the guest\'s index (search.md §4 (iii))');
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1071', 'drafts') });
+  assert.equal(REC.place('1.0.1.0.1071'), undefined, 'another session\'s draft is not in the guest\'s index (search.md §4 (iii))');
   assert.equal(REC.countOf('1.0.1').documents, 1, 'nor in its count');
   fake.fire('index', { board: 'b-1', session: 's-2', state: { arm: 'complete' } });
   assert.equal(REC.indexState()?.arm, 'at_the_floor', 'a session\'s face is not the guest\'s');
   assert.equal(REC.countsExact(), false);
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1014', 'published') });
-  assert.equal(REC.place('1.0.1.0.1014')?.kind, 'edition', 'a published row reaches the guest');
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1072', 'published') });
+  assert.equal(REC.place('1.0.1.0.1072')?.kind, 'edition', 'a published row reaches the guest');
   fake.fire('index', { board: 'b-1', session: null, state: { arm: 'complete' } });
   assert.equal(REC.countsExact(), true, 'the guest face\'s state is the guest\'s');
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.sessionDied({ arm: 'closed' });
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1015', 'drafts') });
-  assert.equal(REC.place('1.0.1.0.1015'), undefined, 'a page whose session ended reads as a guest: no drafts row, the ended session\'s own among them');
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1073', 'drafts') });
+  assert.equal(REC.place('1.0.1.0.1073'), undefined, 'a page whose session ended reads as a guest: no drafts row, the ended session\'s own among them');
 });
 
 test('a page signed in takes the drafts rows and the index state its own session\'s events name — never another principal\'s, nor its own principal\'s as another tab\'s session hears them, nor a row naming no session, nor the guest face\'s state — and a listing out lays none of another session\'s over its answer; a session of no account reads the guest face (issue #145)', async () => {
@@ -250,25 +250,25 @@ test('a page signed in takes the drafts rows and the index state its own session
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeIndex(indexAt('building'));
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.2.0.1013', 'drafts', 's-2') });
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1014', 'drafts', 's-3') });
-  fake.fire('feed', { board: 'b-1', update: { position: 3, at: 3, op: 'create_new_document', docs: ['1.0.1.0.1015'], class: 'drafts' } });
-  assert.deepEqual(['1.0.2.0.1013', '1.0.1.0.1014', '1.0.1.0.1015'].map((a) => REC.place(a)), [undefined, undefined, undefined], 'another principal\'s draft, the principal\'s own as its other tab\'s session hears it, and a row naming no session: none listed');
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.2.0.1071', 'drafts', 's-2') });
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1072', 'drafts', 's-3') });
+  fake.fire('feed', { board: 'b-1', update: { position: 3, at: 3, op: 'create_new_document', docs: ['1.0.1.0.1073'], class: 'drafts' } });
+  assert.deepEqual(['1.0.2.0.1071', '1.0.1.0.1072', '1.0.1.0.1073'].map((a) => REC.place(a)), [undefined, undefined, undefined], 'another principal\'s draft, the principal\'s own as its other tab\'s session hears it, and a row naming no session: none listed');
   assert.deepEqual([REC.countOf('1.0.2').documents, REC.countOf('1.0.1').documents], [0, 1], 'nor counted');
   fake.fire('index', { board: 'b-1', session: 's-2', state: { arm: 'widening' } });
   fake.fire('index', { board: 'b-1', session: null, state: { arm: 'complete' } });
   assert.deepEqual([REC.indexState()?.arm, REC.countsExact()], ['building', false], 'neither another session\'s state nor the guest face\'s');
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1014', 'drafts') });
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1072', 'drafts') });
   fake.fire('index', { board: 'b-1', session: 's-1', state: { arm: 'complete' } });
-  assert.deepEqual([REC.place('1.0.1.0.1014')?.kind, REC.countOf('1.0.1').documents, REC.countsExact()], ['draft', 2, true], 'its own session\'s row listed and counted, its own session\'s state taken');
+  assert.deepEqual([REC.place('1.0.1.0.1072')?.kind, REC.countOf('1.0.1').documents, REC.countsExact()], ['draft', 2, true], 'its own session\'s row listed and counted, its own session\'s state taken');
   const release = fake.hold('places', { board: 'b-1' });
   const listing = PUMP.readIndex();
   await new Promise((r) => setTimeout(r, 0));
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.2.0.1016', 'drafts', 's-2') });
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.2.0.1074', 'drafts', 's-2') });
   fake.fire('index', { board: 'b-1', session: 's-2', state: { arm: 'complete' } });
   release();
   await listing;
-  assert.deepEqual([REC.place('1.0.2.0.1016'), REC.indexState()?.arm], [undefined, 'building'], 'the listing\'s answer whole: no other session\'s row laid over it, and its own state, never another session\'s');
+  assert.deepEqual([REC.place('1.0.2.0.1074'), REC.indexState()?.arm], [undefined, 'building'], 'the listing\'s answer whole: no other session\'s row laid over it, and its own state, never another session\'s');
   REC.setSession({ session: 's-4', principal: 2, account: null });
   fake.fire('index', { board: 'b-1', session: 's-4', state: { arm: 'complete' } });
   assert.equal(REC.indexState()?.arm, 'building', 'a session of no account has no drafts index: a session\'s face is not its, under its own name too');
@@ -352,7 +352,7 @@ test('the boot\'s session is opened by the acquire: one call, the session taken,
 });
 
 test('a restart the shell re-opened is no death: the page goes on under the re-opened session, its reads and drafts rows with it, holding what it read; one that re-opened none is no death either — the boot\'s own call is made again, once, and the page goes on under the session it opens, reading no index and saying nothing, and takes what was written while it was out: `changes` from the last position it took, before any read waiting on the session goes out, each row as the feed hands one — a draft minted listed, a draft written dropped, a row the shell sent only another tab\'s session taken from the catch-up (issues #175, #326)', async () => {
-  const DR = '1.0.1.0.1013', NEW = '1.0.1.0.1014';
+  const DR = '1.0.1.0.1071', NEW = '1.0.1.0.1072';
   // what was written while the session was out: a draft minted at 4 — which the shell sends another tab's session, s-3, meanwhile — and the draft DR written at 5
   const minted = { ...minting(NEW, 'drafts', 's-10'), position: 4, at: 4 }, written = { position: 5, at: 5, op: 'insert', docs: [DR], class: 'drafts', session: 's-10' };
   // the drafts the end cut off are read FIRST from `draftsAt` (the drafts row at 3 set it), then the catch-up from `feedAt` reads them again and they are not re-taken (D6)
@@ -388,7 +388,7 @@ test('a restart the shell re-opened is no death: the page goes on under the re-o
 });
 
 test('a regain with no re-open reads the drafts from the page\'s own drafts place — below the head, never from `feedAt` nor from the regained session\'s `opened_at` — with class drafts BEFORE the catch-up from `feedAt`, lists each draft the end cut off, raises `draftsAt` but not `feedAt`, and masks no published row in the drafts read\'s window (issues #392, #394; D6)', async () => {
-  const CUT = '1.0.1.0.1012', NEW = '1.0.1.0.1013', A = '1.0.1.0.21';
+  const CUT = '1.0.1.0.1070', NEW = '1.0.1.0.1071', A = '1.0.1.0.79';
   /** a drafts row minting `doc` at `position`, sent under s-2 */
   const draftAt = (/** @type {string} */ doc, /** @type {number} */ position) => ({ position, at: position, op: 'create_new_document', docs: [doc], class: 'drafts', session: 's-2' });
   // the drafts place stands at 8, below the head at 10, and the regained session opened at 13: the drafts read goes from 8 — the draft minted at 9 among its rows, which a read from the head or from the new opened_at never sees — and reaches 14; the catch-up from feedAt reads an earlier snapshot to 12, so its `caught` is (10,12] and a live row at 13 lies in the drafts read's window above it
@@ -426,7 +426,7 @@ test('a regain with a re-open makes no drafts read — the re-opened session kee
 });
 
 test('a regain\'s drafts read refused does not block the catch-up: the board is marked as the published catch-up\'s own refusal marks it, and the catch-up from feedAt still runs and takes its rows (issue #392, D6)', async () => {
-  const A = '1.0.1.0.21';
+  const A = '1.0.1.0.79';
   const fake = FAKE.create({ ...script, ...opened('s-2', { opened_at: 10 }),
     [FAKE.keyOf('changes', { session: 's-2', since: 10, class: 'drafts' })]: RECLAIMED,
     ...caughtUp('s-2', 10, [rowOf(11, [A])], 11) });
@@ -478,14 +478,14 @@ test('a restart that re-opened none whose call again is refused: what the sessio
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeIndex(indexAt('building'));
   REC.takeDelivery(D, [{ pos: 1, width: 8, kind: 'content', text: 'Tumbler.', ref: null, origin: null }]);
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1071', 'drafts') });
   const listings = sessionsSent(fake, 'places');
   fake.fire('session-died', { session: 's-1', reason: { ...UNOPENED, refused: 'no_key' } });
   await flush();
   assert.deepEqual([REC.session(), REC.deathReason()], [null, null], 'a guest, and no death recorded');
   assert.deepEqual([REC.sessionRefused(), REC.reconnect()], [{ kind: 'shell', name: 'no_key' }, { as: '1.0.1', refused: true }], 'the refusal as boot keeps it, and the account it could not reconnect as');
-  assert.deepEqual([listings, REC.place('1.0.1.0.1013'), REC.textBetween(D, 1, 9), drops], [['guest'], undefined, '', 1], 'what the session read dropped and told, and the index read again in the guest form');
-  assert.deepEqual(REC.places().map((p) => p.doc), [D, '1.0.1.0.127'], 'the guest\'s listing, no draft among it');
+  assert.deepEqual([listings, REC.place('1.0.1.0.1071'), REC.textBetween(D, 1, 9), drops], [['guest'], undefined, '', 1], 'what the session read dropped and told, and the index read again in the guest form');
+  assert.deepEqual(REC.places().map((p) => p.doc), [D, '1.0.1.0.185'], 'the guest\'s listing, no draft among it');
   fake.fire('session-died', { session: 's-1', reason: UNOPENED });
   await flush();
   assert.equal(opens(fake), 1, 'one call, never made again');
@@ -531,7 +531,7 @@ test('a read out under the session when the page takes its death is asked once m
   const s = {};
   firstThen(s, frame,
     { result: { as_of: 1, resp: 'delivery', items: [{ content: 'Tumbler.\n\nThe first field.' }, { content: 'mine' }] } },
-    { result: { as_of: 1, resp: 'delivery', items: [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }] } });
+    { result: { as_of: 1, resp: 'delivery', items: [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1061', width: '4' } }] } });
   const fake = FAKE.create(s);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
@@ -633,11 +633,11 @@ test('a listing read while the feed brings a row and an index state lays them ov
   const release = fake.hold('places', { board: 'b-1' });
   const listing = PUMP.readIndex();
   await new Promise((r) => setTimeout(r, 0));
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.77', 'published') });
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.135', 'published') });
   fake.fire('index', { board: 'b-1', session: null, state: { arm: 'complete' } });
   release();
   await listing;
-  assert.deepEqual(REC.places().map((p) => [p.doc, p.kind]), [[D, 'edition'], ['1.0.1.0.77', 'edition']], 'the listing\'s edition, and the one the row minted while it was read');
+  assert.deepEqual(REC.places().map((p) => [p.doc, p.kind]), [[D, 'edition'], ['1.0.1.0.135', 'edition']], 'the listing\'s edition, and the one the row minted while it was read');
   assert.deepEqual([REC.countOf('1.0.1').documents, REC.indexState()?.arm, REC.countsExact()], [2, 'complete', true], 'counted over the listing\'s count; the state the event brought, never the listing\'s building');
 });
 
@@ -650,16 +650,16 @@ test('a listing read out across the page\'s own death lays over its answer the r
   const release = fake.hold('places', { board: 'b-1' });
   const boot = PUMP.readIndex();
   await new Promise((r) => setTimeout(r, 0));
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1071', 'drafts') });
   fake.fire('index', { board: 'b-1', session: 's-1', state: { arm: 'complete' } });
   fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
-  fake.fire('feed', { board: 'b-1', update: { ...minting('1.0.1.0.78', 'published'), position: 4, at: 4 } });
+  fake.fire('feed', { board: 'b-1', update: { ...minting('1.0.1.0.136', 'published'), position: 4, at: 4 } });
   release();
   await boot;
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(listings, ['s-1', 'guest', 'guest'], 'the boot\'s listing out under the session, the death\'s as a guest, and the boot\'s asked once more as a guest, landing last');
-  assert.deepEqual(REC.places().map((p) => [p.doc, p.kind]), [[D, 'edition'], ['1.0.1.0.78', 'edition']], 'the guest\'s listing, and the edition minted after the death');
-  assert.deepEqual([REC.place('1.0.1.0.1013'), REC.countOf('1.0.1').documents, REC.indexState()?.arm], [undefined, 2, 'at_the_floor'], 'no draft the dead session read, nor its face\'s state');
+  assert.deepEqual(REC.places().map((p) => [p.doc, p.kind]), [[D, 'edition'], ['1.0.1.0.136', 'edition']], 'the guest\'s listing, and the edition minted after the death');
+  assert.deepEqual([REC.place('1.0.1.0.1071'), REC.countOf('1.0.1').documents, REC.indexState()?.arm], [undefined, 2, 'at_the_floor'], 'no draft the dead session read, nor its face\'s state');
 });
 
 test('the board\'s health and its daemon, each read while a mode or a daemon event arrives, are laid under the event — which may be newer and is never sent again; with no event meanwhile, the answer stands', async () => {
@@ -847,7 +847,7 @@ test('a session the call again opens as another principal is taken only once wha
 });
 
 test('a catch-up takes each row once and in position order: the rows the feed brings while it is out wait, every read waiting on the session with them and the page not settled; a row held at a position it read is left for its own — a straddle\'s drafts rendering among them — and the rest taken around them; a row the feed brings after at a position it read is left, one past it taken, and a start forgets the positions it read (issue #326\'s design decision: "Rows that arrive meanwhile wait, and each row is applied once, in position order")', async () => {
-  const [A, B, C, X, Y] = ['1.0.1.0.21', '1.0.1.0.22', '1.0.1.0.23', '1.0.1.0.24', '1.0.1.0.25'];
+  const [A, B, C, X, Y] = ['1.0.1.0.79', '1.0.1.0.80', '1.0.1.0.81', '1.0.1.0.82', '1.0.1.0.83'];
   /** a row of `op` at `position` naming `docs`, of class `cls`: a drafts row sent under s-2 */
   const row = (/** @type {number} */ position, /** @type {string[]} */ docs, cls = 'published', op = 'insert') => ({ position, at: position, op, docs, class: cls, ...(cls === 'drafts' ? { session: 's-2' } : {}) });
   // what was written while the session was out, as the catch-up reads it: an edit at 11, a draft minted at 12, and at 13 a straddle, its drafts rendering naming the draft beside the edition
@@ -900,7 +900,7 @@ test('where no catch-up can be done — no position held, or `changes` refused �
 });
 
 test('a catch-up the page\'s class changes under takes nothing it read and marks nothing, the rows held taken at the new class; one whose session is lost under it, the shell naming no death, leaves the rows held and the reads waiting on the session for the call that follows, whose catch-up reads from the same position (issue #326)', async () => {
-  const NEW = '1.0.1.0.1014', OTHER = '1.0.1.0.1015';
+  const NEW = '1.0.1.0.1072', OTHER = '1.0.1.0.1073';
   /** a drafts row minting `doc` at `position`, sent under `session` */
   const draftAt = (/** @type {string} */ doc, /** @type {number} */ position, /** @type {string} */ session) => ({ ...minting(doc, 'drafts', session), position, at: position });
   const edit = { position: 5, at: 5, op: 'insert', docs: [D], class: 'published' };
@@ -1019,17 +1019,17 @@ test('no call the pump makes is a write: every op frame names a read op', async 
   for (const key of Object.keys(script)) if (key.startsWith('op:')) { const frame = JSON.parse(key.slice(3)); assert.ok(F.READ_OPS.includes(frame.op), frame.op + ' is a read'); }
 });
 
-test('at HOME the reads ask for the documents standing whole and nothing for the 49th, which the first continuation\'s mark holds', async () => {
+test('at HOME the reads ask for the documents standing whole and nothing for the one at the 49th cell, which the first continuation\'s mark holds', async () => {
   const fake = FAKE.create(script);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
-  const MEMBER = '1.0.1.0.49';
+  const MEMBER = '1.0.1.0.107';
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: MEMBER, kind: 'edition', label: 'm', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
   PUMP.forget(D); PUMP.forget(MEMBER);
   CAM.setViewport(1440, 900);
   CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
-  assert.deepEqual(PUMP.visibleDocs().map((d) => d.addr), [D], 'the 49th is in view, inside the mark');
+  assert.deepEqual(PUMP.visibleDocs().map((d) => d.addr), [D], 'the one at the 49th cell is in view, inside the mark');
   PUMP.pump();
   await new Promise((r) => setTimeout(r, 0));
   assert.equal(REC.doc(D).extent, 30, 'the document standing whole has its span set read');
@@ -1253,7 +1253,7 @@ const citation = (/** @type {number} */ ord, /** @type {Array<{start: string, wi
 const passageOf = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => [{ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w }];
 
 test('at reading scale the view asks where each far end its read links send from a document sits now — one `project` per link and far slot, none for a document named whole or one a read found unregistered, none whose place the model holds, none again once answered — and the model holds the stretches, none, and what each refusal says of the far document', async () => {
-  const FAR = '1.0.1.0.127', GHOST = '1.0.1.0.1049578', DEAD = '1.0.1.0.9', HIDDEN = '1.0.2.0.7';
+  const FAR = '1.0.1.0.185', GHOST = '1.0.1.0.1049636', DEAD = '1.0.1.0.67', HIDDEN = '1.0.2.0.65';
   const [MOVED, FLOATS, TO_GHOST, TO_DEAD, HELD, TO_HIDDEN, AGAIN_GHOST, AGAIN_HIDDEN] = [3, 4, 5, 6, 8, 9, 10, 11].map((k) => `${D}.0.2.${k}`);
   /** @type {Record<string, unknown>} */
   const s = {
@@ -1313,7 +1313,7 @@ test('at reading scale the view asks where each far end its read links send from
 });
 
 test('at reading scale the view asks where the far end of a link on bytes a document transcludes sits now, as it asks of one on its own bytes, and the model holds it', async () => {
-  const FAR = '1.0.1.0.127', S = '1.0.1.0.1003', L = S + '.0.2.1';
+  const FAR = '1.0.1.0.185', S = '1.0.1.0.1061', L = S + '.0.2.1';
   /** @type {Record<string, unknown>} */
   const s = {
     ...script,
@@ -1344,7 +1344,7 @@ test('at reading scale the view asks where the far end of a link on bytes a docu
 });
 
 test('a view over a document\'s later columns reads its text from position 1 through one estimated column past the last in view, every column\'s place read from every line before it (issue #15); a view past the whole read\'s cap reads its columns in view alone, never joined to the text held from 1', async () => {
-  const BIG = '1.0.1.0.5', HUGE = '1.0.1.0.6';
+  const BIG = '1.0.1.0.5', HUGE = '1.0.1.0.64';
   /** @type {Record<string, unknown>} */
   const s = {};
   for (const [doc, extent] of /** @type {Array<[string, number]>} */ ([[BIG, 40000], [HUGE, 2000000]])) {
@@ -1387,7 +1387,7 @@ test('a view over a document\'s later columns reads its text from position 1 thr
 });
 
 test('the span window reads the estimate at the measure in force: at a 480 px view the columns in view hold its narrower measure\'s positions, never the full measure\'s (issue #151)', () => {
-  const HUGE = '1.0.1.0.12', extent = 2000000;
+  const HUGE = '1.0.1.0.70', extent = 2000000;
   REC.takeSpanSet(HUGE, [{ subspace: 1, ordinal: 1, positions: extent }]);
   const box = docBox(HUGE);
   try {
@@ -1403,7 +1403,7 @@ test('the span window reads the estimate at the measure in force: at a 480 px vi
 });
 
 test('where the corner stands at its document\'s head, its band above every row of columns, the span window holds the positions of the column the view stands over, under a band of one, two or three rows and from the column\'s left to its right (issue #689; FP-12)', () => {
-  const H = '1.0.1.0.12', extent = 20000;
+  const H = '1.0.1.0.70', extent = 20000;
   REC.takeSpanSet(H, [{ subspace: 1, ordinal: 1, positions: extent }]);
   const box = docBox(H);
   try {
@@ -1423,7 +1423,7 @@ test('where the corner stands at its document\'s head, its band above every row 
 });
 
 test('a projection the board declines answers the refusal it met, and the model holds what it says of the far document — the document marked where the board will say nothing of it, never where it is withheld; one the board did not answer holds nothing', async () => {
-  const L = D + '.0.2.7', FAR = '1.0.1.0.127', GHOST = '1.0.1.0.1049578', HIDDEN = '1.0.2.0.7';
+  const L = D + '.0.2.7', FAR = '1.0.1.0.185', GHOST = '1.0.1.0.1049636', HIDDEN = '1.0.2.0.65';
   const declined = { refused: { kind: 'refused', name: 'not_a_link', code: 'not_a_link' } };
   const unregistered = { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
   const withheld = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
@@ -1498,7 +1498,7 @@ test('a view\'s read that lands after its document was dropped takes nothing and
 });
 
 test('a view\'s projection that lands after the document projected into was dropped takes nothing, its refusal included, and is asked again', async () => {
-  const FAR = '1.0.1.0.127', L = D + '.0.2.3';
+  const FAR = '1.0.1.0.185', L = D + '.0.2.3';
   const s = {
     ...script,
     [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [L] } },
@@ -1668,7 +1668,7 @@ test('a probe of a chain keeps each member\'s age as its metadata answered it �
 });
 
 test('an act\'s projection the document projected into is dropped under is asked again and holds where the end stands after the row; dropped at every ask, it answers after DROP_ATTEMPTS asks and holds nothing', async () => {
-  const FAR = '1.0.1.0.127', L = D + '.0.2.3';
+  const FAR = '1.0.1.0.185', L = D + '.0.2.3';
   const at = (/** @type {number} */ pos) => ({ result: { as_of: 1, resp: 'span_set', set: [{ start: '1.' + pos, width: '0.4' }] } });
   /** @type {Record<string, unknown>} */
   const s = {};
@@ -1712,7 +1712,7 @@ test('an image asked for a window a text read widens before it lands is placed f
 
 test('a bare feed row — its docs null — names the home of the link it deposited by its link alone, whatever the row\'s op: the home the view shows stands as held while it is read again — its extent, and its links with the new one — and the new link is read', async () => {
   const [L1, L2, L3] = [1, 2, 3].map((k) => `${D}.0.2.${k}`);
-  const toFar = [{ start: '1.0.1.0.127', width: '0.0.0.0.1' }];
+  const toFar = [{ start: '1.0.1.0.185', width: '0.0.0.0.1' }];
   const s = {
     ...script, [FAKE.keyOf('op', { frame: F.readLink(L2) })]: citation(14, toFar), [FAKE.keyOf('op', { frame: F.readLink(L3) })]: citation(17, toFar),
     // D's chain, counted from its first member as it is read again: one member, the second not registered
@@ -1741,7 +1741,7 @@ test('a bare feed row — its docs null — names the home of the link it deposi
 // ---- the edition claims on a withheld run's origin -------------------------------------------------------------------
 
 /** D's withheld run's origin, and two claims of the edition class on it: the owner's edition over its own bytes, a delegate's quoting the draft — each homed out of the view D is read at */
-const O = '1.0.1.0.1003', [EDITION, FORK] = ['1.0.1.0.30.0.2.1', '1.0.1.1.0.4.0.2.1'], [EDITION_HOME, FORK_HOME] = ['1.0.1.0.30', '1.0.1.1.0.4'];
+const O = '1.0.1.0.1061', [EDITION, FORK] = ['1.0.1.0.88.0.2.1', '1.0.1.1.0.4.0.2.1'], [EDITION_HOME, FORK_HOME] = ['1.0.1.0.88', '1.0.1.1.0.4'];
 /** the lookup's answer: the claims it lists */
 const claimsOn = (/** @type {string[]} */ addrs) => ({ result: { as_of: 1, resp: 'addrs', addrs } });
 /** a claim's link as `read_link` answers it: FROM `from`, TO the origin whole, typed R20 */
@@ -1770,7 +1770,7 @@ test('at reading scale the view asks the edition claims on the origin of each wi
     [FAKE.keyOf('op', { frame: F.readLink(CITES) })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [passageOf('1.0.2.0.5', 1, 3), [{ start: O, width: '0.0.0.0.1' }], [{ start: '1.1.0.1.0.1.0.3.13', width: '0.0.0.0.0.0.0.0.1' }]] } } },
     [FAKE.keyOf('op', { frame: F.readLink(NONE) })]: { result: { as_of: 1, resp: 'link_value', link: null } },
     // the edition-class links homed in the documents the rows name: none; the edition's own home the edition alone
-    ...noEditionLinks('1.0.2.0.5', '1.0.2.0.6.1', EDITION_HOME + '.2'),
+    ...noEditionLinks('1.0.2.0.5', '1.0.2.0.64.1', EDITION_HOME + '.2'),
     [FAKE.keyOf('op', { frame: F.editionLinksIn(EDITION_HOME) })]: claimsOn([EDITION]),
   });
   const fake = readingD(s);
@@ -1786,7 +1786,7 @@ test('at reading scale the view asks the edition claims on the origin of each wi
   const rows = [
     { op: 'insert', docs: ['1.0.2.0.5'] }, { op: 'make_link', docs: ['1.0.2.0.5'], link: CITES }, { op: 'emit', docs: ['1.0.2.0.5'] },
     { op: 'edit_link', docs: ['1.0.2.0.5'] }, { op: 'nullify', docs: ['1.0.2.0.5'] }, { op: 'assert_sup', docs: ['1.0.2.0.5'] },
-    { op: 'publish', docs: ['1.0.2.0.6.1'] }, { op: 'publish', docs: [EDITION_HOME + '.2', EDITION_HOME] },
+    { op: 'publish', docs: ['1.0.2.0.64.1'] }, { op: 'publish', docs: [EDITION_HOME + '.2', EDITION_HOME] },
     // a bare row (wire.md §The change feed): a link the journal names, its op unnamed — a make_link, an emit or an assert_sup
     { op: null, docs: null, link: NONE },
   ];
@@ -1821,7 +1821,7 @@ async function until(/** @type {() => boolean} */ cond, /** @type {string} */ wh
 }
 
 test('a make_link whose link is an edition claim on the origin, a nullify retracting one the origin lists and a publish whose edition homes a new one each change the claims on an origin a document the view shows windows: they stand as held at every step until their read again sets them in one step; a row changing them while that read is out queues one more read, never one a row (issue #272\'s design decision: "a link write drops only the edition claims it writes, retracts or supersedes"; "Rows arriving while a read is out queue one more read")', async () => {
-  const [NEW_HOME, PUB_HOME, Q_HOME, R_HOME] = ['1.0.1.0.31', '1.0.1.0.32', '1.0.1.0.33', '1.0.1.0.34'], [NEW, PUB, Q, R] = [NEW_HOME, PUB_HOME, Q_HOME, R_HOME].map((h) => h + '.0.2.1');
+  const [NEW_HOME, PUB_HOME, Q_HOME, R_HOME] = ['1.0.1.0.89', '1.0.1.0.90', '1.0.1.0.91', '1.0.1.0.92'], [NEW, PUB, Q, R] = [NEW_HOME, PUB_HOME, Q_HOME, R_HOME].map((h) => h + '.0.2.1');
   const s = claimed({ ...script, ...claimAt(NEW_HOME), ...claimAt(PUB_HOME), ...claimAt(Q_HOME), ...claimAt(R_HOME) });
   // the lookup as each change leaves the claims: the new claim beside the two; the fork's retracted; the publish's claim beside the rest; then the two the queued rows write
   const lookup = inTurn(s, F.editionClaimsAt(O), claimsOn([EDITION, FORK]), claimsOn([EDITION, FORK, NEW]), claimsOn([EDITION, NEW]), claimsOn([EDITION, NEW, PUB]), claimsOn([EDITION, NEW, PUB, Q]), claimsOn([EDITION, NEW, PUB, Q, R]));
@@ -1866,7 +1866,7 @@ test('a make_link whose link is an edition claim on the origin, a nullify retrac
 });
 
 test('a row changing the claims on an origin no document the view shows windows drops them, and tells the documents windowing it, so a reader of them reads the clause anew; one changing an origin the view shows tells them once its read again sets them (issue #272)', async () => {
-  const NEW_HOME = '1.0.1.0.31', NEW = NEW_HOME + '.0.2.1', NEXT_HOME = '1.0.1.0.35', NEXT = NEXT_HOME + '.0.2.1';
+  const NEW_HOME = '1.0.1.0.89', NEW = NEW_HOME + '.0.2.1', NEXT_HOME = '1.0.1.0.93', NEXT = NEXT_HOME + '.0.2.1';
   const s = claimed({ ...script, ...claimAt(NEW_HOME), ...claimAt(NEXT_HOME) });
   inTurn(s, F.editionClaimsAt(O), claimsOn([EDITION, FORK]), claimsOn([EDITION, FORK, NEW]), claimsOn([EDITION, FORK, NEW, NEXT]));
   const fake = FAKE.create(s);
@@ -2013,7 +2013,7 @@ test('the view holds the lookup\'s refusal by whether it was withheld — a refu
 });
 
 test('an act\'s reads of the edition claims hold a refusal as the view holds them, and ask again a read the page holds no answer to — a failed one among them — while one refused as withheld from the reader is an answer, never asked again', async () => {
-  const s = claimed({ ...script }), HIDDEN_ORIGIN = '1.0.1.0.1004';
+  const s = claimed({ ...script }), HIDDEN_ORIGIN = '1.0.1.0.1062';
   const lookup = inTurn(s, F.editionClaimsAt(O), BUSY, claimsOn([EDITION]));
   const link = inTurn(s, F.readLink(EDITION), NO_ANSWER, claimLink(passageOf(EDITION_HOME, 1, 20)));
   const hidden = inTurn(s, F.editionClaimsAt(HIDDEN_ORIGIN), WITHHELD_READ);
@@ -2038,7 +2038,7 @@ test('an act\'s reads of the edition claims hold a refusal as the view holds the
 });
 
 test('an act\'s read of a document\'s metadata asks it where the page holds neither it nor a refusal of the document and takes what it answers — a refusal that says nothing of the document held failed and asked again by the next act, one withheld from the reader held of the document and never asked again — and takes nothing, no record made, where a drop overtook it, answering so', async () => {
-  const [DRAFT, FLAKY, HIDDEN, OVERTAKEN] = ['1.0.1.0.41', '1.0.1.0.42', '1.0.1.0.43', '1.0.1.0.44'];
+  const [DRAFT, FLAKY, HIDDEN, OVERTAKEN] = ['1.0.1.0.99', '1.0.1.0.100', '1.0.1.0.101', '1.0.1.0.102'];
   /** a draft's metadata as the board answers it */
   const draftMeta = (/** @type {string} */ doc) => ({ result: { as_of: 1, resp: 'doc_metadata', doc, published: false, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } });
   /** @type {Record<string, unknown>} */
@@ -2068,13 +2068,13 @@ test('an act\'s read of a document\'s metadata asks it where the page holds neit
 /** a `compare` of the passage `a` against the stretch of text `b`, as M-PUMP asks it */
 const compareOf = (/** @type {{doc: string, pos: number, width: number}} */ a, /** @type {{doc: string, pos: number, width: number}} */ b) =>
   F.compare([{ doc: a.doc, spans: [{ ordinal: a.pos, positions: a.width }] }], [{ doc: b.doc, spans: [{ ordinal: b.pos, positions: b.width }] }]);
-/** a `compare` answer from D into 1.0.1.0.127: each pair its position in each and its positions */
-const compared = (/** @type {Array<[number, number, number]>} */ pairs) => ({ result: { as_of: 1, resp: 'compare', pairs: pairs.map(([u1, u2, width]) => ({ d1: D, d2: '1.0.1.0.127', u1: { ordinal: String(u1), subspace: '1' }, u2: { ordinal: String(u2), subspace: '1' }, width: String(width) })) } });
+/** a `compare` answer from D into 1.0.1.0.185: each pair its position in each and its positions */
+const compared = (/** @type {Array<[number, number, number]>} */ pairs) => ({ result: { as_of: 1, resp: 'compare', pairs: pairs.map(([u1, u2, width]) => ({ d1: D, d2: '1.0.1.0.185', u1: { ordinal: String(u1), subspace: '1' }, u2: { ordinal: String(u2), subspace: '1' }, width: String(width) })) } });
 /** a budget refusal of the board's, naming the operand it localizes where one is given (wire.md §Errors: `site.operand`) */
 const budget = (/** @type {string} */ name, /** @type {string | null} */ operand = null) => ({ refused: { kind: 'refused', name, status: 200, code: name, detail: null, op: 'compare', body: { resp: 'rejected', code: name, disposition: 'permanent', op: 'compare', site: operand ? { operand } : null } } });
 
 test('a compare the board refuses for its size is asked again in parts — the operand its refusal names halved, else the text sought in — each part asked on its own and their pairs taken together; any other refusal handed up, and a size refusal past SPLIT_READS reads (issue #153)', async () => {
-  const FAR = '1.0.1.0.127', a = { doc: D, pos: 1, width: 10 }, b = { doc: FAR, pos: 1, width: 40 };
+  const FAR = '1.0.1.0.185', a = { doc: D, pos: 1, width: 10 }, b = { doc: FAR, pos: 1, width: 40 };
   /** the board's answers to a script's compares, and the compares the pump asked */
   const over = (/** @type {Record<string, unknown>} */ answers) => {
     const fake = FAKE.create({ ...script, ...answers });
@@ -2117,13 +2117,13 @@ test('a whole read whose image the board refuses for its size reads it in parts 
   const fake = FAKE.create({
     ...script, [FAKE.keyOf('op', { frame: F.image(D, 1, 30) })]: sized,
     [FAKE.keyOf('op', { frame: F.image(D, 1, 15) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '15' }] } },
-    [FAKE.keyOf('op', { frame: F.image(D, 16, 15) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.16', width: '11' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }] } },
+    [FAKE.keyOf('op', { frame: F.image(D, 16, 15) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.16', width: '11' }, { i_start: '1.0.1.0.1061.0.1.1', width: '4' }] } },
   });
   PORT.boot(fake); PUMP.start({ onDirty: () => {} }); REC.setBoard({ board: 'b-1', name: '', origin: '' });
   const w = await PUMP.wholeOf(D);
   assert.deepEqual([w.refused, w.doc?.imageFor], [null, [1, 31]], 'the image held over the whole text, nothing refused handed up');
   assert.deepEqual(REC.identityOf(D, 14, 4), [{ prefix: D + '.0.1', ordinal: 14, width: 2 }, { prefix: D + '.0.1', ordinal: 16, width: 2 }], 'every position placed, across the parts\' seam');
-  assert.deepEqual(REC.doc(D).origins, [{ pos: 27, width: 4, doc: '1.0.1.0.1003' }], 'the transcluded run named from the second part');
+  assert.deepEqual(REC.doc(D).origins, [{ pos: 27, width: 4, doc: '1.0.1.0.1061' }], 'the transcluded run named from the second part');
   assert.deepEqual(fake.unanswered, []);
   REC._reset();
   const busy = { refused: { kind: 'refused', name: 'busy', status: 503, code: 'busy', detail: null, op: 'retrieve_doc_v_span_set', body: null } };
@@ -2203,7 +2203,7 @@ test('a version its box does not show asks nothing, whatever the model holds of 
 });
 
 test('a far end is placed in the version its far document\'s box shows: `project` into that version, never the document (issue #154)', async () => {
-  const FAR = '1.0.1.0.127', AT = FAR + '.1', L = D + '.0.2.3';
+  const FAR = '1.0.1.0.185', AT = FAR + '.1', L = D + '.0.2.3';
   /** @type {Record<string, unknown>} */
   const s = {
     ...script,
@@ -2242,7 +2242,7 @@ test('a feed row publishing a trunk\'s member is handed to the app with the row\
   assert.equal(REC.doc(D).from, -1, 'the row dropped the trunk after');
   told.length = 0;
   fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'make_link', docs: [D + '.4'], class: 'published' } });
-  fake.fire('feed', { board: 'b-1', update: { position: 5, at: 5, op: 'publish', docs: ['1.0.1.0.77'], class: 'published' } });
+  fake.fire('feed', { board: 'b-1', update: { position: 5, at: 5, op: 'publish', docs: ['1.0.1.0.135'], class: 'published' } });
   assert.deepEqual(told, [], 'neither a row of another op nor a publish naming a document whole');
 });
 
@@ -2466,7 +2466,7 @@ const naming = (/** @type {number} */ position, /** @type {string | null} */ op)
 const opKeyOf = (/** @type {object} */ frame) => FAKE.keyOf('op', { frame });
 
 test('rows naming nothing mark the board and drop nothing as they come; once the run is in — no row for RUN_QUIET_MS — one refresh counts the chain of each edition read at its bare address and reads again what the view shows, set in one step and never emptied meanwhile, a link the board no longer answers gone, and a draft out of view dropped unread (issue #212)', async () => {
-  const OUT = '1.0.2.0.7';
+  const OUT = '1.0.2.0.65';
   const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.2'))]: NOT_REGISTERED };
   // D's text read at 5 before the run and at 9 after it; its link, then none
   inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9));
@@ -2641,7 +2641,7 @@ function leftAt(ats) {
   TRAIL._reset();
   const view = { x: 0, y: 0, scale: 1 }, entry = (/** @type {string} */ addr) => ({ addr, pos: null, width: null, view, label: null, notice: null });
   TRAIL.push(entry(D), null);
-  ats.forEach((at, i) => TRAIL.push(entry(i + 1 < ats.length ? D : '1.0.1.0.127'), { view, reading: { addr: D, at, pos: 1, width: 8, ids: [], around: [], p: { x: 0, y: 0 }, line: { x: 0, y: 0 }, fs: 1, top: 0 }, stood: { addr: D, pos: 1, ids: [], of: [], end: null } }));
+  ats.forEach((at, i) => TRAIL.push(entry(i + 1 < ats.length ? D : '1.0.1.0.185'), { view, reading: { addr: D, at, pos: 1, width: 8, ids: [], around: [], p: { x: 0, y: 0 }, line: { x: 0, y: 0 }, fs: 1, top: 0 }, stood: { addr: D, pos: 1, ids: [], of: [], end: null } }));
   return TRAIL.all().slice(0, ats.length);
 }
 /** what a trail entry names: its place, the document its view read and the one its walk stood in */
@@ -2713,7 +2713,7 @@ const ONE_MEMBER = { [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F
 const timesAsked = (/** @type {ReturnType<typeof FAKE.create>} */ fake, /** @type {object} */ frame) => fake.asked.filter((k) => k === opKeyOf(frame)).length;
 
 test('a feed row naming a document the view shows keeps what the page holds of it — its text, its image, its extent and its links — while it is read again, the view asking nothing of it meanwhile, then sets it in one step from what that read answers; a document the row names out of view is dropped (issue #285)', async () => {
-  const OUT = '1.0.2.0.7';
+  const OUT = '1.0.2.0.65';
   const s = { ...script, ...ONE_MEMBER };
   // D's text read at 5 before the row and at 9 after it
   inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9));
@@ -2768,7 +2768,7 @@ test('a shown document\'s read again one part of which the board did not answer 
   // its links read again answering a second, which is set only once every read has answered
   const [L1, L2] = [D + '.0.2.1', D + '.0.2.2'], touching = (/** @type {string[]} */ addrs) => ({ result: { as_of: 7, resp: 'addrs', addrs } });
   inTurn(s, F.findLinksV(D, 1, 30), touching([L1]), touching([L1, L2]));
-  s[opKeyOf(F.readLink(L2))] = citation(14, [{ start: '1.0.1.0.127', width: '0.0.0.0.1' }]);
+  s[opKeyOf(F.readLink(L2))] = citation(14, [{ start: '1.0.1.0.185', width: '0.0.0.0.1' }]);
   const fake = readingD(s);
   await settle();
   const rev = REC.doc(D).rev;
@@ -3007,7 +3007,7 @@ test('a shown document a refresh reads again, one part of which the board did no
   // its links read again answering a second, which is set only once every read has answered
   const [L1, L2] = [D + '.0.2.1', D + '.0.2.2'], touching = (/** @type {string[]} */ addrs) => ({ result: { as_of: 7, resp: 'addrs', addrs } });
   inTurn(s, F.findLinksV(D, 1, 30), touching([L1]), touching([L1, L2]));
-  s[opKeyOf(F.readLink(L2))] = citation(14, [{ start: '1.0.1.0.127', width: '0.0.0.0.1' }]);
+  s[opKeyOf(F.readLink(L2))] = citation(14, [{ start: '1.0.1.0.185', width: '0.0.0.0.1' }]);
   /** @type {PUMP.Dropped[]} */
   const told = [];
   const fake = readingD(s, (x) => { told.push(x); });
@@ -3032,7 +3032,7 @@ test('a shown document a refresh reads again, one part of which the board did no
 });
 
 test('the edition claims a row changed on an origin a shown document windows stand kept once their read again has been out KEPT_MS, saying the refusal the lookup met where the board does not answer, until the read made at running sets them (issue #345)', async () => {
-  const NEW_HOME = '1.0.1.0.31', NEW = NEW_HOME + '.0.2.1';
+  const NEW_HOME = '1.0.1.0.89', NEW = NEW_HOME + '.0.2.1';
   const s = claimed({ ...script, ...claimAt(NEW_HOME) });
   inTurn(s, F.editionClaimsAt(O), claimsOn([EDITION, FORK]), UNREACHABLE, claimsOn([EDITION, FORK, NEW]));
   const fake = readingD(s);
@@ -3273,7 +3273,7 @@ test('a refresh after a change of class keeps each box the change left: a cover 
 });
 
 test('a change of the page\'s class while a refresh reads what the view shows ends its reads where they stand: a document still waiting its turn is never read, and none is left kept with no read again of it out (issue #371)', async () => {
-  const drafts = [5, 6, 7, 8, 9, 10, 11].map((k) => '1.0.1.0.' + k);
+  const drafts = [5, 64, 65, 66, 67, 68, 69].map((k) => '1.0.1.0.' + k);
   const fake = FAKE.create({ ...NONE_LISTED, ...Object.fromEntries(drafts.map((dr) => [opKeyOf(F.retrieveDocVSpanSet(dr)), WITHHELD_READ])) });
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
@@ -3534,7 +3534,7 @@ function signedIn(/** @type {Record<string, unknown>} */ s, head = 10) {
 const RECLAIMED = { refused: { kind: 'refused', name: 'history_reclaimed', status: 410, code: 'history_reclaimed', detail: null, op: null, body: { error: 'history_reclaimed', floor: 12 } } };
 
 test('the event stream\'s drop holds every row until the stream reopens and its catch-up reads `changes` from the last position the page took, under the page\'s session: the rows the dropped stream never sent and those the reopened one brings taken together, each once and in position order, nothing read and nothing missing while the stream stands dropped, the page not settled while the catch-up is out (issue #367\'s design decision: "`web/model/pump.js` holds new rows and reads `changes` from its last position once it has a session")', async () => {
-  const [A, B] = ['1.0.1.0.21', '1.0.1.0.22'];
+  const [A, B] = ['1.0.1.0.79', '1.0.1.0.80'];
   // what was written while the stream was down: an edit at 11, a draft minted at 12, edits at 13 and 14
   const fake = signedIn({ ...script, ...caughtUp('s-1', 10, [rowOf(11, [A]), rowOf(12, [B], 'drafts', 'create_new_document'), rowOf(13, [A]), rowOf(14, [A])], 14) });
   fake.drop();
@@ -3558,7 +3558,7 @@ test('the event stream\'s drop holds every row until the stream reopens and its 
 });
 
 test('a gap whose catch-up meets the page\'s session lost leaves the gap to the acquire that loss begins: one catch-up at a time — the acquire\'s from the last position, then the gap\'s from where it reached — every row taken once (issue #367)', async () => {
-  const A = '1.0.1.0.21';
+  const A = '1.0.1.0.79';
   const fake = signedIn({ ...script, ...opened('s-2'), [FAKE.keyOf('changes', { session: 's-1', since: 10 })]: { refused: { kind: 'shell', name: 'session_ended', session: 's-1' } }, ...caughtUp('s-2', 10, [rowOf(11, [A]), rowOf(12, [A])], 12), ...caughtUp('s-2', 12, [rowOf(13, [A])], 13) });
   fake.drop();
   fake.reopen();
@@ -3569,7 +3569,7 @@ test('a gap whose catch-up meets the page\'s session lost leaves the gap to the 
 });
 
 test('an acquire\'s catch-up that lands while the stream stands dropped takes what it read and leaves the rows held for the gap, whose catch-up reads from where it reached once the stream reopens (issue #367)', async () => {
-  const A = '1.0.1.0.21', frame = F.docMetadata(D);
+  const A = '1.0.1.0.79', frame = F.docMetadata(D);
   const s = { ...script, ...opened('s-2'), ...caughtUp('s-2', 10, [rowOf(11, [A])], 11), ...caughtUp('s-2', 11, [rowOf(12, [A]), rowOf(13, [A])], 13) };
   firstThen(s, frame, { refused: { kind: 'shell', name: 'session_ended', session: 's-1' } }, script[FAKE.keyOf('op', { frame })]);
   const fake = signedIn(s);
@@ -3586,7 +3586,7 @@ test('an acquire\'s catch-up that lands while the stream stands dropped takes wh
 });
 
 test('the event stream\'s drop over a guest\'s page is caught up with the guest form of `changes` — the published rows read token-free from the last position the page took, taken with the rows held, each once and in position order (issue #367; #749)', async () => {
-  const [A, B] = ['1.0.1.0.21', '1.0.1.0.22'];
+  const [A, B] = ['1.0.1.0.79', '1.0.1.0.80'];
   // what was written while the stream was down: edits at 11 and 12
   const fake = FAKE.create({ ...script, ...caughtUpGuest('b-1', 10, [rowOf(11, [A]), rowOf(12, [B])], 12) });
   PORT.boot(fake);
@@ -3607,7 +3607,7 @@ test('the event stream\'s drop over a guest\'s page is caught up with the guest 
 });
 
 test('the board lags from the stream\'s drop: past a second it is kept from the drop while the stream stands dropped and while the gap\'s catch-up is out, and kept no more from the step the catch-up\'s rows are taken (issue #367\'s design decision: "Meanwhile the board carries the clause")', async () => {
-  const fake = signedIn({ ...script, ...caughtUp('s-1', 10, [rowOf(11, ['1.0.1.0.21'])], 11) });
+  const fake = signedIn({ ...script, ...caughtUp('s-1', 10, [rowOf(11, ['1.0.1.0.79'])], 11) });
   const t0 = Date.now();
   fake.drop();
   const t1 = Date.now(), rev = PUMP.keptRevision();
@@ -3625,7 +3625,7 @@ test('the board lags from the stream\'s drop: past a second it is kept from the 
 });
 
 test('the lagging board records how the reads that made it whole set it, with the stamp of the drop — unchanged where its catch-up read no row, changed where it took one — and nothing where a change of the page\'s class let the lag go (issue #369)', async () => {
-  const A = '1.0.1.0.21';
+  const A = '1.0.1.0.79';
   const fake = signedIn({ ...script, ...caughtUp('s-1', 10), ...caughtUp('s-1', 20, [rowOf(21, [A])], 21) });
   /** the stream dropped, the page's clock held still as it drops: the stamp the board lags from */
   const dropped = () => { const at = Date.now(), clock = Date.now; Date.now = () => at; try { fake.drop(); } finally { Date.now = clock; } return at; };
@@ -3713,7 +3713,7 @@ test('where `changes` refuses the gap\'s catch-up, the board is marked and lags 
 const filled = (/** @type {string} */ ch, /** @type {number} */ n) => ({ result: { as_of: 1, resp: 'delivery', items: [{ content: ch.repeat(n) }] } });
 
 test('a text past one delivery\'s items is read in parts of at most MAX_DELIVERY_ITEMS positions — a whole read, an open find\'s read of the rest, and a feed row\'s read again of the window held, the text an open find searches kept as the view keeps what it shows — and a part the board refuses for its size is asked again as its halves (FP-21; wire.md §Content & provenance reads)', async () => {
-  const HUGE = '1.0.1.0.7', SIZED = '1.0.1.0.8', n = 200000, cut = F.MAX_DELIVERY_ITEMS;
+  const HUGE = '1.0.1.0.65', SIZED = '1.0.1.0.66', n = 200000, cut = F.MAX_DELIVERY_ITEMS;
   /** @type {Record<string, unknown>} */
   const s = {
     [opKeyOf(F.retrieveDocVSpanSet(HUGE))]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
@@ -3754,7 +3754,7 @@ test('a text past one delivery\'s items is read in parts of at most MAX_DELIVERY
 });
 
 test('the view\'s window past one delivery\'s items reads each part of it the page lacks on its own, of at most MAX_DELIVERY_ITEMS positions, and a part the board refuses for its size as its two halves (FP-21, FP-12)', async () => {
-  const BIG = '1.0.1.0.9', n = 200000, cut = F.MAX_DELIVERY_ITEMS, half = Math.floor((n - cut) / 2);
+  const BIG = '1.0.1.0.67', n = 200000, cut = F.MAX_DELIVERY_ITEMS, half = Math.floor((n - cut) / 2);
   /** @type {Record<string, unknown>} */
   const s = {
     [opKeyOf(F.retrieveDocVSpanSet(BIG))]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + n }] } },
@@ -3783,7 +3783,7 @@ test('the view\'s window past one delivery\'s items reads each part of it the pa
 });
 
 test('the view reading on down a text past one delivery\'s items keeps each part it read before: the part it reads next replaces the text over its own positions alone, so no position read goes unheld and no part is asked twice (FP-6, FP-21)', async () => {
-  const H = '1.0.1.0.15', n = 2000000, cut = F.MAX_DELIVERY_ITEMS;
+  const H = '1.0.1.0.73', n = 2000000, cut = F.MAX_DELIVERY_ITEMS;
   /** @type {Record<string, unknown>} */
   const s = {};
   const fake = FAKE.create(s);
@@ -3888,7 +3888,7 @@ test('a whole read asks its text\'s image with the text and takes the two in one
 });
 
 test('a find\'s read of the rest asks each part\'s image with its text and takes the two in one step: while a part\'s image is out none of its text is held, and no state holds text its image does not place; a part whose image read fails is taken alone at once, the read answering no refusal (FP-27)', async () => {
-  const R = '1.0.1.0.14', n = 200000, head = 4096, cut = F.MAX_DELIVERY_ITEMS, rest = n - head;
+  const R = '1.0.1.0.72', n = 200000, head = 4096, cut = F.MAX_DELIVERY_ITEMS, rest = n - head;
   /** R's own bytes from `pos`, as `image` answers them */
   const own = (/** @type {number} */ pos, /** @type {number} */ width) => ({ result: { as_of: 1, resp: 'runs', runs: [{ i_start: `${R}.0.1.${pos}`, width: String(width) }] } });
   /** @type {Record<string, unknown>} */
@@ -3930,7 +3930,7 @@ test('a find\'s read of the rest asks each part\'s image with its text and takes
 });
 
 test('a read near a place, for the undo chord: the extent first where the record lacks it; then of the stretches lacked, nearest the place first — one holding it, then one after it before one before it — the image of held text read alone, a text read with its image and the two taken in one step; it stops as `done` answers true, hands up the refusal a read meets, and begins a pass again where the document is dropped under it, taking nothing that pass read (D5 K-75; FP-27)', async () => {
-  const N = '1.0.1.0.16';
+  const N = '1.0.1.0.74';
   /** N's own bytes from `pos`, as `image` answers them */
   const own = (/** @type {number} */ pos, /** @type {number} */ width) => ({ result: { as_of: 1, resp: 'runs', runs: [{ i_start: `${N}.0.1.${pos}`, width: String(width) }] } });
   /** @type {Record<string, unknown>} */
@@ -3991,7 +3991,7 @@ const imagesAsked = (/** @type {ReturnType<typeof FAKE.create>} */ fake, from = 
 /** D's image refused for its size, as the board refuses a region past M8's budget */
 const IMAGE_TOO_LARGE = { refused: { kind: 'refused', name: 'image_too_large', status: 200, code: 'image_too_large', detail: null, op: 'image', body: null } };
 /** D's image over its first fifteen positions, its own bytes; and over the fifteen after them, its own to 26 and four of the withheld run's origin */
-const [D_FIRST_HALF, D_SECOND_HALF] = [{ result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '15' }] } }, { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.16', width: '11' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }] } }];
+const [D_FIRST_HALF, D_SECOND_HALF] = [{ result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '15' }] } }, { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.16', width: '11' }, { i_start: '1.0.1.0.1061.0.1.1', width: '4' }] } }];
 
 test('the view asks only the image its held text lacks, each placed where it was asked: the image held over the text\'s first half, its second half asked alone; images held over two windows that do not meet, the stretch between them alone (FP-27)', async () => {
   const s = { ...script, ...D_CHAIN, [opKeyOf(F.image(D, 16, 15))]: D_SECOND_HALF, [opKeyOf(F.image(D, 11, 10))]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.11', width: '10' }] } } };
@@ -4002,7 +4002,7 @@ test('the view asks only the image its held text lacks, each placed where it was
   assert.deepEqual([imagesAsked(fake, from), gapsIn(D)], [[[16, 15]], []], 'its second half asked alone, and placed there');
   REC.invalidate(D); PUMP.forget(D);
   heldD({ from: 1, runs: [{ iStart: D + '.0.1.1', width: 10 }] });
-  REC.takeImage(D, 21, [{ iStart: D + '.0.1.21', width: 6 }, { iStart: '1.0.1.0.1003.0.1.1', width: 4 }]);
+  REC.takeImage(D, 21, [{ iStart: D + '.0.1.21', width: 6 }, { iStart: '1.0.1.0.1061.0.1.1', width: 4 }]);
   from = fake.asked.length;
   await settle();
   assert.deepEqual([imagesAsked(fake, from), gapsIn(D)], [[[11, 10]], []], 'the stretch between the two windows asked alone, and placed there');
@@ -4014,7 +4014,7 @@ test('the view\'s image read the board refuses for its size is asked again as it
   const fake = readingD(s);
   heldD(null);
   await settle();
-  assert.deepEqual([imagesAsked(fake), gapsIn(D), REC.doc(D).origins], [[[1, 30], [1, 15], [16, 15]], [], [{ pos: 27, width: 4, doc: '1.0.1.0.1003' }]], 'refused whole for its size, asked as its halves: every position named');
+  assert.deepEqual([imagesAsked(fake), gapsIn(D), REC.doc(D).origins], [[[1, 30], [1, 15], [16, 15]], [], [{ pos: 27, width: 4, doc: '1.0.1.0.1061' }]], 'refused whole for its size, asked as its halves: every position named');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -4043,7 +4043,7 @@ test('each refusal the view\'s image read meets is recorded once: the size refus
 });
 
 test('past the whole read\'s cap the view asks no image of positions it holds no text of: its first window and the window in view held with their images, nothing asked across the positions between them (FP-12, FP-27)', async () => {
-  const H = '1.0.1.0.15', n = 2000000, head = 4096;
+  const H = '1.0.1.0.73', n = 2000000, head = 4096;
   const fake = FAKE.create({});
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
@@ -4065,7 +4065,7 @@ test('past the whole read\'s cap the view asks no image of positions it holds no
 });
 
 test('the launch\'s reads: the newest row of this hand is asked of the account\'s feed alone, under the session, and only where a session that may write stands under an account with a key of the device\'s; where a write landed is one history read of the draft\'s image before it, asked again at the position the board names where the first lies inside a commit, a draft minted by the write before it holding nothing then, any other refusal telling nothing (B3-S1 THE LAUNCH; D6 BM-53)', async () => {
-  const W = '1.0.1.0.9', KEY = 'c'.repeat(64);
+  const W = '1.0.1.0.67', KEY = 'c'.repeat(64);
   /** @type {any[]} */
   const asked = [];
   /** what the board answers the history read at a position */
@@ -4098,12 +4098,12 @@ test('the launch\'s reads: the newest row of this hand is asked of the account\'
   assert.deepEqual(asked.map((f) => [f.at, f.frame.op, f.frame.d]), [[39, 'image', W], [37, 'image', W]], 'asked at the position before the write\'s, then at the one the board names');
   assert.deepEqual(await PUMP.landedOf(W, 20), { placed: [{ pos: 1, width: 6 }], left: null }, 'the draft unregistered before the write: all it holds placed since');
   assert.equal(await PUMP.landedOf(W, 10), null, 'the state before the write reclaimed: nothing told');
-  assert.equal(await PUMP.landedOf('1.0.1.0.10', 40), null, 'a document the page holds no text of: nothing asked, nothing told');
+  assert.equal(await PUMP.landedOf('1.0.1.0.68', 40), null, 'a document the page holds no text of: nothing asked, nothing told');
   assert.equal(PUMP.inflightCount(), 0, 'no read left counted in flight');
 });
 
 test('a document\'s text and its image as they stood at a position of the board\'s history are read for an act and kept nowhere: the extent there, asked again at the committed position the board names below it — save where that lies at or below the position the caller bounds it by, the board\'s refusal handed up — then the text and its image one after the other; empty where the document was not registered then; asked again whole after the board\'s reconstructions were busy, as many times as the caller allows, the busy refusal handed up past them; any other refusal handed up; counted in flight while out (B3-S2; D6 BM-14; wire.md §Reading history)', async () => {
-  const X = '1.0.1.0.120';
+  const X = '1.0.1.0.178';
   /** a history read's key: the frame asked as of `at` */
   const K = (/** @type {number} */ at, /** @type {object} */ frame) => FAKE.keyOf('op', { frame: F.opAt(at, frame) });
   const span = (/** @type {number} */ at, /** @type {number} */ n) => ({ result: { resp: 'span_set', as_of: at, set: [{ start: '1.1', width: '0.' + n }] } });
@@ -4151,7 +4151,7 @@ test('a document\'s text and its image as they stood at a position of the board\
 });
 
 test('the links that stood on a document\'s words at a position of the board\'s history are read for an act and kept nowhere: one `find_links_v` over its first positions as of that position, the addresses answered; asked again after the board\'s reconstructions or its scans were busy, the busy refusal handed up past the bound; any other refusal handed up; nothing asked where the text held no position; counted in flight while out (B3-S7; A-46; skep-frontend #704)', async () => {
-  const X = '1.0.1.0.124', L1 = X + '.0.2.1', L2 = '1.0.1.0.5.0.2.3';
+  const X = '1.0.1.0.182', L1 = X + '.0.2.1', L2 = '1.0.1.0.5.0.2.3';
   const K = (/** @type {number} */ at, /** @type {number} */ n) => FAKE.keyOf('op', { frame: F.opAt(at, F.findLinksV(X, 1, n)) });
   let busy = 2;
   /** @type {Record<string, unknown>} */
@@ -4184,7 +4184,7 @@ test('the links that stood on a document\'s words at a position of the board\'s 
 });
 
 test('a document\'s text and its image as the board holds them now are read as a whole read reads them, never as of a position of its history: held whole, an image placing every position, nothing read and the record\'s own answered, at the position its text was read at; an image leaving a position unplaced read over the text and taken; a text held in part read whole with its image; a draft the window writes — its burst open, or words of it dialed the board has not acked — read off the board at its head and kept nowhere; the refusal a read met handed up; counted in flight while out (B3-S7; issue #700)', async () => {
-  const X = '1.0.1.0.122', Y = '1.0.1.0.123', TEXT = 'Words now.', n = TEXT.length;
+  const X = '1.0.1.0.180', Y = '1.0.1.0.181', TEXT = 'Words now.', n = TEXT.length;
   const run = { pos: 1, width: n, kind: /** @type {const} */ ('content'), text: TEXT, ref: null, origin: null };
   /** @type {Record<string, unknown>} */
   const script = {
@@ -4237,7 +4237,7 @@ test('a document\'s text and its image as the board holds them now are read as a
 });
 
 test('the feed\'s row at a position is read for an act as one row of `changes` past the position before it — under the page\'s session, in the guest form where none stands: the row where the first read stands at the position; none where it stands past it or none comes; the refusal met handed up; counted in flight while out (B3-S7; issue #700)', async () => {
-  const at = (/** @type {number} */ position) => ({ position, at: position, op: 'insert', docs: ['1.0.1.0.124'], class: 'published', time: 7 });
+  const at = (/** @type {number} */ position) => ({ position, at: position, op: 'insert', docs: ['1.0.1.0.182'], class: 'published', time: 7 });
   const page = (/** @type {object[]} */ entries) => ({ result: { entries, next: 60, head: 60 } });
   const fake = FAKE.create({
     [FAKE.keyOf('changes', { session: 's-1', since: 45, limit: 1 })]: page([at(46)]),
@@ -4283,7 +4283,7 @@ test('replay: a recorded script from the provider builds the model; the snapshot
 });
 
 test('bytes read by their identity: `retrieve_i` at the page\'s class, the spans cut into parts of at most MAX_DELIVERY_ITEMS positions — one item a position — each one read in order, the values handed up in the spans\' order, `null` where the document minted none; a refusal recorded and handed up, the parts after it unasked; an answer of too few positions malformed (B3-S5; FP-21)', async () => {
-  const X = '1.0.1.0.40', Y = '1.0.1.0.41', M = F.MAX_DELIVERY_ITEMS;
+  const X = '1.0.1.0.98', Y = '1.0.1.0.99', M = F.MAX_DELIVERY_ITEMS;
   /** @type {string[]} */
   const asked = [];
   let refuse = false, short = false;
@@ -4318,7 +4318,7 @@ test('bytes read by their identity: `retrieve_i` at the page\'s class, the spans
 });
 
 test('a draft\'s history is read off the feed narrowed to the draft — `under` the draft, under the session — in windows from the head back as the launch reads, until the rows read hold what the caller asks or the windows reach the feed\'s first position, each window paged by its `next`; the narrowed feed\'s positions never move the page\'s own on the whole feed; the rows below a first read\'s reach read alone, and those above a position alone; counted in flight while out; a refused page ending the read (B3-S7 THE LIST; the past states survey\'s R1; FP-18)', async () => {
-  const W = '1.0.1.0.12', HEAD = 5000, OWN_W = PUMP.OWN_WINDOW;
+  const W = '1.0.1.0.70', HEAD = 5000, OWN_W = PUMP.OWN_WINDOW;
   /** the draft's rows on the narrowed feed: one every hundred positions from 100 */
   const ROWS = Array.from({ length: 49 }, (_, i) => ({ position: 100 * (i + 1), at: 100 * (i + 1), op: 'insert', docs: [W], class: 'drafts', key: 'bare', time: 1 }));
   /** @type {any[]} */
@@ -4369,7 +4369,7 @@ test('a draft\'s history is read off the feed narrowed to the draft — `under` 
 });
 
 test('a draft\'s history read reads its newest window on to the board\'s head, past the page\'s place on the feed: a row the board holds whose feed row the page has not taken — the commit its own burst\'s ack answered — stands among the rows read, the read covering up to the narrowed feed\'s `next` at the head, the page\'s own positions on the whole feed unmoved; a read above a position reads it too; a read below a position reads nothing above it; a page refused in the newest window hands up the rows the pages before it answered, the read covering up to their `next` (B3-S7 THE LIST; issue #718)', async () => {
-  const W = '1.0.1.0.14', HEAD = 5000, AT = 4950, W1 = AT - PUMP.OWN_WINDOW;
+  const W = '1.0.1.0.72', HEAD = 5000, AT = 4950, W1 = AT - PUMP.OWN_WINDOW;
   /** the draft's rows on the narrowed feed: two before the page's place on the feed, one past it */
   const ROWS = [4800, 4900, 4980].map((p) => ({ position: p, at: p, op: 'insert', docs: [W], class: 'drafts', key: 'bare', time: 1 }));
   /** @type {number[]} each page's `since`, as asked */
@@ -4409,7 +4409,7 @@ test('a draft\'s history read reads its newest window on to the board\'s head, p
 });
 
 test('a draft\'s history read hands up every row of the positions it covers and none outside them: a page refused partway ends it at the windows read whole above it, their rows alone; a page refused below the first position the feed\'s files hold, naming it, is read again from the position before it — from the floor itself where that is refused too — and the read ends there, the floor reached (B3-S7 THE LIST; wire.md §The change feed, Retention; issue #696)', async () => {
-  const W = '1.0.1.0.13', HEAD = 5000, OWN_W = PUMP.OWN_WINDOW;
+  const W = '1.0.1.0.71', HEAD = 5000, OWN_W = PUMP.OWN_WINDOW;
   /** the draft's rows on the narrowed feed: one every hundred positions from 100 */
   const ROWS = Array.from({ length: 49 }, (_, i) => ({ position: 100 * (i + 1), at: 100 * (i + 1), op: 'insert', docs: [W], class: 'drafts', key: 'bare', time: 1 }));
   /** @type {number[]} each page's `since`, as asked */

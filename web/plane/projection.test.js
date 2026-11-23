@@ -1,13 +1,19 @@
-// P-PROJ's test: reading order with the continuation (foundations §2.1); a
-// mint moves no place; siblings never collide; each continuation's cell
-// holds its documents and none shallower; a mark's name read back, and its
-// members each account's documents its continuation holds; the residue past
-// the sound depth; the clear strip left of a box; the account under a point,
-// read through every level's continuations, and none where the doubles can no
-// longer place a continuation apart; and the board's label cell.
+// P-PROJ's test: a document's number mapped to its cell — the home page and
+// the slots their own, an ordinary document from cell 6 in mint order, a
+// reserved number none; reading order with the continuation (foundations
+// §2.1); a mint moves no place; siblings never collide; each continuation's
+// cell holds its documents and none shallower; a mark's name read back, and
+// its members each account's documents its continuation holds; the residue
+// past the sound depth; the clear strip left of a box; the account under a
+// point, read through every level's continuations, and none where the
+// doubles can no longer place a continuation apart; and the board's label
+// cell.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, boardLabelCell, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
+import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, boardLabelCell, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf, cellNumberOf, numberAtCell, hasCell, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
+
+/** the document of account 1.0.1 standing at a cell, counted from 1 */
+const atCell = (/** @type {number} */ cell) => '1.0.1.0.' + numberAtCell(cell);
 
 test('the padded path: a board 3 digits, an account 5, a document 6', () => {
   assert.deepEqual(pathOf('1'), [1, 0, 0]);
@@ -16,20 +22,38 @@ test('the padded path: a board 3 digits, an account 5, a document 6', () => {
   assert.deepEqual(pathOf('1.0.1.0.3.2'), [1, 0, 0, 1, 0, 3], 'a member projects to its document');
 });
 
+test('a document\'s number takes its cell: the home page and the slots 2 … 5 their own, an ordinary document from 64 the cells after them in mint order, a reserved number 6 … 63 none (B11-S3)', () => {
+  assert.deepEqual([1, 2, 3, 4, 5].map(cellNumberOf), [1, 2, 3, 4, 5], 'the home page and the slots');
+  assert.deepEqual([64, 65, 106, 107, 634, 635].map(cellNumberOf), [6, 7, 48, 49, 576, 577], 'an ordinary document: 64 at cell 6, 106 the first grid\'s last, 107 the first continuation\'s first, 634 the sound depth\'s last');
+  assert.deepEqual([6, 12, 63, 0].map(cellNumberOf), [null, null, null, null], 'a reserved number, and none at all: no cell');
+  for (const c of [1, 5, 6, 48, 49, 576, 577]) assert.equal(cellNumberOf(numberAtCell(c)), c, `cell ${c} read back`);
+  assert.deepEqual([hasCell('1.0.1.0.5'), hasCell('1.0.1.0.64'), hasCell('1.0.1.0.64.2'), hasCell('1.0.1.0.7'), hasCell('1.0.1.0.7.2'), hasCell('1.0.1.0.7.0.2.1'), hasCell('1.0.1'), hasCell('1')], [true, true, true, false, false, false, true, true], 'a reserved number has no place, nor its members or elements; every board and account has one');
+});
+
+test('a reserved number answers the account\'s first cell, at depth 0 inside no continuation, which no mark counts', () => {
+  _reset();
+  const home = docBox('1.0.1.0.1'), reserved = docBox('1.0.1.0.7');
+  assert.deepEqual([reserved.x, reserved.y, reserved.w, reserved.h, reserved.depth, reserved.residue], [home.x, home.y, home.w, home.h, 0, false]);
+  assert.equal(depthOfDoc('1.0.1.0.63'), 0);
+  assert.ok(!withinContinuation('1.0.1.0.63', 1), 'no continuation holds it');
+  assert.deepEqual([...membersAt(['1.0.1.0.7', '1.0.1.0.63', atCell(49)], 1)], [['1.0.1', [atCell(49)]]], 'no mark counts it');
+});
+
 test('a document digit picks its cell in reading order — along the row, then the next row', () => {
   assert.deepEqual(slotOf(1, 7, true), { k: 0, idx: 0, col: 0, row: 0 });
   assert.deepEqual(slotOf(2, 7, true), { k: 0, idx: 1, col: 1, row: 0 });
-  assert.deepEqual(slotOf(8, 7, true), { k: 0, idx: 7, col: 0, row: 1 });
-  assert.deepEqual(slotOf(48, 7, true), { k: 0, idx: 47, col: 5, row: 6 });
+  assert.deepEqual(slotOf(64, 7, true), { k: 0, idx: 5, col: 5, row: 0 }, 'the first ordinary document at cell 6, beside the slots');
+  assert.deepEqual(slotOf(65, 7, true), { k: 0, idx: 6, col: 6, row: 0 });
+  assert.deepEqual(slotOf(66, 7, true), { k: 0, idx: 7, col: 0, row: 1 }, 'the next row');
+  assert.deepEqual(slotOf(106, 7, true), { k: 0, idx: 47, col: 5, row: 6 });
 });
 
-test('the last cell holds the next grid: the 49th document continues in reading order inside it', () => {
-  assert.deepEqual(slotOf(49, 7, true), { k: 1, idx: 0, col: 0, row: 0 });
-  assert.deepEqual(slotOf(97, 7, true), { k: 2, idx: 0, col: 0, row: 0 });
-  const c48 = cellOf(pathOf('1.0.1.0.48')), c49 = cellOf(pathOf('1.0.1.0.49'));
+test('the last cell holds the next grid: the document at the 49th cell continues in reading order inside it', () => {
+  assert.deepEqual(slotOf(numberAtCell(49), 7, true), { k: 1, idx: 0, col: 0, row: 0 });
+  assert.deepEqual(slotOf(numberAtCell(97), 7, true), { k: 2, idx: 0, col: 0, row: 0 });
+  const c48 = cellOf(pathOf(atCell(48))), c49 = cellOf(pathOf(atCell(49)));
   assert.equal(c49.w, c48.w / G[5], 'a continuation cell is one grid smaller');
-  const cont = cellOf(pathOf('1.0.1.0.49'));
-  assert.ok(cont.x >= c48.x + c48.w, 'inside the last cell, to the right of the 48th');
+  assert.ok(c49.x >= c48.x + c48.w, 'inside the last cell, to the right of the 48th');
 });
 
 test('the separator slot holds the parent\'s own accounts: digit 0 is the first cell', () => {
@@ -42,24 +66,26 @@ test('the separator slot holds the parent\'s own accounts: digit 0 is the first 
 test('siblings never collide and consecutive mints stand side by side', () => {
   _reset();
   const boxes = [];
-  for (let n = 1; n <= 100; n++) boxes.push(docBox('1.0.1.0.' + n));
+  for (let c = 1; c <= 100; c++) boxes.push(docBox(atCell(c)));
   for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
     const a = boxes[i], b = boxes[j];
     const overlap = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-    assert.ok(!overlap, `documents ${i + 1} and ${j + 1} collide`);
+    assert.ok(!overlap, `the documents at cells ${i + 1} and ${j + 1} collide`);
   }
   assert.ok(Math.abs(boxes[1].y - boxes[0].y) < 1e-6 && boxes[1].x > boxes[0].x, 'document 2 beside document 1');
-  assert.ok(boxes[7].y > boxes[0].y && Math.abs(boxes[7].x - boxes[0].x) < 1e-6, 'document 8 starts the next row');
+  assert.ok(boxes[7].y > boxes[0].y && Math.abs(boxes[7].x - boxes[0].x) < 1e-6, 'cell 8 starts the next row');
+  const minted = docBox('1.0.1.0.65'), next = docBox('1.0.1.0.64');
+  assert.ok(Math.abs(minted.y - next.y) < 1e-6 && minted.x > next.x, 'the second ordinary mint beside the first');
 });
 
 test('a continuation\'s cell holds the documents at its depth and deeper, and none shallower', () => {
   for (const k of [1, 2, 3]) {
     const c = continuationCell('1.0.1', k);
     const inside = (/** @type {{x: number, y: number, w: number, h: number}} */ b) => b.x >= c.x && b.y >= c.y && b.x + b.w <= c.x + c.w && b.y + b.h <= c.y + c.h;
-    const first = '1.0.1.0.' + (48 * k + 1), next = '1.0.1.0.' + (48 * (k + 1) + 1), before = '1.0.1.0.' + 48 * k;
-    assert.ok(inside(docBox(first)) && withinContinuation(first, k), `document ${48 * k + 1}, the continuation's first, inside continuation ${k}`);
+    const first = atCell(48 * k + 1), next = atCell(48 * (k + 1) + 1), before = atCell(48 * k);
+    assert.ok(inside(docBox(first)) && withinContinuation(first, k), `${first}, at the continuation's first cell, inside continuation ${k}`);
     assert.ok(inside(docBox(next)) && withinContinuation(next, k), 'the next continuation\'s first inside it too');
-    assert.ok(!inside(docBox(before)) && !withinContinuation(before, k), `document ${48 * k}, the grid's last before it, outside`);
+    assert.ok(!inside(docBox(before)) && !withinContinuation(before, k), `${before}, at the grid's last cell before it, outside`);
   }
   assert.equal(continuationCell('1.0.1', 1).w, cellOfKey('1.0.1').w / G[5], 'the first continuation is a cell of the account\'s first grid');
 });
@@ -71,38 +97,40 @@ test('a mark\'s name is its account and its continuation, read back whole; no ad
 });
 
 test('a mark\'s members are each account\'s documents its continuation holds, in address order, its newest last — a version member counted once, as its document — and none shallower (issue #42)', () => {
-  const docs = ['1.0.1.0.60', '1.0.1.0.3', '1.0.1.0.49', '1.0.1.0.49.2', '1.0.2.0.50', '1.0.1.0.48', '1.0.1.0.200'];
-  assert.deepEqual([...membersAt(docs, 1)], [['1.0.1', ['1.0.1.0.49', '1.0.1.0.60', '1.0.1.0.200']], ['1.0.2', ['1.0.2.0.50']]]);
-  assert.deepEqual([...membersAt(docs, 2)], [['1.0.1', ['1.0.1.0.200']]], 'continuation 2: from the 97th');
-  assert.deepEqual([...membersAt(['1.0.1.0.3', '1.0.1.0.48'], 1)], [], 'the first grid\'s documents stand whole: no member');
+  const docs = ['1.0.1.0.118', '1.0.1.0.3', '1.0.1.0.107', '1.0.1.0.107.2', '1.0.2.0.108', '1.0.1.0.106', '1.0.1.0.258'];
+  assert.deepEqual([...membersAt(docs, 1)], [['1.0.1', ['1.0.1.0.107', '1.0.1.0.118', '1.0.1.0.258']], ['1.0.2', ['1.0.2.0.108']]]);
+  assert.deepEqual([...membersAt(docs, 2)], [['1.0.1', ['1.0.1.0.258']]], 'continuation 2: from the 97th cell');
+  assert.deepEqual([...membersAt(['1.0.1.0.3', '1.0.1.0.64', '1.0.1.0.106'], 1)], [], 'the first grid\'s documents stand whole: no member');
 });
 
 test('the continuation past the sound depth is exactly the cell its documents share', () => {
-  const deep = '1.0.1.0.' + (48 * (DEPTH_SOUND + 1) + 1), sound = '1.0.1.0.' + 48 * (DEPTH_SOUND + 1);
+  const deep = atCell(48 * (DEPTH_SOUND + 1) + 1), sound = atCell(48 * (DEPTH_SOUND + 1));
+  assert.deepEqual([deep, sound], ['1.0.1.0.635', '1.0.1.0.634'], 'the residue from document 635, 634 the last with a box of its own');
   assert.deepEqual(continuationCell('1.0.1', DEPTH_SOUND + 1), cellOfKey(deep), 'cellOf\'s own descent, step for step');
   assert.ok(docBox(deep).residue && withinContinuation(deep, DEPTH_SOUND + 1));
+  assert.ok(!docBox(sound).residue && depthOfDoc(sound) === DEPTH_SOUND, 'the sound depth\'s last document has a box of its own');
   assert.ok(!withinContinuation(sound, DEPTH_SOUND + 1) && withinContinuation(sound, DEPTH_SOUND), 'the sound depth\'s last document stands whole, inside its own continuation');
 });
 
 test('a document past the sound depth shares the residue cell, marked so', () => {
-  const deep = docBox('1.0.1.0.' + (48 * (DEPTH_SOUND + 2)));
+  const deep = docBox(atCell(48 * (DEPTH_SOUND + 2)));
   assert.equal(deep.residue, true);
-  assert.equal(depthOfDoc('1.0.1.0.' + (48 * (DEPTH_SOUND + 2))), DEPTH_SOUND + 1);
-  const deeper = docBox('1.0.1.0.' + (48 * (DEPTH_SOUND + 5)));
+  assert.equal(depthOfDoc(atCell(48 * (DEPTH_SOUND + 2))), DEPTH_SOUND + 1);
+  const deeper = docBox(atCell(48 * (DEPTH_SOUND + 5)));
   assert.deepEqual([deeper.x, deeper.y], [deep.x, deep.y], 'every residue member shares the one cell');
   assert.equal(docBox('1.0.1.0.3').residue, false);
 });
 
 test('the strip left of a box is clear of every other box: to the sibling\'s box beside it, or its own cell\'s edge at its grid\'s first column', () => {
-  for (const [d, left] of [['1.0.1.0.3', '1.0.1.0.2'], ['1.0.1.0.4', '1.0.1.0.3'], ['1.0.1.0.50', '1.0.1.0.49']]) {
+  for (const [d, left] of [['1.0.1.0.3', '1.0.1.0.2'], ['1.0.1.0.4', '1.0.1.0.3'], ['1.0.1.0.64', '1.0.1.0.5'], [atCell(50), atCell(49)]]) {
     const b = docBox(d), n = docBox(left);
     assert.ok(Math.abs(b.x - clearLeftOf(d) - (n.x + n.w)) < 1e-6, `${d}: its strip ends at ${left}'s box`);
   }
-  for (const d of ['1.0.1.0.1', '1.0.1.0.8', '1.0.1.0.49']) {
+  for (const d of ['1.0.1.0.1', atCell(8), atCell(49)]) {
     assert.ok(Math.abs(docBox(d).x - clearLeftOf(d) - cellOfKey(d).x) < 1e-6, `${d}: at its grid's first column, its own cell's margin alone`);
   }
-  const deep = '1.0.1.0.' + (48 * (DEPTH_SOUND + 1) + 1); // past the sound depth, its own digit the first of its grid
-  assert.equal(slotOf(48 * (DEPTH_SOUND + 1) + 1, G[5], true).col, 0);
+  const deep = atCell(48 * (DEPTH_SOUND + 1) + 1); // past the sound depth, its own digit the first of its grid
+  assert.equal(slotOf(numberAtCell(48 * (DEPTH_SOUND + 1) + 1), G[5], true).col, 0);
   const ratio = clearLeftOf(deep) / (docBox(deep).x - cellOfKey(deep).x); // a cell 7^11 smaller: compared as a ratio
   assert.ok(Math.abs(ratio - 2) < 0.01, `the residue cell stands in its grid's last column: a sibling's margin with its own (${ratio})`);
 });
