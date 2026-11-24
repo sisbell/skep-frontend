@@ -305,7 +305,22 @@ the top line means FP-37.
   the destination, the camera waits, input acts on what is on screen,
   and Esc or Back abandons the jump. A jump that ends without the
   camera leaving gives its entry back. No act is cancelled by a pan or
-  zoom, and nothing flies the reader back unbidden.
+  zoom, and nothing flies the reader back unbidden. An act at an
+  address the map places arrives — a flight and one entry, the act's
+  own read answered at the landing — save at an ordinary address the
+  page knows the board says nothing of; an assigned slot's address
+  arrives every time. An address the map places nowhere never flies
+  and takes no entry; its answer stands at the act's site. This binds
+  every act: the LEAP box, every follow surface, the gate's doors.
+
+- **FP-42 A number the map gives no cell has one state everywhere.**
+  Wherever an address's state is named — the box's rows, a link's far
+  end, its tail and a merged tail, the which-list, the link card, the
+  mirror — an address the map gives no cell stands in one state until
+  a read answers otherwise. No surface draws, lists, mounts or hits it:
+  the plane, the walk, a hit, the text layer and the pump leave it out.
+  Every face that answers an act there offers the jump to its account's
+  region.
 
 ## What stands
 
@@ -663,7 +678,7 @@ last. Each stands until a later decision says it changes it.
 - **#617**: a moved scene's held version names the person's held words by the identity the draft's text shown gives them, so each pane draws the held bar beside them through its own image → FP-38, FP-31
 - **B3-S7's put-back** (D5 K-102; the past states survey's P7, P43, P44): a past state's passages the current text lacks are marked in pane B by identity at their line's edge — those on one line one mark carrying their count, a walk element whose face holds C-49 and "put back in the current text" — and the act places a passage's words by identity, a member's by the member the preview names, where the words before it stand in the current text at the press, else before the words after it, one step of its own that Mod+Z takes back → FP-9, FP-11
 - **#675**: a draft's history list is headed by one row naming, in its own words cut between words and never wrapped, what the next press acts on — pane B's selection, else the passage held — its act bringing the passage into view in each pane holding it, else opening its words whole beneath, the row held at the column's top above the day heads; the step's row, its chords and its press land with #705, the record of the page's own acknowledged changes and the step built beneath them → FP-26, FP-36
-- **#771**: the plane's cell map alone says which numbers are reserved, no jump to one flies or takes a trail entry and no read of one is keyed to the account's first cell — a reserved address showing "reserved number" on the LEAP box's row as it is typed and wherever a link's far-end state shows until a read answers otherwise, a merged tail naming a state only where all its ends share one and the tail staying as #132 draws it, and after the press the face following the board's answer — nothing registered the reserved words then the board's own, withheld its withheld face with no reserved words, a document there this version draws nowhere offering "read it beside" in a reading scene's pane, any other answer the reserved words then its own — every arm offering the jump to the account's region, the LEAP box staying open on the typed address with the face at its row and the jump on the row below (changes #224) → FP-25, FP-21, FP-26, FP-20, FP-36
+- **#771**: the plane's cell map alone says which numbers are reserved, no jump to one flies or takes a trail entry and no read of one is keyed to the account's first cell — a reserved address showing "reserved number" on the LEAP box's row as it is typed and wherever a link's far-end state shows until a read answers otherwise, a merged tail naming a state only where all its ends share one and the tail staying as #132 draws it, and after the press the face following the board's answer — nothing registered the reserved words then the board's own, withheld its withheld face with no reserved words, a document there this version draws nowhere offering "read it beside" in a reading scene's pane, any other answer the reserved words then its own — every arm offering the jump to the account's region, the LEAP box staying open on the typed address with the face at its row and the jump on the row below (changes #224) → FP-42, FP-25, FP-21, FP-26, FP-20, FP-36
 
 ## What these rule out
 
