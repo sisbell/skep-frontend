@@ -4312,12 +4312,13 @@ ROWS_TIMED = """((text) => { const q = document.getElementById('leapq'), ms = []
 def slot_names_typed(ctx, r):
     """A WELL-KNOWN SLOT'S NAME TYPED IN THE LEAP BOX — reads alone (B11-S9, B11-S7; B11-F18 (4); O1): `mailbox`, `bio` and
     `link page`, each finding the claimant's own slot first, before any press, created or not — its address, then its account
-    and its name, its go named by them — the claimant's own mailbox listed once; Enter on `bio` twice, each LEAP arriving at the
-    unwritten bio with an entry of its own and the one line naming its slot after its field (B11-S4); Enter on `mailbox`, the line
-    naming the claimant's own mailbox by its own name. Its figures: the box's time from a text to its rows drawn with an own
+    and its name as the reader is shown it, "your bio" and its siblings (the one form's part 5), its go named by them — the
+    claimant's own mailbox listed once; Enter on `bio` twice, each LEAP arriving at the unwritten bio with an entry of its own and
+    the one line naming its slot by its own name after its field (B11-S4); Enter on `mailbox`, the line naming the claimant's own
+    mailbox by its own name. Its figures: the box's time from a text to its rows drawn with an own
     slot's row and with none over the same matches, and each LEAP's time from Enter to its landing"""
     words = slot_words(ctx)
-    names = {MAILBOX: words['L.well-known.your-mailbox'], BIO: words['L.well-known.bio'], LINK_PAGE: words['L.well-known.link-page']}
+    names = {MAILBOX: words['L.well-known.your-mailbox'], BIO: words['L.well-known.your-bio'], LINK_PAGE: words['L.well-known.your-link-page']}
     figures = {}
     for typed, own in (('mailbox', MAILBOX), ('bio', BIO), ('link page', LINK_PAGE)):
         type_in_box(ctx, typed)
@@ -4349,7 +4350,7 @@ def slot_names_typed(ctx, r):
         shown = ctx.js('window.__skep.line()')['address']
         dom = ctx.js('(() => { const e = document.querySelector("#line .seg.address .slot-name"); return e ? [e.dataset.string, e.textContent] : null; })()')
         r.check(not s['leap'] and t1['cursor'] == t0['cursor'] + n and bool(newest) and newest['addr'] == BIO and not same_view(left, s)
-                and shown.get('doc') == BIO and (shown.get('name') or {}).get('text') == names[BIO] and dom == ['L.well-known.bio', names[BIO]],
+                and shown.get('doc') == BIO and (shown.get('name') or {}).get('text') == names[BIO] and dom == ['L.well-known.your-bio', names[BIO]],
                 'Enter on the own row "bio" %s: the box closed, the LEAP arriving at the unwritten bio with an entry of its own (O1), and the one line naming "%s" after its field (B11-S4, B11-S9)' % ('the first time' if n == 1 else 'again', names[BIO]),
                 {'cursor': [t0['cursor'], t1['cursor']], 'newest': newest and newest['addr'], 'moved': not same_view(left, s), 'line': {k: shown.get(k) for k in ('text', 'doc', 'name')}, 'dom': dom, 'ms': took})
         chord(ctx, 'Escape')
@@ -4364,6 +4365,100 @@ def slot_names_typed(ctx, r):
             {'line': {k: shown.get(k) for k in ('text', 'doc', 'name')}, 'dom': dom})
     chord(ctx, 'Escape')
     r.figures['slot_names_typed'] = figures
+
+
+# a depth-0 box this many px wide frames the claimant's slot cells at mid, and at far~mid one this many px wide: its forms a few px
+# across, each pressed in its press area (P-REG's TARGET.min)
+FORM_MID_PX, FORM_FAR_PX = 300, 12
+
+
+def forms_walked(ctx, r):
+    """THE ONE FORM'S STOP AND ITS PRESS (B11-S5; the one form's parts 1, 6; the owner's minimum press area, 24 px) — reads alone:
+    before any press the claimant's account lists its home page, its mailbox, the forms at its slots 3–5, then its documents from 64
+    (the gate's `walk.children`), and the walk's ↓ from its home page steps through them in that order, each form a stop of its own
+    kind; Enter on the bio's form twice, each a LEAP arriving at the unwritten bio with an entry of its own, the children's count the
+    same after; at mid a click inside a form's rectangle a LEAP to its slot; at far~mid a click 8 px below a form, in its press area,
+    a LEAP to its slot, a point between two forms nearer the second going to that one, and a click just below the claimant's one-row
+    mailbox, a box drawn under the least target, a LEAP to it. Its figures: the children, each press's place and the hit test's time"""
+    figures = {}
+    slots = [MAILBOX, BIO, LINK_PAGE, '1.0.1.0.%d' % LAST_NAMED_SLOT]
+    kids = ctx.js('window.__skep.walk.children("1.0.1")')
+    want = [['document', HOME], ['document', MAILBOX], ['form', BIO], ['form', LINK_PAGE], ['form', slots[3]], ['document', edition(0)]]
+    figures['children'] = kids[:7]
+    r.check(kids[:6] == want, 'before any press the claimant\'s account lists its home page, its mailbox, the forms at its slots 3–5, then its documents from %s (B11-F20 (3); the one form\'s part 6)' % edition(0), kids[:7])
+    focus = lambda: ctx.js('(() => { const f = window.__skep.view.focus(); return f && [f.kind, f.addr]; })()')
+    chord(ctx, 'H', mods=('Meta', 'Shift'))
+    chord(ctx, 'ArrowRight')
+    chord(ctx, 'Home')
+    steps = [focus()]
+    for _ in range(5):
+        chord(ctx, 'ArrowDown')
+        steps.append(focus())
+    figures['steps'] = steps
+    r.check(steps == want, 'from the home page the walk\'s ↓ steps through the mailbox, the three forms, each a stop of its own, then the first ordinary document (law 7)', steps)
+    # Enter on the bio's form, twice: each a LEAP arriving with an entry of its own
+    for _ in range(3):
+        chord(ctx, 'ArrowUp')
+    at_bio, t0, n0 = focus(), trail(ctx), len(kids)
+    arrivals = []
+    for n in (1, 2):
+        chord(ctx, 'Enter')
+        overlay_up(ctx, 'face:')
+        ctx.settle(); ctx.frames(2)
+        t1 = trail(ctx)
+        newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+        arrivals.append({'cursor': t1['cursor'], 'newest': newest and newest['addr'], 'focus': focus()})
+        chord(ctx, 'Escape')
+    after = ctx.js('window.__skep.walk.children("1.0.1")')
+    r.check(at_bio == ['form', BIO] and [a['cursor'] for a in arrivals] == [t0['cursor'] + 1, t0['cursor'] + 2] and all(a['newest'] == BIO for a in arrivals) and len(after) == n0 and after[:6] == want,
+            'Enter on the bio\'s form twice: each a LEAP arriving at the unwritten bio with an entry of its own (O1), the account\'s children and their count as they stood',
+            {'at': at_bio, 'arrivals': arrivals, 'children': [n0, len(after)]})
+    figures['enter'] = arrivals
+    def framed(px):
+        b3, b4 = ctx.js('window.__skep.boxOf(%s)' % json.dumps(BIO)), ctx.js('window.__skep.boxOf(%s)' % json.dumps(LINK_PAGE))
+        f3 = ctx.js('window.__skep.fold(%s)' % json.dumps(BIO))
+        ctx.set_view((b3['x'] + b3['w'] + b4['x']) / 2, f3['outline']['y'] + f3['outline']['h'] / 2, ctx.extent_scale(px))
+        return {f['addr']: f['rect'] for f in ctx.js('window.__skep.forms()')}
+    def pressed(x, y):
+        """a click at a point of the plane: the place the hit test gives it, and the entry it pushed"""
+        place, t0 = ctx.js('window.__skep.placeAt(%s, %s)' % (x, y)), trail(ctx)
+        ctx.drv.click(x, y)
+        ctx.settle(); ctx.frames(2)
+        t1 = trail(ctx)
+        newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+        out = {'place': place, 'pushed': t1['cursor'] - t0['cursor'], 'newest': newest and newest['addr']}
+        chord(ctx, 'Escape')
+        return out
+    rects = framed(FORM_MID_PX)
+    q = rects.get(LINK_PAGE)
+    mid = pressed(q['x'] + q['w'] / 2, q['y'] + q['h'] * 0.6) if q else None
+    r.check(bool(mid) and mid['place'] == {'addr': LINK_PAGE, 'form': True, 'padded': False} and mid['pushed'] == 1 and mid['newest'] == LINK_PAGE,
+            'at mid a click inside the link page\'s form: a LEAP to its slot, an entry of its own (B11-S5\'s press)', mid)
+    figures['click_mid'] = mid
+    rects = framed(FORM_FAR_PX)
+    lod = ctx.js('window.__skep.view.lod().name')
+    b, l = rects.get(BIO), rects.get(LINK_PAGE)
+    below = pressed(b['x'] + b['w'] / 2, b['y'] + b['h'] + 8) if b else None
+    rects = framed(FORM_FAR_PX)
+    b, l = rects.get(BIO), rects.get(LINK_PAGE)
+    cb, cl = (b['x'] + b['w'] / 2, b['y'] + b['h'] / 2), (l['x'] + l['w'] / 2, l['y'] + l['h'] / 2)
+    between = ctx.js('window.__skep.placeAt(%s, %s)' % (cb[0] + (cl[0] - cb[0]) * 0.6, cb[1]))
+    r.check(lod == 'far~mid' and bool(b) and b['w'] < 24 and bool(below) and below['place'] == {'addr': BIO, 'form': True, 'padded': True} and below['pushed'] == 1 and below['newest'] == BIO
+            and (between or {}).get('addr') == LINK_PAGE,
+            'at far~mid a click 8 px below the bio\'s form, outside its rectangle and inside its press area, a LEAP to its slot; a point between two forms nearer the second goes to that one (the owner\'s minimum press area, 24 px; the nearest centre)',
+            {'lod': lod, 'bio': b, 'below': below, 'between': between})
+    m = ctx.js('window.__skep.fold(%s)' % json.dumps(MAILBOX))['outline']
+    cam, vp = ctx.camera(), ctx.js('window.__skep.view.viewport()')
+    ms = {'x': (m['x'] - cam['x']) * cam['scale'] + vp['VW'] / 2, 'y': (m['y'] - cam['y']) * cam['scale'] + vp['VH'] / 2, 'w': m['w'] * cam['scale'], 'h': m['h'] * cam['scale']}
+    small = pressed(ms['x'] + ms['w'] / 2, ms['y'] + ms['h'] + 8)
+    r.check(ms['w'] < 24 and ms['h'] < 24 and small['place'] == {'addr': MAILBOX, 'form': False, 'padded': True} and small['pushed'] == 1 and small['newest'] == MAILBOX,
+            'at far~mid a click 8 px below the claimant\'s one-row mailbox, a box drawn under 24 px, inside its press area: a LEAP to it (the owner\'s "forms and any small box")',
+            {'mailbox': ms, 'press': small})
+    figures['far_mid'] = {'below_bio': below, 'between': between, 'below_mailbox': small}
+    rects = framed(FORM_FAR_PX)
+    b = rects.get(BIO)
+    figures['hit_ms'] = ctx.js('((x, y) => { const t0 = performance.now(); for (let i = 0; i < 100; i++) window.__skep.placeAt(x, y); return Math.round((performance.now() - t0) / 100 * 1000) / 1000; })(%s, %s)' % (b['x'] + b['w'] / 2, b['y'] + b['h'] + 8)) if b else None
+    r.figures['forms_walked'] = figures
 
 
 def run(ctx):
@@ -5268,5 +5363,6 @@ def run(ctx):
     r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click, a double-click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C with nothing selected, with a selection standing and with one drawn over no range of the platform\'s', 'a copy event with nothing selected and with a selection', 'a click on a column\'s blank room after a drag', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival', 'Mod+K, Mod+Shift+A, Mod+Shift+C, a printable key and Space at a selection in the moved scene\'s held version']
     fixed_addresses(ctx, r)
     slot_names_typed(ctx, r)
+    forms_walked(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

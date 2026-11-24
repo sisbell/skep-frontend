@@ -52,7 +52,7 @@ lists no document a row never names."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, SECOND_ACCOUNT, WINDOW, XFAIL_UNNAMED_BY_FEED, Result, edition
+from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, SECOND_ACCOUNT, WINDOW, XFAIL_UNNAMED_BY_FEED, Result, edition, is_slot
 
 WS = re.compile(r'\s+')
 # the board's time document: genesis places it published and memberless, and the time writer's first record — made at the
@@ -576,6 +576,10 @@ def run(ctx):
     ctx.settle()
     ctx.frames(2)
     r.figures['home_tail'] = tails_home(ctx, r)
+    # no tail names an assigned slot's address: where the plane draws the one form there, a link ending at it is a connection (the one
+    # form's part 7, changing #132 at an assigned slot); the test board holds no link to a slot's address, so this is a guard
+    tailed = sorted({f for t in ctx.js('window.__skep.tails()') for f in t['far'] if is_slot(f)})
+    r.check(not tailed, 'at HOME no tail names an assigned slot\'s address: a link ending at a slot no document stands at ends on the one form, never a tail (the one form\'s part 7; #132)', tailed)
     marks = [m for m in ctx.js('window.__skep.residues()') if m['account'] == '1.0.1']
     mark = marks[0] if len(marks) == 1 else None
     r.check(mark is not None and mark['k'] == 1, 'at HOME the account\'s first continuation is drawn as ONE mark — the documents of its first grid stand whole: its home, its slots and its first ordinary documents', [{k: m[k] for k in ('k', 'n', 'rect')} for m in marks])

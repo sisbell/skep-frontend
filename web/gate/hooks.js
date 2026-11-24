@@ -49,7 +49,10 @@
 // the places the line names (`named`) and
 // where a reading view frames a column (`frameOf`); the continuations' marks
 // (`residues`), the mid connections with their counts and stubs
-// (`connections`), the boxes' history strips (`strips`), the labels the
+// (`connections`), the boxes' history strips (`strips`), the one form drawn at
+// each assigned slot no box stands at and the forms' places as the model lists
+// them (`forms`, `formPlaces`), the place a press at a point goes to
+// (`placeAt`), the labels the
 // canvas set and the parts it left out (`labels`, `labelsLeftOut`); the
 // teleports and the landing — the version
 // each box shows (`go.shownIn`), the arrival, what a landing says and the
@@ -154,6 +157,7 @@ import { pct, r2 } from '../util.js';
  * @property {number} drawMs
  * @property {string} lod
  * @property {number} docs
+ * @property {number} forms the one form drawn at each assigned slot in view no box stands at (P-RENDER's `stats.forms`)
  * @property {number} both the documents whose label the canvas set while their article stands in the mount band, or that it drew a bar for on a line standing as text at the frame's end: text over its own bars
  * @property {number} neither the documents the canvas yielded a line, or the whole, of to text that does not stand at the frame's end: an empty place
  * @property {number} barred the bars the canvas drew for documents at the readable em or above: none, by FP-12
@@ -198,7 +202,7 @@ export function summarize(/** @type {Frame[]} */ rows) {
   for (const f of rows) { if (f.interval > 33.34) { over++; run++; worstRun = Math.max(worstRun, run); } else run = 0; }
   const most = (/** @type {(f: Frame) => number} */ k) => Math.max(0, ...rows.map(k));
   return { frames: rows.length, fps_median: r2(1000 / Math.max(0.001, pct(iv, 50))), frame_p50: r2(pct(iv, 50)), frame_p95: r2(pct(iv, 95)), frame_p99: r2(pct(iv, 99)), draw_p50: r2(pct(dr, 50)), draw_p99: r2(pct(dr, 99)), frames_over_33ms: over, longest_sub30_run_frames: worstRun, worst_frame_ms: r2(Math.max(0, ...iv)),
-    max_docs_drawn: most((f) => f.docs), max_both: most((f) => f.both), max_neither: most((f) => f.neither), max_barred: most((f) => f.barred),
+    max_docs_drawn: most((f) => f.docs), max_forms_drawn: most((f) => f.forms ?? 0), max_both: most((f) => f.both), max_neither: most((f) => f.neither), max_barred: most((f) => f.barred),
     max_standing: most((f) => f.standing), max_lines: most((f) => f.lines), max_mounted: most((f) => f.mounted), mounted: rows.reduce((n, f) => n + f.mounted, 0) };
 }
 
@@ -478,14 +482,16 @@ export function install(deps) {
    * its bounds, the disjoint rects that make it up and its first row — where
    * its first line stands, which its label sets its first line at (P-LAY's
    * `leadOf`) — and each column — its text box in world units, its count of
-   * lines, whether it is estimated.
+   * lines, whether it is estimated; at the one form's place (M-REC's
+   * `isForm`), the form's fold, its first column slot (T-LAYER's
+   * `formFold`), read with no record made (`form`).
    * @param {string} addr
    */
   function foldView(addr) {
-    const f = LAYER.foldOf(REC.doc(addr)), box = docBox(addr), b = boundsOf(f), r0 = firstRow(f), l = leadOf(f);
+    const form = REC.isForm(addr), f = form ? LAYER.formFold(addr) : LAYER.foldOf(REC.doc(addr)), box = docBox(addr), b = boundsOf(f), r0 = firstRow(f), l = leadOf(f);
     const at = (/** @type {{x: number, y: number, w: number, h: number}} */ r) => ({ x: box.x + r.x, y: box.y + r.y, w: r.w, h: r.h });
     return {
-      addr, fs: f.fs, step: f.step, across: f.across, band: f.band, lines: f.lines.length, cpl: f.cpl,
+      addr, form, fs: f.fs, step: f.step, across: f.across, band: f.band, lines: f.lines.length, cpl: f.cpl,
       room: { x: box.x, y: box.y, w: box.w, h: box.h }, outline: at(b), rects: outlineRects(f).map(at), row: at(r0), lead: { column: l.column, x: box.x + l.x, y: box.y + l.y, h: l.h },
       columns: f.columns.map((c) => ({ x: box.x + c.x, y: box.y + c.y, w: c.w, h: c.h, n: c.n, estimated: c.estimated, edge: at(edgeOf(f, c)) })),
     };
@@ -746,6 +752,12 @@ export function install(deps) {
     tails: () => RENDER.stats.tails.map((tl) => ({ ...tl })),
     /** the history strips the last frame drew: each one's box's document and the version it shows, the members it marks, the one its window holds, its head where the board ended the chain, whether its window runs open, and its ticks' and its window's rects on screen */
     strips: () => RENDER.stats.strips.map((s) => ({ ...s })),
+    /** the one form the last frame drew at each assigned slot in view no box stands at: its slot's address, its rectangle on screen, its alpha, its arms' lengths, its ink, and the lines the label pass set of its label */
+    forms: () => RENDER.stats.forms.map((f) => ({ ...f })),
+    /** the forms' places as the model lists them (M-REC's `forms`), drawn in view or not */
+    formPlaces: () => REC.forms().slice(),
+    /** the place a press at a screen point goes to as the last frame drew the places (P-RENDER's `placeAtScreen`): its address, whether it is a form's, and whether the point lies in a press area outside every drawn shape; null where none */
+    placeAt: (/** @type {number} */ x, /** @type {number} */ y) => RENDER.placeAtScreen(x, y),
     /** the labels the last frame set, in the order they were set — a connection's count under its two places, `a|b` sorted — the trail's pip numbers last */
     labels: () => RENDER.stats.labels.slice(),
     /** the parts of labels the last frame left out, each with the rule that left it out */

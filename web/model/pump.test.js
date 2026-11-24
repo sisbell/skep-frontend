@@ -100,7 +100,7 @@ import { clauseOf } from '../text/layer.js';
 import { t } from '../strings.js';
 import { createHash } from 'node:crypto';
 
-const D = '1.0.1.0.3';
+const D = '1.0.1.0.76';
 const script = {
   [FAKE.keyOf('boards', {})]: { result: [{ board: 'b-1', name: 'http://127.0.0.1:8642', origin: 'http://127.0.0.1:8642' }] },
   [FAKE.keyOf('session', { board: 'b-1' })]: { result: { session: 's-1', principal: 1, account: '1.0.1', writes: true } },
@@ -548,7 +548,7 @@ test('a read out under the session when the page takes its death is asked once m
 });
 
 test('the page\'s own death keeps what the session read as published and covers the draft the view stood on at once — the edition\'s row and extent standing while they are read again in the guest form and set in one step, the draft\'s text, metadata and row and the link homed in it gone at once, the draft the withheld box a guest meets, its read owed — and reads the index again in the guest form, the draft\'s cover confirmed once the guest\'s read of it answers it withheld (issues #177, #274)', async () => {
-  const DR = '1.0.1.0.5', L = DR + '.0.2.1';
+  const DR = '1.0.1.0.84', L = DR + '.0.2.1';
   const edition = { doc: D, kind: 'edition', label: 'd', standing: 'public' };
   /** @type {Record<string, unknown>} */
   const s = {
@@ -601,7 +601,7 @@ test('the page\'s own death keeps what the session read as published and covers 
 });
 
 test('a cover the change of class made lifts where the read at the new class returns its material: a draft the view stood on that the new class may read holds its extent again, no longer withheld, and the change\'s reads answered (issue #274\'s design decision: "A cover lifts if the new read returns its material")', async () => {
-  const DR = '1.0.1.0.5';
+  const DR = '1.0.1.0.84';
   /** @type {Record<string, unknown>} */
   const s = {
     [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } } },
@@ -3191,7 +3191,7 @@ const farOver = (/** @type {string} */ account) => { CAM.setViewport(1440, 900);
 const extentAsks = (/** @type {ReturnType<typeof FAKE.create>} */ fake, /** @type {string} */ doc) => fake.asked.filter((k) => k === opKeyOf(F.retrieveDocVSpanSet(doc))).length;
 
 test('a session ending with the view at far scale covers at once each draft the session could read — a box the model knows, nothing read of it there — and the view reads it as it comes nearer, once, in the guest form, the guest\'s refusal confirming the cover (issue #350\'s design decision: "No draft is read at far scale … it is read when the view comes nearer")', async () => {
-  const DR = '1.0.1.0.5';
+  const DR = '1.0.1.0.84';
   const fake = FAKE.create({ ...NONE_LISTED, [opKeyOf(F.retrieveDocVSpanSet(DR))]: WITHHELD_READ });
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
@@ -3214,7 +3214,7 @@ test('a session ending with the view at far scale covers at once each draft the 
 });
 
 test('a session got back as another principal leaves each draft the lost one could read waiting to be read — never withheld before a read says so, a box the model knows — the draft the view stood on asked its extent at once under the new session, one out of view asked nothing until the view reaches it (issue #350\'s design decision: "the face shown straight after the change is \'waiting to be read\', except when signed out")', async () => {
-  const DR = '1.0.1.0.5', OUT = '1.0.3.0.5';
+  const DR = '1.0.1.0.84', OUT = '1.0.3.0.5';
   const fake = FAKE.create({
     ...opened('s-2', { principal: 2, account: '1.0.2' }), ...caughtUp('s-2', 3), ...NONE_LISTED,
     // the draft the view stands on, readable by the principal got back; the one out of view withheld from it
@@ -3249,7 +3249,7 @@ test('a session got back as another principal leaves each draft the lost one cou
 });
 
 test('a refresh after a change of class keeps each box the change left: a cover in view read again and covered still, a box owed its read out of view waiting — its cover dropped with the rest, a box the model knows, nothing read of it — and read in the refresh that finds it in view, set in one step (issue #350)', async () => {
-  const DR = '1.0.1.0.5', OUT = '1.0.3.0.5';
+  const DR = '1.0.1.0.84', OUT = '1.0.3.0.5';
   const fake = FAKE.create({ ...NONE_LISTED, [opKeyOf(F.retrieveDocVSpanSet(DR))]: WITHHELD_READ, [opKeyOf(F.retrieveDocVSpanSet(OUT))]: WITHHELD_READ });
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
@@ -3373,7 +3373,7 @@ test('a refresh at far scale drops nothing of a draft being typed in, holding di
 });
 
 test('a refresh and a row keep a draft a reading scene\'s editor pane holds as the view keeps what it shows, at far scale too — read again over the window held and set in one step, its text never dropped — and a refresh drops it once no editor pane holds it (FP-23, FP-38)', async () => {
-  const DR = '1.0.1.0.5';
+  const DR = '1.0.1.0.84';
   const s = {
     ...NONE_LISTED, ...noEditionLinks(DR),
     [opKeyOf(F.retrieveDocVSpanSet(DR))]: { result: { as_of: 9, resp: 'span_set', set: [{ start: '1.1', width: '0.12' }] } },

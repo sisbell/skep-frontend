@@ -8,7 +8,11 @@
 // does not, its row the same height known or not — a kept document's clause
 // whole after its address at the row's end, the first line giving way first,
 // else beneath the row ahead of the badge, held or not — its address past its
-// region's prefix only where the region is named in view, held or not; first
+// region's prefix only where the region is named in view, held or not; at a
+// fixed slot's cell in a region named in view the address giving way first,
+// its slot's name standing for it, then the first line cut, then gone, then
+// the name, the names of one region's first row standing or going together,
+// the address whole away from a named region, held, and from cell 6 up; first
 // lines that read alike once cut cut apart where they differ; no label meeting another place's shape or a label set before it,
 // the weaker side of a crossfade setting and blocking nothing; a connection's
 // count named alike from either end and standing on its stroke in the clear
@@ -709,4 +713,52 @@ test('over many random frames every contents line\'s lines stand inside their pl
     for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++) assert.ok(!meets(lines[i].rect, lines[j].rect), `${lines[i].text} meets ${lines[j].text}`);
   }
   assert.ok(rows > 100 && keptRows > 10 && keptBeneath > 5, `contents lines set (${rows}), of them ${keptRows} with their clause on the row and ${keptBeneath} with it beneath: the invariants held over rows set, not over none`);
+});
+
+// ---- a fixed slot's cell's label, short of room (the one form's part 9; FP-26) ------------------------------------------
+
+/** a fixed slot's cell's label as P-RENDER hands one over (`Contents.slot`): `contents`'s, its region 1.0.1, its slot's name "bio" unless one is given — `name: ''` none, as at slot 5 */
+const slotted = (/** @type {Parameters<typeof contents>[0] & {place?: string}} */ o = {}) => {
+  const l = contents({ region: '1.0.1', ...o, name: o.name === '' ? undefined : o.name ?? 'bio' });
+  return { ...l, place: o.place ?? l.place, contents: { .../** @type {import('./labels.js').Contents} */ (l.contents), slot: true } };
+};
+/** the pass with the one line naming the region 1.0.1, so it is named in view */
+const namedIn = (/** @type {Label[]} */ labels, /** @type {Shape[]} */ shapes = []) => setLabels(labels, shapes, VIEW, measure, new Set(['1.0.1']));
+/** what a set label's lines say, by its place */
+const said = (/** @type {ReturnType<typeof run>} */ r, /** @type {string} */ place) => r.set.find((l) => l.place === place)?.lines.map((x) => x.text) ?? null;
+
+test('at a fixed slot\'s cell in a region named in view, short of room, the address gives way first and the slot\'s name stands for it at the row\'s end; then the first line is cut on a word, then it goes, then the name, whole or not at all with the whole label; where the row holds every part, every part stands (the one form\'s part 9; FP-26)', () => {
+  // at 9 px the name "bio" 16.2 px and the address ".0.3" 21.6 px, a space 5.4; the first line at 12 px, 7.2 px a character, from 20; the row ending at 300
+  assert.deepEqual(said(namedIn([slotted({ lead: 'Hello world', to: 300 })]), 'A'), ['Hello world', 'bio', '.0.3'], 'room for all: the first line, the name, the address');
+  const kept = 'The artifact chain of custody kept';
+  const r = namedIn([slotted({ lead: kept, to: 300 })]);
+  assert.deepEqual([said(r, 'A'), r.out.map((o) => [o.text, o.reason])], [[kept, 'bio'], [['.0.3', 'width']]], 'a first line whole only without the address: the address gives way first, the first line whole, the name at the row\'s end');
+  const name = /** @type {import('./labels.js').SetLabel} */ (r.set[0]).lines[1];
+  assert.ok(Math.abs(name.rect.x + name.rect.w - 300) < 1e-9, `the name at the row's end: ${JSON.stringify(name.rect)}`);
+  const long = 'The artifact chain of custody and the records that keep it whole';
+  const cut = said(namedIn([slotted({ lead: long, to: 300 })]), 'A');
+  assert.ok(cut && cut.length === 2 && cut[1] === 'bio' && cut[0].endsWith('…') && long.startsWith(cut[0].slice(0, -1)), `then the first line cut on a word: ${JSON.stringify(cut)}`);
+  assert.deepEqual(said(namedIn([slotted({ lead: 'Supercalifragilisticexpialidocious antidisestablishmentarianism', to: 300, within: { x: 10, y: 10, w: 300, h: 200 } })]), 'A'), ['bio'], 'then the first line goes, the name alone');
+  const blocked = namedIn([slotted({ lead: null })], [{ place: 'B', rect: { x: 280, y: 40, w: 30, h: 20 }, alpha: 1 }]);
+  assert.deepEqual([blocked.set.length, blocked.out.map((o) => [o.text, o.reason])], [0, [['.0.3', 'meets'], ['bio', 'after']]], 'the name last, whole or not at all: met, the whole label left out');
+});
+
+test('the slot names of one region\'s first row stand or give way together, at the room the longest of them needs as drawn: each slot cell\'s label left out whole where any cell\'s row lacks it — one whose own name fits among them — a cell whose slot bears no name setting no room and going with them; standing, such a cell keeps its address as every label does (the one form\'s part 9; FP-26)', () => {
+  const row = (/** @type {number} */ x, /** @type {number} */ w, /** @type {string} */ place, /** @type {string} */ name) => slotted({ place, name, lead: null, within: { x, y: 10, w, h: 100 }, from: x, to: x + w, end: x + w });
+  const narrow = namedIn([row(10, 300, 'A', 'bio'), row(330, 300, 'B', 'your link page'), row(650, 60, 'C', '')]);
+  assert.deepEqual([narrow.set.length, narrow.out.filter((o) => o.reason !== 'after').map((o) => [o.place, o.text, o.reason])], [0, [['A', '.0.3', 'width'], ['B', '.0.3', 'width'], ['C', '.0.3', 'width']]],
+    'a cell 60 px across, "your link page" 75.6 px: every slot cell\'s label left out, the bio\'s that fits its own row among them');
+  const wide = namedIn([row(10, 300, 'A', 'bio'), row(330, 300, 'B', 'your link page'), row(650, 100, 'C', '')]);
+  assert.deepEqual([said(wide, 'A'), said(wide, 'B'), said(wide, 'C')], [['bio', '.0.3'], ['your link page', '.0.3'], ['.0.3']], 'every row holding the longest name: each name and its address; the unnamed cell its address alone');
+});
+
+test('the address stays whole wherever no slot\'s name spells it: a slot cell\'s label away from a region named in view, a held row, and every cell from 6 up — each as every label, the first line giving way first (the one form\'s part 9; FP-26; #23)', () => {
+  const kept = 'The artifact chain of custody kept';
+  const away = run([slotted({ lead: kept, to: 300 })]);
+  assert.deepEqual(addressOf(/** @type {import('./labels.js').SetLabel} */ (away.set[0]))?.text, '1.0.1.0.3', 'its region not named: its address whole, standing');
+  const ordinary = namedIn([{ ...contents({ region: '1.0.1', lead: kept, to: 300, address: '.0.64', whole: '1.0.1.0.64' }) }]);
+  assert.deepEqual(addressOf(/** @type {import('./labels.js').SetLabel} */ (ordinary.set[0]))?.text, '.0.64', 'a cell from 6 up in a named region: its address stands, its first line cut');
+  const held = namedIn([{ ...slotted({ lead: kept, to: 300, y: -40 }), hold: { rects: [{ x: 10, y: -60, w: 300, h: 400 }], pad: 0, plate: null } }]);
+  const h = /** @type {import('./labels.js').SetLabel} */ (held.set[0]);
+  assert.ok(h && h.held && h.lines.some((x) => x.text === '.0.3'), `held below the line: its address stands: ${JSON.stringify(h && h.lines.map((x) => x.text))}`);
 });

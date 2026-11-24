@@ -148,18 +148,26 @@
 // lifts it, and only such an answer settles what a box is owed: a drop keeps
 // it owed. Every document the model knows exists — listed, answered for, or
 // owed its read — is one box (`known`), save one at a number the plane's map
-// gives no cell, whose record may be held and is drawn nowhere, and another
-// person's mailbox a read answered `withheld` (B11 call 3); the map's reading
-// of a document's number and where an account's next document stands are
-// read here (`numberKind`, `nextDocument`, the latter kept until the index
-// is next written). So is the one table of the well-known slots' names, which
-// every face naming a document reads (FP-33; B11-F10, B11-F12): a slot's name
-// read off its address and its account's kind with no lookup — the mailbox,
-// the bio and the link page in every account but the system account, whose
-// slots take none, and none at a slot whose word is not given (`slotName`) —
-// the acting account's own mailbox shown by a name of its own (`isOwn`,
-// `slotNameShown`; B11-S7), and an account's named slots listed, created or
-// not (`namedSlots`; B11-S9). The system
+// gives no cell, whose record may be held and is drawn nowhere, and an
+// assigned slot a read answered `withheld` — another person's mailbox, a
+// covered one among them (B11 call 3; FP-29), and any other slot the reader
+// cannot read (`slotWithheld`). The one form's places are the assigned slots
+// no box stands at (B11-S5): of every account whose home page is a box, each
+// slot from the mailbox's to the last named one where no document the reader
+// can read stands, read off `known` and the address alone, no record made and
+// no read asked, kept until the model next moves (`forms`, `isForm`); at
+// another person's mailbox no line ends at it at rest (`theirMailboxForm`).
+// The map's reading of a document's number and where an account's next
+// document stands are read here (`numberKind`, `nextDocument`, the latter
+// kept until the index is next written). So is the one table of the
+// well-known slots' names, which every face naming a document or a form reads
+// (FP-33; B11-F10, B11-F12): a slot's name read off its address and its
+// account's kind with no lookup — the mailbox, the bio and the link page in
+// every account but the system account, whose slots take none, and none at a
+// slot whose word is not given (`slotName`) — each named slot of the acting
+// account's own shown by a name of its own (`isOwn`, `slotNameShown`; B11-S7),
+// and an account's named slots listed, created or not (`namedSlots`; B11-S9).
+// The system
 // account's rows are held and marked `system` for the drawing modules to
 // leave out. The model knows
 // nothing of pixels, zoom, selection or lenses: the links touching an
@@ -169,7 +177,7 @@
 // FP-33, FP-34, FP-35, FP-38.
 
 import { accountOf, documentOf, homeOf, cmpAddr, memberOf, isUnder, isTrunkMember, docOneOf, kindOf as addressKind } from './address.js';
-import { pathOf, cellNumberOf, assignedSlotOf, hasCell, LEAF, MAILBOX_SLOT, FIRST_ORDINARY_DOCUMENT } from '../plane/projection.js';
+import { pathOf, cellNumberOf, assignedSlotOf, hasCell, LEAF, MAILBOX_SLOT, LAST_NAMED_SLOT, FIRST_ORDINARY_DOCUMENT } from '../plane/projection.js';
 import { byteOffsets, sliceBytes } from '../util.js';
 
 export { FIRST_ORDINARY_DOCUMENT };
@@ -1022,11 +1030,12 @@ export const docs = () => [...state.docs.values()];
  * or one owed its read at the page's class (`owed`), in the order first held
  * — the system account's rows left out, every one at a number the plane's
  * map gives no cell (P-PROJ's `hasCell`), whatever a read answered for it,
- * and another person's mailbox a read answered `withheld` (`unboxed`). The
- * plane draws a box for each (P-RENDER's `drawable`), the walk lists each
- * under its account (N-WALK's `childrenOf`), and a press and the walk's
- * re-take find each under a point (P-RENDER's `docAtScreen`, N-WALK's
- * `documentAt`), so none of them part.
+ * and every assigned slot a read answered `withheld` (`slotWithheld`), owed
+ * its read or not, where the one form stands instead (`forms`). The plane
+ * draws a box for each (P-RENDER's `drawable`), the walk lists each under its
+ * account (N-WALK's `childrenOf`), and a press and the walk's re-take find
+ * each under a point (P-RENDER's `docAtScreen`, N-WALK's `documentAt`), so
+ * none of them part.
  * @returns {string[]}
  */
 export function known() {
@@ -1034,24 +1043,77 @@ export function known() {
   const out = [];
   const seen = new Set();
   const take = (/** @type {string} */ doc) => { seen.add(doc); out.push(doc); };
-  for (const p of places()) if (!p.system && !seen.has(p.doc) && hasCell(p.doc)) take(p.doc);
+  for (const p of places()) if (!p.system && !seen.has(p.doc) && hasCell(p.doc) && !slotWithheld(state.docs.get(p.doc))) take(p.doc);
   for (const d of state.docs.values()) {
     const doc = documentOf(d.addr) || d.addr;
-    if (!seen.has(doc) && !d.system && hasCell(doc) && (d.from >= 0 || d.meta || (d.refused === 'withheld' && !unboxed(d)) || state.owed.has(d.addr))) take(doc);
+    if (!seen.has(doc) && !d.system && hasCell(doc) && !slotWithheld(d) && (d.from >= 0 || d.meta || d.refused === 'withheld' || state.owed.has(d.addr))) take(doc);
   }
   return out;
 }
 
 /**
- * Is a held record another person's mailbox a read answered `withheld` (B11
- * call 3; B11-F24 (3)): its number the mailbox's slot (P-PROJ's
- * `MAILBOX_SLOT`), the reader refused it, and the class the page last left
- * could not read it — a mailbox that class read is a covered one (`covered`),
- * which keeps its box. No box stands for it (`known`).
- * @param {Doc} d
+ * Is a held record an assigned slot a read answered `withheld` (B11 call 3;
+ * B11-S5): its number one of the well-known slots (P-PROJ's
+ * `assignedSlotOf`), and the reader refused it — another person's mailbox, a
+ * covered one the class the page left could read among them, and any other
+ * slot the reader cannot read, owed its read again or not. No document the
+ * reader can read stands there: no box stands for it (`known`), and the one
+ * form does (`forms`).
+ * @param {Doc | undefined} d
  * @returns {boolean}
  */
-const unboxed = (d) => d.refused === 'withheld' && assignedSlotOf(d.addr) === MAILBOX_SLOT && !state.readBefore.has(d.addr);
+const slotWithheld = (d) => !!d && d.refused === 'withheld' && assignedSlotOf(d.addr) != null;
+
+/** the one form's places as `forms` last read them, at a model revision: a cache of a pure function of the model */
+let formsAt = { rev: -1, list: /** @type {string[]} */ ([]), set: /** @type {Set<string>} */ (new Set()) };
+
+/**
+ * The one form's places (B11-S5; see the head), in record order: of every
+ * account whose home page is a box the model knows (`known`) — the system
+ * account's never, `known` leaving its rows out — each assigned slot from
+ * P-PROJ's MAILBOX_SLOT to LAST_NAMED_SLOT that holds no such box: no
+ * document the reader can read stands there. Read off `known` and the
+ * address alone: no record is made and no read asked, so a slot never
+ * created, one a read answered `withheld` and one whose read is still out
+ * read alike, and the list is the same whoever looks. Kept until the model
+ * next moves (`rev`).
+ * @returns {string[]}
+ */
+export function forms() {
+  if (formsAt.rev !== state.rev) {
+    const boxes = new Set(known());
+    /** @type {string[]} */
+    const list = [];
+    for (const doc of boxes) {
+      if (numberKind(doc) !== 'home') continue;
+      const account = accountOf(doc);
+      for (let n = MAILBOX_SLOT; n <= LAST_NAMED_SLOT; n++) { const addr = `${account}.0.${n}`; if (!boxes.has(addr)) list.push(addr); }
+    }
+    list.sort(cmpAddr);
+    formsAt = { rev: state.rev, list, set: new Set(list) };
+  }
+  return formsAt.list;
+}
+
+/**
+ * Does the one form stand at an address's slot (`forms`): its document — a
+ * version member's, its trunk — one of the form's places.
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export function isForm(addr) {
+  forms();
+  return formsAt.set.has(documentOf(addr) || addr);
+}
+
+/**
+ * Is an address the one form at another person's mailbox (B11-S5's part 7):
+ * a form's place (`isForm`) at P-PROJ's MAILBOX_SLOT of an account not the
+ * acting one's own (`isOwn`). No line ends at it at rest; LK reads it.
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export const theirMailboxForm = (addr) => isForm(addr) && assignedSlotOf(addr) === MAILBOX_SLOT && !isOwn(addr);
 
 /**
  * What a document's number is on the plane's map (P-PROJ's `cellNumberOf`,
@@ -1069,7 +1131,7 @@ export function numberKind(addr) {
   return p[LEAF] === 1 ? 'home' : assignedSlotOf(addr) != null ? 'slot' : cellNumberOf(p[LEAF]) == null ? 'reserved' : 'ordinary';
 }
 
-/** @typedef {'L.well-known.mailbox' | 'L.well-known.bio' | 'L.well-known.link-page' | 'L.well-known.your-mailbox'} SlotName a well-known slot's name, as its id in the strings table */
+/** @typedef {'L.well-known.mailbox' | 'L.well-known.bio' | 'L.well-known.link-page' | 'L.well-known.your-mailbox' | 'L.well-known.your-bio' | 'L.well-known.your-link-page'} SlotName a well-known slot's name, as its id in the strings table */
 
 /**
  * The well-known slots' names (see the head), in slot order from
@@ -1080,8 +1142,8 @@ export function numberKind(addr) {
  */
 const SLOT_NAMES = Object.freeze(['L.well-known.mailbox', 'L.well-known.bio', 'L.well-known.link-page', null]);
 
-/** the name the acting account's own mailbox is shown by (`slotNameShown`) */
-const OWN_MAILBOX = 'L.well-known.your-mailbox';
+/** the names the acting account's own named slots are shown by (`slotNameShown`), by each slot's name: its mailbox, its bio, its link page */
+const OWN_NAMES = /** @type {Readonly<Record<string, SlotName>>} */ (Object.freeze({ 'L.well-known.mailbox': 'L.well-known.your-mailbox', 'L.well-known.bio': 'L.well-known.your-bio', 'L.well-known.link-page': 'L.well-known.your-link-page' }));
 
 /** each address's slot's name as `slotName` reads it, kept, for every label the plane sets asks it on every frame and the name is the address's alone */
 /** @type {Map<string, SlotName | null>} */
@@ -1121,15 +1183,16 @@ export function isOwn(addr) {
 }
 
 /**
- * A well-known slot's name as the reader is shown it (see the head): at the
- * acting account's own mailbox (`isOwn`) the name its owner is shown it by,
- * else its name (`slotName`).
+ * A well-known slot's name as the reader is shown it (see the head): at each
+ * named slot of the acting account's own (`isOwn`) — its mailbox, its bio,
+ * its link page, created or not — the name its owner is shown it by, else its
+ * name (`slotName`); none where its name is not given.
  * @param {string} addr
  * @returns {SlotName | null}
  */
 export function slotNameShown(addr) {
   const id = slotName(addr);
-  return id && id === SLOT_NAMES[0] && isOwn(addr) ? OWN_MAILBOX : id;
+  return id && isOwn(addr) ? OWN_NAMES[id] ?? id : id;
 }
 
 /**
@@ -2800,7 +2863,7 @@ export function _reset() {
   state.keys = null; state.daemon = null; state.daemonReason = null; state.index.clear(); nextOf.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.owed.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.feedAt = null; state.draftsAt = null; state.rev = 0;
-  state.minted.clear(); state.mints.clear();
+  state.minted.clear(); state.mints.clear(); formsAt = { rev: -1, list: [], set: new Set() };
   for (const waiting of state.writing.values()) for (const w of waiting) w();
   state.writing.clear(); state.typing.clear();
 }

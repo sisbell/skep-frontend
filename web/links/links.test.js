@@ -22,7 +22,9 @@
 // (FP-21, FP-26); the most a reveal can set in
 // a text, which no stage, toggle or lens moves (FP-12); and, in a draft
 // holding typed text, each end drawn where its bytes stand in the text the
-// page shows, none on the words typed (FP-30).
+// page shows, none on the words typed (FP-30); and a far end at the one form
+// no tail, its beam and connection drawn, but none at rest at another
+// person's mailbox's form.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -783,4 +785,26 @@ test('a surface set from a record of its own hands it in: `shown`, `symbols`, `c
   assert.deepEqual([LK.shown(D)[0].pos, LK.shown(D, doc)[0].pos, LK.symbols(D, doc)[0].pos, LK.utmost(D, doc).shown[0].pos], [50, 52, 52, 52], 'no reader handed in: the model\'s record; the record handed in: its own places');
   assert.deepEqual([LK.countAt(D, doc.blocks[0], doc).n, LK.countAt(D, doc.blocks[1], doc).n], [1, 0]);
   assert.deepEqual(LK.shown(D, null), [], 'no text to place them in: none drawn');
+});
+
+test('a link whose far end is an assigned slot no document the reader can read stands at is no tail where the plane draws the one form there — the reader `drawn` answering that place — and draws its beam and its connection; one ending at the one form at another person\'s mailbox draws no beam, no connection and no tail at rest, standing in the set, marked and counted (the one form\'s part 7, changing #132 at an assigned slot)', () => {
+  REC._reset(); LK._reset();
+  const A = '1.0.9', NEAR = A + '.0.64', BIO = A + '.0.3', THEIRS = '1.0.8.0.2';
+  REC.takeIndex(/** @type {any} */ ({ docs: [A + '.0.1', NEAR, '1.0.8.0.1'].map((doc) => ({ doc, kind: 'edition', label: null, standing: 'public' })), counts: [{ account: A, documents: 2 }, { account: '1.0.8', documents: 1 }], state: { arm: 'complete' } }));
+  REC.setSession({ session: 's-1', principal: 1, account: A });
+  REC.takeDelivery(NEAR, [{ pos: 1, width: 40, kind: 'content', text: 'x'.repeat(40), ref: null, origin: null }]);
+  REC.takeImage(NEAR, 1, [{ iStart: NEAR + '.0.1.1', width: 40 }]);
+  const [TO_BIO, TO_THEIRS] = [NEAR + '.0.2.1', NEAR + '.0.2.2'];
+  REC.takeLinks(NEAR, [TO_BIO, TO_THEIRS]);
+  REC.takeLink({ addr: TO_BIO, from: [span(NEAR, 1, 5)], to: [whole(BIO)], type: CITE });
+  REC.takeLink({ addr: TO_THEIRS, from: [span(NEAR, 11, 5)], to: [whole(THEIRS)], type: CITE });
+  LK.readers({ drawn: (a) => REC.known().includes(a) || REC.isForm(a) });
+  try {
+    LK.reveal(NEAR, 3);
+    const end = (/** @type {string} */ l) => /** @type {import('./links.js').Shown} */ (LK.shown(NEAR).find((s) => s.link.addr === l));
+    assert.deepEqual([REC.isForm(BIO), REC.isForm(THEIRS), LK.tailed(end(TO_BIO)), LK.tailed(end(TO_THEIRS))], [true, true, false, false], 'both far ends a form\'s place: neither tailed');
+    assert.deepEqual(LK.beams(NEAR).map((s) => s.link.addr), [TO_BIO], 'the bio\'s beam; none to another person\'s mailbox at rest');
+    assert.deepEqual([LK.connections([NEAR]).map((c) => [c.a, c.b]), LK.tails([NEAR])], [[[NEAR, BIO]], []], 'a connection to the bio\'s form; none to the mailbox\'s; no tail');
+    assert.deepEqual([LK.symbols(NEAR).map((s) => s.link.addr), LK.countDoc(NEAR).n], [[TO_BIO, TO_THEIRS], 2], 'both stand in the set, marked at their spans and counted');
+  } finally { REC._reset(); LK._reset(); }
 });

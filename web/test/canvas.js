@@ -2,9 +2,9 @@
 // `web/test/`, never imported by the page, for the pure tests of the modules
 // that stroke the page's curves (BM's beams, SC's bands, strokes and lines
 // between the panes) and draw the plane's frame (P-RENDER): it keeps each
-// stroke as it was made — its stroke style, its dash, its cap, its width,
-// where its path began, the cubic it drew from there, where its last straight
-// segment ended, and every segment of its path in order — each fill's style,
+// stroke as it was made — its stroke style, its dash, its cap, its join, its
+// width, its alpha, where its path began, the cubic it drew from there, where
+// its last straight segment ended, and every segment of its path in order — each fill's style,
 // and each fill with its path's segments, each rect it filled with its style,
 // and each string set on it with its fill style, and
 // draws nothing; a string is measured at 0.6 em a character of the size its
@@ -19,7 +19,9 @@
  * @property {string} hue its stroke style
  * @property {number[]} dash its dash pattern
  * @property {string} cap its line cap
+ * @property {string} join its line join
  * @property {number} width its line width
+ * @property {number} alpha the global alpha it was stroked at
  * @property {{x: number, y: number}} start where its path began
  * @property {Array<{x: number, y: number}>} curve the cubic's two control points and its end, where its path drew one; none where it drew none
  * @property {{x: number, y: number} | null} line where its last straight segment ended, where its path drew one; null where it drew none
@@ -51,7 +53,7 @@ export function recorder() {
   let path = [];
   const none = () => {};
   const ctx = {
-    strokeStyle: '', fillStyle: '', lineCap: 'round', lineWidth: 1, globalAlpha: 1, font: '10px monospace', textAlign: 'left', textBaseline: 'alphabetic',
+    strokeStyle: '', fillStyle: '', lineCap: 'round', lineJoin: 'miter', lineWidth: 1, globalAlpha: 1, font: '10px monospace', textAlign: 'left', textBaseline: 'alphabetic',
     setLineDash: (/** @type {number[]} */ d) => { dash = [...d]; },
     beginPath: () => { start = { x: NaN, y: NaN }; curve = []; line = null; path = []; },
     moveTo: (/** @type {number} */ x, /** @type {number} */ y) => { start = { x, y }; path.push({ op: 'move', at: [{ x, y }] }); },
@@ -64,7 +66,7 @@ export function recorder() {
     save: none, restore: none, translate: none, rotate: none,
     setTransform: none, clearRect: none, strokeRect: none, arc: none, arcTo: none,
     fillRect: (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ w, /** @type {number} */ h) => { rects.push({ x, y, w, h, fill: ctx.fillStyle }); },
-    stroke: () => { strokes.push({ hue: ctx.strokeStyle, dash, cap: ctx.lineCap, width: ctx.lineWidth, start, curve, line, path: [...path] }); },
+    stroke: () => { strokes.push({ hue: ctx.strokeStyle, dash, cap: ctx.lineCap, join: ctx.lineJoin, width: ctx.lineWidth, alpha: ctx.globalAlpha, start, curve, line, path: [...path] }); },
     fill: () => { fills.push(ctx.fillStyle); filled.push({ fill: ctx.fillStyle, path: [...path] }); },
     fillText: (/** @type {string} */ s) => { texts.push(s); inked.push({ text: s, ink: ctx.fillStyle }); },
     measureText: (/** @type {string} */ s) => ({ width: [...s].length * 0.6 * Number((/([\d.]+)px/.exec(ctx.font) || [0, 10])[1]) }),

@@ -479,7 +479,7 @@ import json
 import math
 import re
 
-from . import AGENT_SPACE, BEAMED, DOC, FAR_LEAP, FIRST_ORDINARY, GHOST, MAILBOX, SECOND_ACCOUNT, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, edition, first_grid, frame_row, heard, slot_words
+from . import AGENT_SPACE, BEAMED, BIO, DOC, FAR_LEAP, FIRST_ORDINARY, GHOST, LAST_NAMED_SLOT, LINK_PAGE, MAILBOX, MAILBOX_SLOT, SECOND_ACCOUNT, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, edition, first_grid, frame_row, heard, is_slot, slot_words
 
 LEVELS_EM = [9, 12, 18, 30]
 # the room about the viewport the text layer stands a document's lines in (issue #122: a document stands by line) — the
@@ -804,7 +804,9 @@ def label_view(ctx):
     each held label's place (issue #169), by its kind and place — a document's outline's rects, a mark's cell for each
     of its labels (issue #42), an account's cell — the places the one line names, and for each document labelled the lead its label sets (the page's
     first-line rule), where its first line stands in its fold (issue #23), the clause it carries while it stands kept (issue #368) and the name of
-    the well-known slot it stands at as the reader is shown it (B11-F10)"""
+    the well-known slot it stands at as the reader is shown it (B11-F10); and the one form drawn at each assigned slot in view no box stands at,
+    its rectangle and the lines set of its label (B11-S5), each labelled form read as a document is — its row, its shape, its slot's name — its fold
+    its first column slot, read with no record made"""
     return ctx.js('''(async () => {
       const P = await import('./plane/projection.js'), T = await import('./text/layer.js');
       const S = window.__skep, c = S.view.camera(), p = S.view.viewport(), lod = S.view.lod();
@@ -822,20 +824,23 @@ def label_view(ctx):
       const boxes = boxesDrawn ? places.filter((q) => !held.has(q.doc) && crosses(scr(S.boxOf(q.doc)), view)).flatMap((q) => S.fold(q.doc).rects.map((r) => ({place: q.doc, rect: scr(r)}))).filter((b) => crosses(b.rect, view)) : [];
       const accounts = S.model.counts().filter((a) => !a.system).map((a) => ({place: a.account, rect: scr(S.accountCell(a.account))}));
       const b = S.boardCell('1');
-      const docs = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => [l.place, scr(S.fold(l.place).row)]));
+      // the one form at each assigned slot in view no box stands at (B11-S5): its rectangle on screen, as the frame drew it; its fold read with no record made
+      const forms = boxesDrawn ? S.forms().map((f) => ({place: f.addr, rect: f.rect, label: f.label})) : [];
+      const named = (l) => l.kind === 'doc' || l.kind === 'form';
+      const docs = Object.fromEntries(labels.filter(named).map((l) => [l.place, scr(S.fold(l.place).row)]));
       // each document's label room: its outline's first row, inside the half gutter its columns are padded by
       const inner = (f) => { const g = S.constants.GUTTER / 2 * f.fs; return scr({x: f.row.x + g, y: f.row.y + g, w: f.row.w - 2 * g, h: f.row.h - 2 * g}); };
-      const rows = Object.fromEntries(boxesDrawn ? places.filter((q) => !held.has(q.doc) && crosses(scr(S.boxOf(q.doc)), view)).map((q) => [q.doc, inner(S.fold(q.doc))]) : []);
+      const rows = Object.fromEntries(boxesDrawn ? [...places.filter((q) => !held.has(q.doc) && crosses(scr(S.boxOf(q.doc)), view)).map((q) => q.doc), ...forms.map((f) => f.place)].map((a) => [a, inner(S.fold(a))]) : []);
       // the shape of each held label's place: a document's outline's rects, a mark's cell, an account's cell
-      const shapeOf = (l) => l.kind === 'doc' ? S.fold(l.place).rects.map(scr) : ['mark', 'newest', 'member'].includes(l.kind) ? [cell(l.place)] : [scr(S.accountCell(l.place))];
+      const shapeOf = (l) => named(l) ? S.fold(l.place).rects.map(scr) : ['mark', 'newest', 'member'].includes(l.kind) ? [cell(l.place)] : [scr(S.accountCell(l.place))];
       // each document labelled: the lead the page's first-line rule gives it and where its first line stands in its fold, on screen
-      const leads = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => { const at = S.fold(l.place).lead; return [l.place, {words: S.firstLine(l.place).lead, at: scr({x: at.x, y: at.y, w: 0, h: at.h})}]; }));
+      const leads = Object.fromEntries(labels.filter(named).map((l) => { const at = S.fold(l.place).lead; return [l.place, {words: l.kind === 'form' ? null : S.firstLine(l.place).lead, at: scr({x: at.x, y: at.y, w: 0, h: at.h})}]; }));
       // each document labelled: the clause it carries while it stands kept, else null
-      const kept = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => { const k = T.keptIn(l.place); return [l.place, k ? k.text : null]; }));
+      const kept = Object.fromEntries(labels.filter(named).map((l) => { const k = l.kind === 'form' ? null : T.keptIn(l.place); return [l.place, k ? k.text : null]; }));
       // each document labelled: the name of the well-known slot it stands at as the reader is shown it, else null
-      const names = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => { const n = S.slotName ? S.slotName(l.place) : null; return [l.place, n ? n.text : null]; }));
+      const names = Object.fromEntries(labels.filter(named).map((l) => { const n = S.slotName ? S.slotName(l.place) : null; return [l.place, n ? n.text : null]; }));
       return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})), leads, kept, names,
-              boxes, rows, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, connections, mounted: S.mountedAddrs(),
+              boxes, forms, rows, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, connections, mounted: S.mountedAddrs(),
               tails: S.tails().map((t) => ({key: t.key, links: t.links, far: t.far, from: t.from, to: t.to})),
               held: Object.fromEntries(labels.filter((l) => l.held).map((l) => [l.kind + ' ' + l.place, shapeOf(l)])), named: S.named()};
     })()''')
@@ -861,7 +866,7 @@ def place_of(v, label):
         return next((a['rect'] for a in v['accounts'] if a['place'] == place), None)
     if kind in ('mark', 'newest', 'member'):
         return next((m['rect'] for m in v['marks'] if m['place'] == place), None)
-    if kind == 'doc':
+    if kind in ('doc', 'form'):
         return v['docs'].get(place)
     return None
 
@@ -955,37 +960,57 @@ def labels_hold(r, name, v):
     r.check(not crossing, f'{name}: (iii) no two labels meet', crossing[:6])
     met = []
     for l, p, x in placed:
-        others = [('box', o) for o in v['boxes'] if o['place'] != l['place']] + [('mark', o) for o in v['marks'] if o['place'] != l['place']]
+        others = [('box', o) for o in v['boxes'] if o['place'] != l['place']] + [('mark', o) for o in v['marks'] if o['place'] != l['place']] + [('form', o) for o in v.get('forms', []) if o['place'] != l['place']]
         if l['kind'] not in ('connection', 'tail'):
             others += [('account', o) for o in v['accounts'] if p is None or not inside(p, o['rect'])]
         met += [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'meets': [what, o['place']]} for what, o in others if meets(x['rect'], o['rect'])]
-    r.check(not met, f'{name}: (iv) no label meets another place: the box of a document in view that no mark drawn the stronger holds, a continuation\'s mark, an account\'s cell that does not hold its place — a connection\'s count and a tail\'s label, no one account\'s, meeting no box and no mark, the tail\'s own document\'s among them', met[:6])
+    r.check(not met, f'{name}: (iv) no label meets another place: the box of a document in view that no mark drawn the stronger holds, a continuation\'s mark, the one form\'s rectangle (B11-S5), an account\'s cell that does not hold its place — a connection\'s count and a tail\'s label, no one account\'s, meeting no box and no mark, the tail\'s own document\'s among them', met[:6])
     # (v) the address (issue #23's design decision: "Show only the fields past the region's prefix while that region's label is in
-    # view"; foundations F-9): every document's label carries its address whole in the identifier's face, past its region's prefix
-    # only where the region's label is set in this frame or the one line names the region
+    # view"; foundations F-9): every document's label — and the one form's (B11-S5) — carries its address whole in the identifier's face,
+    # past its region's prefix only where the region's label is set in this frame or the one line names the region; save, at a fixed
+    # slot's cell inside a region named in view, a label set in its place whose slot's name stands for its address (FP-26's last sentence;
+    # the one form's part 9), which carries the address or the name; a held row, a label away from a named region and every cell from 6
+    # up carry the address
     regions = {l['place'] for l in labels if l['kind'] in ('frame', 'cluster')} | ({v['named']['account']} if v['named']['account'] else set())
     unnamed = []
     for l in labels:
-        if l['kind'] != 'doc':
+        if l['kind'] not in ('doc', 'form'):
             continue
         acct, a = account_of(l['place']) or '', address_line(l)
         want = l['place'][len(acct):] if acct in regions else l['place']
+        slot_name = (v.get('names') or {}).get(l['place'])
+        spelled = a is None and not l.get('held') and acct in regions and is_slot(l['place']) and bool(slot_name) and any(x['text'] == slot_name for x in l['lines'])
+        if spelled:
+            continue
         if a is None or a['text'] != want:
-            unnamed.append({'place': l['place'], 'address': a and a['text'], 'want': want, 'region_named': acct in regions})
-    r.check(not unnamed, f'{name}: (v) every document\'s label carries its address whole in the identifier\'s face — its fields past its region\'s prefix (".0.3") only where its region\'s label is set in view or the one line names the region, its whole address elsewhere (issue #23)', unnamed[:6])
+            unnamed.append({'place': l['place'], 'kind': l['kind'], 'address': a and a['text'], 'want': want, 'region_named': acct in regions, 'held': bool(l.get('held'))})
+    r.check(not unnamed, f'{name}: (v) every document\'s label, and the one form\'s, carries its address whole in the identifier\'s face — its fields past its region\'s prefix (".0.3") only where its region\'s label is set in view or the one line names the region, its whole address elsewhere — save at a fixed slot\'s cell in a region named in view, where its slot\'s name, standing, spells the address in its stead; a held row and every other label keeping it (issue #23; FP-26; the one form\'s part 9)', unnamed[:6])
     # (v-b) the contents line (issue #23's design decision: "Set it at the head of the first column, where those words will stand when
     # the text mounts ... at the end of that row, like a page number"): a document's label set in its place stands on one row — its
     # address ending at the end of its outline's first row, or, while the document stands kept, before its clause, which ends there
     # (issue #368's design decision: "the clause follows the address"); its first line, where set, the page's lead cut on a whole word,
     # LEAD_WORDS kept at the least, starting where those words stand in its fold and centred on that line, unless its row is held to its
     # first row's top; and at a well-known slot (B11-F10, B11-S2), the slot's name, where set, whole just before its address, its first
-    # line ending before the name
+    # line ending before the name — or, at a fixed slot's cell in a region named in view where the address gave way (FP-26's last
+    # sentence; the one form's part 9), the name whole at the row's end in its stead, the first line before it; the one form's label
+    # (B11-S5) the same, its row its rectangle's head
     astray = []
     for l in labels:
-        if l['kind'] != 'doc' or l.get('held') or l['place'] not in v['rows']:
+        if l['kind'] not in ('doc', 'form') or l.get('held') or l['place'] not in v['rows']:
             continue
         a, row, lead, kept, slot = address_line(l), v['rows'][l['place']], v['leads'].get(l['place']), v['kept'].get(l['place']), (v.get('names') or {}).get(l['place'])
         if a is None:
+            # the address gave way at a slot's cell: the name ends the row, any first line on it before the name
+            named = next((x for x in l['lines'] if slot and x['text'] == slot), None)
+            if named is None or not is_slot(l['place']):
+                continue
+            nmid = named['rect']['y'] + named['rect']['h'] / 2
+            on_row = [x for x in l['lines'] if x is not named and abs(x['rect']['y'] + x['rect']['h'] / 2 - nmid) <= LABEL_TOL_PX]
+            end_ok = abs(named['rect']['x'] + named['rect']['w'] - (row['x'] + row['w'])) <= LABEL_TOL_PX
+            firsts_ok = len(on_row) <= 1 and all(lead and lead['words'] and word_cut(x['text'], lead['words']) and abs(x['rect']['x'] - lead['at']['x']) <= LABEL_TOL_PX
+                                                 and x['rect']['x'] + x['rect']['w'] < named['rect']['x'] for x in on_row)
+            if not (end_ok and firsts_ok):
+                astray.append({'place': l['place'], 'address': None, 'name': [named['text'], named['rect']], 'row': row, 'first': [[x['text'], x['rect']] for x in on_row], 'lead': lead})
             continue
         mid = a['rect']['y'] + a['rect']['h'] / 2
         level = lambda x: abs(x['rect']['y'] + x['rect']['h'] / 2 - mid) <= LABEL_TOL_PX
@@ -1004,7 +1029,7 @@ def labels_hold(r, name, v):
                                              and (abs(mid - lead_mid) <= LABEL_TOL_PX or abs(row_top - row['y']) <= LABEL_TOL_PX) for x in on_row)
         if not (end_ok and name_ok and firsts_ok):
             astray.append({'place': l['place'], 'address': a['rect'], 'kept': after and [after['text'], after['rect']], 'name': named and [named['text'], named['rect']], 'row': row, 'first': [[x['text'], x['rect']] for x in on_row], 'lead': lead})
-    r.check(not astray, f'{name}: (v-b) every document\'s label set in its place is one contents line — its address ending at its outline\'s first row\'s end, or before its kept clause, which ends there; at a well-known slot its slot\'s name, where set, whole just before its address; its first line, where set, its lead cut on a whole word with {LEAD_WORDS} words kept at the least, starting where those words stand in its fold and level with that line, ending before the name — {LABEL_TOL_PX} px either way (issues #23, #368; B11-F10)', astray[:6])
+    r.check(not astray, f'{name}: (v-b) every document\'s label set in its place, and the one form\'s, is one contents line — its address ending at its outline\'s first row\'s end, or before its kept clause, which ends there; at a well-known slot its slot\'s name, where set, whole just before its address, or at the row\'s end where the address gave way in a region named in view; its first line, where set, its lead cut on a whole word with {LEAD_WORDS} words kept at the least, starting where those words stand in its fold and level with that line, ending before the name — {LABEL_TOL_PX} px either way (issues #23, #368; B11-F10; FP-26; the one form\'s part 9)', astray[:6])
     # the connections' counts (foundations §2.1's register: "one connection drawn per document pair with its count"; P44 forbids a merged mark
     # that hides it): the numeral of its links on each holding two or more, else the rule that left it out named; none on one holding one
     conns = v['connections']
@@ -1069,8 +1094,8 @@ def slot_name_holds(ctx, r):
     (`frame_row`): its label set there holds the name the acting account's own mailbox is shown by, whole, in the client's
     face, level with its address and a space short of it, the address whole at the row's end — THE LABELS' checks holding in
     that view, rule (v) at the slot's cell among them; the agent space's mailbox, framed so, named by the plain name wherever
-    a name of it stands (B11-S7: the acting account's own address alone), and the second account's, withheld from every
-    reader, drawn and labelled nowhere (B11 call 3). Its figures: what each label sets"""
+    a name of it stands (B11-S7: the acting account's own address alone); the second account's, withheld from every reader, no
+    box but the one form, whose label the forms' row reads (B11 call 3; B11-S5). Its figures: what each label sets"""
     words = slot_words(ctx)
     mine, plain = words['L.well-known.your-mailbox'], words['L.well-known.mailbox']
     figures = {}
@@ -1098,7 +1123,83 @@ def slot_name_holds(ctx, r):
     figures['agent_space_mailbox'] = {'name': shown, 'label': l and [x['text'] for x in l['lines']], 'left_out': [[o['text'], o['reason']] for o in v['out'] if o['place'] == agent]}
     theirs = SECOND_ACCOUNT + '.0.2'
     known = ctx.js('import("./model/records.js").then((R) => R.known().includes(%s))' % json.dumps(theirs))
-    figures['second_account_mailbox'] = {'known': known, 'labelled': any(l['place'] == theirs for l in v['labels'])}
+    figures['second_account_mailbox'] = {'known': known, 'labelled': [l['kind'] for l in v['labels'] if l['place'] == theirs]}
+    return figures
+
+
+# a depth-0 box this many px wide frames an account's four slot cells in the gate's 1440 px view, each form's rectangle wide enough
+# for its label whole (measured on the test board; FP-18)
+FORM_BOX_PX = 300
+# the plane's ground, COL.bg (#0e1013), where the one form leaves the canvas bare
+GROUND = (14, 16, 19)
+# how far off the ground a canvas pixel the form leaves bare may read (anti-aliasing a hairline's neighbour), and how far one it paints reads
+GROUND_TOL, INK_MIN = 8, 20
+
+# the canvas's pixels about each of a list of rects: the most a 3 × 3 patch reads off the ground at each corner's arm, at the middle of each
+# side and inside it (the canvas pixel oracle: a stats field is the page's own claim, the pixels its drawing)
+FORM_PIXELS = """((rects, ground) => {
+  const c = document.getElementById('plane'), k = c.width / c.clientWidth, g = c.getContext('2d');
+  const px = (x, y) => [...g.getImageData(Math.floor(x * k), Math.floor(y * k), 1, 1).data].slice(0, 3);
+  const off = (x, y) => Math.max(...px(x, y).map((v, i) => Math.abs(v - ground[i])));
+  const patch = (x, y) => Math.max(...[-1, 0, 1].flatMap((dx) => [-1, 0, 1].map((dy) => off(x + dx, y + dy))));
+  return rects.map((r) => ({
+    corners: [[r.x + 2, r.y], [r.x + r.w - 2, r.y], [r.x + 2, r.y + r.h], [r.x + r.w - 2, r.y + r.h]].map(([x, y]) => patch(x, y)),
+    sides: [[r.x + r.w / 2, r.y], [r.x + r.w / 2, r.y + r.h], [r.x, r.y + r.h / 2], [r.x + r.w, r.y + r.h / 2]].map(([x, y]) => patch(x, y)),
+    inside: patch(r.x + r.w / 2, r.y + r.h * 0.6),
+  }));
+})(%s, %s)"""
+
+
+def forms_hold(ctx, r):
+    """THE ONE FORM AT MID (B11-S5; the one form's drawing, parts 1-5, 8, 9): each region the test board draws in the claimant's
+    first row — the claimant's, its agent space's (U1, "like any account"), the second account's — framed at mid on its four slot
+    cells: at each slot no box stands at, the one form, its rectangle the cell's first column slot (the fold door's, read with no
+    record made), four corner marks — the canvas painted at each corner, bare at the middle of each side and inside, so half of every
+    side stands open and nothing is filled — at the boxes' alpha; labelled by its slot's name then its address: "your bio" and "your
+    link page" in the claimant's own region, the bare names elsewhere, slot 5 its address alone, the address past the region's prefix
+    or, short of room, given way to the name (part 9); THE LABELS' checks holding in each view, rule (v) as re-keyed and the first
+    row's names together among them; a slot a box stands at drawing none, and no form outside its own cell (part 8). Its figures: each
+    region's forms, their rectangles and labels"""
+    words = slot_words(ctx)
+    figures = {}
+    for who, acct in (('own', '1.0.1'), ('agent', AGENT_SPACE), ('other', SECOND_ACCOUNT)):
+        slots = ['%s.0.%d' % (acct, n) for n in range(MAILBOX_SLOT, LAST_NAMED_SLOT + 1)]
+        known = ctx.js('import("./model/records.js").then((R) => R.known())')
+        boxes = [a for a in slots if a in known]
+        forms_due = [a for a in slots if a not in known] if '%s.0.1' % acct in known else []
+        held = lambda: ctx.js('import("./model/records.js").then((R) => %s.filter((a) => R.has(a)))' % json.dumps(forms_due))
+        # a record an earlier act's own read made — a landing at a slot, as the text case's at the bio — is no record of this row's frames
+        before = held()
+        b3, b4 = ctx.js('window.__skep.boxOf(%s)' % json.dumps(slots[1])), ctx.js('window.__skep.boxOf(%s)' % json.dumps(slots[2]))
+        f3 = ctx.js('window.__skep.fold(%s)' % json.dumps(slots[1]))
+        ctx.set_view((b3['x'] + b3['w'] + b4['x']) / 2, f3['outline']['y'] + f3['outline']['h'] / 2, ctx.extent_scale(FORM_BOX_PX))
+        v = label_view(ctx)
+        seen = labels_hold(r, 'forms-' + who, v)
+        drawn = {f['addr']: f for f in ctx.js('window.__skep.forms()')}
+        cam, vp = ctx.camera(), ctx.js('window.__skep.view.viewport()')
+        scr = lambda q: {'x': (q['x'] - cam['x']) * cam['scale'] + vp['VW'] / 2, 'y': (q['y'] - cam['y']) * cam['scale'] + vp['VH'] / 2, 'w': q['w'] * cam['scale'], 'h': q['h'] * cam['scale']}
+        made = [a for a in held() if a not in before]
+        want ={a: [n for n in [(words.get('L.well-known.your-' + k) if acct == '1.0.1' else words.get('L.well-known.' + k)) for k in [['mailbox', 'bio', 'link-page', None][int(a.split('.0.')[-1]) - MAILBOX_SLOT]] if k] if n] for a in forms_due}
+        rects = {a: scr(ctx.js('window.__skep.fold(%s)' % json.dumps(a))['outline']) for a in forms_due}
+        near = lambda p, q: all(abs(p[k] - q[k]) <= 0.5 for k in ('x', 'y', 'w', 'h'))
+        wrong = [{'addr': a, 'drawn': drawn.get(a) and drawn[a]['rect'], 'want': rects[a]} for a in forms_due if a not in drawn or not near(drawn[a]['rect'], rects[a])]
+        cells = {a: scr(ctx.js('window.__skep.boxOf(%s)' % json.dumps(a))) for a in drawn}
+        astray = [a for a, f in drawn.items() if not (f['rect']['x'] >= cells[a]['x'] - 0.5 and f['rect']['x'] + f['rect']['w'] <= cells[a]['x'] + cells[a]['w'] + 0.5)]
+        r.check(bool(forms_due) and not wrong and not made and not any(a in drawn for a in boxes) and not astray and all(f['alpha'] == 1 for f in drawn.values()),
+                'forms-%s: at %s\'s slot cells no box stands at (%s) the one form, its rectangle the cell\'s first column slot, inside its own cell, at the boxes\' alpha — its frames making no record; none where a box stands (%s) (B11-S5; part 8)' % (who, acct, ', '.join(forms_due) or 'none', ', '.join(boxes) or 'none'),
+                {'due': forms_due, 'wrong': wrong, 'records': made, 'held_before': before, 'boxes': boxes, 'astray': astray})
+        pix = ctx.js(FORM_PIXELS % (json.dumps([drawn[a]['rect'] for a in forms_due if a in drawn]), json.dumps(GROUND)))
+        crossed = lambda q: any(abs((c['ends'][1]['y'] - c['ends'][0]['y']) * (q[0] - c['ends'][0]['x']) - (c['ends'][1]['x'] - c['ends'][0]['x']) * (q[1] - c['ends'][0]['y'])) / (math.hypot(c['ends'][1]['x'] - c['ends'][0]['x'], c['ends'][1]['y'] - c['ends'][0]['y']) or 1) < 3 for c in v['connections'])
+        open_ok = [a for a, p in zip([a for a in forms_due if a in drawn], pix) if not (min(p['corners']) >= INK_MIN and all(x <= GROUND_TOL for x in p['sides']) and p['inside'] <= GROUND_TOL)]
+        open_ok = [a for a in open_ok if not crossed((drawn[a]['rect']['x'] + drawn[a]['rect']['w'] / 2, drawn[a]['rect']['y'] + drawn[a]['rect']['h'] / 2))]
+        r.check(not open_ok, 'forms-%s: each form painted at its four corners and bare at the middle of each side and inside — half of every side open, nothing filled (part 1)' % who,
+                {'pixels': dict(zip([a for a in forms_due if a in drawn], pix)), 'astray': open_ok})
+        lab = {a: drawn[a]['label'] for a in forms_due if a in drawn}
+        mislabelled = {a: [l, want[a]] for a, l in lab.items() if l and not (l == want[a] + ['.0.%s' % a.split('.0.')[-1]] or (want[a] and l == want[a]) or (not want[a] and l == ['.0.%s' % a.split('.0.')[-1]]))}
+        r.check(all(lab.values()) and not mislabelled,
+                'forms-%s: each form labelled by its slot\'s name, then its address past the region\'s prefix — %s — slot 5 by its address alone; or, short of room, its name alone, the address given way (parts 1, 5, 9)' % (who, '"your bio", "your link page"' if acct == '1.0.1' else 'the bare names'),
+                {'labels': lab, 'want': want, 'mislabelled': mislabelled})
+        figures[who] = {'forms': {a: {'rect': drawn[a]['rect'], 'label': drawn[a]['label'], 'arms': drawn[a]['arms']} for a in forms_due if a in drawn}, 'boxes': boxes, 'labels': seen}
     return figures
 
 
@@ -5889,6 +5990,7 @@ def run(ctx):
         seen[name] = labels_hold(r, name, label_view(ctx))
     r.figures['labels'] = seen
     r.figures['slot_names'] = slot_name_holds(ctx, r)
+    r.figures['forms'] = forms_hold(ctx, r)
     r.figures['contents_handoff'] = lead_handoff(ctx, r)
     r.figures['address_dots'] = address_dots(ctx, r)
     # THE TYPE, THE READING SCENE, THE CARRY, THE VERSION MOVE, THE CHROME, THE TRAIL

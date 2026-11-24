@@ -73,8 +73,10 @@
 // where it stands and the caret left where it stood; and a press on a
 // reading scene's pane's text taking nothing until its release, which takes
 // that pane's selection once, a drag in each of two panes leaving both
-// standing and a click in one ending its own (FP-9, FP-10, FP-12, FP-20,
-// FP-21, FP-24, FP-25, FP-30, FP-34, FP-35, FP-36, FP-40).
+// standing and a click in one ending its own; and a click, in its rectangle
+// or its press area, and Enter at its stop each a LEAP to the one form's slot,
+// with no look under the pointer over a form or a document (FP-9, FP-10,
+// FP-12, FP-20, FP-21, FP-24, FP-25, FP-30, FP-34, FP-35, FP-36, FP-40).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -100,7 +102,7 @@ import * as LINE from '../line/line.js';
 import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
-import { accountCell, boardCell, docBox, numberAtCell } from '../plane/projection.js';
+import { accountCell, boardCell, docBox, numberAtCell, DOC_W } from '../plane/projection.js';
 import { outlineRects, LINE_H } from '../plane/layout.js';
 import { t, tHTML, tRuns, addressedHTML, heard, opening } from '../strings.js';
 import { esc, byteLength } from '../util.js';
@@ -1978,3 +1980,69 @@ test('a drag in one pane\'s text, then one in the other\'s, leaves both panes\' 
     assert.deepEqual(SEL.selected('a'), { addr: O, pos: 9, width: 8 }, 'the platform\'s own keys extending it in pane A, a change outside a press: pane A\'s');
   } finally { P.end(); }
 }));
+
+test('a press goes to the one form at an assigned slot at every scale its rectangle is drawn, holding no text — a click inside it at mid and at reading scale, one in its press area outside it at far~mid, and Enter at its walk stop each a LEAP to the slot\'s address, its entry pushed each time and the camera leaving, never an Esc step or an account step; the pointer takes no look over a form, nor over a document (B11-S5\'s press; the one form\'s part 6; P-REG\'s TARGET)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the plane's listeners, by event */
+  const plane = new Map();
+  /** @type {Set<string>} the plane's classes */
+  const classes = new Set();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  const FORM = '1.0.4.0.3', ORDINARY = '1.0.4.0.64';
+  const unregistered = { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
+  const fake = FAKE.create({ [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(FORM) })]: unregistered, [FAKE.keyOf('op', { frame: F.docMetadata(FORM) })]: unregistered });
+  try {
+    PORT.boot(fake);
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.4', writes: true }));
+    REC.takeIndex(/** @type {any} */ ({ docs: ['1.0.4.0.1', ORDINARY].map((doc) => ({ doc, kind: 'edition', label: null, standing: 'public' })), counts: [{ account: '1.0.4', documents: 2 }], state: { arm: 'complete' } }));
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), classList: { add: (/** @type {string} */ c) => classes.add(c), remove: (/** @type {string} */ c) => classes.delete(c) } }, layer: listens(null), corners: listens(null) }));
+    const { ctx } = recorder();
+    RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+    CAM.setViewport(1440, 900);
+    const s = LAYER.shapeOf(FORM), o = LAYER.shapeOf(ORDINARY);
+    const click = (/** @type {{clientX: number, clientY: number}} */ at) => { plane.get('pointerdown')?.({ ...at, ctrlKey: false, metaKey: false, pointerId: 1 }); plane.get('pointerup')?.({ ...at }); };
+    /** a click at a point of the plane, the camera at a scale over the form: its entry and its flight, the camera then landed */
+    const pressAt = async (/** @type {number} */ scale, /** @type {(r: {x: number, y: number, w: number, h: number}) => {x: number, y: number}} */ where) => {
+      CAM.step(Infinity);
+      CAM.set({ x: s.x + s.w / 2, y: s.y + s.h / 2, scale });
+      RENDER.draw();
+      const r = { x: CAM.sx(s.x), y: CAM.sy(s.y), w: s.w * CAM.cam.scale, h: s.h * CAM.cam.scale }, p = where(r);
+      const before = TRAIL.all().length;
+      click({ clientX: p.x, clientY: p.y });
+      const out = [lodOf(scale).name, TRAIL.all().length - before, TRAIL.current()?.addr, CAM.flying()];
+      for (let i = 0; i < 50 && CAM.flying(); i++) { CAM.step(Infinity); await new Promise((q) => setTimeout(q, 0)); }
+      return out;
+    };
+    const centre = (/** @type {{x: number, y: number, w: number, h: number}} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+    TRAIL._reset();
+    assert.deepEqual(await pressAt(600 / DOC_W, centre), ['mid', 1, FORM, true], 'at mid, inside its rectangle: the slot, an entry and a flight');
+    assert.deepEqual(await pressAt(600 / DOC_W, centre), ['mid', 1, FORM, true], 'again: another entry, another flight');
+    const near = 14 / LAYER.foldOf(REC.doc(ORDINARY)).fs;
+    assert.deepEqual(await pressAt(near, centre), ['near', 1, FORM, true], 'at reading scale, inside its rectangle: the slot, no text to hold the press');
+    assert.deepEqual(await pressAt(12 / DOC_W, (r) => ({ x: r.x + r.w / 2, y: r.y + r.h + 8 })), ['far~mid', 1, FORM, true], 'at far~mid, 8 px below its rectangle, in its press area: the slot');
+    CAM.set({ x: s.x + s.w / 2, y: s.y + s.h / 2, scale: 600 / DOC_W });
+    RENDER.draw();
+    for (const r of [s, o]) {
+      plane.get('pointermove')?.({ clientX: CAM.sx(r.x + r.w / 2), clientY: CAM.sy(r.y + r.h / 2) });
+      assert.deepEqual([...classes], [], 'no look under the pointer over a form or a document');
+    }
+    await WALK.focusTo(FORM, null);
+    const before = TRAIL.all().length;
+    const entered = KEYS.activate();
+    assert.deepEqual([WALK.current()?.kind, TRAIL.all().length - before, TRAIL.current()?.addr, CAM.flying()], ['form', 1, FORM, true], 'Enter at its stop: the slot, an entry and a flight');
+    for (let i = 0; i < 50 && CAM.flying(); i++) { CAM.step(Infinity); await new Promise((q) => setTimeout(q, 0)); }
+    await entered;
+  } finally {
+    HOST.dismiss(); PORT.boot(null);
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' }); TRAIL._reset();
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});

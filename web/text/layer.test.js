@@ -109,7 +109,9 @@
 // a reading scene's pane a site of its own — its selection placed in its
 // article alone though the plane mounts the same document, its rects read
 // there, a range read with its site, and its blocks marked by its own
-// selection, never the plane's (FP-8,
+// selection, never the plane's; and the one form never mounted, its fold its
+// cell's first column slot and its label its slot's name and address, read
+// off its address with no record made (FP-8,
 // FP-10, FP-12, FP-20, FP-22, FP-23, FP-24, FP-26, FP-27, FP-30, FP-31, FP-33,
 // FP-34, FP-36, FP-37, FP-38, FP-39).
 import { test, beforeEach } from 'node:test';
@@ -1732,18 +1734,18 @@ test('a box\'s label is its contents line: its first line leading, at its em, it
   assert.equal(LAYER.firstLineHTML(REC.doc(D)), `[${tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })}]`);
 });
 
-test('a slot document\'s label carries its slot\'s name between its first line and its address — at the address\'s size in the client\'s face and the title\'s ink, never cut — the acting account\'s own mailbox by its own name, another account\'s mailbox the reader may read and the acting account\'s agent space\'s by the plain one, a version member as its document; none at the home page, an ordinary number, slot 5 or the system account\'s slots; a guest\'s none of its own; and the status region\'s name of a document, which names it as the mirror\'s label does, carries none (B11-S2, B11-S7, B11-F10, B11-F12; FP-33; issue #369)', () => {
+test('a slot document\'s label carries its slot\'s name between its first line and its address — at the address\'s size in the client\'s face and the title\'s ink, never cut — the acting account\'s own mailbox, bio and link page each by its own name (the one form\'s part 5), another account\'s slots, its mailbox the reader may read and the acting account\'s agent space\'s by the plain one, a version member as its document; none at the home page, an ordinary number, slot 5 or the system account\'s slots; a guest\'s none of its own; and the status region\'s name of a document, which names it as the mirror\'s label does, carries none (B11-S2, B11-S7, B11-F10, B11-F12; FP-33; issue #369)', () => {
   const nameOf = (/** @type {string} */ a) => { const n = LAYER.docLabel(REC.doc(a), 12).name; return n && [n.text, n.px, n.ink, n.fit, n.face ?? 'client']; };
   const named = (/** @type {string} */ id) => [t(id), ADDRESS.px, COL.title, 'one', 'client'];
-  assert.deepEqual(['1.0.1.0.3', '1.0.1.0.4', '1.0.1.0.2', '1.0.2.0.2', '1.0.1.1.0.2', '1.0.1.0.3.2'].map(nameOf),
-    [named('L.well-known.bio'), named('L.well-known.link-page'), named('L.well-known.your-mailbox'), named('L.well-known.mailbox'), named('L.well-known.mailbox'), named('L.well-known.bio')],
-    'acting as 1.0.1: its bio, its link page and its own mailbox; another account\'s mailbox and its agent space\'s by the plain name; a member of its bio as its bio');
+  assert.deepEqual(['1.0.1.0.3', '1.0.1.0.4', '1.0.1.0.2', '1.0.2.0.2', '1.0.2.0.3', '1.0.2.0.4', '1.0.1.1.0.2', '1.0.1.1.0.3', '1.0.1.0.3.2'].map(nameOf),
+    [named('L.well-known.your-bio'), named('L.well-known.your-link-page'), named('L.well-known.your-mailbox'), named('L.well-known.mailbox'), named('L.well-known.bio'), named('L.well-known.link-page'), named('L.well-known.mailbox'), named('L.well-known.bio'), named('L.well-known.your-bio')],
+    'acting as 1.0.1: its own bio, link page and mailbox each by its own name; another account\'s slots and its agent space\'s by the plain names; a member of its bio as its bio');
   assert.deepEqual(['1.0.1.0.1', '1.0.1.0.64', '1.0.1.0.185', '1.0.1.0.5', REC.SYSTEM_ACCOUNT + '.0.2', REC.SYSTEM_ACCOUNT + '.0.3'].map(nameOf), [null, null, null, null, null, null], 'the home page, ordinary numbers, slot 5, the system account\'s slots: no name');
   const lab = LAYER.docLabel(REC.doc('1.0.1.0.3'), 12);
   assert.deepEqual([lab.lead && plain(lab.lead.text), lab.address.text], ['d', '.0.3'], 'beside it the first line and the address, as at every document');
   assert.ok(!LAYER.placeName(REC.doc('1.0.1.0.3'), '1.0.1.0.3').includes(t('L.well-known.bio')), 'the status region\'s name: its first line and its address alone');
   REC.setSession(null);
-  assert.deepEqual(['1.0.1.0.2', '1.0.2.0.2'].map(nameOf), [named('L.well-known.mailbox'), named('L.well-known.mailbox')], 'a guest: no mailbox its own');
+  assert.deepEqual(['1.0.1.0.2', '1.0.2.0.2', '1.0.1.0.3', '1.0.1.0.4'].map(nameOf), [named('L.well-known.mailbox'), named('L.well-known.mailbox'), named('L.well-known.bio'), named('L.well-known.link-page')], 'a guest: no slot its own');
 });
 
 test('a box\'s first line is read by one rule: its own text from its first position where the model holds it — a record\'s words by the record rule, bracketed, else its first typed line holding more than white space — else the index\'s first line at its bare address; none where none is known, and none at a version the model holds no text of (issue #23)', () => {
@@ -3416,3 +3418,24 @@ test('a record at a number the plane\'s map gives no cell, its text held, is set
     assert.equal(LAYER.readAt(CAM.cam)?.addr, HOME, 'the view reads the home page alone');
   } finally { REC.invalidate(HOME); REC.invalidate(RESERVED); }
 }, 1440, 900));
+
+test('the text layer never mounts the one form, a place holding no text: at reading scale over its rectangle the frame stands no article there and makes no record; its fold its cell\'s first column slot, at its own em; its label the slot\'s name, then its address, past the region\'s prefix, whole as a part — no first line, no state, no kept clause, no badge — "your" at the acting account\'s own, the bare name elsewhere, the address alone at slot 5 (B11-S5; the one form\'s parts 1, 3, 5; T-LAYER\'s `mountable`)', () => {
+  const yourBio = t('L.well-known.your-bio'), link = t('L.well-known.link-page');
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.9' });
+  REC.takeIndex(/** @type {any} */ ({ docs: ['1.0.9.0.1', '1.0.8.0.1'].map((doc) => ({ doc, kind: 'edition', label: null, standing: 'public' })), counts: [{ account: '1.0.9', documents: 1 }, { account: '1.0.8', documents: 1 }], state: { arm: 'complete' } }));
+  const BIO = '1.0.9.0.3', THEIRS = '1.0.8.0.4', FIVE = '1.0.9.0.5';
+  onLayer(() => {
+    assert.ok([BIO, THEIRS, FIVE].every(REC.isForm), 'each a form');
+    const s = LAYER.shapeOf(BIO), f = LAYER.formFold(BIO);
+    CAM.set({ x: s.x + s.w / 2, y: s.y + s.h / 2, scale: 14 / f.fs });
+    assert.equal(LAYER.atReadingScale(BIO), true, 'at its own reading scale');
+    LAYER.frame();
+    assert.deepEqual([LAYER.isMounted(BIO), LAYER.mountedAddrs().includes(BIO), REC.has(BIO)], [false, false, false], 'no article mounted, no record made');
+  });
+  const part = (/** @type {import('../plane/labels.js').Part | null} */ p) => p && [p.text, p.whole ?? null, p.px, p.ink, p.face ?? 'client'];
+  const label = (/** @type {string} */ a) => { const l = LAYER.formLabel(a); return [l.lead, part(l.name), part(l.address), l.kept, l.parts, l.region]; };
+  assert.deepEqual(label(BIO), [null, [yourBio, null, ADDRESS.px, COL.title, 'client'], ['.0.3', BIO, ADDRESS.px, COL.title, 'ident'], null, [], '1.0.9'], 'the acting account\'s own bio: "your bio", then its address');
+  assert.deepEqual(label(THEIRS), [null, [link, null, ADDRESS.px, COL.title, 'client'], ['.0.4', THEIRS, ADDRESS.px, COL.title, 'ident'], null, [], '1.0.8'], 'another\'s link page: the bare name');
+  assert.deepEqual(label(FIVE)[1], null, 'slot 5: no name, its address alone');
+  assert.ok(![BIO, THEIRS, FIVE].some(REC.has), 'no record made');
+});

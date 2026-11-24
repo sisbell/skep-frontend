@@ -7,10 +7,12 @@
 // beside it and inside the strip's inset; the three faces each their job's,
 // the shipped two waited on in every style the style declares; the margin's
 // marks three shapes in three hues, inside the room before a column's edge
-// signs; the CSS variables carry the same values.
+// signs; the one form's ink the labels' own brought to the 3:1 floor against
+// the plane's ground and no higher, whole where more contrast is asked and
+// CanvasText under forced colours; the CSS variables carry the same values.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, ADDRESS, TAIL, CORNER, FACE, SHIPPED, WINDOW, STRIP, MARGIN, cornerWidth, cssVariables } from './register.js';
+import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, ADDRESS, TAIL, CORNER, FACE, SHIPPED, WINDOW, STRIP, MARGIN, COL, FORM, formInk, cornerWidth, cssVariables } from './register.js';
 import { LOD_TXT_LO, UNMOUNT_EM } from './lod.js';
 import { GUTTER, EDGE_GAP } from './layout.js';
 
@@ -60,6 +62,24 @@ test('a document\'s words are set in Charter, the client\'s in the system\'s fac
   assert.deepEqual(SHIPPED.filter((s) => s.endsWith('Charter')).map((s) => s.replace(/16px Charter$/, '').trim()), ['', 'italic', 'bold', 'italic bold'], 'Charter in all four styles');
   assert.equal(SHIPPED.filter((s) => s.endsWith('"Atkinson Hyperlegible Mono"')).length, 1, 'the mono\'s one file, every weight in it');
 });
+/** a colour's channels, #rrggbb */
+const channels = (/** @type {string} */ hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+/** a colour's relative luminance (WCAG 2.2) */
+const luminance = (/** @type {string} */ hex) => { const [r, g, b] = channels(hex).map((c) => { const s = c / 255; return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+/** two colours' contrast ratio (WCAG 2.2) */
+const contrast = (/** @type {string} */ a, /** @type {string} */ b) => { const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+
+test('the one form\'s ink is the labels\' ink at mid brought toward the plane\'s ground to the 3:1 floor against it and no higher, its hue the labels\' — whole where the person asks more contrast, the page\'s CanvasText under forced colours; its arms a quarter of each side, a stroke one px wide (the one form\'s drawing, part 1; ux-T1 (a))', () => {
+  const ratio = contrast(FORM.ink, COL.bg);
+  assert.ok(ratio >= 3 && ratio < 3.2, `${FORM.ink} on ${COL.bg}: ${ratio.toFixed(3)}:1`);
+  const [g, l, f] = [channels(COL.bg), channels(COL.title), channels(FORM.ink)];
+  const share = f.map((c, i) => (c - g[i]) / (l[i] - g[i]));
+  assert.ok(Math.max(...share) - Math.min(...share) < 0.02, `on the line from the ground to the labels' ink, each channel as far along it: ${share.map((x) => x.toFixed(3))}`);
+  assert.deepEqual([formInk({ more: false, forced: null }), formInk({ more: true, forced: null }), formInk({ more: true, forced: 'rgb(255, 255, 255)' })], [FORM.ink, COL.title, 'rgb(255, 255, 255)'],
+    'the floor\'s ink; the labels\' ink whole where more contrast is asked; CanvasText where colours are forced');
+  assert.deepEqual([FORM.arm, FORM.width], [0.25, 1], 'a quarter of each side, half of every side open; one px');
+});
+
 test('the corner compact is narrower than whole, its padding inside its width, and holds a kept word whole: "document", at its size (issue #151; FP-26: never cut mid-word)', () => {
   assert.deepEqual([cornerWidth(false), cornerWidth(true)], [CORNER.whole * CORNER.px, CORNER.compact * CORNER.px], 'its em at its size, the padding inside it');
   assert.ok(cornerWidth(true) < cornerWidth(false));

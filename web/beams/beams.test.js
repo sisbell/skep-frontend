@@ -16,7 +16,9 @@
 // word, alike ones cut apart — placed above or below its end inside the
 // visible view, saying what its beams' far texts hold where they agree, in
 // its short form (FP-21); and in a draft holding typed words a near end met
-// where the text shown holds it and a far end carried there (issue #515).
+// where the text shown holds it and a far end carried there (issue #515);
+// and a far end at the one form ending on its rectangle's facing side, no
+// record made and no read sent there.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -25,7 +27,9 @@ import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
 import * as CAM from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
-import { bundlesOf, beamOf, labelPlace, labelText, labelRuns, bundleLabels, pastSigns, inkOf, strokeOf, pointOn, strokeIn, pageGeometry, WORDS_CH } from './beams.js';
+import { bundlesOf, beamOf, labelPlace, labelText, labelRuns, bundleLabels, pastSigns, inkOf, strokeOf, pointOn, strokeIn, pageGeometry, build as buildBeams, WORDS_CH } from './beams.js';
+import * as PORT from '../bridge/port.js';
+import * as FAKE from '../test/fake-port.js';
 import { edgeStub } from '../plane/camera.js';
 import { HUE, NEUTRAL_HUE, STUB } from '../plane/register.js';
 import { t, sentence, sentences } from '../strings.js';
@@ -173,6 +177,7 @@ function geometry(/** @type {{farMounted: boolean, centre: {x: number, y: number
     signs: (addr, pos) => (addr === D && pos >= 50 && pos < 60 ? o.signs || [] : []),
     mounted: (addr) => addr === D || (addr === H && o.farMounted),
     box: (addr) => (addr === D ? NEAR_BOX : around(o.centre)),
+    form: () => false,
     view: SEEN,
   };
 }
@@ -293,7 +298,7 @@ test('differing ends change colour once, outside both documents: the stroke cut 
     lines: (addr, pos, width) => (addr === D && pos === 3 && width === 10 ? [{ x: 300, y: 100, w: 200, h: 15 }] : addr === H && pos === 7 && width === 5 ? [{ x: 950, y: 400, w: 50, h: 15 }] : []),
     block: (addr) => (addr === D ? [{ x: 100, y: 90, w: 400, h: 60 }] : addr === H ? [{ x: 900, y: 390, w: 300, h: 50 }] : []),
     first: () => null, signs: () => [], mounted: (addr) => addr === D || addr === H,
-    box: (addr) => (addr === D ? D_BOX : H_BOX), view: SEEN,
+    box: (addr) => (addr === D ? D_BOX : H_BOX), form: () => false, view: SEEN,
   };
   const b = beamOf(into, g);
   assert.ok(b && b.change != null, 'its ends differ: it changes');
@@ -497,4 +502,43 @@ test('the page\'s geometry reads a block of the text the page shows: at a positi
     const g = pageGeometry(CAM.visibleView(0));
     assert.deepEqual(g.block(D, shown + 1), [{ x: 100, y: 10, w: 50, h: 16 }], 'the block the text shown holds there');
   }, answers);
+});
+
+test('a beam whose far end is an assigned slot no document the reader can read stands at ends on the one form\'s rectangle there — the middle of its side facing the beam\'s near end, never inside it and never at its cell\'s centre — the rectangle whole: nothing of the slot\'s text asked, no record made and no read sent (the one form\'s "Any case not listed": "a line ending on its rectangle")', () => {
+  // on a hand-built geometry: the far document a form's place, its rectangle to the left of the near end
+  const FORM_RECT = { x: 600, y: 380, w: 60, h: 90 };
+  const g = { ...geometry({ farMounted: false, centre: { x: 900, y: 700 } }), box: (/** @type {string} */ addr) => (addr === D ? NEAR_BOX : FORM_RECT), form: (/** @type {string} */ addr) => addr === H };
+  const b = beamOf(own(), g);
+  assert.ok(b && !b.stub, 'a beam ending in view');
+  assert.deepEqual(b && b.to, { x: FORM_RECT.x, y: FORM_RECT.y + FORM_RECT.h / 2 }, 'the near end left of it: the middle of its left side');
+  const curve = strokeOf(/** @type {NonNullable<typeof b>} */ (b).from, /** @type {NonNullable<typeof b>} */ (b).end);
+  assert.ok(Array.from({ length: 41 }, (_, i) => pointOn(curve, i / 40)).every((p) => !(p.x > FORM_RECT.x + 1e-9 && p.x < FORM_RECT.x + FORM_RECT.w && p.y > FORM_RECT.y && p.y < FORM_RECT.y + FORM_RECT.h)), 'its curve never inside the rectangle');
+  // on the page: a mounted near document whose passage links an uncreated bio
+  const A = '1.0.9', NEAR = A + '.0.64', FORM = A + '.0.3', LINK = NEAR + '.0.2.1', text = 'The near words.\n\nAnd more of them here.';
+  const fake = FAKE.create({});
+  onPage(() => {
+    REC._reset(); WRITE._reset(); LK._reset();
+    PORT.boot(fake);
+    REC.setSession({ session: 's-1', principal: 1, account: A });
+    REC.takeIndex(/** @type {any} */ ({ docs: [A + '.0.1', NEAR].map((doc) => ({ doc, kind: 'edition', label: null, standing: 'public' })), counts: [{ account: A, documents: 2 }], state: { arm: 'complete' } }));
+    REC.takeSpanSet(NEAR, [{ subspace: 1, ordinal: 1, positions: text.length }]);
+    REC.takeDelivery(NEAR, [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }]);
+    REC.takeImage(NEAR, 1, [{ iStart: NEAR + '.0.1.1', width: text.length }]);
+    REC.takeLink({ addr: LINK, from: [span(NEAR, 1, 5)], to: [whole(FORM)], type: CITE });
+    REC.takeLinks(NEAR, [LINK]);
+    LK.readers({ drawn: (a) => REC.known().includes(a) || REC.isForm(a) });
+    LK.reveal(NEAR, 3);
+    const f = LAYER.foldOf(REC.doc(NEAR)), box = docBox(NEAR), c = f.columns[0];
+    CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 3, scale: 12 / f.fs });
+    LAYER.frame();
+    assert.ok(LAYER.isMounted(NEAR) && REC.isForm(FORM), 'its article stands, the bio a form');
+    const held = REC.docs().length, asked = fake.asked.length;
+    const beam = buildBeams(CAM.visibleView(0)).flatMap((x) => x.members).find((m) => m.s.link.addr === LINK);
+    const s = LAYER.shapeOf(FORM), r = { x: CAM.sx(s.x), y: CAM.sy(s.y), w: s.w * CAM.cam.scale, h: s.h * CAM.cam.scale }, cell = docBox(FORM);
+    assert.ok(beam && !LK.tailed(beam.s), 'a beam, no tail');
+    const to = beam ? beam.to : { x: NaN, y: NaN };
+    assert.ok(Math.abs(to.x - (r.x + r.w)) < 1e-6 && Math.abs(to.y - (r.y + r.h / 2)) < 1e-6, `ending on the form's rectangle, the middle of its side facing the near end — never the cell's centre (${CAM.sx(cell.x + cell.w / 2)}, ${CAM.sy(cell.y + cell.h / 2)}): ${JSON.stringify({ to, r })}`);
+    assert.deepEqual([REC.has(FORM), REC.docs().length, fake.asked.length], [false, held, asked], 'no record made at the slot, none anywhere, no read sent');
+  }, new Map());
+  PORT.boot(null); LK._reset();
 });

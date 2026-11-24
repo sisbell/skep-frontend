@@ -62,8 +62,9 @@ def first_grid(account):
 
 
 # the well-known slots' names as the strings table holds them (B11-F10, B11-F18 (2), (3)): the mailbox, the name the acting
-# account's own mailbox is shown by, the bio, the link page
-SLOT_NAMES = ('L.well-known.mailbox', 'L.well-known.your-mailbox', 'L.well-known.bio', 'L.well-known.link-page')
+# account's own mailbox is shown by, the bio, the link page, and the names the acting account's own bio and link page are shown by
+# (the one form's part 5)
+SLOT_NAMES = ('L.well-known.mailbox', 'L.well-known.your-mailbox', 'L.well-known.bio', 'L.well-known.link-page', 'L.well-known.your-bio', 'L.well-known.your-link-page')
 
 
 # the width of a depth-0 box, in px, at which the claimant's mailbox — an empty draft, its outline one row — is framed at mid on
@@ -309,6 +310,13 @@ def trunk_of(addr):
     """the trunk document an address lies under (the page's `documentOf`); None above a document"""
     f = fields(addr)
     return '.0.'.join(['.'.join(f[0]), '.'.join(f[1]), f[2][0]]) if len(f) >= 3 and f[2] else None
+
+
+def is_slot(addr):
+    """does an address lie at one of its account's assigned slots, MAILBOX_SLOT … LAST_NAMED_SLOT (the page's `assignedSlotOf`): a
+    document numbered one of them — the one form's place, or a slot document's — a version member as its document"""
+    f = fields(addr)
+    return len(f) >= 3 and bool(f[2]) and f[2][0].isdigit() and MAILBOX_SLOT <= int(f[2][0]) <= LAST_NAMED_SLOT
 
 
 def unit_span(addr):

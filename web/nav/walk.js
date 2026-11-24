@@ -108,7 +108,14 @@
 // order (S3 Q6), each box once, as the version it shows (FP-22; the `shown`
 // reader): an account's documents are every box the plane draws — the
 // model's one list (M-REC's `known`), a covered one among them (FP-29) —
-// each the version its box shows, its spans and links that version's; where
+// each the version its box shows, its spans and links that version's; and
+// among them in record order, the one form at each assigned slot no box
+// stands at (M-REC's `forms`; B11-S5, B11-F20 (3)): a fixed stop listed
+// before any read and whatever a read answers, so a first row's ↓ count
+// never moves at a creation, a letter or a read, and a landing at a slot
+// finds its stop listed — a place and never a document, a leaf holding no
+// element, named by its label (`named`), framed at its rectangle and
+// entered by no read; Enter there arrives at the slot's address (N-KEYS'); where
 // the plane draws a continuation of the account as its one mark at the scale
 // the camera is bound for (P-LOD's `residueDepth`), one stop for the mark
 // stands before its members, each a stop still in record order (P-PROJ's
@@ -313,8 +320,8 @@ import { t, tRuns, addressedHTML, facedHTML, markCount, counted, plural, sentenc
 
 /**
  * @typedef {Object} Node — one element of the linearization
- * @property {'board' | 'account' | 'mark' | 'document' | 'block' | 'link'} kind
- * @property {string} addr the board, the account, the document; a mark's, the name the plane draws its continuation under (P-PROJ's `markKey`), never an address
+ * @property {'board' | 'account' | 'mark' | 'document' | 'form' | 'block' | 'link'} kind `form` the one form at an assigned slot no box stands at (M-REC's `forms`): a place, never a document
+ * @property {string} addr the board, the account, the document, the form's slot; a mark's, the name the plane draws its continuation under (P-PROJ's `markKey`), never an address
  * @property {number | null} pos a block's first position
  * @property {Shown | null} link a drawn link
  */
@@ -573,20 +580,23 @@ function membersOf(/** @type {string} */ key) {
 }
 
 /**
- * The children of a node, in record order: an account's, its documents with
- * the stop for its mark before the mark's members (see the head), the mark
- * read at the scale the camera is bound for.
+ * The children of a node, in record order: an account's, its documents and
+ * the one form at each of its assigned slots no box stands at, the stop for
+ * its mark before the mark's members (see the head), the mark read at the
+ * scale the camera is bound for; a form's, none.
  * @param {Node | null} node null = the plane's root
  * @returns {Promise<Node[]>}
  */
 export async function childrenOf(node) {
   if (!node) return [BOARD];
   if (node.kind === 'board') return REC.accounts().filter((a) => !a.system).map((a) => ({ kind: /** @type {const} */ ('account'), addr: a.account, pos: null, link: null }));
-  // an account's documents as the plane draws them: every box the model knows of under it, a covered one among them (M-REC's `known`)
+  // an account's documents as the plane draws them: every box the model knows of under it, a covered one among them (M-REC's `known`), and
+  // its forms (M-REC's `forms`), fixed stops whatever a read answers
   if (node.kind === 'account') {
-    const docs = documentsUnder(node.addr), k = markDepth(CAM.destination().scale);
+    const forms = new Set(REC.forms().filter((a) => accountOf(a) === node.addr));
+    const docs = [...documentsUnder(node.addr), ...forms].sort(cmpAddr), k = markDepth(CAM.destination().scale);
     /** @type {Node[]} */
-    const out = docs.map((doc) => ({ kind: /** @type {const} */ ('document'), addr: read.shown(doc), pos: null, link: null }));
+    const out = docs.map((doc) => (forms.has(doc) ? { kind: /** @type {const} */ ('form'), addr: doc, pos: null, link: null } : { kind: /** @type {const} */ ('document'), addr: read.shown(doc), pos: null, link: null }));
     const first = k == null ? -1 : docs.findIndex((doc) => withinContinuation(doc, k));
     if (k != null && first >= 0) out.splice(first, 0, { kind: 'mark', addr: markKey(node.addr, k), pos: null, link: null });
     return out;
@@ -693,6 +703,14 @@ function named(n, i, total) {
   }
   // a mark's stop: its count, the words the mark shows (ST's `markCount`)
   if (n.kind === 'mark') return item(plainly(ended(markCount(membersOf(n.addr).length, REC.countsExact()))), at);
+  if (n.kind === 'form') {
+    // the one form's stop opens with its visible label (WCAG 2.5.3): the name of the slot it stands at as the reader is shown it (T-LAYER's
+    // `slotNamed`), then its address, whole as the mirror reads every sign — its address alone where the slot bears no name — and never a read's
+    // answer; no words of the strings table say what the place is, so no statement follows them. Read off the address: no record is made
+    const slot = LAYER.slotNamed(n.addr), name = slot ? opening(slot.id) : '';
+    const address = { text: n.addr, html: addressedHTML(n.addr), runs: [{ text: n.addr, face: /** @type {const} */ ('ident') }] };
+    return item(endSaid(listSaid([slot ? { text: name, html: `<span data-string="${esc(slot.id)}">${esc(name)}</span>`, runs: asRuns(name) } : plainly(''), address])), at);
+  }
   if (n.kind === 'document') {
     // led by its corner's first item — its kind, else a refused document's own words (T-LAYER's `mirrorLead`) — then its address;
     // listed after them, the name of the well-known slot it stands at, the words its label sets (T-LAYER's `slotNamed`; FP-33), a
@@ -747,8 +765,8 @@ const itemNamed = (/** @type {Node} */ n, /** @type {number} */ i, /** @type {nu
 /** a description's words as the hidden element that holds it says them: rendered for the ear by S22's table (ST's `heard`), none where it holds none */
 const spoken = (/** @type {string} */ words) => (words ? heard(words) : '');
 
-/** a node's level in the tree: board › account › document | mark › span | link, a withheld run's links a level below the run (see the head) */
-const levelOf = (/** @type {Node} */ n) => (n.kind === 'board' ? 1 : n.kind === 'account' ? 2 : n.kind === 'document' || n.kind === 'mark' ? 3 : n.kind === 'link' && n.link && n.link.run ? 5 : 4);
+/** a node's level in the tree: board › account › document | form | mark › span | link, a withheld run's links a level below the run (see the head) */
+const levelOf = (/** @type {Node} */ n) => (n.kind === 'board' ? 1 : n.kind === 'account' ? 2 : n.kind === 'document' || n.kind === 'form' || n.kind === 'mark' ? 3 : n.kind === 'link' && n.link && n.link.run ? 5 : 4);
 
 /**
  * Move the walk to item `i` of `sibs` — the one way it moves. A landing
@@ -1320,6 +1338,8 @@ async function flyToFocus(move) {
   } else if (focus.kind === 'mark') return;
   else if (focus.kind === 'board') await CAM.fly(CAM.viewForCell(boardCell(focus.addr), 0.92), 300);
   else if (focus.kind === 'account') await CAM.fly(CAM.viewForCell(accountCell(focus.addr), 0.85), 300);
+  // the one form framed at its rectangle, no nearer than just short of the reading scale its first column slot reads at, and no read made
+  else if (focus.kind === 'form') { const v = CAM.viewForCell(LAYER.shapeOf(focus.addr), 0.9); await CAM.fly({ ...v, scale: Math.min(v.scale, LAYER.scaleBelowReading(focus.addr)) }, 300); }
   else if (focus.kind === 'document') {
     const addr = focus.addr;
     if (REC.doc(addr).extent == null) await PUMP.loadWhole(addr);
@@ -1383,7 +1403,7 @@ function childUnder(node, view) {
   /** the index of the child at an address, else the first's */
   const named = (/** @type {string | null} */ addr) => (/** @type {Node[]} */ kids) => Math.max(0, kids.findIndex((n) => n.addr === addr));
   if (node.kind === 'board') return named(REC.board() ? accountAt(x, y, BOARD.addr) : null);
-  if (node.kind === 'account') { const mark = markAt(x, y, scale); return named(mark ? mark.key : lodOf(scale).name === 'far' ? null : documentAt(x, y, scale)); }
+  if (node.kind === 'account') { const mark = markAt(x, y, scale); return named(mark ? mark.key : lodOf(scale).name === 'far' ? null : documentAt(x, y, scale) ?? formAt(x, y)); }
   const pos = node.kind === 'document' && holdsPoint(LAYER.regionOf(node.addr), x, y) ? LAYER.posAt(node.addr, x, y) : null;
   return (kids) => (pos == null ? 0 : elementAt(kids, node.addr, pos));
 }
@@ -1565,11 +1585,12 @@ async function standOn(addr, pos, take, end, asHeld, aims) {
     stack = [{ siblings: [BOARD], idx: 0 }];
     if (i >= 0) { stack.push({ siblings: A.sibs, idx: A.i }); setFocus(M, i); } else setFocus(A.sibs, A.i);
   } else if (doc) {
-    const d = LAYER.shownOf(doc);
+    // at the one form's place no record is made: it holds no element, and its stop stands listed among its account's children (M-REC's `forms`)
+    const form = REC.isForm(doc), d = form ? null : LAYER.shownOf(doc);
     // the levels above the landing, each holding ITS OWN place in its siblings (so ← walks out to this document, this account)
     const A = among(await childrenOf(BOARD), { kind: 'account', addr: acct || '', pos: null, link: null });
-    const D = among(await childrenOf({ kind: 'account', addr: acct || '', pos: null, link: null }), { kind: 'document', addr: doc, pos: null, link: null });
-    const kids = pos != null && d.blocks.length ? (asHeld ? elementsOf(doc) : await childrenOf({ kind: 'document', addr: doc, pos: null, link: null })) : [];
+    const D = among(await childrenOf({ kind: 'account', addr: acct || '', pos: null, link: null }), { kind: form ? 'form' : 'document', addr: doc, pos: null, link: null });
+    const kids = pos != null && d && d.blocks.length ? (asHeld ? elementsOf(doc) : await childrenOf({ kind: 'document', addr: doc, pos: null, link: null })) : [];
     if (move !== moves) return false;
     if (pos != null && kids.length) {
       const named = end ? kids.findIndex((n) => n.kind === 'link' && !!n.link && n.link.link.addr === end.link && n.link.key === end.key) : -1;
@@ -1769,6 +1790,17 @@ function documentAt(x, y, scale = CAM.cam.scale) {
 }
 
 /**
+ * The one form whose rectangle holds a world point (M-REC's `forms`;
+ * T-LAYER's `shapeOf`): a place, never a document, found where the re-take
+ * finds a document; null where none does. Its own rectangle is its test:
+ * the pointer's press area is the pointer's alone (P-RENDER's).
+ * @param {number} x
+ * @param {number} y
+ * @returns {string | null}
+ */
+const formAt = (x, y) => REC.forms().find((addr) => holdsPoint(LAYER.shapeOf(addr), x, y)) || null;
+
+/**
  * Does the walk stand on a document the re-take keeps (see the head): its
  * element the document, or a span or a link in it, the document's region
  * meeting the visible view (T-LAYER's `inView`) and not holding the view's
@@ -1790,7 +1822,8 @@ export function kept() {
  * test) and it holds an element of the walk, the element T-SPAN's rule
  * stands the position under the centre on (`elementIn`; rule 20) — the text
  * shown's position there (T-LAYER's `posAt`) — else its first element; else the document
- * whole; else, and at far scale, where the grain stops at the account, the
+ * whole; else the one form whose rectangle holds it (`formAt`), a place;
+ * else, and at far scale, where the grain stops at the account, the
  * account whose region holds the centre, else the board — the root alone
  * where no board is held. The re-take reads it at the camera
  * (`retakeFromView`), and a return at the view it lands at as the act is
@@ -1811,6 +1844,8 @@ export function elementUnder(view) {
       const b = (pos != null && elementIn(d.blocks, pos)) || first;
       return { kind: 'block', addr: doc, pos: b.pos, link: null };
     }
+    const form = formAt(x, y);
+    if (form) return { kind: 'form', addr: form, pos: null, link: null };
   }
   const acct = REC.board() ? accountAt(x, y, BOARD.addr) : null;
   return acct ? { kind: 'account', addr: acct, pos: null, link: null } : BOARD;
@@ -1878,6 +1913,7 @@ export async function retakeFromView(byKey = false) {
   }
   if (at.kind === 'block') { if (!focus || focus.addr !== at.addr || focus.pos !== at.pos) await retake(at.addr, at.pos, byKey); return; }
   if (at.kind === 'document') { if (!focus || focus.addr !== at.addr || focus.kind !== 'document') await retake(at.addr, null, byKey); return; }
+  if (at.kind === 'form') { if (!focus || focus.addr !== at.addr || focus.kind !== 'form') await retake(at.addr, null, byKey); return; }
   // the walk's own document, while it is in view: below its reading scale its spans are no stops, so it stands whole
   if (lod !== 'far' && lod !== 'far~mid' && focus && inDocument(focus) && LAYER.inView(focus.addr)) {
     if (focus.kind !== 'document' && !LAYER.atReadingScale(focus.addr)) await retake(focus.addr, null, byKey);

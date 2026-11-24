@@ -77,14 +77,18 @@
 //     where the far end names a document whole: then the address it names —
 //     the member it names, else the bare address, whose text is the latest —
 //     whatever version the far box shows (`besideAt`; FP-22, FP-30);
-//   - a link whose far document the plane draws nowhere — no index row, no
-//     text or metadata read, no withheld box of its own (the reader `drawn`)
-//     — stays in the set, counted, marked and reached by the keyboard and the
-//     mirror as any link is, and is tailed (`tailed`): never a beam, a
-//     connection or a stub, which would point at the address's place on the
-//     plane, but a short tail leaving its near end (`tails`, which P-RENDER
-//     draws), its far end named in words at its end; once the far document
-//     is drawn, the link draws normally;
+//   - a link whose far document the plane draws no place for — no index row,
+//     no text or metadata read, no withheld box of its own, and no assigned
+//     slot's one form standing for it (the reader `drawn`) — stays in the
+//     set, counted, marked and reached by the keyboard and the mirror as any
+//     link is, and is tailed (`tailed`): never a beam, a connection or a
+//     stub, which would point at the address's place on the plane, but a
+//     short tail leaving its near end (`tails`, which P-RENDER draws), its far
+//     end named in words at its end; once a place is drawn for it, the link
+//     draws normally — at an assigned slot no document the reader can read
+//     stands at, to the one form there, which P-RENDER and BM end it on; at
+//     the one form at another person's mailbox no line is drawn at rest, and
+//     no tail (`lineless`; the one form's part 7);
 //   - a far end is named (`farLabel`) by its full address, then the words the
 //     answers the page holds of its document give (`farWords`) — the read the
 //     plane makes for it (`project`) and any read of the document itself,
@@ -242,7 +246,7 @@ import { t, facedHTML, bracketed, withheldLine, typeName, sentence, joinRuns } f
 /**
  * @typedef {Object} Readers — what LK reads from owners that import it, handed in once by the app
  * @property {() => readonly string[]} lit the links lit at an arrival (N-GO's `litLinks`); none where none is
- * @property {(addr: string) => boolean} drawn does the plane draw a document somewhere — at its box, or in the continuation's mark holding it, a version member at its document's (P-RENDER's `drawsDoc`)
+ * @property {(addr: string) => boolean} drawn does the plane draw a place for a document's address — the document at its box, or in the continuation's mark holding it, a version member at its document's, or the one form at an assigned slot no document the reader can read stands at (P-RENDER's `drawsPlace`)
  * @property {(addr: string) => string} owner the owner account of a document, by the one owner rule (T-LAYER's `originOwner`)
  * @property {(addr: string) => string} shown the version a document's box shows: the plain address, or the version pinned there (N-GO's `shownIn`)
  * @property {(addr: string) => (Doc | null)} text the record of the text the page shows of a document (T-LAYER's `shownOf`), the one its ends are placed in; null where the model holds no record of it
@@ -633,12 +637,23 @@ export const besideAt = (s) => (s.farWhole ? s.far : s.farAt || s.far);
 
 /**
  * Is a drawn end tailed (see the head): its far end names a document the
- * plane draws nowhere (the reader `drawn`), so it leaves its near end by a
- * tail, its far end named in words (`farLabel`), and draws no beam?
+ * plane draws no place for (the reader `drawn`) — neither it nor the one form
+ * at its slot — so it leaves its near end by a tail, its far end named in
+ * words (`farLabel`), and draws no beam?
  * @param {Shown} s
  * @returns {boolean}
  */
 export const tailed = (s) => !!s.far && !read.drawn(s.far);
+
+/**
+ * Does a far end stand at rest with no line (see the head): the one form at
+ * another person's mailbox (M-REC's `theirMailboxForm`), a place, which
+ * neither a beam nor a mid connection reaches at rest and no tail leaves
+ * for — the link standing in the set, marked and named at its near end.
+ * @param {string} far the far end's document
+ * @returns {boolean}
+ */
+const lineless = (far) => !!far && REC.theirMailboxForm(far);
 
 /**
  * A drawn end's far end in words (see the head): its stretches' words,
@@ -842,8 +857,8 @@ export const endRuns = (s) => joinRuns(' · ', [toward(s), typeName(s.link.type)
 
 /** the symbols: stage 2 and above — the shown set at its spans, in a record's text (`shown`) */
 export function symbols(/** @type {string} */ addr, /** @type {Doc | null} */ over = textOf(addr)) { return state(addr).stage >= 2 ? shown(addr, over) : []; }
-/** the beams: stage 3 — the shown set with its far ends, a tailed end apart (`tailed`), which its tail stands in for */
-export function beams(/** @type {string} */ addr) { return state(addr).stage >= 3 ? shown(addr).filter((s) => !tailed(s)) : []; }
+/** the beams: stage 3 — the shown set with its far ends, a tailed end apart (`tailed`), which its tail stands in for, and an end at rest with no line (`lineless`) */
+export function beams(/** @type {string} */ addr) { return state(addr).stage >= 3 ? shown(addr).filter((s) => !tailed(s) && !lineless(s.far)) : []; }
 
 /**
  * The others' links touching a block that are NOT shown — the "+⟨n⟩ others"
@@ -996,17 +1011,19 @@ function joined(l) {
  * merge into (`mergedMark`), each link marked as a mark joining its two
  * documents marks it (`markOf`: the owner of either document's link the
  * owner's), so no order of the documents, and no toggle at either, recolours
- * a link. A link whose two documents stand at one place draws none, and one
- * whose other document the plane draws nowhere is a tail (`tails`).
+ * a link. A link whose two documents stand at one place draws none, one
+ * whose other document the plane draws no place for is a tail (`tails`), and
+ * one whose other end is the one form at another person's mailbox draws none
+ * at rest (`lineless`).
  * @param {string[]} docsDrawn the documents drawn, whole or inside a mark
- * @param {(addr: string) => string | null} [placeOf] the place a document stands at, drawn this frame or not; null where the plane draws it nowhere. By default its own box
+ * @param {(addr: string) => string | null} [placeOf] the place a document stands at, drawn this frame or not — a form's at an assigned slot no document stands at; null where the plane draws no place for it. By default its own box
  * @returns {Connection[]}
  */
 export function connections(docsDrawn, placeOf = (addr) => addr) {
   /** @type {Map<string, {a: string, b: string, links: Map<string, Mark>}>} the pairs met, each with its links, each once, and the mark each link takes there */
   const pairs = new Map();
-  for (const { l, x, y, here, there } of joins(docsDrawn, placeOf)) {
-    if (there == null || there === here) continue;
+  for (const { l, x, y, addr, here, there } of joins(docsDrawn, placeOf)) {
+    if (there == null || there === here || lineless(x === addr ? y : x)) continue;
     const key = [here, there].sort().join('|');
     const p = pairs.get(key);
     if (!p) pairs.set(key, { a: here, b: there, links: new Map([[l.addr, markOf(l, x, y)]]) });

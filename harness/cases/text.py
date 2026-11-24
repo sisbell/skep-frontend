@@ -74,7 +74,7 @@ W-01 step 7's (`walks`), which runs after `keys` reads LK's visited set."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, MAILBOX, NO_MATCH, VERSIONED, WINDOW, Result, byline_expected, byline_facts, byline_shown, frame_row, placeholder_sweep, slot_words
+from . import AGENT_SPACE, BIO, DOC, FAR_LEAP, GHOST, MAILBOX, NO_MATCH, VERSIONED, WINDOW, Result, byline_expected, byline_facts, byline_shown, frame_row, placeholder_sweep, slot_words
 
 TOKEN = re.compile(r'⟨[^⟩]*⟩')
 BLANK = re.compile(r'[\s\-–—·.…]*')  # a value that is no value: dashes, dots and spaces, or nothing
@@ -260,8 +260,9 @@ def slot_name_strings(ctx, r):
     """THE SLOT NAMES, LOCATED WHERE THEY ARE SHOWN (B11-F10, B11-F18 (2)–(4); B11-S2, B11-S4, B11-S5, B11-S7, B11-S9): typed in
     the LEAP box — `mailbox`, `bio`, `link page` — the own row's name and an index place's, each element naming its string; at
     the claimant's own mailbox, landed at, the one line's name after its field and the mirror's item, each naming its string;
-    at its label on the plane, framed at mid on its row, the words its string holds, set by the canvas; none set apart by its
-    class in the inventory, and no template's placeholder shown or told"""
+    at its label on the plane, framed at mid on its row, the words its string holds, set by the canvas; at the claimant's
+    unwritten bio, its form landed at, the one line's name and the mirror's item naming "your bio"'s string (the one form's
+    parts 5, 6); none set apart by its class in the inventory, and no template's placeholder shown or told"""
     words = slot_words(ctx)
     ctx.js('window.__skep.leap.open()'); ctx.frames(1)
     boxed = {}
@@ -277,12 +278,17 @@ def slot_name_strings(ctx, r):
     frame_row(ctx, MAILBOX)
     label = next((l for l in ctx.js('window.__skep.labels()') if l['kind'] == 'doc' and l['place'] == MAILBOX), None)
     canvas = [x['text'] for x in label['lines']] if label else []
-    r.check(not hits, 'the slot names in the LEAP box and at the claimant\'s own mailbox: no template placeholder the page shows or tells (FP-34; issue #208)', hits[:6])
-    marked = [x for marks in (*boxed.values(), line, mirror) for x in marks['marked']]
-    r.check(all(x in boxed['mailbox']['shown'] for x in ('L.well-known.your-mailbox', 'L.well-known.mailbox')) and 'L.well-known.bio' in boxed['bio']['shown'] and 'L.well-known.link-page' in boxed['link page']['shown']
-            and 'L.well-known.your-mailbox' in line['shown'] and 'L.well-known.your-mailbox' in mirror['shown'] and words['L.well-known.your-mailbox'] in canvas and not marked,
-            'the slot names are located where they are shown, each naming its string — the box\'s rows, the one line, the mirror\'s item — and the label on the plane sets the words its string holds; none set apart by its class (B11-F10, B11-F18)',
-            {'box': {k: v['shown'] for k, v in boxed.items()}, 'line': line['shown'], 'mirror': mirror['shown'], 'canvas': canvas, 'marked': marked})
+    ctx.leap(BIO)
+    bio_line, bio_mirror = wording_marks(ctx, '#line'), wording_marks(ctx, '#mirror')
+    hits += placeholder_sweep(ctx)
+    ctx.esc()
+    r.check(not hits, 'the slot names in the LEAP box, at the claimant\'s own mailbox and at its bio\'s form: no template placeholder the page shows or tells (FP-34; issue #208)', hits[:6])
+    marked = [x for marks in (*boxed.values(), line, mirror, bio_line, bio_mirror) for x in marks['marked']]
+    r.check(all(x in boxed['mailbox']['shown'] for x in ('L.well-known.your-mailbox', 'L.well-known.mailbox')) and 'L.well-known.your-bio' in boxed['bio']['shown'] and 'L.well-known.your-link-page' in boxed['link page']['shown']
+            and 'L.well-known.your-mailbox' in line['shown'] and 'L.well-known.your-mailbox' in mirror['shown'] and words['L.well-known.your-mailbox'] in canvas
+            and 'L.well-known.your-bio' in bio_line['shown'] and 'L.well-known.your-bio' in bio_mirror['shown'] and not marked,
+            'the slot names are located where they are shown, each naming its string — the box\'s rows, the one line, the mirror\'s item — the acting account\'s own by their own names, "your bio" at its bio\'s form too; the label on the plane sets the words its string holds; none set apart by its class (B11-F10, B11-F18; the one form\'s part 5)',
+            {'box': {k: v['shown'] for k, v in boxed.items()}, 'line': line['shown'], 'mirror': mirror['shown'], 'canvas': canvas, 'bio_line': bio_line['shown'], 'bio_mirror': bio_mirror['shown'], 'marked': marked})
 
 
 def run(ctx):

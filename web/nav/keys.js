@@ -2262,9 +2262,10 @@ function paneEsc() {
 }
 
 /**
- * Enter activates the focus (K-7): a place goes — the board, an account or a
- * document, each a teleport pushed on the trail, a document's made at the
- * document, where the face of a failure known at the act stands (N-GO) — a
+ * Enter activates the focus (K-7): a place goes — the board, an account, a
+ * document or the one form at an assigned slot (B11-S5), each a teleport
+ * pushed on the trail, a document's and a form's made at its address, where
+ * the face of a failure known at the act stands (N-GO) — a
  * continuation's mark opens its members' list, which takes the focus on its
  * newest row (O-MARK-LIST); a withheld
  * run opens its whole wording's card (§2.1; O-FACES's `withheldRun`), which
@@ -2285,7 +2286,7 @@ async function activateFocus(byKey) {
   if (f.kind === 'account') { await GO.toAccount(f.addr, byKey); return; }
   if (f.kind === 'board') { await GO.wholeBoard(byKey); return; }
   if (f.kind === 'mark') { await MARKLIST.open(f.addr, byKey); return; }
-  if (f.kind === 'document') { await GO.leapTo(f.addr, { how: 'key', byKey, site: { span: { addr: f.addr, pos: 1 } } }); return; }
+  if (f.kind === 'document' || f.kind === 'form') { await GO.leapTo(f.addr, { how: 'key', byKey, site: { span: { addr: f.addr, pos: 1 } } }); return; }
   if (f.kind === 'block' && f.pos != null) {
     const b = LAYER.blockByPos(f.addr, f.pos);
     if (b && b.kind === 'withheld') FACES.withheldRun(f.addr, b, (home, byKey) => GO.leapTo(home, { how: 'leap', byKey, site: { span: { addr: f.addr, pos: b.pos, width: b.width } } }), byKey);

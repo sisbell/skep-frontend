@@ -72,11 +72,11 @@ const named = (/** @type {string | null} */ home) => {
 /** a well-known slot's name as a row carries it, by its string's id */
 const slotNamed = (/** @type {string} */ id) => ({ id, text: t(id) });
 
-test('a slot\'s name typed lists the acting account\'s own slot first, created or not — its address read off the account\'s with no lookup, the account beside it, its name and the first line the index lists for it — ahead of another account\'s slot document matched by its name and a document whose first line holds the word; the system account\'s never; the own slot not listed twice (B11-S9, B11-S7, B11-F10)', () => {
-  const [BIO, MAIL, MINE] = ['L.well-known.bio', 'L.well-known.mailbox', 'L.well-known.your-mailbox'].map(slotNamed);
+test('a slot\'s name typed lists the acting account\'s own slot first, created or not — its address read off the account\'s with no lookup, the account beside it, its own name (the one form\'s part 5) and the first line the index lists for it — ahead of another account\'s slot document matched by its name and a document whose first line holds the word; the system account\'s never; the own slot not listed twice (B11-S9, B11-S7, B11-F10)', () => {
+  const [BIO, MAIL, MINE, MY_BIO] = ['L.well-known.bio', 'L.well-known.mailbox', 'L.well-known.your-mailbox', 'L.well-known.your-bio'].map(slotNamed);
   const c = named('1.0.1');
   const rows = (/** @type {string} */ q) => matches(q, c).map((r) => [r.kind, r.addr]);
-  assert.deepEqual(matches('bio', c)[0], { kind: 'slot', addr: '1.0.1.0.3', title: BIO.text, sub: '', exact: true, owner: '1.0.1', slot: BIO }, 'the own bio, unwritten and unlisted, its first row');
+  assert.deepEqual(matches('bio', c)[0], { kind: 'slot', addr: '1.0.1.0.3', title: MY_BIO.text, sub: '', exact: true, owner: '1.0.1', slot: MY_BIO }, 'the own bio, unwritten and unlisted, its first row, by its own name');
   assert.deepEqual(rows('bio'), [['slot', '1.0.1.0.3'], ['label', '1.0.2.0.3'], ['label', '1.0.1.0.70']], 'then another account\'s bio by its name, then a document whose first line holds the word');
   assert.deepEqual(matches('bio', c)[1].slot, BIO, 'the other account\'s bio names its slot');
   assert.deepEqual(rows('mailbox'), [['slot', '1.0.1.0.2'], ['label', '1.0.1.1.0.2']], 'the own mailbox, listed, once — its own name — then the agent space\'s by its name');
@@ -88,7 +88,8 @@ test('a slot\'s name typed lists the acting account\'s own slot first, created o
   assert.ok(!matches('bio', c).some((r) => r.addr.startsWith(REC.SYSTEM_ACCOUNT)), 'the system account\'s place never listed');
   const listed = { ...c, places: [...c.places, { ...c.places[0], doc: '1.0.1.0.3', label: 'We are the claimant' }] };
   assert.deepEqual(matches('bio', listed).filter((r) => r.addr === '1.0.1.0.3').map((r) => [r.kind, r.sub]), [['slot', 'We are the claimant']], 'its own bio listed: one row, the own row, carrying the first line the index lists');
-  for (const q of ['policy', 'policy document', 'your mailbox']) assert.ok(!matches(q, c).some((r) => r.kind === 'slot'), `"${q}": no slot's name — slot 5's is a gap, and "your mailbox" no name typed`);
+  for (const q of ['policy', 'policy document', 'your mailbox', 'your bio', 'your link page']) assert.ok(!matches(q, c).some((r) => r.kind === 'slot'), `"${q}": no slot's name — slot 5's is a gap, and an own name shown no name typed`);
+  assert.deepEqual(['your bio', 'your link page'].map((q) => matches(q, c).map((r) => r.addr)), [[], []], 'an own bio\'s and link page\'s name shown, typed: nothing found');
   REC.setSession(null);
 });
 
@@ -99,10 +100,10 @@ test('a guest\'s box lists no own slot: a slot\'s name typed matches the index\'
   assert.deepEqual(matches('mailbox', c).map((r) => [r.addr, r.slot]), [['1.0.1.0.2', MAIL], ['1.0.1.1.0.2', MAIL]], 'no mailbox of its own: each by the plain name');
 });
 
-test('an address typed at a well-known slot that bears a name says the name on its row, the words its label sets (FP-33); a reserved number\'s row says "reserved number" as before, and an ordinary address\'s, the home page\'s, slot 5\'s and the system account\'s slots\' nothing (B11-F10; issue #771\'s decision)', () => {
-  const [BIO, MAIL, MINE, LINK] = ['L.well-known.bio', 'L.well-known.mailbox', 'L.well-known.your-mailbox', 'L.well-known.link-page'].map(slotNamed);
+test('an address typed at a well-known slot that bears a name says the name on its row, the words its label sets — the acting account\'s own by its own (FP-33; the one form\'s part 5); a reserved number\'s row says "reserved number" as before, and an ordinary address\'s, the home page\'s, slot 5\'s and the system account\'s slots\' nothing (B11-F10; issue #771\'s decision)', () => {
+  const [MAIL, MINE, LINK, MY_BIO] = ['L.well-known.mailbox', 'L.well-known.your-mailbox', 'L.well-known.link-page', 'L.well-known.your-bio'].map(slotNamed);
   const c = named('1.0.1');
-  assert.deepEqual(matches('1.0.1.0.3', c), [{ kind: 'address', addr: '1.0.1.0.3', title: '1.0.1.0.3', sub: BIO.text, exact: true, slot: BIO }], 'the own bio typed: its row names it');
+  assert.deepEqual(matches('1.0.1.0.3', c), [{ kind: 'address', addr: '1.0.1.0.3', title: '1.0.1.0.3', sub: MY_BIO.text, exact: true, slot: MY_BIO }], 'the own bio typed: its row names it by its own name');
   assert.deepEqual(['1.0.1.0.2', '1.0.2.0.2', '1.0.2.0.4.3'].map((a) => matches(a, c)[0].slot), [MINE, MAIL, LINK], 'the own mailbox its own name, another\'s mailbox the plain one, a member of a link page its document\'s');
   assert.deepEqual(matches('1.0.1.0.7', c), [{ kind: 'address', addr: '1.0.1.0.7', title: '1.0.1.0.7', sub: 'reserved number', exact: true, reserved: true }], 'a reserved number: as before');
   for (const a of ['1.0.1.0.64', '1.0.1.0.1', '1.0.1.0.5', REC.SYSTEM_ACCOUNT + '.0.2', '1.0.1']) assert.deepEqual(matches(a, c).map((r) => [r.kind, r.sub, r.slot]), [['address', '', undefined]], `${a}: nothing on its row`);

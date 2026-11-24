@@ -169,9 +169,10 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     a read the board answers `withheld` — arrives: the camera flown to its
     place and an entry of its own, `withheld · ⟨owner⟩` the act's answer at
     the landing, gone at the next act; and after it no box stands at cell 2
-    — the model knows none, no label names it at mid scale, the walk lists
-    no stop for it under the account, and a click at the cell's centre finds
-    no document there, making no LEAP.
+    but the one form (B11-S5) — the model knows no document there, no
+    document's label names it at mid scale but the form's, "mailbox", the walk
+    lists the form's stop under the account, and a click inside its
+    rectangle LEAPs to its address.
 Shots into `shots/guest/`. The owner's page is opened again at the end and
 the first edition read, as the cases after this one expect."""
 import json
@@ -491,8 +492,8 @@ def inside_rect(a, b):
 
 
 def mailbox_typed(ctx, r):
-    """(j) the claimant's mailbox typed by the guest (see the head): the LEAP arriving at its own withheld words, and no box,
-    no walk stop and no hit at cell 2 after it"""
+    """(j) the claimant's mailbox typed by the guest (see the head): the LEAP arriving at its own withheld words, and no box at
+    cell 2 after it but the one form — its stop, its label and its press"""
     mailbox = '1.0.1.0.2'
     t0, left = ctx.js('window.__skep.trail()'), ctx.js('window.__skep.view.camera()')
     ctx.drv.key('l', mods=('Meta',)); ctx.settle(); ctx.frames(2)
@@ -515,14 +516,20 @@ def mailbox_typed(ctx, r):
     kids = ctx.js('window.__skep.walk.children ? window.__skep.walk.children("1.0.1") : null')
     box = ctx.js('import("./plane/projection.js").then((P) => P.docBox(%s))' % json.dumps(mailbox))
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, 3 / ctx.js('window.__skep.constants.STANDARD_FS'))
-    labelled = [l['place'] for l in ctx.js('window.__skep.labels()') if l['kind'] == 'doc']
-    vp, t2 = ctx.js('window.__skep.view.viewport()'), ctx.js('window.__skep.trail()')
-    ctx.drv.mouse(vp['VW'] / 2, vp['VH'] / 2); ctx.settle(); ctx.frames(2)
+    labels = ctx.js('window.__skep.labels()')
+    boxed = [l['place'] for l in labels if l['kind'] == 'doc']
+    named = next((l['lines'] for l in labels if l['kind'] == 'form' and l['place'] == mailbox), None)
+    word = ctx.js('import("./strings.js").then(({t}) => t("L.well-known.mailbox"))')
+    form = next((f['rect'] for f in ctx.js('window.__skep.forms()') if f['addr'] == mailbox), None)
+    t2 = ctx.js('window.__skep.trail()')
+    if form:
+        ctx.drv.mouse(form['x'] + form['w'] / 2, form['y'] + form['h'] * 0.6); ctx.settle(); ctx.frames(2)
     t3 = ctx.js('window.__skep.trail()')
     clicked = t3['entries'][t3['cursor']]['addr'] if 0 <= t3['cursor'] < len(t3['entries']) else None
-    r.check(not known and kids is not None and ['document', mailbox] not in kids and mailbox not in labelled and t3['cursor'] == t2['cursor'] and len(t3['entries']) == len(t2['entries']),
-            '(j) after it no box stands at cell 2: the model knows none, the walk lists no stop for it under the account, no label names it at mid scale, and a click at the cell\'s centre finds no document there — no LEAP made, the trail unmoved (B11 call 3; B11-F24 (3))',
-            {'known': known, 'children': len(kids or []), 'its_stop': kids is None or ['document', mailbox] in kids, 'labelled': labelled, 'clicked': clicked})
+    r.check(not known and kids is not None and ['document', mailbox] not in kids and ['form', mailbox] in kids and mailbox not in boxed and bool(named) and any(x['text'] == word for x in named)
+            and bool(form) and t3['cursor'] == t2['cursor'] + 1 and clicked == mailbox,
+            '(j) after it no box stands at cell 2 but the one form: the model knows no document there, the walk lists the form\'s stop under the account, no document\'s label names it at mid scale but the form\'s, "%s", and a click inside its rectangle LEAPs to its address (B11 call 3; the one form\'s parts 1, 4, 6)' % word,
+            {'known': known, 'children': len(kids or []), 'its_stop': kids and [k for k in kids if k[1] == mailbox], 'boxed': boxed, 'form_label': named and [x['text'] for x in named], 'form': form, 'clicked': clicked, 'cursor': [t2['cursor'], t3['cursor']]})
     ctx.esc()
 
 def run(ctx):

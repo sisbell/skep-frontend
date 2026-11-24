@@ -19,9 +19,16 @@
 // one where it is too small, and a member the walk's ring stands on ringed
 // on the mark with its name and place (issue #42); and a box's history strip
 // holding the version its box shows in the window mark, the head in its own
-// triangle only where the board ended the chain there (FP-22, FP-26); and in
+// triangle only where the board ended the chain there (FP-22, FP-26); in
 // a draft holding typed words the arrival outlined and the walk's span ringed
-// on the lines the text shown holds them on (FP-21; issue #515).
+// on the lines the text shown holds them on (FP-21; issue #515); and the one
+// form at an assigned slot no document stands at (B11-S5): four open corner
+// marks at its cell's first column slot, drawn with its region's boxes at
+// their alpha in its ink as the person's settings ask it, labelled by its
+// slot's name and address, pressed anywhere in its rectangle or, small, in
+// the least target's area about it — the nearest centre winning, a drawn
+// shape its own place's, small boxes alike — and a link's stroke ending on
+// its rectangle where no tail is drawn.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -31,15 +38,16 @@ import * as PORT from '../bridge/port.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from './camera.js';
 import * as WALK from '../nav/walk.js';
+import * as LK from '../links/links.js';
 import * as GO from '../nav/go.js';
 import * as RENDER from './render.js';
 import { boardStatements } from './render.js';
 import * as LAYER from '../text/layer.js';
 import * as F from '../model/frames.js';
-import { boardCell, accountCell, docBox, accountAt, continuationCell, numberAtCell, DOC_W } from './projection.js';
-import { markScale, lodOf } from './lod.js';
-import { leadOf, firstRow, GUTTER } from './layout.js';
-import { COL, TARGET, ADDRESS, WINDOW, STRIP } from './register.js';
+import { boardCell, accountCell, docBox, accountAt, continuationCell, numberAtCell, cellOfKey, DOC_W } from './projection.js';
+import { markScale, lodOf, LOD_FAR_LO, LOD_FAR_HI } from './lod.js';
+import { leadOf, firstRow, slot, boundsOf, GUTTER } from './layout.js';
+import { COL, TARGET, ADDRESS, WINDOW, STRIP, FORM } from './register.js';
 import { recorder } from '../test/canvas.js';
 import { visibleView } from './camera.js';
 import { t, markCount, lastRead } from '../strings.js';
@@ -159,7 +167,7 @@ test('at mid scale a document\'s label is its contents line: its first line from
 });
 
 test('below its reading scale a kept document\'s label carries its clause after its address — on its row, ending at the row\'s end, the address a space before it, at the address\'s size and in the title\'s ink — and at far scale its account\'s label counts it after its documents; neither within the second, nor once its read again sets it (issue #368\'s design decision: "On the canvas label, the clause follows the address, at the address\'s small size"; "At far scale, the account\'s label carries \'⟨n⟩ as last read\'")', async (ctx) => {
-  const D = '1.0.1.0.3';
+  const D = '1.0.1.0.67';
   const { ctx: canvas } = recorder();
   RENDER.attach(/** @type {any} */ ({ getContext: () => canvas }));
   CAM.setViewport(4000, 900);
@@ -476,7 +484,7 @@ test('the walk\'s span in a text holding typed words is ringed on the lines the 
   } finally { LAYER.clear(); LAYER.attach(/** @type {any} */ (null), null); REC._reset(); WRITE._reset(); globalThis.document = platform.document; globalThis.window = platform.window; }
 });
 
-test('the plane draws no box for another person\'s mailbox a read answered `withheld`, nor for a number the map gives no cell however a read answered it — no label, no press finding it under its place — where it draws a withheld draft at an ordinary number and the home page; a link ending at either has no place to end at (B11 call 3; issue #771\'s decision: "No read of one is keyed to the account\'s first cell")', () => {
+test('the plane draws no box for another person\'s mailbox a read answered `withheld`, nor for a number the map gives no cell however a read answered it — no document\'s label, no press finding a document under its place — where it draws a withheld draft at an ordinary number and the home page; at the mailbox the one form stands instead, labelled by its slot\'s name, a press there going to it and a link ending there ending at a place, while a link ending at the reserved number has none (B11 call 3; the one form\'s part 4; issue #771\'s decision: "No read of one is keyed to the account\'s first cell")', () => {
   const { ctx } = recorder();
   RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
   CAM.setViewport(1440, 900);
@@ -496,5 +504,274 @@ test('the plane draws no box for another person\'s mailbox a read answered `with
     const pressed = (/** @type {string} */ addr) => { const s = LAYER.shapeOf(addr); return RENDER.docAtScreen(CAM.sx(s.x + s.w / 2), CAM.sy(s.y + s.h / 2)); };
     assert.deepEqual([pressed(THEIRS), pressed(DRAFT)], [null, DRAFT], 'a press at the mailbox\'s place finds nothing; at the withheld draft\'s, its box');
     assert.notEqual(pressed(RESERVED), RESERVED, 'a press at the account\'s first cell never finds the reserved number');
+    const s = LAYER.shapeOf(THEIRS), at = RENDER.placeAtScreen(CAM.sx(s.x + s.w / 2), CAM.sy(s.y + s.h / 2));
+    assert.deepEqual([REC.isForm(THEIRS), at, RENDER.drawsPlace(THEIRS), RENDER.drawsPlace(RESERVED), labelled(THEIRS).includes(THEIRS)], [true, { addr: THEIRS, form: true, padded: false }, true, false, false],
+      'the mailbox the one form\'s place: a press there going to it, a place a link ends at, never a document\'s label; the reserved number no place');
+    assert.ok(RENDER.stats.forms.some((f) => f.addr === THEIRS && f.label.includes(t('L.well-known.mailbox'))), `the form there labelled by its slot's name: ${JSON.stringify(RENDER.stats.forms)}`);
+  } finally { REC._reset(); WRITE._reset(); }
+});
+
+// ---- the one form (B11-S5; the one form's drawing, parts 1–8) ------------------------------------------------------------
+
+/** the acting account of the form tests and another account: both homes listed, the acting account's mailbox a draft of its own and an ordinary edition beside its slots */
+const OWN = '1.0.4', OTHER = '1.0.5';
+const MAIL = OWN + '.0.2', SLOT3 = OWN + '.0.3', SLOT4 = OWN + '.0.4', SLOT5 = OWN + '.0.5', ORDINARY = OWN + '.0.64';
+const CITE = '1.1.0.1.0.1.0.3.13';
+/**
+ * The form tests' board (M-REC's `forms`): acting as `acting` — none for a guest — the index listing both homes, the acting
+ * account's mailbox and the ordinary edition, so the forms stand at its slots 3–5 and at the other account's 2–5; a guest's
+ * index listing no draft, the mailbox a form too.
+ * @param {string | null} [acting]
+ */
+function formBoard(acting = OWN) {
+  REC._reset(); WRITE._reset(); LK._reset();
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  if (acting) REC.setSession({ session: 's-1', principal: 1, account: acting });
+  const row = (/** @type {string} */ doc, kind = 'edition') => ({ doc, kind, label: null, standing: kind === 'draft' ? 'yours_to_read' : 'public' });
+  // a guest's index lists no draft
+  const docs = [row(OWN + '.0.1'), ...(acting ? [row(MAIL, 'draft')] : []), row(ORDINARY), row(OTHER + '.0.1')];
+  REC.takeIndex(/** @type {any} */ ({ docs, counts: [{ account: OWN, documents: docs.length - 1 }, { account: OTHER, documents: 1 }], state: { arm: 'complete' } }));
+}
+/** a form's rectangle on screen, as the camera stands (T-LAYER's `shapeOf`) */
+const onScreen = (/** @type {string} */ addr) => { const w = LAYER.shapeOf(addr); return { x: CAM.sx(w.x), y: CAM.sy(w.y), w: w.w * CAM.cam.scale, h: w.h * CAM.cam.scale }; };
+/** the camera centred on the acting account's first row's forms, a depth-0 box `px` px wide */
+const atSlots = (/** @type {number} */ px) => { const a = LAYER.shapeOf(SLOT3), b = LAYER.shapeOf(SLOT5); CAM.set({ x: (a.x + b.x + b.w) / 2, y: a.y + a.h / 2, scale: px / DOC_W }); };
+/** a stroke's path as its subpaths, each its points in order */
+const subpaths = (/** @type {import('../test/canvas.js').Stroke} */ s) => s.path.reduce((/** @type {Array<Array<{x: number, y: number}>>} */ out, seg) => { if (seg.op === 'move') out.push([seg.at[0]]); else if (seg.op === 'line') out[out.length - 1].push(seg.at[0]); return out; }, []);
+/** the four L's a form's rectangle takes, arms `aw` along its top and foot and `ah` along its sides: each subpath's three points */
+const corners = (/** @type {Rect} */ r, /** @type {number} */ aw, /** @type {number} */ ah) => {
+  const x0 = r.x, y0 = r.y, x1 = r.x + r.w, y1 = r.y + r.h;
+  return [[{ x: x0 + aw, y: y0 }, { x: x0, y: y0 }, { x: x0, y: y0 + ah }], [{ x: x1 - aw, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y0 + ah }], [{ x: x1, y: y1 - ah }, { x: x1, y: y1 }, { x: x1 - aw, y: y1 }], [{ x: x0 + aw, y: y1 }, { x: x0, y: y1 }, { x: x0, y: y1 - ah }]];
+};
+/** two point lists equal to a millionth of a px */
+const near = (/** @type {Array<{x: number, y: number}>} */ a, /** @type {Array<{x: number, y: number}>} */ b) => a.length === b.length && a.every((p, i) => Math.abs(p.x - b[i].x) < 1e-6 && Math.abs(p.y - b[i].y) < 1e-6);
+/** does a rect hold another, half a px either way */
+const holds = (/** @type {Rect} */ r, /** @type {Rect} */ q) => q.x >= r.x - 0.5 && q.y >= r.y - 0.5 && q.x + q.w <= r.x + r.w + 0.5 && q.y + q.h <= r.y + r.h + 0.5;
+/** @typedef {{x: number, y: number, w: number, h: number}} Rect */
+
+test('the one form at mid (B11-S5; its drawing\'s part 1): at each assigned slot no box stands at, four corner marks on its cell\'s first column slot\'s boundary — an L at each corner, its two arms along the two sides, each a quarter of its side, so half of every side stands open — one px, solid, butt ends and mitred corners, in the form\'s ink at its boxes\' alpha; nothing inside: no fill, no ground, no plate; never the whole cell; each form\'s strokes inside its own cell (part 8); a slot a box stands at draws none', () => {
+  const { ctx, strokes, filled, rects } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  CAM.setViewport(4000, 900);
+  formBoard();
+  try {
+    atSlots(600);
+    RENDER.draw();
+    assert.equal(lodOf(CAM.cam.scale).name, 'mid', 'at mid');
+    assert.deepEqual(RENDER.stats.forms.map((f) => f.addr), [SLOT3, SLOT4, SLOT5], 'the acting account\'s slots 3–5 in view, in record order; its mailbox, a box, none');
+    assert.deepEqual(REC.forms().filter(REC.has), [], 'drawn with no read: no record made at any form');
+    const room = docBox(SLOT3), first = boundsOf(slot(room, CAM.measure(), 0));
+    assert.deepEqual(LAYER.shapeOf(SLOT3), { x: room.x + first.x, y: room.y + first.y, w: first.w, h: first.h }, 'its rectangle the cell\'s first column slot, where the unread plain box stands (P-LAY\'s `slot`)');
+    for (const f of RENDER.stats.forms) {
+      const r = onScreen(f.addr), box = docBox(f.addr), cell = cellOfKey(f.addr);
+      assert.ok(near([{ x: f.rect.x, y: f.rect.y }, { x: f.rect.w, y: f.rect.h }], [{ x: r.x, y: r.y }, { x: r.w, y: r.h }]) && r.w < box.w * CAM.cam.scale / 2 && r.h < box.h * CAM.cam.scale / 2, `${f.addr}: drawn at its first column slot, never its whole cell`);
+      const mine = strokes.filter((s) => s.hue === FORM.ink && s.path.length && holds(r, { x: s.path[0].at[0].x, y: s.path[0].at[0].y, w: 0, h: 0 }));
+      assert.equal(mine.length, 1, `${f.addr}: one stroke`);
+      const s = mine[0], aw = r.w * FORM.arm, ah = r.h * FORM.arm;
+      assert.deepEqual([f.arms.w, f.arms.h], [aw, ah], `${f.addr}: its arms a quarter of each side`);
+      const ls = subpaths(s), want = corners(r, aw, ah);
+      assert.ok(ls.length === 4 && ls.every((l, i) => near(l, want[i])), `${f.addr}: four L's on its boundary, half of every side open: ${JSON.stringify(ls)}`);
+      assert.ok(!s.path.some((seg) => seg.op === 'close'), `${f.addr}: no closed path`);
+      assert.deepEqual([s.width, s.cap, s.join, s.dash, s.alpha, f.alpha, f.ink], [FORM.width, 'butt', 'miter', [], 1, 1, FORM.ink], `${f.addr}: one px, butt ends, mitred, solid, at the boxes' alpha, in the form's ink`);
+      const pts = s.path.flatMap((seg) => seg.at), cs = { x: CAM.sx(cell.x), y: CAM.sy(cell.y), w: cell.w * CAM.cam.scale, h: cell.h * CAM.cam.scale };
+      assert.ok(pts.every((p) => holds(cs, { ...p, w: 0, h: 0 })), `${f.addr}: its strokes inside its own cell`);
+      assert.ok(!filled.some((x) => x.path.length && x.path.flatMap((seg) => seg.at).every((p) => holds(r, { ...p, w: 0, h: 0 }))) && !rects.some((q) => holds(r, q)), `${f.addr}: nothing filled inside it — no ground, no plate`);
+    }
+    assert.ok(!strokes.some((s) => s.hue === FORM.ink && s.path.some((seg) => seg.at.some((p) => holds(onScreen(MAIL), { ...p, w: 0, h: 0 })))), 'the mailbox, a box: no corner marks');
+  } finally { REC._reset(); WRITE._reset(); }
+});
+
+test('the one form is drawn wherever its region\'s boxes are and at their alpha (its drawing\'s parts 2, 3): none at far, where the clusters stand alone; through far~mid at the band\'s fade, its arms never under a device pixel — four points at the smallest — and its label, which no frame there sets, gone with every label while its corners stand', () => {
+  const { ctx, strokes } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  CAM.setViewport(1440, 900);
+  formBoard();
+  try {
+    atSlots(LOD_FAR_LO * 0.9);
+    strokes.length = 0;
+    RENDER.draw();
+    assert.deepEqual([lodOf(CAM.cam.scale).name, RENDER.stats.forms, strokes.filter((s) => s.hue === FORM.ink).length], ['far', [], 0], 'at far: no form, no corner mark');
+    for (const px of [LOD_FAR_LO + 0.5, LOD_FAR_HI - 1]) {
+      atSlots(px);
+      strokes.length = 0;
+      RENDER.draw();
+      const lod = lodOf(CAM.cam.scale), drawn = RENDER.stats.forms.filter((f) => f.addr.startsWith(OWN + '.'));
+      assert.equal(lod.name, 'far~mid', `${px} px: far~mid`);
+      assert.deepEqual(drawn.map((f) => [f.addr, f.alpha]), [SLOT3, SLOT4, SLOT5].map((a) => [a, lod.fade]), `${px} px: each form drawn, at the boxes' alpha`);
+      for (const f of drawn) {
+        assert.deepEqual([f.arms.w, f.arms.h], [Math.max(f.rect.w * FORM.arm, 1), Math.max(f.rect.h * FORM.arm, 1)], `${f.addr} at ${px} px: its arms a quarter of each side, never under a device pixel`);
+        assert.deepEqual(f.label, [], `${f.addr} at ${px} px: no label set`);
+      }
+      assert.ok(strokes.filter((s) => s.hue === FORM.ink).every((s) => Math.abs(s.alpha - lod.fade) < 1e-9), `${px} px: stroked at the band's fade`);
+    }
+    atSlots(LOD_FAR_LO + 0.5);
+    RENDER.draw();
+    const smallest = RENDER.stats.forms.find((f) => f.addr === SLOT3);
+    assert.ok(smallest && smallest.rect.w * FORM.arm < 1 && smallest.arms.w === 1, `the smallest form: its arms a device pixel where a quarter of its side is less: ${JSON.stringify(smallest)}`);
+  } finally { REC._reset(); WRITE._reset(); }
+});
+
+test('the one form\'s ink is read through the platform as the frame is drawn (its drawing\'s part 1): the labels\' ink whole where the person asks more contrast; the canvas\'s own CanvasText as the style resolves it where colours are forced; else the ink at the 3:1 floor', () => {
+  const { ctx, strokes } = recorder();
+  const canvas = /** @type {any} */ ({ getContext: () => ctx });
+  RENDER.attach(canvas);
+  CAM.setViewport(4000, 900);
+  formBoard();
+  const was = { window: globalThis.window, style: globalThis.getComputedStyle };
+  /** the forms' strokes' inks, the person's settings standing as `on` says */
+  const inks = (/** @type {string | null} */ on) => {
+    globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null, matchMedia: (/** @type {string} */ q) => ({ matches: q === on }) });
+    globalThis.getComputedStyle = /** @type {any} */ ((/** @type {unknown} */ el) => ({ color: el === canvas ? 'rgb(255, 255, 0)' : '' }));
+    strokes.length = 0;
+    atSlots(600);
+    RENDER.draw();
+    return [...new Set(RENDER.stats.forms.map((f) => f.ink))];
+  };
+  try {
+    assert.deepEqual([inks(null), inks('(prefers-contrast: more)'), inks('(forced-colors: active)')], [[FORM.ink], [COL.title], ['rgb(255, 255, 0)']], 'the floor; the labels\' ink; CanvasText');
+    assert.ok(strokes.some((s) => s.hue === 'rgb(255, 255, 0)'), 'stroked in it');
+  } finally { globalThis.window = was.window; globalThis.getComputedStyle = was.style; REC._reset(); WRITE._reset(); }
+});
+
+test('the one form\'s label (its drawing\'s parts 1, 5): the slot\'s name then its address, past the region\'s prefix while the region is named in view — no first line, bracketed words or state words, whatever a read answered — its address alone at slot 5; in the acting account\'s own region "your bio" and "your link page" at the form and at the document created there alike, in every other region and to a guest the bare name', () => {
+  const { ctx } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  CAM.setViewport(4000, 900);
+  const [bio, link, mailbox, yourBio, yourLink] = ['L.well-known.bio', 'L.well-known.link-page', 'L.well-known.mailbox', 'L.well-known.your-bio', 'L.well-known.your-link-page'].map((id) => t(id));
+  /** each form's label in view, as the pass set it, by its slot's address */
+  const labelled = () => Object.fromEntries(RENDER.stats.forms.map((f) => [f.addr, f.label]));
+  try {
+    formBoard();
+    REC.takeRefused(SLOT4, 'unregistered');
+    atSlots(600);
+    RENDER.draw();
+    assert.equal(LINE_NAMED(), OWN, 'the one line names the region');
+    assert.deepEqual(labelled(), { [SLOT3]: [yourBio, '.0.3'], [SLOT4]: [yourLink, '.0.4'], [SLOT5]: ['.0.5'] }, 'the acting account\'s own: "your …", then the address past the prefix; slot 5 its address alone; nothing a read answered at slot 4');
+    REC.takeMetadata(SLOT3, { doc: SLOT3, published: true, owner: OWN, birth: SLOT3 + '.1', birthExtent: 18, placed: null, baseExtent: null, source: null, asOf: 1 });
+    REC.takeSpanSet(SLOT3, [{ subspace: 1, ordinal: 1, positions: 18 }]);
+    REC.takeDelivery(SLOT3, [{ pos: 1, width: 18, kind: 'content', text: 'We are the people.', ref: null, origin: null }]);
+    // its one row framed at a box 1000 px wide, where a one-row outline holds its label
+    const created = LAYER.shapeOf(SLOT3);
+    CAM.set({ x: created.x + created.w / 2, y: created.y + created.h / 2, scale: 1000 / DOC_W });
+    RENDER.draw();
+    const doc = RENDER.stats.labels.find((l) => l.kind === 'doc' && l.place === SLOT3);
+    assert.ok(!RENDER.stats.forms.some((f) => f.addr === SLOT3) && doc && doc.lines.some((x) => x.text === yourBio), `the bio created and read: its box, its label naming it "${yourBio}" as its form did: ${JSON.stringify(doc && doc.lines.map((x) => x.text))}`);
+    const other = LAYER.shapeOf(OTHER + '.0.3');
+    CAM.set({ x: other.x + other.w / 2, y: other.y + other.h / 2, scale: 600 / DOC_W });
+    RENDER.draw();
+    assert.deepEqual(labelled(), { [OTHER + '.0.2']: [mailbox, '.0.2'], [OTHER + '.0.3']: [bio, '.0.3'], [OTHER + '.0.4']: [link, '.0.4'], [OTHER + '.0.5']: ['.0.5'] }, 'another account\'s: the bare names');
+    formBoard(null);
+    atSlots(600);
+    RENDER.draw();
+    assert.deepEqual(labelled(), { [MAIL]: [mailbox, '.0.2'], [SLOT3]: [bio, '.0.3'], [SLOT4]: [link, '.0.4'], [SLOT5]: ['.0.5'] }, 'to a guest: the bare names, its mailbox a form');
+  } finally { REC._reset(); WRITE._reset(); }
+});
+
+/** the account the one line names as it stands — the region named in view (L-LINE's `named`) */
+const LINE_NAMED = () => RENDER.stats.labels.some((l) => l.kind === 'form') ? accountAt(CAM.cam.x, CAM.cam.y, '1') : null;
+
+test('a press goes to the one form wherever its rectangle is drawn (B11-S5\'s press), and to a form, or a box drawn smaller than the least target, anywhere in an area grown about its rectangle\'s centre to that target each way — where areas meet the nearest centre winning, a point in a place\'s drawn shape going to that place, a box at least the target each way pressed on its outline alone; the drawing the same with the areas as without (WCAG 2.2 SC 2.5.8; P-REG\'s TARGET)', () => {
+  const { ctx, strokes, texts } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  CAM.setViewport(1440, 900);
+  formBoard();
+  REC.takeSpanSet(MAIL, [{ subspace: 1, ordinal: 1, positions: 40000 }]);
+  const mid = (/** @type {Rect} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+  const at = (/** @type {{x: number, y: number}} */ p) => RENDER.placeAtScreen(p.x, p.y);
+  try {
+    atSlots(600);
+    RENDER.draw();
+    assert.deepEqual(at(mid(onScreen(SLOT4))), { addr: SLOT4, form: true, padded: false }, 'at mid, inside its rectangle: the form');
+    const mail = RENDER.stats.labels.length >= 0 && LAYER.shapeOf(MAIL), m = { x: CAM.sx(mail.x), y: CAM.sy(mail.y), w: mail.w * CAM.cam.scale, h: mail.h * CAM.cam.scale };
+    assert.ok(m.w >= TARGET.min && m.h >= TARGET.min, 'the mailbox at mid: at least the target each way');
+    assert.deepEqual([at({ x: m.x + m.w + 3, y: m.y + m.h / 2 }), RENDER.docAtScreen(m.x + m.w + 3, m.y + m.h / 2), at(mid(m))?.addr], [null, null, MAIL], 'a box at least the target each way: its outline alone');
+    atSlots(LOD_FAR_LO + 2);
+    const before = { strokes: JSON.stringify(strokes.splice(0)), texts: JSON.stringify(texts.splice(0)) };
+    RENDER.draw();
+    const s3 = onScreen(SLOT3), s4 = onScreen(SLOT4), s5 = onScreen(SLOT5), c3 = mid(s3), c4 = mid(s4), c5 = mid(s5);
+    assert.ok(s3.w < TARGET.min / 4 && s3.h < TARGET.min, `at far~mid the forms are small: ${JSON.stringify(s3)}`);
+    // below a form, outside its rectangle and inside its area, no other place near
+    const under = { x: c4.x, y: s4.y + s4.h + 8 };
+    assert.deepEqual(at(under), { addr: SLOT4, form: true, padded: true }, '8 px below a form, inside its area: the form');
+    // between two forms, nearer the one listed second
+    const between = { x: c3.x + (c4.x - c3.x) * 0.6, y: c3.y };
+    assert.ok(Math.abs(between.x - c3.x) <= TARGET.min / 2 && Math.abs(between.x - c4.x) <= TARGET.min / 2, 'inside both areas');
+    assert.equal(at(between)?.addr, SLOT4, 'the nearer centre: the form listed second');
+    // the ordinary edition beside slot 5, a box drawn small: below it, its area; between it and the form, the nearer centre
+    const o = RENDER.stats.labels && LAYER.shapeOf(ORDINARY), ob = { x: CAM.sx(o.x), y: CAM.sy(o.y), w: o.w * CAM.cam.scale, h: o.h * CAM.cam.scale }, co = mid(ob);
+    assert.ok(ob.w < TARGET.min && ob.h < TARGET.min, 'the edition\'s box drawn smaller than the target');
+    assert.deepEqual(at({ x: co.x, y: ob.y + ob.h + 8 }), { addr: ORDINARY, form: false, padded: true }, '8 px below a small box, inside its area: the box');
+    assert.deepEqual([at({ x: c5.x + (co.x - c5.x) * 0.4, y: c5.y })?.addr, at({ x: c5.x + (co.x - c5.x) * 0.6, y: c5.y })?.addr], [SLOT5, ORDINARY], 'between a form and a small box: the nearer centre');
+    // a point in the mailbox's drawn outline, nearer the bio form's centre than its own and inside that form's area: the mailbox
+    const outline = RENDER.stats.labels && LAYER.shapeOf(MAIL), mo = { x: CAM.sx(outline.x), y: CAM.sy(outline.y), w: outline.w * CAM.cam.scale, h: outline.h * CAM.cam.scale };
+    const inMail = { x: mo.x + mo.w - 0.25, y: c3.y };
+    assert.ok(Math.hypot(inMail.x - c3.x, inMail.y - c3.y) < Math.hypot(inMail.x - mid(mo).x, inMail.y - mid(mo).y) && Math.abs(inMail.x - c3.x) <= TARGET.min / 2 && inMail.y >= mo.y && inMail.y <= mo.y + mo.h,
+      `a point in the mailbox's outline, inside the bio form's area and nearer its centre: ${JSON.stringify({ inMail, mo, s3 })}`);
+    assert.deepEqual(at(inMail), { addr: MAIL, form: false, padded: false }, 'a drawn shape is its own place\'s: the mailbox');
+    // the drawing: the same with the press areas read as without
+    const drawn = { strokes: JSON.stringify(strokes.splice(0)), texts: JSON.stringify(texts.splice(0)) };
+    RENDER.draw();
+    assert.deepEqual({ strokes: JSON.stringify(strokes), texts: JSON.stringify(texts) }, drawn, 'reading the press areas moves no stroke and no label');
+    assert.notEqual(drawn.strokes, before.strokes, 'the frames compared drew');
+  } finally { REC._reset(); WRITE._reset(); }
+});
+
+test('a link the reader can read whose far end is an assigned slot no document the reader can read stands at is a mid connection to the one form there, its stroke ending on the form\'s rectangle where it meets it — never short of it, never inside — and no tail; to another person\'s mailbox\'s form no stroke at rest and no tail; a reserved number\'s far end and another board\'s keep their tail (the one form\'s part 7, changing #132 at an assigned slot; #771)', () => {
+  const { ctx } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  CAM.setViewport(4000, 900);
+  formBoard();
+  LK.readers({ drawn: RENDER.drawsPlace });
+  const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: OWN, whole: false, subspace: 1, ordinal: ord, positions: w });
+  const whole = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: doc.split('.0.').slice(0, -1).join('.0.'), whole: true, subspace: null, ordinal: null, positions: null });
+  const FAR = { form: SLOT3, theirs: OTHER + '.0.2', reserved: OWN + '.0.12', board: '2.0.1.0.3' };
+  const links = Object.entries(FAR).map(([, far], i) => ({ addr: `${ORDINARY}.0.2.${i + 1}`, from: [span(ORDINARY, 1 + 10 * i, 5)], to: [whole(far)], type: CITE }));
+  try {
+    REC.takeSpanSet(ORDINARY, [{ subspace: 1, ordinal: 1, positions: 40 }]);
+    REC.takeDelivery(ORDINARY, [{ pos: 1, width: 40, kind: 'content', text: 'x'.repeat(40), ref: null, origin: null }]);
+    REC.takeImage(ORDINARY, 1, [{ iStart: ORDINARY + '.0.1.1', width: 40 }]);
+    REC.takeLinks(ORDINARY, links.map((l) => l.addr));
+    for (const l of links) REC.takeLink(l);
+    assert.deepEqual([FAR.form, FAR.theirs, FAR.reserved, FAR.board].map((a) => [RENDER.drawsDoc(a), RENDER.drawsPlace(a)]), [[false, true], [false, true], [false, false], [false, false]], 'a place drawn at the two forms, a document at none; none at the reserved number or on another board');
+    const a = LAYER.shapeOf(SLOT3), b = LAYER.shapeOf(ORDINARY);
+    CAM.set({ x: (a.x + b.x + b.w) / 2, y: a.y + a.h / 2, scale: 300 / DOC_W });
+    RENDER.draw();
+    const c = RENDER.stats.connections.find((x) => [x.a, x.b].includes(SLOT3));
+    assert.ok(c && [c.a, c.b].includes(ORDINARY) && !c.stub, `a connection between the edition and the bio's form: ${JSON.stringify(RENDER.stats.connections.map((x) => [x.a, x.b]))}`);
+    const r = onScreen(SLOT3), [p, q] = c.a === SLOT3 ? [c.stroke[1], c.stroke[0]] : c.stroke;
+    const onEdge = Math.min(Math.abs(q.x - r.x), Math.abs(q.x - r.x - r.w), Math.abs(q.y - r.y), Math.abs(q.y - r.y - r.h)) < 1e-6 && q.x >= r.x - 1e-6 && q.x <= r.x + r.w + 1e-6 && q.y >= r.y - 1e-6 && q.y <= r.y + r.h + 1e-6;
+    const centre = { x: r.x + r.w / 2, y: r.y + r.h / 2 }, cross = (q.x - p.x) * (centre.y - p.y) - (q.y - p.y) * (centre.x - p.x);
+    const outside = !(p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h);
+    assert.ok(onEdge && outside && Math.abs(cross) < 1e-6 * Math.hypot(centre.x - p.x, centre.y - p.y) ** 2, `its stroke ends on the form's rectangle, on the line toward its centre, from outside it: ${JSON.stringify({ p, q, r })}`);
+    assert.ok(!RENDER.stats.connections.some((x) => [x.a, x.b].includes(FAR.theirs)), 'none to another person\'s mailbox\'s form');
+    const tails = RENDER.stats.tails.flatMap((tl) => tl.far);
+    assert.deepEqual([tails.includes(FAR.form), tails.includes(FAR.theirs), tails.includes(FAR.reserved), tails.includes(FAR.board)], [false, false, true, true], `no tail to either form; the reserved number's and the other board's stand: ${JSON.stringify(tails)}`);
+  } finally { LK._reset(); REC._reset(); WRITE._reset(); }
+});
+
+test('the walk\'s ring stands around the one form\'s rectangle exactly as around a document\'s box, wherever an act of the person\'s put the walk there, its corners drawn unchanged inside it, no record made (the one form\'s part 6; #559)', async () => {
+  const { ctx, strokes } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  CAM.setViewport(4000, 900);
+  formBoard();
+  try {
+    atSlots(600);
+    RENDER.draw();
+    const bare = JSON.stringify(strokes.filter((s) => s.hue === FORM.ink));
+    await WALK.focusTo(SLOT4, null);
+    atSlots(600);
+    strokes.length = 0;
+    RENDER.draw();
+    const r = onScreen(SLOT4);
+    const ring = RENDER.stats.ring;
+    assert.ok(WALK.current()?.kind === 'form' && ring && near([{ x: ring.x, y: ring.y }, { x: ring.w, y: ring.h }], [{ x: r.x, y: r.y }, { x: r.w, y: r.h }]), `the ring's box the form's rectangle: ${JSON.stringify({ ring, r })}`);
+    assert.ok(strokes.some((s) => s.hue === COL.focus) && JSON.stringify(strokes.filter((s) => s.hue === FORM.ink)) === bare, 'the ring drawn, the corners as they stood');
+    // at a fit whose corners stand at their documents' heads, where a plain box keeps a head's band and the form, holding no corner, keeps none
+    CAM.setViewport(390, 844);
+    atSlots(300);
+    RENDER.draw();
+    const narrow = onScreen(SLOT4), held = RENDER.stats.ring;
+    assert.ok(CAM.fit().head && held && near([{ x: held.x, y: held.y }, { x: held.w, y: held.h }], [{ x: narrow.x, y: narrow.y }, { x: narrow.w, y: narrow.h }]), `at a head fit, the ring's box the form's rectangle still: ${JSON.stringify({ head: CAM.fit().head, held, narrow })}`);
+    assert.equal(REC.has(SLOT4), false, 'no record made');
   } finally { REC._reset(); WRITE._reset(); }
 });

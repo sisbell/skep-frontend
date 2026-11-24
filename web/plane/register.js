@@ -16,7 +16,9 @@
 // label, the short stroke P-RENDER draws for a link whose far document the
 // plane draws nowhere; the focus ring its gap outside its element's box and
 // its stroke's width, which set how far inside the visible view it is held;
-// a target a pointer presses on the plane its least size each way;
+// a target a pointer presses on the plane its least size each way; the one
+// form its ink at the 3:1 floor, its arms' share of each side and its
+// stroke's width, its ink as the person's settings ask it (`FORM`, `formInk`);
 // the hold its gap below the one line, where a label and a corner whose
 // place has risen under the line stand level (FP-26); the corner its size
 // whole and compact, its padding and its gap from the text, which T-LAYER
@@ -149,7 +151,8 @@ export const RING = Object.freeze({ gap: 3, width: 2.5 });
  * A target on the plane a pointer presses, at the least `min` px each way
  * (WCAG 2.2 SC 2.5.8): a continuation's mark is two targets — its newest
  * member's label, and the rest of the mark — only where it holds two of this
- * size (P-RENDER's)
+ * size; the one form, and a box drawn smaller than this either way, is
+ * pressed in an area grown to it about its rectangle's centre (P-RENDER's)
  */
 export const TARGET = Object.freeze({ min: 24 });
 
@@ -219,6 +222,25 @@ export const COL = Object.freeze({
   boardEdge: '#2a3340', withheld: '#2a2520', trail: 'rgba(255,180,84,.85)',
   residue: '#2b3140', hollow: 'rgba(127,178,255,0.15)',
 });
+
+/**
+ * The one form (B11-S5; its drawing's part 1): four corner marks at its
+ * rectangle's corners, each arm `arm` of its side, stroked `width` px in
+ * `ink` — the ink the plane's labels at mid are set in (`COL.title`), its
+ * value brought down toward the plane's ground (`COL.bg`), which shows
+ * through the form, to the 3:1 contrast floor against that ground and no
+ * higher, never a hue (register.test.js holds both).
+ */
+export const FORM = Object.freeze({ ink: '#5c6065', arm: 0.25, width: 1 });
+
+/**
+ * The form's ink as the person's settings ask it (see `FORM`): under forced
+ * colours the page's own CanvasText as the platform resolves it, where it
+ * asks more contrast the labels' ink whole, else `FORM.ink`.
+ * @param {{more: boolean, forced: string | null}} asks `more` the person asks more contrast; `forced` the CanvasText forced colours resolve, null where none are forced
+ * @returns {string}
+ */
+export const formInk = (asks) => asks.forced || (asks.more ? COL.title : FORM.ink);
 
 /**
  * @typedef {Object} Mark — how one link, or the links merged at one site (LK's `mergedMark`), are drawn, decided by LK, applied by the drawers

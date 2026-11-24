@@ -12,10 +12,14 @@ its row and the jump on the row below after it (issue #771's decision). The
 claimant's well-known slots are shot at 1440 px and at 390 px too: its
 mailbox framed at mid on its row, its label holding the name its own mailbox
 is shown by, into `shots/B11-S7/`, and the LEAP box with `mailbox` typed, its
-own row first, into `shots/B11-S9/` (B11-S7, B11-S9, B11-F10)."""
+own row first, into `shots/B11-S9/` (B11-S7, B11-S9, B11-F10). The one form
+is shot into `shots/B11-S5/` (B11-S5): each region the test board draws
+framed at mid on its slot cells, with its forms' labels set and below their
+drop, at 1440 px and at 390 px; the walk's ring on the claimant's bio's form;
+and the claimant's first row beside the second account's in one view."""
 import json
 
-from . import DOC, GHOST, MAILBOX, WINDOW, Result, frame_row, slot_words
+from . import AGENT_SPACE, BIO, DOC, GHOST, MAILBOX, MAILBOX_SLOT, SECOND_ACCOUNT, WINDOW, Result, frame_row, slot_words
 
 RESERVED = '1.0.1.0.7'  # a reserved number of the claimant's: the map gives it no cell, and the board says nothing of it
 
@@ -69,6 +73,58 @@ def slot_name_shots(ctx, r):
         claimed(ctx, r, 'B11-S9 at %d px, "mailbox" typed' % width, '#leaphits .hit:first-child .go', 'the own row')
         ctx.js('window.__skep.leap.close()'); ctx.frames(1)
         ctx.resize(*was)
+    return shots
+
+
+# the one form's shots (B11-S5): a depth-0 box this many px wide frames a region's slot cells with their forms' labels set — at 1440 px
+# its four slot cells, at 390 px, where the fit's narrower measure narrows each cell's first column slot, its bio's — and one this many
+# below the labels' drop (measured on the test board; FP-18)
+FORM_LABELLED_PX = {1440: 300, 390: 420}
+FORM_BARE_PX = 60
+
+
+def form_shots(ctx, r):
+    """B11-S5, the one form at mid (see the head): each region the test board draws — the claimant's, its agent space's, the
+    second account's — framed on its slot cells, once where its forms' labels are set and once below their drop, at 1440 px and
+    at 390 px; the walk's ring on the claimant's bio's form; and the claimant's first row beside the second account's in one view
+    — each shot's claim asserted on the canvas: the forms the frame drew, the labels it set, the ring it drew"""
+    shots = []
+    def framed(acct, px, narrow=False):
+        """the camera at mid on a region's slot cells, a depth-0 box `px` px wide — between its bio's and its link page's cells, or on
+        its bio's form where the view is `narrow` — and the forms the frame drew there"""
+        bio, page = '%s.0.%d' % (acct, MAILBOX_SLOT + 1), '%s.0.%d' % (acct, MAILBOX_SLOT + 2)
+        b3, b4 = ctx.js('window.__skep.boxOf(%s)' % json.dumps(bio)), ctx.js('window.__skep.boxOf(%s)' % json.dumps(page))
+        o3 = ctx.js('window.__skep.fold(%s)' % json.dumps(bio))['outline']
+        ctx.set_view(o3['x'] + o3['w'] / 2 if narrow else (b3['x'] + b3['w'] + b4['x']) / 2, o3['y'] + o3['h'] / 2, ctx.extent_scale(px))
+        return [f for f in ctx.js('window.__skep.forms()') if f['addr'].startswith(acct + '.0.')]
+    for width, height in ((1440, 900), (390, 844)):
+        was = ctx.resize(width, height)
+        for who, acct in (('own', '1.0.1'), ('agent', AGENT_SPACE), ('other', SECOND_ACCOUNT)):
+            drawn = framed(acct, FORM_LABELLED_PX[width], width < 1440)
+            shots.append(ctx.shot(f'B11-S5/{who}-labels-{width}.png'))
+            r.check(bool(drawn) and any(f['label'] for f in drawn), f'B11-S5 {who} at {width} px: the region\'s forms drawn and labelled, as the caption claims (the canvas set them)',
+                    [[f['addr'], f['label']] for f in drawn])
+            drawn = framed(acct, FORM_BARE_PX, width < 1440)
+            shots.append(ctx.shot(f'B11-S5/{who}-bare-{width}.png'))
+            r.check(bool(drawn) and not any(f['label'] for f in drawn), f'B11-S5 {who} at {width} px, below the labels\' drop: the forms drawn bare, as the caption claims',
+                    [[f['addr'], f['label']] for f in drawn])
+        for k, mods in (('H', ('Meta', 'Shift')), ('ArrowRight', ()), ('Home', ()), ('ArrowDown', ()), ('ArrowDown', ())):
+            ctx.drv.key(k, mods=mods); ctx.settle(); ctx.frames(2)
+        ring, focus = ctx.js('window.__skep.view.ring()'), ctx.js('(() => { const f = window.__skep.view.focus(); return f && [f.kind, f.addr]; })()')
+        shots.append(ctx.shot(f'B11-S5/ring-on-bio-{width}.png'))
+        form = next((f['rect'] for f in ctx.js('window.__skep.forms()') if f['addr'] == BIO), None)
+        r.check(focus == ['form', BIO] and bool(ring) and bool(form) and all(abs(ring[q] - form[q]) <= 0.5 for q in ('x', 'y', 'w', 'h')),
+                f'B11-S5 at {width} px: the walk\'s ring around the claimant\'s bio\'s form, as the caption claims', {'focus': focus, 'ring': ring, 'form': form})
+        ctx.esc()
+        ctx.resize(*was)
+    a, b = ctx.js('window.__skep.accountCell("1.0.1")'), ctx.js('window.__skep.accountCell(%s)' % json.dumps(SECOND_ACCOUNT))
+    f3 = ctx.js('window.__skep.fold(%s)' % json.dumps(BIO))
+    vp = ctx.js('window.__skep.view.viewport()')
+    ctx.set_view((a['x'] + b['x'] + b['w']) / 2, f3['outline']['y'] + f3['outline']['h'] / 2, vp['VW'] / (b['x'] + b['w'] - a['x']) * 0.95)
+    rows = {f['addr'] for f in ctx.js('window.__skep.forms()')}
+    shots.append(ctx.shot('B11-S5/first-rows-1440.png'))
+    r.check({BIO, '%s.0.%d' % (SECOND_ACCOUNT, MAILBOX_SLOT)} <= rows and ctx.js('window.__skep.view.lod().name') == 'mid',
+            'B11-S5: the claimant\'s first row beside the second account\'s in one view at mid, the forms of both drawn, as the caption claims', sorted(rows))
     return shots
 
 
@@ -151,5 +207,6 @@ def run(ctx):
     r.check(len(screens) >= 12, 'the B1 screens built are shot', len(screens))
     r.figures['b11_reserved'] = reserved_shots(ctx, r)
     r.figures['b11_slot_names'] = slot_name_shots(ctx, r)
+    r.figures['b11_one_form'] = form_shots(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

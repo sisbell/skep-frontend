@@ -67,6 +67,9 @@
 // mirror follow the text shown — a typed line a stop, a deleted one none, a
 // stop holding its place by its bytes, nothing moved at an ack, the mirror
 // reading the typed words and saying a hold from the held lines alone
+// and the one form at each assigned slot no box stands at a fixed stop among
+// its account's children in record order, whatever a read answers, a leaf
+// a landing finds listed, named by its label and read off its address alone
 // (FP-8, FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33, FP-34, FP-35, FP-36,
 // FP-39).
 import { test, before } from 'node:test';
@@ -2299,4 +2302,61 @@ test('an account\'s documents are the boxes the plane draws there: another perso
       assert.deepEqual(walkAt()?.slice(0, 2), ['account', ACCOUNT], `a re-take over ${addr}'s place stands on the account`);
     }
   } finally { for (const a of [THEIRS, RESERVED, DRAFT]) REC.invalidate(a); }
+});
+
+test('the one form at each assigned slot no box stands at is a fixed stop of the walk, a place and never a document (B11-S5; B11-F20 (3); the one form\'s part 6): its account\'s children in record order — its home page, its slots 2–5, then its documents from 64 — before any read and whatever a read answers, the count the same once a read shows a document at a slot; a landing at a slot finding its stop listed, inserting none; a leaf that → enters nothing; named by its label — the slot\'s name, then its address whole — never a read\'s answer, "your" at the acting account\'s own; its shape its rectangle; no read asked and no record made', async () => {
+  const yourBio = t('L.well-known.your-bio'), mailbox = t('L.well-known.mailbox'), unregistered = t('L.far.unregistered');
+  const A = '1.0.10', HOME_A = A + '.0.1', MAIL_A = A + '.0.2', DOC_A = A + '.0.64', SLOTS = [3, 4, 5].map((n) => `${A}.0.${n}`);
+  const listing = (/** @type {string[]} */ docs) => REC.takeIndex(/** @type {any} */ ({ docs: docs.map((doc) => ({ doc, kind: 'edition', label: null, standing: 'public' })), counts: [{ account: A, documents: docs.length }], state: { arm: 'complete' } }));
+  const kids = async () => (await WALK.childrenOf({ kind: 'account', addr: A, pos: null, link: null })).map((n) => [n.kind, n.addr]);
+  const asked = fake.asked.length;
+  try {
+    listing([HOME_A, DOC_A]);
+    const first = await kids();
+    assert.deepEqual(first, [['document', HOME_A], ['form', MAIL_A], ...SLOTS.map((a) => ['form', a]), ['document', DOC_A]], 'its home page, its four slots as forms, then its documents from 64, before any read');
+    assert.ok(![MAIL_A, ...SLOTS].some(REC.has), 'no record made at a slot');
+    listing([HOME_A, MAIL_A, DOC_A]);
+    REC.takeMetadata(SLOTS[0], { doc: SLOTS[0], published: true, owner: A, birth: SLOTS[0] + '.1', birthExtent: 9, placed: null, baseExtent: null, source: null, asOf: 1 });
+    const after = await kids();
+    assert.deepEqual(after, [['document', HOME_A], ['document', MAIL_A], ['document', SLOTS[0]], ['form', SLOTS[1]], ['form', SLOTS[2]], ['document', DOC_A]], 'its mailbox listed and its bio read: documents where they stood, the count the same');
+    await WALK.focusTo(SLOTS[1], null);
+    assert.deepEqual([walkAt(), WALK.siblingsNow().map((n) => [n.kind, n.addr])], [['form', SLOTS[1], null], after], 'a landing at the link page\'s slot: on its stop, listed already, no stop inserted');
+    await run(WALK.key('in'));
+    assert.deepEqual(walkAt(), ['form', SLOTS[1], null], '→ at a form: nothing to enter');
+    REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: A }));
+    REC.takeRefused(SLOTS[1], 'unregistered');
+    REC.invalidate(SLOTS[0]);
+    listing([HOME_A, DOC_A]);
+    const named = (/** @type {string} */ addr) => { const sibs = WALK.siblingsNow(), i = sibs.findIndex((n) => n.addr === addr); return WALK.nameOf(sibs[i], i, sibs.length); };
+    await WALK.focusTo(SLOTS[0], null);
+    const bio = named(SLOTS[0]), page = named(SLOTS[1]), five = named(SLOTS[2]), mail = named(MAIL_A);
+    assert.ok(bio.startsWith(`Your bio, ${SLOTS[0]}.`) && bio.toLowerCase().startsWith(yourBio), `the acting account's own bio's item: its label first — "your bio", then its address: ${bio}`);
+    assert.ok(mail.startsWith(`Your mailbox, ${MAIL_A}.`) && page.startsWith(`Your link page, ${SLOTS[1]}.`) && five.startsWith(`${SLOTS[2]}.`), `its mailbox's and link page's by their own names, slot 5's its address alone: ${[mail, page, five].join(' | ')}`);
+    assert.ok(![bio, page, five, mail].some((w) => w.includes(unregistered)), 'never a read\'s answer: not even where a read answered "unregistered"');
+    REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1' }));
+    assert.ok(named(MAIL_A).startsWith(`${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}, ${MAIL_A}.`), 'another reader\'s: the bare name');
+    const room = docBox(SLOTS[2]), s = LAYER.shapeOf(SLOTS[2]);
+    assert.ok(s.x === room.x && s.y === room.y && s.w < room.w && s.h < room.h && !REC.has(SLOTS[2]), `its shape its rectangle, the room's first column slot, no record made: ${JSON.stringify(s)}`);
+    assert.equal(fake.asked.length, asked, 'no read asked');
+  } finally {
+    for (const a of [MAIL_A, ...SLOTS]) if (REC.has(a)) REC.invalidate(a);
+    REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1' }));
+  }
+});
+
+test('the re-take finds the one form where its rectangle holds the view\'s centre, a place and never a document — at mid and nearer — and the account where the centre falls in its cell outside the rectangle; no record made (the one form\'s part 6; the cases\' row 29)', async () => {
+  const A = '1.0.11', FORM = A + '.0.3', listed = [A + '.0.1', A + '.0.64'];
+  REC.takeIndex(/** @type {any} */ ({ docs: listed.map((doc) => ({ doc, kind: 'edition', label: null, standing: 'public' })), counts: [{ account: A, documents: 2 }], state: { arm: 'complete' } }));
+  try {
+    const s = LAYER.shapeOf(FORM), room = docBox(FORM);
+    for (const scale of [300 / DOC_W, 14 / LAYER.formFold(FORM).fs]) {
+      at(middle(s), scale);
+      await WALK.retakeFromView();
+      assert.deepEqual(walkAt(), ['form', FORM, null], `at ${lodOf(scale).name}: the form under the centre`);
+    }
+    at({ x: room.x + room.w * 0.8, y: room.y + room.h * 0.8 }, 300 / DOC_W);
+    await WALK.retakeFromView();
+    assert.deepEqual(walkAt()?.slice(0, 2), ['account', A], 'in its cell outside its rectangle: the account');
+    assert.equal(REC.has(FORM), false, 'no record made');
+  } finally { REC.takeIndex(/** @type {any} */ ({ docs: [], counts: [], state: { arm: 'complete' } })); }
 });

@@ -35,7 +35,13 @@
 // gives no cell, which no loop here sets or reads at any place (`mountable`) —
 // stands as text in the frame its em reaches
 // P-LOD's readable threshold (LOD_TXT_LO, an em of 8 px), whatever else that
-// frame mounts. Below it a document mounts from the mount threshold
+// frame mounts. The one form at an assigned slot no document stands at
+// (M-REC's `forms`; B11-S5) holds no text and is never mounted: its fold is
+// its cell's first column slot at the fit's measure (`formFold`), its
+// outline's bounds its rectangle (`shapeOf`), its em its reading scale's
+// (`atReadingScale`), its label its slot's name and its address alone
+// (`formLabel`), each read off its address, no record made and no read asked.
+// Below it a document mounts from the mount threshold
 // (MOUNT_EM, 6.5, so bars become text while they are still too small to read
 // and no character positions disagree — S1 Q7) and keeps its claim down to
 // UNMOUNT_EM, 5.5, and the limit (MOUNTS_PER_FRAME) is spent on those: at
@@ -1701,30 +1707,55 @@ export function foldOf(d) {
   return f;
 }
 
+/** each form's fold (`formFold`), by its address, with the measure it was set at */
+/** @type {Map<string, {cpl: number, fold: Fold}>} */
+const formFolds = new Map();
+
+/**
+ * The one form's fold at a slot's cell (B11-S5; M-REC's `forms`): the first
+ * column slot of the cell's room (P-LAY's `slot`), where the unread plain box
+ * stands and a slot document's box begins, at the fit's measure, beneath no
+ * head's band, for it holds no corner — read off the address alone, so no
+ * record is made; kept until the measure changes.
+ * @param {string} addr
+ * @returns {Fold}
+ */
+export function formFold(addr) {
+  const cpl = measure(), f = formFolds.get(addr);
+  if (f && f.cpl === cpl) return f.fold;
+  const out = slot(docBox(addr), cpl, 0);
+  formFolds.set(addr, { cpl, fold: out });
+  return out;
+}
+
+/** the fold a place is drawn by: the one form's at a form's place (`formFold`), else its document's (`foldOf`) — no record made at a form */
+const placeFold = (/** @type {string} */ addr) => (REC.isForm(addr) ? formFold(documentOf(addr) || addr) : foldOf(REC.doc(addr)));
+
 /** does an em of `fs` world units stand at P-LOD's readable threshold or above at a scale (see the head) */
 const readsAt = (/** @type {number} */ fs, scale = cam.scale) => fs * scale >= LOD_TXT_LO;
 
 /**
  * Is a document at reading scale (see the head): its own em — its fold's
  * size at the scale — at P-LOD's readable
- * threshold or above. The press rule, the one line and the walk's grain read
- * it here, so a click places, the line names a position and the walk takes a
- * span in the same documents.
+ * threshold or above; the one form's, its first column slot's (`formFold`).
+ * The press rule, the one line and the walk's grain read it here, so a click
+ * places, the line names a position and the walk takes a span in the same
+ * documents.
  * @param {string} addr
  * @param {number} [scale] the scale it is read at: the camera's where none is given — a landing's or a flight's destination where the view is bound elsewhere
  * @returns {boolean}
  */
-export function atReadingScale(addr, scale = cam.scale) { return readsAt(foldOf(REC.doc(addr)).fs, scale); }
+export function atReadingScale(addr, scale = cam.scale) { return readsAt(placeFold(addr).fs, scale); }
 
 /**
  * The nearest scale at which a document is below its reading scale (see the
  * head): its own em a millionth under P-LOD's readable threshold, so
  * `atReadingScale` answers false there with room to spare for the camera's
- * arithmetic.
+ * arithmetic; the one form's, its first column slot's.
  * @param {string} addr
  * @returns {number}
  */
-export function scaleBelowReading(addr) { return (LOD_TXT_LO / foldOf(REC.doc(addr)).fs) * (1 - 1e-6); }
+export function scaleBelowReading(addr) { return (LOD_TXT_LO / placeFold(addr).fs) * (1 - 1e-6); }
 
 /**
  * The fold `foldOf` answers (see there).
@@ -2017,9 +2048,9 @@ function shownWhere(d) {
   return { doc: d.addr, member: n != null ? versionAddress(d.addr, n) : null, plain: published };
 }
 
-/** a document's outline's bounds, in world units (where the plane draws it): its fold's padded columns' */
+/** a document's outline's bounds, in world units (where the plane draws it): its fold's padded columns'; at the one form's place its rectangle, the cell's first column slot (`formFold`), no record made */
 export function shapeOf(/** @type {string} */ addr) {
-  const box = docBox(addr), b = boundsOf(foldOf(REC.doc(addr)));
+  const box = docBox(addr), b = boundsOf(placeFold(addr));
   return { x: box.x + b.x, y: box.y + b.y, w: b.w, h: b.h };
 }
 
@@ -3371,6 +3402,26 @@ export function docLabel(d, fsPx) {
     lead: leadPart(d, fsPx), name: slot ? { text: slot.text, px: ADDRESS.px, ink: COL.title, fit: 'one' } : null,
     address: { text: shortAddr(d), whole: d.addr, px: ADDRESS.px, ink: COL.title, weight: ADDRESS.weight, fit: 'one', face: 'ident' },
     kept: k ? { text: k.text, px: ADDRESS.px, ink: COL.title, fit: 'wrap' } : null, parts, region: d.account,
+  };
+}
+
+/**
+ * The one form's label on the plane (B11-S5's part 1; M-REC's `forms`), in
+ * the type, size and ink of a document's (`docLabel`): the name of the slot
+ * it stands at (`slotNamed`), then its address, past its region's prefix
+ * where its region is named in view, else whole — no first line, no
+ * bracketed words, no state words, no kept clause and no badge, whatever a
+ * read answered there; at a slot whose name is not given, its address alone.
+ * Read off the address alone: no record is made.
+ * @param {string} addr a form's place
+ * @returns {DocLabel}
+ */
+export function formLabel(addr) {
+  const account = accountOf(addr), slot = slotNamed(addr);
+  return {
+    lead: null, name: slot ? { text: slot.text, px: ADDRESS.px, ink: COL.title, fit: 'one' } : null,
+    address: { text: account ? addr.slice(account.length) : addr, whole: addr, px: ADDRESS.px, ink: COL.title, weight: ADDRESS.weight, fit: 'one', face: 'ident' },
+    kept: null, parts: [], region: account || null,
   };
 }
 

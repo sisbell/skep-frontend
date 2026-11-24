@@ -153,9 +153,9 @@ def slot_names_heard(ctx, r):
     """A WELL-KNOWN SLOT'S NAME HEARD (B11-S5, B11-S4, B11-S9; FP-33): at the claimant's own mailbox, landed at, the mirror's
     item names it by the name its label sets, after its address, and the DOM item says the same; the one line's address
     segment is named by its fields and that name after the document's; and in the LEAP box, `bio` typed, the own row's go is
-    named by its address, its account and its slot's name"""
+    named by its address, its account and its slot's name as the reader is shown it, "your bio" (the one form's part 5)"""
     words = slot_words(ctx)
-    mine, bio = heard(ctx, words['L.well-known.your-mailbox']), heard(ctx, words['L.well-known.bio'])
+    mine, bio = heard(ctx, words['L.well-known.your-mailbox']), heard(ctx, words['L.well-known.your-bio'])
     ctx.leap(MAILBOX)
     at = ctx.js('''(() => { const i = window.__skep.mirror.index(), li = document.getElementById('walk-' + i), f = window.__skep.view.focus(), seg = document.querySelector('#line .seg.address');
       return {item: window.__skep.mirror.item(i), dom: li ? li.getAttribute('aria-label') : null, focus: f && {kind: f.kind, addr: f.addr}, line: seg ? seg.getAttribute('aria-label') : null}; })()''')
@@ -172,6 +172,35 @@ def slot_names_heard(ctx, r):
             'in the LEAP box, "bio" typed: the own row\'s go named by its address, then its account and "%s" (B11-S9; B11-F18 (4))' % bio, {'go': go})
     ctx.drv.key('Escape'); ctx.frames(1)
     r.figures['slot_names_heard'] = {'mirror_item': item, 'line': at['line'], 'own_row': go}
+
+
+def form_heard(ctx, r):
+    """THE ONE FORM HEARD (B11-S5; the one form's part 6; WCAG 2.5.3): the walk stood on the claimant's bio's form by its keys — HOME,
+    → and Home onto its home page, ↓ twice — its mirror item opens with its visible label, "your bio", then its address, the DOM item
+    saying the same and never a read's answer; the ring and the mirror's current item framed at the form's rectangle; then, Enter's
+    LEAP made and its read answered "unregistered", its item still opening with its label and never saying those words"""
+    words = slot_words(ctx)
+    mine = heard(ctx, words['L.well-known.your-bio'])
+    unregistered = ctx.js('import("./strings.js").then(({t}) => t("L.far.unregistered"))')
+    def item():
+        return ctx.js('''(() => { const S = window.__skep, i = S.mirror.index(), li = document.getElementById('walk-' + i), f = S.view.focus();
+          return {focus: f && [f.kind, f.addr], item: S.mirror.item(i), dom: li ? li.getAttribute('aria-label') : null, ring: S.view.ringBox(), forms: S.forms().map((x) => [x.addr, x.rect])}; })()''')
+    for k, mods in (('H', ('Meta', 'Shift')), ('ArrowRight', ()), ('Home', ()), ('ArrowDown', ()), ('ArrowDown', ())):
+        ctx.drv.key(k, mods=mods); ctx.settle(); ctx.frames(2)
+    at = item()
+    rect = dict(at['forms']).get(BIO)
+    framed = bool(rect) and bool(at['ring']) and all(abs(at['ring'][q] - rect[q]) <= 0.5 for q in ('x', 'y', 'w', 'h'))
+    opens = (at['item'] or '').lower().startswith(mine.lower() + ', ' + BIO)
+    r.check(at['focus'] == ['form', BIO] and opens and at['dom'] == at['item'] and unregistered not in (at['item'] or '') and framed,
+            'the walk on the claimant\'s bio\'s form: its mirror item opens with its label, "%s", then its address, the DOM item the same, no read\'s answer, framed at the form\'s rectangle (B11-S5; WCAG 2.5.3)' % mine, at)
+    ctx.drv.key('Enter'); ctx.settle(); ctx.frames(2)
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__skep.overlay().id || "").startsWith("face:") || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    ctx.frames(2)
+    landed = item()
+    r.check(landed['focus'] == ['form', BIO] and (landed['item'] or '').lower().startswith(mine.lower() + ', ' + BIO) and unregistered not in (landed['item'] or ''),
+            'Enter\'s LEAP made and its read answered: the item still opens with its label and never says "%s" (the one form\'s part 6)' % unregistered, landed)
+    ctx.drv.key('Escape'); ctx.frames(1)
+    r.figures['form_heard'] = {'item': at['item'], 'landed': landed['item'], 'ring': at['ring']}
 
 
 def run(ctx):
@@ -1268,6 +1297,7 @@ def run(ctx):
     r.figures['record_item'] = item[:300]
     reserved_keys(ctx, r)
     slot_names_heard(ctx, r)
+    form_heard(ctx, r)
     # leave the page as the case found it: the landing, the focus on no element
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')

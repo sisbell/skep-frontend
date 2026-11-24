@@ -858,8 +858,11 @@ const RESERVE = { 0: WORDS_CH, 1: PLACE_CH, 2: PLACE_CH, 3: PLACE_CH, 4: FOLDED_
  * position only where that document stands at its own reading scale
  * (T-LAYER's `atReadingScale`), its words standing empty below it, the
  * strip's window where a position is named and the walk keeps the document in
- * view off the view's centre; or the account or the board it stands on, named
- * as at mid; the account under the camera where it stands nowhere.
+ * view off the view's centre; the one form it stands on (B11-S5), named as a
+ * document is — the slot's name ahead of nothing, after its address's field —
+ * with no position, no strip and no first line, its address read alone; or
+ * the account or the board it stands on, named as at mid; the account under
+ * the camera where it stands nowhere.
  * Where no board is held, at every scale, "go to an address" alone, naming
  * no place (FP-35).
  * @returns {AddressDisplay}
@@ -882,6 +885,11 @@ export function addressDisplay() {
     const win = pos != null && WALK.kept() ? windowOver(f.addr) : null;
     const name = LAYER.slotNamed(f.addr);
     return { text: place + positionWords(pos), place, label: LAYER.firstOf(REC.doc(f.addr)), ...(name ? { name } : {}), slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, strip: readable, window: win };
+  }
+  // the one form: a place holding no text, so no position, no strip and no first line; no record made at its address
+  if (f && nearer && f.kind === 'form') {
+    const place = `${boardOf(f.addr)} › ${accountOf(f.addr)} › ${f.addr}`, name = LAYER.slotNamed(f.addr);
+    return { text: place, place, label: [], ...(name ? { name } : {}), slot: 0, addr: f.addr, doc: f.addr, pos: null, member: null, whole: false, strip: false, window: null };
   }
   // nearer than mid the account or the board the walk stands on; at mid, or where it stands nowhere, the account under the camera
   const acct = f && nearer && (f.kind === 'account' || f.kind === 'board') ? (f.kind === 'account' ? f.addr : null) : accountAt(cam.x, cam.y, '1');
@@ -1396,7 +1404,7 @@ function addressPart(a, at) {
 /** what the line shows now (`Shown`) */
 function shown() {
   const a = addressDisplay();
-  return { a, acting: actingSegment(), daemon: daemonSegment(), aside: acts && acts.aside ? acts.aside() : null, kept: (a.doc ? LAYER.keptIn(a.doc) : null) || LAYER.boardKeptIn(), asOf: acts && acts.asOf ? acts.asOf() : null };
+  return { a, acting: actingSegment(), daemon: daemonSegment(), aside: acts && acts.aside ? acts.aside() : null, kept: (a.doc && !REC.isForm(a.doc) ? LAYER.keptIn(a.doc) : null) || LAYER.boardKeptIn(), asOf: acts && acts.asOf ? acts.asOf() : null };
 }
 
 /**

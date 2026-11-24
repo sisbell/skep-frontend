@@ -37,7 +37,11 @@
 // unminted ones under the page's load, a gap where no run places it —
 // spelled through the mints at the call; those watching a document's text
 // told before it is set again or let go, a refresh's drop among them; and
-// those watching a change of class told once it is taken.
+// those watching a change of class told once it is taken; and the one
+// form's places — each assigned slot of an account whose home page is a box
+// that holds no box, an assigned slot a read withholds, a covered mailbox
+// among them, holding none — read off the model with no record made, and
+// the acting account's own slots shown by names of their own.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -50,9 +54,9 @@ beforeEach(() => REC._reset());
 
 const PLACES = {
   docs: [
-    { doc: '1.0.1.0.3', kind: 'edition', label: '# skep-ux-design', standing: 'public' },
-    { doc: '1.0.1.0.4', kind: 'edition', label: '## The artifact chain', standing: 'public' },
-    { doc: '1.0.1.0.2', kind: 'draft', label: 'staging', standing: 'yours_to_read' },
+    { doc: '1.0.1.0.73', kind: 'edition', label: '# skep-ux-design', standing: 'public' },
+    { doc: '1.0.1.0.74', kind: 'edition', label: '## The artifact chain', standing: 'public' },
+    { doc: '1.0.1.0.72', kind: 'draft', label: 'staging', standing: 'yours_to_read' },
     { doc: '1.0.2.0.1', kind: 'edition', label: null, standing: 'public' },
     { doc: '1.1.0.1.0.2', kind: 'edition', label: null, standing: 'public' },
   ],
@@ -66,7 +70,7 @@ test('the index is built from places: rows, counts, the state and its floor', ()
   assert.deepEqual(REC.countOf('1.0.1'), { documents: 3, exact: false });
   assert.equal(REC.floor(), 8265);
   assert.deepEqual(REC.landmarks().map((p) => p.doc), ['1.0.2.0.1']);
-  assert.equal(REC.doc('1.0.1.0.2').kind, 'draft');
+  assert.equal(REC.doc('1.0.1.0.72').kind, 'draft');
 });
 
 /** a record's copy of its index row */
@@ -76,53 +80,53 @@ test('a listing takes the feed rows taken while it was read laid over it, by the
   REC.setIndexState({ arm: 'complete' });
   const rows = [
     { position: 12324, at: 12324, op: 'create_new_document', docs: ['1.0.1.0.1013'], class: 'drafts', session: 's-1' },
-    { position: 12325, at: 12325, op: 'publish', docs: ['1.0.1.0.2.1'], class: 'published' },
+    { position: 12325, at: 12325, op: 'publish', docs: ['1.0.1.0.72.1'], class: 'published' },
     { position: 12326, at: 12326, op: 'delegate', docs: null, class: 'published', new_prefix: '1.0.3' },
   ];
   REC.takeIndex(/** @type {any} */ (PLACES), /** @type {any} */ ({ rows, state: true }));
-  assert.deepEqual(REC.placesOf('1.0.1').map((p) => [p.doc, p.kind]), [['1.0.1.0.2', 'edition'], ['1.0.1.0.3', 'edition'], ['1.0.1.0.4', 'edition'], ['1.0.1.0.1013', 'draft']], 'the draft minted meanwhile listed; the listed draft published meanwhile an edition');
+  assert.deepEqual(REC.placesOf('1.0.1').map((p) => [p.doc, p.kind]), [['1.0.1.0.72', 'edition'], ['1.0.1.0.73', 'edition'], ['1.0.1.0.74', 'edition'], ['1.0.1.0.1013', 'draft']], 'the draft minted meanwhile listed; the listed draft published meanwhile an edition');
   assert.equal(REC.countOf('1.0.1').documents, 4, 'the mint counted over the listing\'s three; the publish of a listed draft not counted again');
   assert.deepEqual(REC.accounts().map((a) => a.account), ['1.0.1', '1.0.2', '1.0.3', '1.1.0.1'], 'the account delegated meanwhile listed, holding no document yet');
   assert.equal(REC.indexState()?.arm, 'complete', 'the state taken meanwhile kept: the listing\'s may be older');
   REC.takeIndex(/** @type {any} */ (PLACES));
   assert.deepEqual(REC.places().map((p) => [p.doc, p.kind, p.label]), [
-    ['1.0.1.0.2', 'draft', 'staging'], ['1.0.1.0.3', 'edition', '# skep-ux-design'], ['1.0.1.0.4', 'edition', '## The artifact chain'], ['1.0.2.0.1', 'edition', null], ['1.1.0.1.0.2', 'edition', null],
+    ['1.0.1.0.72', 'draft', 'staging'], ['1.0.1.0.73', 'edition', '# skep-ux-design'], ['1.0.1.0.74', 'edition', '## The artifact chain'], ['1.0.2.0.1', 'edition', null], ['1.1.0.1.0.2', 'edition', null],
   ], 'nothing meanwhile: the listing\'s rows exactly');
   assert.deepEqual([rowOf('1.0.1.0.1013'), REC.countOf('1.0.1').documents, REC.accounts().map((a) => a.account), REC.indexState()], [['unknown', null, null], 3, ['1.0.1', '1.0.2', '1.1.0.1'], PLACES.state], 'its counts, its accounts and its state; the draft no listing names keeps none of its row');
 });
 
 test('an index replaces the one before it whole: a record the new one does not list keeps none of its row, its kind its metadata\'s where read', () => {
   REC.takeIndex(/** @type {any} */ (PLACES));
-  REC.takeMetadata('1.0.1.0.4', { doc: '1.0.1.0.4', published: true, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
-  REC.takeIndex(/** @type {any} */ ({ docs: PLACES.docs.filter((p) => p.doc !== '1.0.1.0.2' && p.doc !== '1.0.1.0.4'), counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
-  assert.equal(REC.place('1.0.1.0.2'), undefined);
-  assert.deepEqual(rowOf('1.0.1.0.2'), ['unknown', null, null], 'the draft the new index does not list: no kind, label or standing of the old row');
-  assert.deepEqual(rowOf('1.0.1.0.4'), ['edition', null, null], 'its kind its metadata\'s where read');
-  assert.deepEqual(rowOf('1.0.1.0.3'), ['edition', '# skep-ux-design', 'public'], 'a record the new index lists, its row');
+  REC.takeMetadata('1.0.1.0.74', { doc: '1.0.1.0.74', published: true, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeIndex(/** @type {any} */ ({ docs: PLACES.docs.filter((p) => p.doc !== '1.0.1.0.72' && p.doc !== '1.0.1.0.74'), counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  assert.equal(REC.place('1.0.1.0.72'), undefined);
+  assert.deepEqual(rowOf('1.0.1.0.72'), ['unknown', null, null], 'the draft the new index does not list: no kind, label or standing of the old row');
+  assert.deepEqual(rowOf('1.0.1.0.74'), ['edition', null, null], 'its kind its metadata\'s where read');
+  assert.deepEqual(rowOf('1.0.1.0.73'), ['edition', '# skep-ux-design', 'public'], 'a record the new index lists, its row');
 });
 
 test('the death keeps the editions\' rows and drops the rest of what the session\'s class read — the drafts\' rows, the counts and the state, each document\'s delivered state the view did not stand on and its row where no edition row stands on it, the link homed in a draft and where the links project, the owners and key sets, the drafts rows — each draft it could read covered at once though the view stood on none, and the runs a reader took stand as they were (issue #350)', () => {
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
-  REC.takeSpanSet('1.0.1.0.2', [{ subspace: 1, ordinal: 1, positions: 12 }, { subspace: 2, ordinal: 1, positions: 1 }]);
-  REC.takeDelivery('1.0.1.0.2', [{ pos: 1, width: 12, kind: 'content', text: 'draft words.', ref: null, origin: null }]);
-  REC.takeMetadata('1.0.1.0.2', { doc: '1.0.1.0.2', published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
-  REC.takeImage('1.0.1.0.3', 1, [{ iStart: '1.0.1.0.2.0.1.1', width: 4 }]);
-  REC.takeProjection('1.0.1.0.2.0.2.1', 2, '1.0.1.0.4', [{ pos: 3, width: 2 }]);
-  REC.takeMembers('1.0.1.0.3', 2);
+  REC.takeSpanSet('1.0.1.0.72', [{ subspace: 1, ordinal: 1, positions: 12 }, { subspace: 2, ordinal: 1, positions: 1 }]);
+  REC.takeDelivery('1.0.1.0.72', [{ pos: 1, width: 12, kind: 'content', text: 'draft words.', ref: null, origin: null }]);
+  REC.takeMetadata('1.0.1.0.72', { doc: '1.0.1.0.72', published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeImage('1.0.1.0.73', 1, [{ iStart: '1.0.1.0.72.0.1.1', width: 4 }]);
+  REC.takeProjection('1.0.1.0.72.0.2.1', 2, '1.0.1.0.74', [{ pos: 3, width: 2 }]);
+  REC.takeMembers('1.0.1.0.73', 2);
   REC.takeRefused('1.0.2.0.1', 'withheld');
-  REC.takeLinks('1.0.1.0.3', ['1.0.1.0.2.0.2.1']);
-  REC.takeLink({ addr: '1.0.1.0.2.0.2.1', from: [], to: [], type: null });
+  REC.takeLinks('1.0.1.0.73', ['1.0.1.0.72.0.2.1']);
+  REC.takeLink({ addr: '1.0.1.0.72.0.2.1', from: [], to: [], type: null });
   REC.takeOwner('1.0.1.1', { prefix: '1.0.1', principal: 1 });
   REC.takeKeySet('1.0.1', { enrolled: [], retired: [] });
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 12324, at: 12324, op: 'create_new_document', docs: ['1.0.1.0.1013'], class: 'drafts', session: 's-1' }));
-  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12325, at: 12325, op: 'publish', docs: ['1.0.1.0.4.2'], class: 'published' }));
-  const taken = REC.doc('1.0.1.0.2').runs;
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12325, at: 12325, op: 'publish', docs: ['1.0.1.0.74.2'], class: 'published' }));
+  const taken = REC.doc('1.0.1.0.72').runs;
   REC.sessionDied({ arm: 'closed' });
   assert.deepEqual([REC.session(), REC.deathReason()], [null, { arm: 'closed' }]);
-  const editions = ['1.0.1.0.3', '1.0.1.0.4', '1.0.2.0.1', '1.1.0.1.0.2'];
+  const editions = ['1.0.1.0.73', '1.0.1.0.74', '1.0.2.0.1', '1.1.0.1.0.2'];
   assert.deepEqual([REC.places().map((p) => p.doc), REC.indexState(), REC.countOf('1.0.1')], [editions, null, { documents: 2, exact: false }], 'the editions\' rows, read as published, stand; the drafts\' rows — the listed one and the one a row minted — the counts and the state go, the count the rows give a lower bound');
-  const drafts = ['1.0.1.0.2', '1.0.1.0.1013'];
+  const drafts = ['1.0.1.0.72', '1.0.1.0.1013'];
   for (const d of REC.docs()) {
     assert.deepEqual([d.from, d.runs, d.blocks, d.extent, d.whole, d.linkPositions, d.meta, d.image, d.origins, d.imageFor, [...d.links], d.linksRead, d.members, d.ended, d.refused], [-1, [], [], null, null, null, null, [], [], null, [], false, null, false, drafts.includes(d.addr) ? 'withheld' : null], d.addr + '\'s delivered state, the view standing on none');
     if (!editions.includes(d.addr)) assert.deepEqual(rowOf(d.addr), ['unknown', null, null], d.addr + '\'s row');
@@ -130,14 +134,14 @@ test('the death keeps the editions\' rows and drops the rest of what the session
   assert.deepEqual([drafts.map(REC.covered), drafts.map(REC.owed), drafts.map((a) => REC.known().includes(a)), REC.coveredDocs()], [[true, true], [true, true], [true, true], drafts],
     'each draft the session could read — the one it read and the one a row minted — covered at once, its read owed at the guest\'s class, a box the model knows');
   assert.deepEqual(editions.map(REC.owed), [false, false, false, false], 'no edition read as published is owed a read: the one withheld from the session among them');
-  assert.deepEqual(rowOf('1.0.1.0.3'), ['edition', '# skep-ux-design', 'public'], 'an edition keeps its row');
-  assert.deepEqual([REC.links(), REC.projection('1.0.1.0.2.0.2.1', 2, '1.0.1.0.4'), REC.ownerOf('1.0.1.1'), REC.keySetOf('1.0.1')], [[], undefined, undefined, undefined], 'the link homed in the draft and where it projects, the owners and the key sets');
+  assert.deepEqual(rowOf('1.0.1.0.73'), ['edition', '# skep-ux-design', 'public'], 'an edition keeps its row');
+  assert.deepEqual([REC.links(), REC.projection('1.0.1.0.72.0.2.1', 2, '1.0.1.0.74'), REC.ownerOf('1.0.1.1'), REC.keySetOf('1.0.1')], [[], undefined, undefined, undefined], 'the link homed in the draft and where it projects, the owners and the key sets');
   assert.deepEqual(REC.feedRows().map((r) => r.cls), ['published'], 'the published row held, the drafts row dropped');
   assert.equal(REC.textOf(taken, 1, 13), 'draft words.', 'the runs a reader took before the death read as they stood');
 });
 
 test('a change of class keeps each document the view stood on that the class it left read as published — its text, its image, its metadata, its extent, its chain, the links homed in published documents and where they project — save the runs whose bytes its image places in a draft, each a withheld run naming the draft from that moment, its image and origins there gone; one whose image does not place its whole text keeps none of its text; a draft it stood on is covered at once, its read owed, a refusal confirming the cover and an answer lifting it (issue #274\'s design decision: "everything not read as published goes at once. Drafts and runs from drafts go to covers; links homed in drafts leave view. A cover lifts if the new read returns its material")', () => {
-  const E = '1.0.1.0.3', P = '1.0.1.0.4', DR = '1.0.1.0.2', HALF = '1.0.2.0.1', OTHER = '1.0.3.0.9';
+  const E = '1.0.1.0.73', P = '1.0.1.0.74', DR = '1.0.1.0.72', HALF = '1.0.2.0.1', OTHER = '1.0.3.0.9';
   const OWN = 'Tumbler.\n\n', THEIRS = 'draft bytes', AFTER = '\n\nThe end.';
   const n = (/** @type {string} */ s) => new TextEncoder().encode(s).length;
   const at1 = n(OWN) + 1, at2 = at1 + n(THEIRS), end = at2 + n(AFTER);
@@ -243,20 +247,70 @@ test('the names table (B11-F10, B11-F12): a well-known slot\'s name read off its
   assert.deepEqual(REC.namedSlots(REC.SYSTEM_ACCOUNT), [], 'the system account\'s: none');
 });
 
-test('a slot\'s name as the reader is shown it (B11-S7): the acting account\'s own mailbox by a name of its own, and no other — another account\'s mailbox, the acting account\'s agent space\'s, the acting account\'s bio and link page by their names — and none of its own for a guest, whose session names no account', () => {
+test('a slot\'s name as the reader is shown it (B11-S7; the one form\'s part 5): each named slot of the acting account\'s own — its mailbox, its bio, its link page, a version member as its document — by a name of its own, and no other — another account\'s slots and the acting account\'s agent space\'s by their names, slot 5 by none — and none of its own for a guest, whose session names no account', () => {
   const SHOWN = (/** @type {string[]} */ as) => as.map(REC.slotNameShown);
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.4' });
   assert.deepEqual(['1.0.4.0.2', '1.0.4.0.2.1', '1.0.4.1.0.2', '1.0.5.0.2', '1', '1.0.4'].map(REC.isOwn), [true, true, false, false, false, true], 'the acting account\'s own: its account the session\'s, never one under it');
-  assert.deepEqual(SHOWN(['1.0.4.0.2', '1.0.4.0.3', '1.0.4.0.4', '1.0.5.0.2', '1.0.4.1.0.2', '1.0.4.0.5']),
-    ['L.well-known.your-mailbox', 'L.well-known.bio', 'L.well-known.link-page', 'L.well-known.mailbox', 'L.well-known.mailbox', null], 'acting as 1.0.4: its own mailbox its own name, every other slot its plain one');
+  assert.deepEqual(SHOWN(['1.0.4.0.2', '1.0.4.0.3', '1.0.4.0.4', '1.0.4.0.3.1', '1.0.5.0.2', '1.0.5.0.3', '1.0.5.0.4', '1.0.4.1.0.2', '1.0.4.1.0.3', '1.0.4.0.5']),
+    ['L.well-known.your-mailbox', 'L.well-known.your-bio', 'L.well-known.your-link-page', 'L.well-known.your-bio', 'L.well-known.mailbox', 'L.well-known.bio', 'L.well-known.link-page', 'L.well-known.mailbox', 'L.well-known.bio', null],
+    'acting as 1.0.4: its own mailbox, bio and link page each its own name, every other slot its plain one, slot 5 none');
   REC.setSession({ session: 's-2', principal: 1, account: '1.0.5' });
-  assert.deepEqual(SHOWN(['1.0.4.0.2', '1.0.5.0.2']), ['L.well-known.mailbox', 'L.well-known.your-mailbox'], 'acting as 1.0.5: its own');
+  assert.deepEqual(SHOWN(['1.0.4.0.2', '1.0.4.0.3', '1.0.5.0.2', '1.0.5.0.4']), ['L.well-known.mailbox', 'L.well-known.bio', 'L.well-known.your-mailbox', 'L.well-known.your-link-page'], 'acting as 1.0.5: its own');
   REC.setSession(null);
-  assert.deepEqual([...SHOWN(['1.0.4.0.2', '1.0.5.0.2']), REC.isOwn('1.0.4.0.2')], ['L.well-known.mailbox', 'L.well-known.mailbox', false], 'a guest: no mailbox its own');
+  assert.deepEqual([...SHOWN(['1.0.4.0.2', '1.0.4.0.3', '1.0.5.0.4']), REC.isOwn('1.0.4.0.2')], ['L.well-known.mailbox', 'L.well-known.bio', 'L.well-known.link-page', false], 'a guest: no slot its own');
+});
+
+/** an index of the places a form test reads: each row an edition but those named as drafts, every account counted */
+const listing = (/** @type {string[]} */ docs, /** @type {string[]} */ drafts = []) => REC.takeIndex(/** @type {any} */ ({
+  docs: docs.map((doc) => ({ doc, kind: drafts.includes(doc) ? 'draft' : 'edition', label: null, standing: drafts.includes(doc) ? 'yours_to_read' : 'public' })),
+  counts: [...new Set(docs.map((d) => d.split('.0.').slice(0, -1).join('.0.')))].map((account) => ({ account, documents: docs.filter((d) => d.startsWith(account + '.0.')).length })), state: { arm: 'complete' },
+}));
+
+test('the one form\'s places (B11-S5): of every account whose home page is a box the model knows, each assigned slot 2–5 holding no box — an agent space\'s alike — in record order; none in an account whose home page is no box, none at the system account, none at 6–63 however a read answered there, none past slot 5 (B11-S5, "NO FORM BEFORE A HOME PAGE"; B11-F12; FP-42)', () => {
+  listing(['1.0.4.0.1', '1.0.4.0.2', '1.0.4.0.64', '1.0.4.1.0.1', '1.0.5.0.70', '1.1.0.1.0.1', '1.1.0.1.0.2'], ['1.0.4.0.2']);
+  REC.takeSpanSet('1.0.4.0.7', [{ subspace: 1, ordinal: 1, positions: 9 }]);
+  REC.takeDelivery('1.0.4.0.7', [{ pos: 1, width: 9, kind: 'content', text: 'Reserved.', ref: null, origin: null }]);
+  REC.takeRefused('1.0.4.0.63', 'withheld');
+  assert.deepEqual(REC.forms(), ['1.0.4.0.3', '1.0.4.0.4', '1.0.4.0.5', '1.0.4.1.0.2', '1.0.4.1.0.3', '1.0.4.1.0.4', '1.0.4.1.0.5'],
+    'the account with a home: its slots less its mailbox, a box; its agent space with a home: every slot; the account with no home page and the system account: none');
+  assert.deepEqual(['1.0.4.0.3', '1.0.4.0.3.1', '1.0.4.0.2', '1.0.4.0.1', '1.0.4.0.6', '1.0.4.0.7', '1.0.4.0.63', '1.0.4.0.64', '1.0.5.0.2', '1.1.0.1.0.3'].map(REC.isForm),
+    [true, true, false, false, false, false, false, false, false, false], 'a form\'s place, a version member at its document\'s; never a box, a home page, a reserved number read or withheld, an ordinary one, a home-less account\'s slot, the system account\'s');
+});
+
+test('the one form is read off the model with no record made and no read asked: listing the forms, asking whether one stands at an address, and asking again once the model moves add no record at a slot, so the form at a slot never created and the one at a slot no read reached read alike (B11-S5, "drawn by the projection\'s rule with no read"; P80)', () => {
+  listing(['1.0.6.0.1']);
+  let held = REC.docs().length;
+  assert.deepEqual([REC.forms(), REC.isForm('1.0.6.0.3'), REC.isForm('1.0.6.0.9'), REC.docs().length], [['1.0.6.0.2', '1.0.6.0.3', '1.0.6.0.4', '1.0.6.0.5'], true, false, held], 'every slot of the account a form, no record made');
+  listing(['1.0.6.0.1', '1.0.6.0.64']);
+  held = REC.docs().length;
+  assert.deepEqual([REC.forms().length, REC.isForm('1.0.6.0.2'), REC.docs().length, ['1.0.6.0.2', '1.0.6.0.3', '1.0.6.0.4', '1.0.6.0.5'].some(REC.has)], [4, true, held, false], 'the model moved and read again: no record made at any slot');
+});
+
+test('a read that shows a document at a slot replaces its form for the session, no other cell moving; a slot document the index lists, unread, and one a change of class left waiting to be read are boxes; another person\'s mailbox answered `withheld`, a covered mailbox — the reader\'s own once the session ends — and another person\'s slot 3 answered `withheld` are forms, never boxes, the cover standing (B11-S5, seat-settled 15; the one form\'s part 4; issue #772)', () => {
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.4' });
+  listing(['1.0.4.0.1', '1.0.4.0.2', '1.0.6.0.1', '1.0.6.0.4'], ['1.0.4.0.2']);
+  REC.takeSpanSet('1.0.4.0.2', [{ subspace: 1, ordinal: 1, positions: 0 }]);
+  assert.deepEqual(REC.forms(), ['1.0.4.0.3', '1.0.4.0.4', '1.0.4.0.5', '1.0.6.0.2', '1.0.6.0.3', '1.0.6.0.5'], 'the slot document the index lists, unread, a box: no form there');
+  REC.takeMetadata('1.0.6.0.3', metaOf('1.0.6.0.3', true));
+  assert.deepEqual([REC.known().includes('1.0.6.0.3'), REC.forms()], [true, ['1.0.4.0.3', '1.0.4.0.4', '1.0.4.0.5', '1.0.6.0.2', '1.0.6.0.5']], 'a read showing a document at slot 3: its box, its form gone, every other form standing');
+  REC.takeRefused('1.0.6.0.2', 'withheld');
+  REC.takeRefused('1.0.6.0.5', 'withheld');
+  assert.deepEqual([['1.0.6.0.2', '1.0.6.0.5'].map((a) => REC.known().includes(a)), ['1.0.6.0.2', '1.0.6.0.5'].map(REC.isForm)], [[false, false], [true, true]], 'another person\'s mailbox and slot 5 answered `withheld`: forms, never boxes');
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual([REC.covered('1.0.4.0.2'), REC.owed('1.0.4.0.2'), REC.coveredDocs()], [true, true, ['1.0.4.0.2']], 'the reader\'s own mailbox covered at once by the session\'s end, owed its read: the cover stands');
+  assert.deepEqual([REC.known().includes('1.0.4.0.2'), REC.isForm('1.0.4.0.2'), REC.forms().filter((a) => a.startsWith('1.0.4.'))], [false, true, ['1.0.4.0.2', '1.0.4.0.3', '1.0.4.0.4', '1.0.4.0.5']], 'the covered mailbox: the form, never the withheld box');
+  REC.takeRefused('1.0.4.0.2', 'withheld');
+  assert.deepEqual([REC.covered('1.0.4.0.2'), REC.isForm('1.0.4.0.2'), REC.known().includes('1.0.4.0.2')], [true, true, false], 'its cover confirmed by the read: the form still');
+  REC.setSession({ session: 's-2', principal: 1, account: '1.0.4' });
+  REC.takeSpanSet('1.0.4.0.2', [{ subspace: 1, ordinal: 1, positions: 0 }]);
+  REC.takeMetadata('1.0.4.0.2', metaOf('1.0.4.0.2'));
+  assert.deepEqual([REC.covered('1.0.4.0.2'), REC.isForm('1.0.4.0.2'), REC.known().includes('1.0.4.0.2')], [false, false, true], 'read again, its extent lifting the cover and its metadata showing it: its box');
+  assert.equal(REC.sessionRegained({ session: 's-3', principal: 2, account: '1.0.7', writes: true }, []), true, 'another principal: the class changed');
+  assert.deepEqual([REC.owed('1.0.4.0.2'), REC.doc('1.0.4.0.2').refused, REC.known().includes('1.0.4.0.2'), REC.isForm('1.0.4.0.2')], [true, null, true, false], 'a slot left waiting to be read: a box no read has answered for, no form');
 });
 
 test('a document is covered where the class the page left could read it — its text, metadata or extent held, or its index listing it — and the change ending the session withholds it at once, or a read at the new class answers it `withheld`: never one the page never read, nor one withheld before the change, which waits on its read; each is a box the model knows (issues #177, #350)', () => {
-  const READ = '1.0.1.0.2', LISTED = '1.0.1.0.4', HELD = '1.0.2.0.70', NEVER = '1.0.3.0.90';
+  const READ = '1.0.1.0.72', LISTED = '1.0.1.0.74', HELD = '1.0.2.0.70', NEVER = '1.0.3.0.90';
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeSpanSet(READ, [{ subspace: 1, ordinal: 1, positions: 12 }]);
@@ -277,7 +331,7 @@ test('a document is covered where the class the page left could read it — its 
 });
 
 test('a session regained as another principal leaves every draft the class it left held a box waiting to be read, whatever the view stood on — none of its text, no refusal, its read owed, a box the model knows — and covers none before a read says so: a read withholding one covers it, one answering lifts the wait (issue #350\'s design decision: "the face shown straight after the change is \'waiting to be read\', except when signed out")', () => {
-  const STOOD = '1.0.1.0.2', AWAY = '1.0.1.0.1013', HELD = '1.0.2.0.70';
+  const STOOD = '1.0.1.0.72', AWAY = '1.0.1.0.1013', HELD = '1.0.2.0.70';
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeSpanSet(STOOD, [{ subspace: 1, ordinal: 1, positions: 12 }]);
@@ -289,7 +343,7 @@ test('a session regained as another principal leaves every draft the class it le
     const d = REC.doc(a);
     assert.deepEqual([d.from, d.extent, d.refused, REC.covered(a), REC.owed(a), REC.known().includes(a)], [-1, null, null, false, true, true], a + ': waiting to be read — the draft the view stood on, one it did not, and one withheld from the class it left alike');
   }
-  assert.deepEqual([REC.coveredDocs(), REC.owed('1.0.1.0.3')], [[], false], 'nothing covered before a read says so; no edition owed a read');
+  assert.deepEqual([REC.coveredDocs(), REC.owed('1.0.1.0.73')], [[], false], 'nothing covered before a read says so; no edition owed a read');
   REC.takeRefused(STOOD, 'withheld');
   assert.deepEqual([REC.covered(STOOD), REC.owed(STOOD), REC.coveredDocs()], [true, false, [STOOD]], 'a read withholding the draft the class it left read: covered');
   REC.takeSpanSet(AWAY, [{ subspace: 1, ordinal: 1, positions: 12 }]);
@@ -297,7 +351,7 @@ test('a session regained as another principal leaves every draft the class it le
 });
 
 test('only a read\'s answer settles what a box the change of class left is owed: a feed row\'s drop and a refresh\'s keep it owed and a box the model knows — a cover made at once waiting from then on — and a refresh setting it again from reads that answered nothing keeps it covered; a refusal it sets, an extent or a refusal read settles it (issue #350)', () => {
-  const A = '1.0.1.0.2', B = '1.0.1.0.1013', C = '1.0.1.0.5';
+  const A = '1.0.1.0.72', B = '1.0.1.0.1013', C = '1.0.1.0.75';
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 12324, at: 12324, op: 'create_new_document', docs: [B], class: 'drafts', session: 's-1' }));
@@ -702,7 +756,7 @@ test('a failed read of a listed claim\'s link or its home\'s metadata is held �
 });
 
 test('every drop of an address is counted — by invalidate, its record held or not and none made for it, and by a death, every address\'s — and no read taken moves the count', () => {
-  const D = '1.0.1.0.3', FAR = '1.0.1.0.127', L = D + '.0.2.1';
+  const D = '1.0.1.0.73', FAR = '1.0.1.0.127', L = D + '.0.2.1';
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 5 }]);
   REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: 5, placed: null, baseExtent: null, source: null, asOf: 1 });
@@ -764,7 +818,7 @@ test('a bare row — its docs null, lost testimony — drops the home of the lin
 });
 
 test('a row naming no document and no link marks the board whatever its op — a nullify, a version or a publish by its op alone, a delegation, an op unnamed — dropping nothing, its delegation\'s account still listed; a recorded row naming no document marks nothing; a refresh takes the mark once, and a change of class drops it (issue #212)', () => {
-  const D = '1.0.1.0.3';
+  const D = '1.0.1.0.73';
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.takeDelivery(D, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 1, at: 1, op: 'delegate', docs: [], class: 'published', new_prefix: '1.0.3', new_id: 3 }));
@@ -808,11 +862,11 @@ test('a newer member\'s arrival hands the trunk\'s text to the member it is — 
 });
 
 test('a refresh\'s drop keeps the documents shown and what they read through — their links\' values and where those project, the edition claims on their withheld runs\' origins and the claims\' homes, their owners\' byline causes — and drops the rest as a row naming each would, each drop counted; the index, its counts and the feed\'s rows stand (issue #212)', () => {
-  const A = '1.0.1.0.3', B = '1.0.2.0.5', FAR = '1.0.1.0.127', O = '1.0.1.0.1003', O2 = '1.0.2.0.9', H = '1.0.1.0.30', C = H + '.0.2.1';
+  const A = '1.0.1.0.73', B = '1.0.2.0.5', FAR = '1.0.1.0.127', O = '1.0.1.0.1003', O2 = '1.0.2.0.9', H = '1.0.1.0.30', C = H + '.0.2.1';
   const L1 = A + '.0.2.1', L2 = B + '.0.2.1';
   const meta = (/** @type {string} */ doc, /** @type {string} */ owner) => ({ doc, published: true, owner, birth: doc + '.1', birthExtent: 5, placed: null, baseExtent: null, source: null, age: { at: 3, time: null, from: null }, asOf: 9 });
   REC.takeIndex(/** @type {any} */ (PLACES));
-  REC.applyFeedUpdate(/** @type {any} */ ({ position: 1, at: 1, op: 'insert', docs: ['1.0.1.0.4'], class: 'published' }));
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 1, at: 1, op: 'insert', docs: ['1.0.1.0.74'], class: 'published' }));
   REC.takeDelivery(A, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }, { pos: 6, width: 4, kind: 'withheld', text: '', ref: null, origin: O }]);
   REC.takeDelivery(B, [{ pos: 1, width: 5, kind: 'content', text: 'world', ref: null, origin: null }, { pos: 6, width: 4, kind: 'withheld', text: '', ref: null, origin: O2 }]);
   REC.takeLinks(A, [L1]); REC.takeLinks(B, [L2]);
@@ -900,9 +954,9 @@ test('a feed row naming a document the view shows drops nothing of it — its te
 
 test('a feed row names a document: the place is kept, what was held is dropped; a system row is marked', () => {
   REC.takeIndex(/** @type {any} */ (PLACES));
-  REC.takeDelivery('1.0.1.0.3', [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
-  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12323, at: 12323, op: 'publish', docs: ['1.0.1.0.3.3'], class: 'published' }));
-  assert.equal(REC.doc('1.0.1.0.3').from, -1, 'the trunk invalidated');
+  REC.takeDelivery('1.0.1.0.73', [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12323, at: 12323, op: 'publish', docs: ['1.0.1.0.73.3'], class: 'published' }));
+  assert.equal(REC.doc('1.0.1.0.73').from, -1, 'the trunk invalidated');
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 12324, at: 12324, op: 'create_new_document', docs: ['1.0.1.0.1013'], class: 'drafts', session: 's-1' }));
   assert.equal(REC.place('1.0.1.0.1013')?.kind, 'draft');
   assert.equal(REC.countOf('1.0.1').documents, 4);
@@ -1220,7 +1274,7 @@ const LEAVING = [];
 REC.beforeText((addr) => { LEAVING.push(addr); });
 
 test('#448: a change of the page\'s class that ends the session leaves a draft holding words the board has not kept as it was read — its text, its extent, its image, its row and its kind, neither covered nor owed its read — and covers every other draft as before; a change that ends no session keeps none', () => {
-  const D = '1.0.1.0.2', E = '1.0.1.0.5';
+  const D = '1.0.1.0.72', E = '1.0.1.0.75';
   const read = (/** @type {string} */ addr) => { REC.takeSpanSet(addr, [{ subspace: 1, ordinal: 1, positions: 3 }]); REC.takeDelivery(addr, [{ pos: 1, width: 3, kind: 'content', text: 'abc', ref: null, origin: null }], 7, { from: 1, runs: [{ iStart: addr + '.0.1.1', width: 3 }] }); };
   const set = () => {
     REC._reset();

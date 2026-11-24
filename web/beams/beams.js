@@ -29,7 +29,11 @@
 // stretch's line; a whole-work end, and one that floats (LK's `floats`), at
 // the far article's first block, where its follow lands (foundations §2.3);
 // a far end not laid out — its document unmounted, or nothing placing it —
-// at its document's box's centre. Where the far end stands in the visible
+// at its document's box's centre; a far end at an assigned slot no document
+// the reader can read stands at, on the one form's rectangle there (M-REC's
+// `forms`; T-LAYER's `shapeOf`) — the middle of its side facing the beam's
+// near end, so the beam ends on it and never inside it — the rectangle whole,
+// nothing of the address's text asked and no record made. Where the far end stands in the visible
 // view, the viewport below the one line, the beam ends there, mounted or
 // not; outside it the beam is a stub, its stroke cut at the view's border
 // on the true bearing (P-CAM's `edgeStub`, the cut P-RENDER's mid
@@ -75,7 +79,7 @@ import { sx, sy, viewport, visibleView, edgeStub, stubTriangle } from '../plane/
 import { docBox } from '../plane/projection.js';
 import { COL } from '../plane/register.js';
 import { drawRun, runWidth, face, inFace, plain, runsOf, cutWords, apartTexts, LEAD_WORDS } from '../plane/labels.js';
-import { blockIn } from '../model/records.js';
+import { blockIn, isForm } from '../model/records.js';
 import { CLIENT_CLOSE } from '../strings.js';
 import { numeral } from '../util.js';
 import { farShort } from './held.js';
@@ -124,7 +128,8 @@ import { farShort } from './held.js';
  * @property {(addr: string) => (Rect | null)} first the box of a mounted article's first block: the anchor of a whole-work end, and of one that floats
  * @property {(addr: string, pos: number) => Rect[]} signs the signs its column's edge holds beside the block holding a position of that text in a mounted article — its others' count, a withheld run's mark — where they stand; none elsewhere
  * @property {(addr: string) => boolean} mounted
- * @property {(addr: string) => Rect} box a document's box: a far end not laid out stands at its centre, and a beam's colour changes on the ground between two of them (`changeAt`)
+ * @property {(addr: string) => Rect} box a document's box: a far end not laid out stands at its centre, and a beam's colour changes on the ground between two of them (`changeAt`); at the one form's place, the form's rectangle
+ * @property {(addr: string) => boolean} form is an address the one form's place (M-REC's `isForm`): no document stands there, and a beam ends on its rectangle (`box`)
  * @property {Rect} view the visible view (P-CAM's `visibleView`)
  */
 
@@ -399,6 +404,11 @@ function beamTo(s, line, from, to, g) {
  */
 export function beamOf(s, g) {
   if (!s.far) return null;
+  if (g.form(s.farAt)) {
+    // the one form's place: its rectangle whole, nothing of its address's text asked
+    const r = g.box(s.farAt), left = leaveAt(g, s.near, s.runs, mid(r));
+    return left && beamTo(s, left.line, left.from, onSide(left.from, r), g);
+  }
   const far = g.mounted(s.farAt) ? farAnchors(s, g) : null;
   if (far && far.length) {
     const left = leaveAt(g, s.near, s.runs, mid(far[0].line));
@@ -409,6 +419,22 @@ export function beamOf(s, g) {
   const c = mid(g.box(s.farAt));
   const left = leaveAt(g, s.near, s.runs, c);
   return left && beamTo(s, left.line, left.from, c, g);
+}
+
+/**
+ * Where a beam arriving from a point ends on a rect it may not enter (see the
+ * head): the middle of the side facing the point — its left or its right side
+ * where the point lies past it across, else its top or its foot. The beam's
+ * curve (`strokeOf`) runs level into that side, so it meets the rect there
+ * and never crosses into it.
+ * @param {Point} from
+ * @param {Rect} r
+ * @returns {Point}
+ */
+function onSide(from, r) {
+  if (from.x < r.x) return { x: r.x, y: r.y + r.h / 2 };
+  if (from.x > r.x + r.w) return { x: r.x + r.w, y: r.y + r.h / 2 };
+  return { x: r.x + r.w / 2, y: from.y < r.y ? r.y : r.y + r.h };
 }
 
 /** a beam's identity: its link and its two ends, unordered, each the document it stands at — the near end the one drawing it, the far end the version its far box shows, which the far end is placed in (LK's `farAt`) — with the key of the span the link stores for it (LK's `endKey`): the same beam whichever end it is drawn from, whichever version a box shows, wherever either end stands now, and a beam from each document one stored end is drawn at */
@@ -542,7 +568,7 @@ function byColumn(/** @type {Rect[]} */ lines) {
   return [...out.values()];
 }
 
-/** the page's geometry: T-LAYER's rects of the mounted articles, read by positions of the text the page shows — a line standing in no part where its fold sets it — the camera's projection of the boxes, the visible view; P-RENDER's tails leave the text through it too (`leaveAt`) */
+/** the page's geometry: T-LAYER's rects of the mounted articles, read by positions of the text the page shows — a line standing in no part where its fold sets it — the camera's projection of the boxes and of the one form's rectangles, which places are forms (M-REC's `isForm`), the visible view; P-RENDER's tails leave the text through it too (`leaveAt`) */
 export function pageGeometry(/** @type {Rect} */ seen = seenNow()) {
   /** the block of the text the page shows of a document holding a position of it (T-LAYER's `shownOf`) */
   const blockOf = (/** @type {string} */ addr, /** @type {number} */ pos) => blockIn(LAYER.shownOf(addr).blocks, pos);
@@ -560,7 +586,8 @@ export function pageGeometry(/** @type {Rect} */ seen = seenNow()) {
     first: (addr) => parts(addr, (LAYER.shownOf(addr).blocks[0] || { pos: 1 }).pos)[0] || null,
     signs: (addr, pos) => { const b = blockOf(addr, pos); return b ? LAYER.signRects(addr, b.pos) : []; },
     mounted: LAYER.isMounted,
-    box: (addr) => { const b = docBox(addr), x = sx(b.x), y = sy(b.y); return { x, y, w: sx(b.x + b.w) - x, h: sy(b.y + b.h) - y }; },
+    box: (addr) => { const b = isForm(addr) ? LAYER.shapeOf(addr) : docBox(addr), x = sx(b.x), y = sy(b.y); return { x, y, w: sx(b.x + b.w) - x, h: sy(b.y + b.h) - y }; },
+    form: isForm,
     view: seen,
   };
   return g;

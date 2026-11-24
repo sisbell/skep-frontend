@@ -43,8 +43,10 @@
 // and every name and word said
 // rendered for the ear by S22's table — the acts named by their words alone,
 // the trail's chord its key, the bar between parts hidden, the address
-// segment's levels a pause (FP-13, FP-20, FP-21, FP-22, FP-23, FP-25, FP-26,
-// FP-28, FP-29, FP-33, FP-34, FP-35, FP-36; style S18, S22).
+// segment's levels a pause; the one form the walk stands on named by its
+// fields and its slot's name, no position and no strip, no record made
+// (FP-13, FP-20, FP-21, FP-22, FP-23, FP-25, FP-26, FP-28, FP-29, FP-33,
+// FP-34, FP-35, FP-36; style S18, S22).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -229,10 +231,11 @@ test('at reading scale the document\'s field is followed by its label — its bo
   }
 });
 
-test('at a slot document the line names its slot after the document\'s field, ahead of its label, a field\'s joiner apart and in the client\'s face, kept whole as the label gives way — the bio and the link page by their names, the acting account\'s own mailbox by its own — and at an uncreated own slot the walk stands at, its name alone; the segment\'s accessible name says it after the field, before the first line (B11-S4, B11-S7, B11-F10; P2.22; issue #23)', async () => {
+test('at a slot document the line names its slot after the document\'s field, ahead of its label, a field\'s joiner apart and in the client\'s face, kept whole as the label gives way — another account\'s bio by its name, the acting account\'s own link page and mailbox each by its own (the one form\'s part 5) — and at an uncreated own slot the walk stands at, its name alone; the segment\'s accessible name says it after the field, before the first line (B11-S4, B11-S7, B11-F10; P2.22; issue #23)', async () => {
+  const bio = t('L.well-known.bio'), link = t('L.well-known.your-link-page'), mine = t('L.well-known.your-mailbox');
   const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
   LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
-  const BIO = '1.0.1.0.3', LINK = '1.0.1.0.4', MAIL = '1.0.1.0.2';
+  const BIO = '1.0.6.0.3', LINK = '1.0.1.0.4', MAIL = '1.0.1.0.2';
   Object.assign(script, reads(BIO, 'Hello.\n\nMore.'), reads(LINK, LONG_TEXT), reads(MAIL, 'Mail kept here.'));
   /** the segment as the line renders it: its label's words and markup, and its accessible name */
   const segment = () => {
@@ -242,14 +245,13 @@ test('at a slot document the line names its slot after the document\'s field, ah
   };
   /** the walk at a document's first position, the camera at its reading scale over it */
   const at = async (/** @type {string} */ doc) => { await PUMP.loadWhole(doc); await WALK.focusTo(doc, 1); CAM.set({ ...LAYER.centreOf(doc, 1), scale: 12.5 / LAYER.foldOf(REC.doc(doc)).fs }); return LINE.addressDisplay(); };
-  const bio = t('L.well-known.bio'), link = t('L.well-known.link-page'), mine = t('L.well-known.your-mailbox');
   // an uncreated own slot the walk stands at, as a LEAP's landing leaves it: no text read, no first line
   await WALK.focusTo(LINK, null);
   CAM.set({ ...LAYER.centreOf(LINK, null), scale: 12.5 / LAYER.foldOf(REC.doc(LINK)).fs });
   let a = LINE.addressDisplay(), seg = segment();
   assert.deepEqual([REC.doc(LINK).from, a.doc, a.name?.text, a.label, seg.label], [-1, LINK, link, [], link], 'its link page, no text read: its name alone, no joiner');
   a = await at(BIO); seg = segment();
-  assert.deepEqual([a.name, a.label], [{ id: 'L.well-known.bio', text: bio }, [{ text: 'Hello.', face: 'reading' }]], 'the bio: its name, then its first line');
+  assert.deepEqual([a.name, a.label], [{ id: 'L.well-known.bio', text: bio }, [{ text: 'Hello.', face: 'reading' }]], 'another account\'s bio: its name, then its first line');
   assert.equal(seg.label, `${bio} · Hello.`, 'drawn after the field: the name, a field\'s joiner, the first line');
   assert.ok(seg.labelHTML.startsWith(`<span class="slot-name" data-string="L.well-known.bio">${bio}</span><span class="joiner"> · </span><span class="reading">`), `the name its own element, its string named, before the first line's: ${seg.labelHTML}`);
   assert.equal(seg.name, `${a.place.split(' › ').join(', ')} ${heard(`${bio} · Hello.`)} ${t('F.position', { p: 1 })}`, `named by its fields, the slot's name, then its first line: ${seg.name}`);
@@ -1440,4 +1442,20 @@ test('a transient segment handed in as stretches is drawn as the client\'s words
     press('transient');
     assert.equal(went.length, 1, 'a press where no segment stands makes nothing');
   } finally { LINE.act(); globalThis.document = platform.document; }
+});
+
+test('nearer than mid the line names the one form the walk stands on as it names a document — the slot\'s name after its address\'s field, the acting account\'s own by its own name, slot 5 its address alone — with no position, no strip and no first line, and no record made at its address (the one form\'s part 6; FP-26)', async () => {
+  const listed = (/** @type {string[]} */ docs) => REC.takeIndex(/** @type {any} */ ({ docs: docs.map((doc) => ({ doc, kind: 'edition', label: 'd', standing: 'public' })), counts: [{ account: '1.0.1', documents: docs.length }], state: { arm: 'complete' } }));
+  const BIO = '1.0.1.0.3', FIVE = '1.0.1.0.5', yourBio = t('L.well-known.your-bio');
+  try {
+    listed([D, '1.0.1.0.1']);
+    for (const [form, name] of /** @type {Array<[string, {id: string, text: string} | undefined]>} */ ([[BIO, { id: 'L.well-known.your-bio', text: yourBio }], [FIVE, undefined]])) {
+      await WALK.focusTo(form, null);
+      const s = LAYER.shapeOf(form);
+      CAM.set({ x: s.x + s.w / 2, y: s.y + s.h / 2, scale: 14 / LAYER.formFold(form).fs });
+      const place = `1 › 1.0.1 › ${form}`;
+      assert.deepEqual([WALK.current()?.kind, LINE.addressDisplay()], ['form', { text: place, place, label: [], ...(name ? { name } : {}), slot: 0, addr: form, doc: form, pos: null, member: null, whole: false, strip: false, window: null }], `${form}: its fields, its slot's name, no position, no strip`);
+      assert.equal(REC.has(form), false, `${form}: no record made`);
+    }
+  } finally { listed([D]); }
 });

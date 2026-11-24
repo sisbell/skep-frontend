@@ -50,7 +50,7 @@ TILED_DEEP_CENTRE = edition(19 + FIRST_GRID)
 READABLE_EM = 8
 
 # a summary's figures as the report names them
-KEEP = ('frames', 'frame_p50', 'frame_p95', 'frame_p99', 'draw_p50', 'draw_p99', 'frames_over_33ms', 'worst_frame_ms', 'max_both', 'max_neither', 'max_barred',
+KEEP = ('frames', 'frame_p50', 'frame_p95', 'frame_p99', 'draw_p50', 'draw_p99', 'frames_over_33ms', 'worst_frame_ms', 'max_forms_drawn', 'max_both', 'max_neither', 'max_barred',
         'max_standing', 'max_lines', 'max_mounted', 'mounted')
 
 

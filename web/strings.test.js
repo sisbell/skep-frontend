@@ -1358,13 +1358,15 @@ test('the words at a reserved number are the lane\'s own as issue #771 decided t
   assert.ok(t('L.far.reserved.whole', { first: 64 }).startsWith(short.charAt(0).toUpperCase() + short.slice(1)), 'the whole form begins with the short form, a sentence\'s capital first');
 });
 
-test('the well-known slots\' names are the lane\'s own, the wording queue\'s DRAFTs verbatim (B11-F18 (2), (3)), each DRAFT with no design source, a name this app gives (K27), its screen naming the B11 screens and findings that show it, listed for the report; none is a byline slot\'s, none carries a token, and slot 5\'s word, a gap, has no entry', () => {
+test('the well-known slots\' names are the lanes\' own, the wording queue\'s DRAFTs verbatim (B11-F18 (2), (3); "your bio" and its siblings), each DRAFT with no design source, a name this app gives (K27), its screen naming the B11 screens and findings that show it, listed for the report; none is a byline slot\'s, none carries a token, and slot 5\'s word, a gap, has no entry, nor any "your" form of it', () => {
   /** @type {Record<string, [string, RegExp]>} each entry's words and the screens its `screen` names */
   const want = {
     'L.well-known.mailbox': ['mailbox', /B11-S2.*B11-S4.*B11-S5.*B11-S9.*B11-F10.*B11-F18 \(2\)/],
     'L.well-known.your-mailbox': ['your mailbox', /B11-S7.*B11-F18 \(3\)/],
     'L.well-known.bio': ['bio', /B11-S2.*B11-S4.*B11-S5.*B11-S9.*B11-F10.*B11-F18 \(2\)/],
     'L.well-known.link-page': ['link page', /B11-S2.*B11-S4.*B11-S5.*B11-S9.*B11-F10.*B11-F18 \(2\)/],
+    'L.well-known.your-bio': ['your bio', /B11-S5.*B11-S7.*B11-F18 \(2\)/],
+    'L.well-known.your-link-page': ['your link page', /B11-S5.*B11-S7.*B11-F18 \(2\)/],
   };
   for (const [id, [text, screens]] of Object.entries(want)) {
     const e = STRINGS[id];

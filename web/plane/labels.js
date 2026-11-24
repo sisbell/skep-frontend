@@ -32,7 +32,16 @@
 // the well-known slot a document stands at stands whole a space before its
 // address, its first line cut to the room before the name — so the first
 // line gives way first, then the name, and the address stands whole or no
-// label does (FP-26). A kept
+// label does (FP-26). At a fixed slot's cell inside a region named in view —
+// a slot document's and the one form's alike (`Contents.slot`) — the slot's
+// name spells the address's fields past the region's prefix, so short of
+// room the address gives way first and the name stands for it at the row's
+// end, then the first line is cut on a word, then it goes, then the name,
+// whole or not at all with the whole label (`slotRow`); and the names of one
+// region's first row stand or give way together, at the room the longest of
+// them needs as drawn, each slot cell's label left out whole with them, one
+// whose slot bears no name keeping its address as every label does and going
+// with the row (`rowStands`). A kept
 // document's clause (FP-23) follows its address at the address's size, never
 // its first line: whole at the row's end, the address a space before it, where
 // the row holds the two, so the first line gives way first; else the address
@@ -271,9 +280,10 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
  * @property {number} from where the lead's first word starts, on screen
  * @property {number} to where the lead's room ends, on screen
  * @property {number} end the row's end, on screen
+ * @property {boolean} [slot] it stands at a fixed slot's cell (2–5), a document's or the one form's: in a region named in view its address gives way first and its slot's name stands for it (`slotRow`), the names of the region's first row standing or giving way together (`rowStands`); absent or false at every other cell
  */
 
-/** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'newest' | 'member' | 'doc' | 'connection' | 'tail' | 'pip'} LabelKind the place a label names; 'mark' a continuation's mark's count, 'newest' its newest member's label and 'member' the name and place of the member the walk's ring stands on, each under the mark's name; 'connection' a mid connection's count; 'tail' a tail's far end in words, or its count; 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
+/** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'newest' | 'member' | 'doc' | 'form' | 'connection' | 'tail' | 'pip'} LabelKind the place a label names; 'form' the one form at an assigned slot no document stands at, its contents line a slot's name and an address; 'mark' a continuation's mark's count, 'newest' its newest member's label and 'member' the name and place of the member the walk's ring stands on, each under the mark's name; 'connection' a mid connection's count; 'tail' a tail's far end in words, or its count; 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
 
 /**
  * @typedef {Object} Label — a label a drawing function hands the pass
@@ -700,8 +710,11 @@ export function setLabels(labels, shapes, view, measure, named = new Set()) {
   const breaks = (/** @type {Rect} */ r, /** @type {Label} */ l) => past(r, l.within) || (past(r, view) ? 'view' : blocked(r, l.place) ? 'meets' : null);
   /** each part named left out, the first for the rule that left it out and every one after it with it */
   const leave = (/** @type {Label} */ l, /** @type {Part[]} */ ps, /** @type {Reason | null} */ why) => ps.forEach((p, j) => out.push({ kind: l.kind, place: l.place, text: plain(p.text), reason: j || !why ? 'after' : why }));
+  /** @type {Map<string, boolean>} each region's first row as `rowStands` decided it in this pass, by the region */
+  const rows = new Map();
   for (const raw of labels) {
-    const l = inRegion(raw, !!raw.region && (named.has(raw.region) || set.some((s) => (s.kind === 'frame' || s.kind === 'cluster') && s.place === raw.region)));
+    const regionIn = !!raw.region && (named.has(raw.region) || set.some((s) => (s.kind === 'frame' || s.kind === 'cluster') && s.place === raw.region));
+    const l = inRegion(raw, regionIn);
     const parts = l.parts.filter((p) => plain(p.text).trim());
     const c = l.contents && plain(l.contents.address.text).trim() ? l.contents : null;
     if (l.hold && (c || parts.length) && l.y < top - 1e-6) {
@@ -714,7 +727,14 @@ export function setLabels(labels, shapes, view, measure, named = new Set()) {
     const lines = [];
     let y = l.y, beneath = parts;
     if (c) {
-      const row = contentsRow(l, c);
+      // at a fixed slot's cell in a region named in view its slot's name spells its address's fields: the row's names stand together or none does
+      const spelled = regionIn && !!c.slot && !!l.region;
+      if (spelled && !rowStands(/** @type {string} */ (l.region))) {
+        for (const [j, p] of [c.address, c.name, c.lead, c.kept].filter((x) => !!x && plain(x.text).trim()).entries()) out.push({ kind: l.kind, place: l.place, text: plain(/** @type {Part} */ (p).text), reason: j ? 'after' : 'width' });
+        leave(l, parts, null);
+        continue;
+      }
+      const row = spelled ? slotRow(l, c) : contentsRow(l, c);
       if (!row.lines.length) { out.push(...row.out); leave(l, parts, null); continue; }
       out.push(...row.out);
       lines.push(...row.lines);
@@ -856,6 +876,99 @@ export function setLabels(labels, shapes, view, measure, named = new Set()) {
     const first = { text: plain(s), runs: runsOf(s, lbase), px: lpx, ink: lead.ink, weight: lweight, rect };
     if (s !== full) cuts.push({ line: first, full, base: lbase, close: lead.close || '' });
     return { lines: [first, ...tail], out: left, foot: l.y + lh, below };
+  }
+
+  /**
+   * Do the slot names of a region's first row stand (see the head; FP-26):
+   * the longest name its fixed slots' labels in this pass carry, as drawn,
+   * fits the least room any of those cells' rows gives it — so every one of
+   * them stands, or every one gives way, a cell whose name is not given going
+   * with them and setting no room. Decided once a pass.
+   * @param {string} region
+   * @returns {boolean}
+   */
+  function rowStands(region) {
+    let v = rows.get(region);
+    if (v === undefined) {
+      let need = 0, room = Infinity;
+      for (const x of labels) {
+        const c = x.contents;
+        if (!c || !c.slot || x.region !== region) continue;
+        room = Math.min(room, c.end - x.within.x);
+        const n = c.name && plain(c.name.text).trim() ? c.name : null;
+        if (n) need = Math.max(need, wideOf(measure, n.text.trim().replace(/\s+/g, ' '), sizeOf(n.px), n.weight || 'normal', n.face || 'client'));
+      }
+      v = need <= room + 1e-6;
+      rows.set(region, v);
+    }
+    return v;
+  }
+
+  /**
+   * A contents line at a fixed slot's cell in a region named in view (see the
+   * head; FP-26): where its row holds every part whole — its lead, its slot's
+   * name, its address and a kept clause after it — as `contentsRow` sets it;
+   * else, short of room, its address gives way first and its slot's name,
+   * which spells the address's fields, stands for it at the row's end; then
+   * its lead is cut on a word to the room before the name, LEAD_WORDS kept at
+   * the least, then the lead goes, then the name, whole or not at all, with
+   * the whole label; a kept clause, which follows the address, stands
+   * beneath the row where the address gave way. Where the slot bears no name,
+   * nothing spells its address: as `contentsRow` sets it.
+   * @param {Label} l
+   * @param {Contents} c
+   * @returns {{lines: SetLine[], out: LeftOut[], foot: number, below: Part | null}}
+   */
+  function slotRow(l, c) {
+    const name = c.name && plain(c.name.text).trim() ? c.name : null;
+    if (!name) return contentsRow(l, c);
+    const lead = c.lead && plain(c.lead.text).trim() ? c.lead : null, kept = c.kept && plain(c.kept.text).trim() ? c.kept : null;
+    const a = c.address, apx = sizeOf(a.px), aweight = a.weight || 'normal', abase = a.face || 'client', atext = a.text.trim().replace(/\s+/g, ' ');
+    const npx = sizeOf(name.px), nweight = name.weight || 'normal', nbase = name.face || 'client', ntext = name.text.trim().replace(/\s+/g, ' ');
+    const lpx = lead ? sizeOf(lead.px) : apx, lweight = lead ? lead.weight || 'normal' : 'normal', lbase = lead ? lead.face || 'client' : 'client';
+    const lh = Math.max(apx, sizeOf(c.px), lpx, npx) * LINE_BOX;
+    const aw = wideOf(measure, atext, apx, aweight, abase), nw = wideOf(measure, ntext, npx, nweight, nbase), nsp = wideOf(measure, ' ', npx, nweight, nbase);
+    /** a line's rect on the row, its right edge at `end` */
+    const at = (/** @type {number} */ end, /** @type {number} */ w, /** @type {number} */ px) => ({ x: end - w, y: l.y + (lh - px * LINE_BOX) / 2, w, h: px * LINE_BOX });
+    // the address where `contentsRow` sets it: at the row's end, or a space short of a kept clause the row holds there
+    let arect = at(c.end, aw, apx);
+    if (kept && l.alpha >= STRONGER) {
+      const kpx = sizeOf(kept.px), kweight = kept.weight || 'normal', kbase = kept.face || 'client', ktext = kept.text.trim().replace(/\s+/g, ' ');
+      const krect = at(c.end, wideOf(measure, ktext, kpx, kweight, kbase), kpx), short = at(krect.x - wideOf(measure, ' ', kpx, kweight, kbase), aw, apx);
+      if (!breaks(krect, l) && !breaks(short, l)) arect = short;
+    }
+    const lwide = (/** @type {string} */ s) => wideOf(measure, s, lpx, lweight, lbase), full = lead ? lead.text.trim().replace(/\s+/g, ' ') : '';
+    /** the room before a stop the lead's words may take, a space short of it */
+    const roomTo = (/** @type {number} */ stop) => Math.min(c.to, stop - lwide(' ')) - c.from;
+    /** the lead's rect from where its words stand, `s` its words */
+    const leadAt = (/** @type {string} */ s) => ({ x: c.from, y: l.y + (lh - lpx * LINE_BOX) / 2, w: lwide(s), h: lpx * LINE_BOX });
+    const withAddress = at(arect.x - nsp, nw, npx);
+    if (l.alpha >= STRONGER && !breaks(arect, l) && !breaks(withAddress, l) && (!lead || (lwide(full) <= roomTo(withAddress.x) + 1e-6 && !breaks(leadAt(full), l)))) return contentsRow(l, c);
+    /** @type {LeftOut[]} */
+    const left = [];
+    const nrect = at(c.end, nw, npx), why = l.alpha < STRONGER ? 'faint' : breaks(nrect, l);
+    if (why) {
+      left.push({ kind: l.kind, place: l.place, text: plain(atext), reason: why });
+      for (const p of [name, lead, kept]) if (p) left.push({ kind: l.kind, place: l.place, text: plain(p.text), reason: 'after' });
+      return { lines: [], out: left, foot: l.y + lh, below: null };
+    }
+    // the address gives way: its fields spelled by the name, which stands at the row's end
+    left.push({ kind: l.kind, place: l.place, text: plain(atext), reason: 'width' });
+    /** @type {SetLine[]} */
+    const tail = [{ text: plain(ntext), runs: runsOf(ntext, nbase), px: npx, ink: name.ink, weight: nweight, rect: nrect }];
+    if (!lead) return { lines: tail, out: left, foot: l.y + lh, below: kept };
+    const room = roomTo(nrect.x), fits = (/** @type {string} */ s) => lwide(s) <= room + 1e-6;
+    const s = room <= 0 ? null : fits(full) ? full : cutWords(full, fits, lead.close || '', LEAD_WORDS);
+    /** @type {Reason | null} */
+    const lwhy = !s ? 'width' : breaks(leadAt(s), l);
+    if (!s || lwhy) {
+      left.push({ kind: l.kind, place: l.place, text: plain(lead.text), reason: /** @type {Reason} */ (lwhy) });
+      return { lines: tail, out: left, foot: l.y + lh, below: kept };
+    }
+    /** @type {SetLine} */
+    const first = { text: plain(s), runs: runsOf(s, lbase), px: lpx, ink: lead.ink, weight: lweight, rect: leadAt(s) };
+    if (s !== full) cuts.push({ line: first, full, base: lbase, close: lead.close || '' });
+    return { lines: [first, ...tail], out: left, foot: l.y + lh, below: kept };
   }
 
   /**

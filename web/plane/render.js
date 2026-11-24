@@ -39,13 +39,25 @@
 // a triangle of its own where the board ended the chain there, and the
 // version the box shows held in the one line's window mark (P-REG's WINDOW);
 // a document a read answered `withheld`, whether the index lists it or not,
-// as the withheld box (B1-S2) — save another person's mailbox, for which no
-// box stands (M-REC's `known`); none at a number the map gives no cell,
-// whatever a read answered for it. The mid connections come
-// from LK's `connections`, each end at the outline that draws a document or
-// the mark that holds it — none where the plane draws its document nowhere
-// (`drawsDoc`, the one test LK reads through the reader the app hands it) —
-// a line between two places standing in the visible view, and from the place
+// as the withheld box (B1-S2) — save at an assigned slot, for which no box
+// stands (M-REC's `known`); none at a number the map gives no cell,
+// whatever a read answered for it. At each assigned slot in view no box
+// stands at, of an account whose home page is drawn (M-REC's `forms`), the
+// one form (B11-S5; `drawForm`), after the boxes and at their alpha, so
+// drawn wherever its region's boxes are and nowhere at far: four corner marks
+// at its cell's first column slot (T-LAYER's `shapeOf`), each an L of two
+// arms a quarter of their sides, never under a device pixel, one px, solid,
+// butt-ended and mitred, in P-REG's form ink as the person's settings ask it
+// (`inkOfForm`) — nothing inside them, its rectangle a shape of the pass —
+// and its label, its slot's name then its address (T-LAYER's `formLabel`),
+// set as a document's is, on no plate. The mid connections come
+// from LK's `connections`, each end at the outline that draws a document,
+// the mark that holds it or the one form's rectangle — none where the plane
+// draws no place for it (`drawsPlace`, the one test LK reads through the
+// reader the app hands it), and none at rest to the form at another person's
+// mailbox (LK's) — a line between two places standing in the visible view,
+// ending on a form's rectangle where it meets it, for no ground hides its end
+// there (`meetRect`), and from the place
 // standing there toward one out of it the edge stub: its stroke cut at the
 // view's border on the true bearing (P-CAM's `edgeStub`; foundations §2.1,
 // §2.5); two places both out of view joined only where the frame draws both;
@@ -117,10 +129,16 @@
 // whole of it. The app's loop runs T-LAYER's frame before `draw`, so what
 // stands is settled when a document's label and bars are drawn or yielded.
 // `stats` names what the frame drew, for the gate; the hit tests
-// (`docAtScreen`, `residueAtScreen`, `tailAtScreen`, `arrivalAtScreen`) read
-// the draw's own rule, as the last frame drew it — a mark's two targets among
+// (`placeAtScreen` and `docAtScreen`, `residueAtScreen`, `tailAtScreen`,
+// `arrivalAtScreen`) read the draw's own rule, as the last frame drew it — a
+// mark's two targets among it. A press's place (`placeAtScreen`): a place
+// whose drawn shape holds the point — a document's outline, the one form's
+// rectangle — else, where boxes are drawn, of the forms and the boxes drawn
+// smaller than P-REG's TARGET.min either way, each pressed in an area grown
+// about its rectangle's centre to that target each way (WCAG 2.2 SC 2.5.8),
+// the nearest centre winning where areas meet; the drawing never moves for
 // it. The system account's rows are never drawn (the record §1.8).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-21, FP-22, FP-23, FP-26, FP-35.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-25, FP-26, FP-35, FP-42.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -132,10 +150,10 @@ import * as GO from '../nav/go.js';
 import * as LINE from '../line/line.js';
 import { cam, sx, sy, wx, wy, viewport, viewportWorld, visibleView, edgeStub, stubTriangle, markDirty } from './camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
-import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt, membersAt, markKey, continuationOf } from './projection.js';
-import { bars, outline, outlineRects, firstRow, leadOf, GUTTER } from './layout.js';
+import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt, membersAt, markKey, continuationOf, assignedSlotOf } from './projection.js';
+import { bars, outline, outlineRects, boundsOf, firstRow, leadOf, GUTTER } from './layout.js';
 import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, inFace, runWidth, drawRun, LINE_BOX } from './labels.js';
-import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL, TARGET, ADDRESS, WINDOW, STRIP } from './register.js';
+import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL, TARGET, ADDRESS, WINDOW, STRIP, FORM, formInk } from './register.js';
 import { documentOf, accountOf, memberOf, isTrunkMember } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
 import { t, markCount, plural } from '../strings.js';
@@ -185,6 +203,7 @@ import { numeral } from '../util.js';
  * @property {string} b the place the other end stands at
  * @property {number} count the links it holds, each once
  * @property {Stub | null} stub where one place stands in the visible view and the other out of it; null for a line
+ * @property {[Point, Point]} stroke its stroke's two ends on screen: the places' centres, a stub's cut, and at a form the point its rectangle's boundary meets the stroke
  * @property {string | null} label the count the label pass set on its stroke; null where it set none — a connection holding one link, or one whose count the pass left out (`stats.labelsLeftOut` names why)
  */
 
@@ -221,6 +240,16 @@ import { numeral } from '../util.js';
  * @property {Rect | null} window its window's extent on screen; null where it holds none
  */
 
+/**
+ * @typedef {Object} DrawnForm — the one form the frame drew at an assigned slot no box stands at (`drawForm`; M-REC's `forms`)
+ * @property {string} addr the slot's address
+ * @property {Rect} rect its rectangle on screen: its cell's first column slot (T-LAYER's `shapeOf`)
+ * @property {number} alpha the alpha it is drawn at: the boxes' of its region
+ * @property {{w: number, h: number}} arms its marks' arms' lengths, px — along its top and its foot, and along its sides: a quarter of each side, never under a device pixel
+ * @property {string} ink the ink its marks are stroked in (P-REG's `formInk`)
+ * @property {string[]} label the lines the label pass set of its label; none where it left the label out (`stats.labelsLeftOut` names why)
+ */
+
 /** @type {HTMLCanvasElement | null} */
 let cv = null;
 /** @type {CanvasRenderingContext2D | null} */
@@ -238,7 +267,9 @@ let DPR = 1;
  * stands out of view, the count set on its stroke where the pass set one,
  * `tails` the tails drawn, each with its links and the label set at its end,
  * `strips` the history strips drawn, each with the members it marks, the one
- * its window holds and its head (`DrawnStrip`),
+ * its window holds and its head (`DrawnStrip`), `forms` the one form drawn at
+ * each assigned slot in view no box stands at, with its rectangle, its alpha,
+ * its arms and the lines set of its label (`DrawnForm`),
  * `labels` the labels set — the connections' counts, the tails' labels and
  * the trail's pip numbers among them — `labelsLeftOut` the parts the pass left out, each with
  * the rule that left it out, `ring` the focused element's box on screen the
@@ -251,6 +282,7 @@ export const stats = {
   connections: /** @type {DrawnConnection[]} */ ([]),
   tails: /** @type {DrawnTail[]} */ ([]),
   strips: /** @type {DrawnStrip[]} */ ([]),
+  forms: /** @type {DrawnForm[]} */ ([]),
   drawn: /** @type {string[]} */ ([]), labelled: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]),
   bars: /** @type {Array<[string, number]>} */ ([]), yieldedLines: /** @type {Array<[string, number]>} */ ([]), barred: 0,
   labels: /** @type {import('./labels.js').SetLabel[]} */ ([]),
@@ -460,8 +492,9 @@ function firstBar(/** @type {import('./layout.js').Bar[]} */ B, /** @type {numbe
  * its read, drawn covered or as a box no read has answered for (the index at
  * guest class lists no draft; a LEAP to one learns it exists, and a change of
  * class leaves every draft it drops owed its read, M-REC's `owed`) — the
- * system account's rows, every number the map gives no cell and another
- * person's mailbox a read answered `withheld` left out.
+ * system account's rows, every number the map gives no cell and every
+ * assigned slot a read answered `withheld` left out, the one form standing
+ * there instead (`drawForm`).
  * @returns {Doc[]}
  */
 function drawable() {
@@ -473,16 +506,80 @@ let drawnDocs = { rev: -1, docs: new Set() };
 /**
  * Does the plane draw a document somewhere — at its box where it stands whole,
  * or in the continuation's mark that holds it: a document `drawable` lists, a
- * version member as its document, whose box the two share? The one test of
- * where a link's far end can stand on the plane: the connections end only at
- * such a document, and LK tails a link whose far document is none (the
- * reader the app hands it).
+ * version member as its document, whose box the two share? Never at the one
+ * form's place, where no document stands (`drawsPlace`).
  * @param {string} addr
  * @returns {boolean}
  */
 export function drawsDoc(addr) {
   if (drawnDocs.rev !== REC.rev()) drawnDocs = { rev: REC.rev(), docs: new Set(drawable().map((d) => documentOf(d.addr) || d.addr)) };
   return drawnDocs.docs.has(documentOf(addr) || addr);
+}
+
+/**
+ * Does the plane draw a place for an address's document: the document — at
+ * its box, or in the mark holding it (`drawsDoc`) — or, at an assigned slot
+ * no document the reader can read stands at, the one form (M-REC's
+ * `isForm`), a place and never a document. The one test of where a link's
+ * far end can stand on the plane: the connections end only at such a place,
+ * and LK tails a link whose far end has none (the reader the app hands it).
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export const drawsPlace = (addr) => drawsDoc(addr) || REC.isForm(addr);
+
+/**
+ * The one form's four corner marks (see the head; P-REG's FORM): at each
+ * corner of its rectangle an L of two arms along its two sides, each a
+ * quarter of its side and never under a device pixel, so half of every side
+ * stands open — stroked on the rectangle's boundary, one px, solid, butt
+ * ends and mitred corners, at the boxes' alpha; nothing inside them.
+ * @param {CanvasRenderingContext2D} c
+ * @param {Rect} r its rectangle on screen
+ * @param {string} ink
+ * @param {number} alpha
+ * @returns {{w: number, h: number}} its arms' lengths: along its top and its foot, and along its sides
+ */
+function drawForm(c, r, ink, alpha) {
+  const least = 1 / DPR, aw = Math.max(r.w * FORM.arm, least), ah = Math.max(r.h * FORM.arm, least);
+  const x0 = r.x, y0 = r.y, x1 = r.x + r.w, y1 = r.y + r.h;
+  c.globalAlpha = alpha; c.strokeStyle = ink; c.lineWidth = FORM.width; c.lineCap = 'butt'; c.lineJoin = 'miter'; c.setLineDash([]);
+  c.beginPath();
+  c.moveTo(x0 + aw, y0); c.lineTo(x0, y0); c.lineTo(x0, y0 + ah);
+  c.moveTo(x1 - aw, y0); c.lineTo(x1, y0); c.lineTo(x1, y0 + ah);
+  c.moveTo(x1, y1 - ah); c.lineTo(x1, y1); c.lineTo(x1 - aw, y1);
+  c.moveTo(x0 + aw, y1); c.lineTo(x0, y1); c.lineTo(x0, y1 - ah);
+  c.stroke();
+  return { w: aw, h: ah };
+}
+
+/**
+ * The form's ink as the frame is drawn (P-REG's `formInk`): the person's
+ * settings read through the platform — more contrast asked, and forced
+ * colours, CanvasText then read as the style resolves it on the canvas's own
+ * element (the style's `#plane`).
+ * @returns {string}
+ */
+function inkOfForm() {
+  const w = typeof window !== 'undefined' ? window : null;
+  const asks = (/** @type {string} */ q) => !!w && typeof w.matchMedia === 'function' && w.matchMedia(q).matches;
+  const forced = asks('(forced-colors: active)') && cv && typeof getComputedStyle === 'function' ? getComputedStyle(cv).color || null : null;
+  return formInk({ more: asks('(prefers-contrast: more)'), forced });
+}
+
+/**
+ * Where a straight stroke from a point toward a rect's centre meets the rect:
+ * the first point of it the rect holds — on its boundary where the point lies
+ * outside it, the point itself where the rect holds it.
+ * @param {Point} p
+ * @param {Rect} r
+ * @returns {Point}
+ */
+function meetRect(p, r) {
+  const dx = r.x + r.w / 2 - p.x, dy = r.y + r.h / 2 - p.y;
+  let t = 0;
+  for (const [d, at, lo, hi] of [[dx, p.x, r.x, r.x + r.w], [dy, p.y, r.y, r.y + r.h]]) if (d !== 0) t = Math.max(t, Math.min((lo - at) / d, (hi - at) / d));
+  return { x: p.x + t * dx, y: p.y + t * dy };
 }
 
 /** the part of a screen rect inside another — the visible view — zero-sized where none is */
@@ -618,18 +715,22 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   /** @type {Map<string, string>} the place of each document a mark drawn here holds */
   const heldAt = new Map();
   for (const m of marks) if (m.k === cont.held) for (const a of m.members) heldAt.set(a, m.key);
-  /** @type {Map<string, {x: number, y: number, w: number, h: number}>} each place met, by its key: a document's outline's bounds, a mark's cell */
+  /** @type {Map<string, {x: number, y: number, w: number, h: number}>} each place met, by its key: a document's outline's bounds, a mark's cell, a form's rectangle */
   const cells = new Map();
   const placeOf = (/** @type {string} */ addr) => {
     const doc = documentOf(addr) || addr, account = accountOf(doc);
-    if (!drawsDoc(doc)) return null;
+    if (!drawsPlace(doc)) return null;
     const key = account && withinContinuation(doc, cont.held) ? markKey(account, cont.held) : doc;
     if (!cells.has(key)) cells.set(key, key === doc ? LAYER.shapeOf(GO.shownIn(doc)) : continuationCell(/** @type {string} */ (account), cont.held));
     return key;
   };
-  /** the places this frame draws: the boxes standing whole, the marks holding their documents */
-  const drawnAt = new Set([...vis.map((x) => placeOf(x.d.addr)), ...heldAt.values()]);
+  // the one form at each assigned slot in view no box stands at (M-REC's `forms`): a place of the frame's
+  const forms = REC.forms().filter((addr) => intersects(docBox(addr), v));
+  /** the places this frame draws: the boxes standing whole, the marks holding their documents, the forms */
+  const drawnAt = new Set([...vis.map((x) => placeOf(x.d.addr)), ...heldAt.values(), ...forms.map(placeOf)]);
   const centreOf = (/** @type {string} */ key) => { const c = /** @type {{x: number, y: number, w: number, h: number}} */ (cells.get(key)); return { x: sx(c.x + c.w / 2), y: sy(c.y + c.h / 2) }; };
+  /** a form's rectangle on screen where a place is one (M-REC's `isForm`), which a connection ends on: no ground hides its stroke there; null for a box or a mark */
+  const formAt = (/** @type {string} */ key) => { if (!REC.isForm(key)) return null; const c = /** @type {Rect} */ (cells.get(key)); return { x: sx(c.x), y: sy(c.y), w: c.w * cam.scale, h: c.h * cam.scale }; };
   const inView = (/** @type {Point} */ p) => p.x >= seen.x && p.x <= seen.x + seen.w && p.y >= seen.y && p.y <= seen.y + seen.h;
   /** @type {Array<{place: string, count: number, p: Point, q: Point}>} each connection holding more than one link, and the stroke its count stands on: to the far place's centre, or to the stub's triangle's base */
   const counted = [];
@@ -642,18 +743,20 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
       const A = centreOf(c.a), B = centreOf(c.b), inA = inView(A), inB = inView(B);
       // both out of view: a line only between two places the frame draws, unless both lie far past one side
       if (!inA && !inB && (!drawnAt.has(c.a) || !drawnAt.has(c.b) || (A.x < -400 && B.x < -400) || (A.x > VW + 400 && B.x > VW + 400) || (A.y < -400 && B.y < -400) || (A.y > VH + 400 && B.y > VH + 400))) continue;
+      // at a form, which has no ground to hide its end, the stroke ends on the form's rectangle where it meets it: never short of it, never inside
+      const fa = formAt(c.a), fb = formAt(c.b);
       /** @type {Stub | null} */
       let stub = null;
       if (inA !== inB) {
-        const [from, to, toward] = inA ? [A, B, c.b] : [B, A, c.a];
+        const [from, to, toward, at] = inA ? [A, B, c.b, fa] : [B, A, c.a, fb];
         const cut = edgeStub(from, to, seen);
-        stub = { toward, from, cut, triangle: stubTriangle(cut, to), hue: c.mark.hue, alpha: alpha * c.mark.value };
+        stub = { toward, from: at ? meetRect(cut, at) : from, cut, triangle: stubTriangle(cut, to), hue: c.mark.hue, alpha: alpha * c.mark.value };
       }
-      const [p, q] = stub ? [stub.from, stub.cut] : [A, B];
+      const [p, q] = stub ? [stub.from, stub.cut] : [fa ? meetRect(B, fa) : A, fb ? meetRect(A, fb) : B];
       ctx.globalAlpha = alpha * 0.3 * c.mark.value; ctx.strokeStyle = c.mark.hue;
       ctx.setLineDash(Array.isArray(c.mark.form) ? c.mark.form : []);
       ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); ctx.setLineDash([]); drawn++;
-      stats.connections.push({ a: c.a, b: c.b, count: c.count, stub, label: null });
+      stats.connections.push({ a: c.a, b: c.b, count: c.count, stub, label: null, stroke: [p, q] });
       if (c.count > 1) counted.push({ place: pairOf(c.a, c.b), count: c.count, p, q: stub ? { x: (stub.triangle[1].x + stub.triangle[2].x) / 2, y: (stub.triangle[1].y + stub.triangle[2].y) / 2 } : q });
     }
   }
@@ -695,7 +798,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
       // the label pass in that row on the document's ground, else held below the one line in its outline, but where the line names the document
       const lab = LAYER.docLabel(d, fsPx), lead = leadOf(f), col = f.columns[lead.column], rowH = Math.max(lineHeight(lab.address.px), lineHeight(fsPx));
       pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X, y: Y, w: W, h: H }, x: sx(box.x + col.x), y: Math.max(Y, sy(box.y + lead.y + lead.h / 2) - rowH / 2), align: 'left', alpha: a, plate: ground,
-        contents: { lead: lab.lead, name: lab.name, px: fsPx, address: lab.address, kept: lab.kept, from: sx(box.x + lead.x), to: sx(box.x + col.x + col.w), end: X + W },
+        contents: { lead: lab.lead, name: lab.name, px: fsPx, address: lab.address, kept: lab.kept, from: sx(box.x + lead.x), to: sx(box.x + col.x + col.w), end: X + W, slot: assignedSlotOf(doc) != null },
         parts: lab.parts, region: lab.region, hold: named.doc === doc ? null : { rects, pad: g * cam.scale, plate: ground } });
       // the history strip along the outline's top, from the first row's text: the members, the head, the version the box shows
       if (W > 60) { const s = drawStrip(ctx, d, doc, X, sy(box.y + row.y)); if (s) stats.strips.push(s); }
@@ -724,6 +827,26 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     }
     if (set) stats.drawn.push(d.addr);
   }
+  // the one form at each assigned slot no box stands at, with the boxes and at their alpha — the boxes at its depth stand whole wherever boxes are
+  // drawn: its four corner marks at its cell's first column slot, nothing inside them, its rectangle a shape of the pass, so no other label stands
+  // on it; its label — its slot's name, then its address (T-LAYER's `formLabel`) — handed to the pass as a document's is, at the head of that
+  // rectangle, held below the one line within it but where the line names it, on no plate, the ground showing through
+  const ink = inkOfForm();
+  for (const addr of forms) {
+    const w = LAYER.shapeOf(addr), box = docBox(addr), f = LAYER.formFold(addr);
+    const rect = { x: sx(w.x), y: sy(w.y), w: w.w * cam.scale, h: w.h * cam.scale };
+    const arms = drawForm(ctx, rect, ink, alpha);
+    pass.shapes.push({ place: addr, rect, alpha });
+    stats.forms.push({ addr, rect, alpha, arms, ink, label: [] });
+    const row = firstRow(f), g = (GUTTER / 2) * f.fs;
+    const X = sx(box.x + row.x + g), Y = sy(box.y + row.y + g), W = (row.w - 2 * g) * cam.scale, H = (row.h - 2 * g) * cam.scale;
+    if (W < 10) continue;
+    const fsPx = f.fs * cam.scale, lab = LAYER.formLabel(addr), lead = leadOf(f), col = f.columns[lead.column], rowH = Math.max(lineHeight(lab.address.px), lineHeight(fsPx));
+    pass.labels.push({ kind: 'form', place: addr, within: { x: X, y: Y, w: W, h: H }, x: sx(box.x + col.x), y: Math.max(Y, sy(box.y + lead.y + lead.h / 2) - rowH / 2), align: 'left', alpha, plate: null,
+      contents: { lead: null, name: lab.name, px: fsPx, address: lab.address, kept: null, from: sx(box.x + lead.x), to: sx(box.x + col.x + col.w), end: X + W, slot: true },
+      parts: [], region: lab.region, hold: named.doc === addr ? null : { rects: [rect], pad: g * cam.scale, plate: null } });
+  }
+  ctx.globalAlpha = 1;
   // the tails, once every place's shape is drawn: each stroke a shape of the pass, so no count stands on it, and its label handed to it
   if (lod.docPx > 6) stats.tails = tailsOf(docsDrawn, placeOf, alpha, pass, seen);
   // each connection's count, once every place's shape is drawn: on its stroke where its room meets none of them (P-LABEL's `onStroke`), the
@@ -881,6 +1004,7 @@ function drawLabels(pass, seen, named) {
   const counts = new Map(set.filter((l) => l.kind === 'connection').map((l) => [l.place, l.lines[0].text]));
   for (const cn of stats.connections) cn.label = counts.get(pairOf(cn.a, cn.b)) ?? null;
   for (const tl of stats.tails) { const l = set.find((x) => x.kind === 'tail' && x.place === tl.key); tl.label = l ? l.lines.map((x) => x.text) : []; tl.rects = l ? l.lines.map((x) => x.rect) : []; }
+  for (const fm of stats.forms) { const l = set.find((x) => x.kind === 'form' && x.place === fm.addr); fm.label = l ? l.lines.map((x) => x.text) : []; }
   const drawn = new Set(stats.drawn);
   for (const l of set) if (l.kind === 'doc') { stats.labelled.push(l.place); if (!drawn.has(l.place)) stats.drawn.push(l.place); }
 }
@@ -1115,7 +1239,7 @@ export function draw() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, VW, VH);
   ctx.textBaseline = 'alphabetic';
-  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.tails = []; stats.strips = []; stats.drawn = []; stats.labelled = []; stats.yielded = [];
+  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.tails = []; stats.strips = []; stats.forms = []; stats.drawn = []; stats.labelled = []; stats.yielded = [];
   stats.bars = []; stats.yieldedLines = []; stats.barred = 0; stats.labels = []; stats.labelsLeftOut = []; stats.ring = null; stats.arrival = [];
   /** @type {Pass} */
   const pass = { labels: [], shapes: [] };
@@ -1156,17 +1280,65 @@ export function arrivalAtScreen(px, py) {
   return a && r ? { addr: a.addr, run: r.run } : null;
 }
 
-/** the document under a screen point where it stands whole, on its outline — of the boxes the plane draws (`drawable`), each the version its box shows (N-GO's `shownIn`), the outline that version's; one a continuation's mark holds is the mark's (a hit test; draws nothing) */
-export function docAtScreen(/** @type {number} */ px, /** @type {number} */ py) {
-  const { held } = residueDepth(cam.scale);
+/**
+ * @typedef {Object} PlaceHit — the place a press under a screen point goes to (`placeAtScreen`)
+ * @property {string} addr a document — the version its box shows — or the slot a form stands at
+ * @property {boolean} form it is the one form's place, where no document stands
+ * @property {boolean} padded the point lies outside every drawn shape, in the press area grown about the place's drawn rectangle (P-REG's TARGET)
+ */
+
+/**
+ * The place a press under a screen point goes to, as the last frame drew the
+ * places (a hit test; draws nothing; see the head): a place whose drawn shape
+ * holds the point — a document's outline, of the boxes the plane draws
+ * (`drawable`), each the version its box shows (N-GO's `shownIn`), the
+ * outline that version's, one a continuation's mark holds being the mark's;
+ * the one form's rectangle (M-REC's `forms`) wherever the frame draws boxes —
+ * else, where the frame draws boxes, of the forms and of the boxes whose
+ * drawn outline is smaller than P-REG's TARGET.min either way, each pressed
+ * in an area grown about its drawn rectangle's centre to TARGET.min each way,
+ * the one of those holding the point whose drawn rectangle's centre is
+ * nearest it. A box at least TARGET.min each way is pressed on its outline
+ * alone, and no area reaches into a shape another place has drawn, for the
+ * drawn shapes are read first. Null where none holds the point.
+ * @param {number} px
+ * @param {number} py
+ * @returns {PlaceHit | null}
+ */
+export function placeAtScreen(px, py) {
+  const { held } = residueDepth(cam.scale), boxes = lodOf(cam.scale).name !== 'far';
   const wxp = wx(px), wyp = wy(py);
   const inside = (/** @type {{x: number, y: number, w: number, h: number}} */ b, /** @type {number} */ x, /** @type {number} */ y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
-  for (const d of drawable()) {
-    if (withinContinuation(d.addr, held)) continue;
+  const docs = drawable().filter((d) => !withinContinuation(d.addr, held)), forms = boxes ? REC.forms() : [];
+  for (const d of docs) {
     const b = docBox(d.addr);
-    if (inside(b, wxp, wyp) && outlineRects(LAYER.foldOf(d)).some((r) => inside(r, wxp - b.x, wyp - b.y))) return d.addr;
+    if (inside(b, wxp, wyp) && outlineRects(LAYER.foldOf(d)).some((r) => inside(r, wxp - b.x, wyp - b.y))) return { addr: d.addr, form: false, padded: false };
   }
-  return null;
+  for (const addr of forms) if (inside(LAYER.shapeOf(addr), wxp, wyp)) return { addr, form: true, padded: false };
+  if (!boxes) return null;
+  // the press areas: no further from a place's box than half the least target, so a box whose box lies further is no candidate
+  const reach = TARGET.min / 2 / cam.scale, near = (/** @type {string} */ addr) => { const b = docBox(addr); return wxp >= b.x - reach && wxp <= b.x + b.w + reach && wyp >= b.y - reach && wyp <= b.y + b.h + reach; };
+  /** @type {PlaceHit | null} */
+  let best = null;
+  let bd = Infinity;
+  /** a place's drawn rectangle, in world units: a candidate where its press area holds the point, the nearest centre kept */
+  const take = (/** @type {string} */ addr, /** @type {boolean} */ form, /** @type {Rect} */ r) => {
+    const w = r.w * cam.scale, h = r.h * cam.scale;
+    if (!form && w >= TARGET.min && h >= TARGET.min) return;
+    const cx = sx(r.x + r.w / 2), cy = sy(r.y + r.h / 2), aw = Math.max(w, TARGET.min) / 2, ah = Math.max(h, TARGET.min) / 2;
+    if (Math.abs(px - cx) > aw || Math.abs(py - cy) > ah) return;
+    const dd = (px - cx) ** 2 + (py - cy) ** 2;
+    if (dd < bd) { bd = dd; best = { addr, form, padded: true }; }
+  };
+  for (const d of docs) if (near(d.addr)) { const b = docBox(d.addr), s = boundsOf(LAYER.foldOf(d)); take(d.addr, false, { x: b.x + s.x, y: b.y + s.y, w: s.w, h: s.h }); }
+  for (const addr of forms) if (near(addr)) take(addr, true, LAYER.shapeOf(addr));
+  return best;
+}
+
+/** the document under a screen point a press goes to (`placeAtScreen`): its outline, or a small box's press area; null where none, or where the press goes to the one form's place, which holds no document (a hit test; draws nothing) */
+export function docAtScreen(/** @type {number} */ px, /** @type {number} */ py) {
+  const p = placeAtScreen(px, py);
+  return p && !p.form ? p.addr : null;
 }
 
 /**

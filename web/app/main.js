@@ -68,7 +68,7 @@
 // pane holding the platform's focus, SC's `focusedPane`, Q4, and the reason a
 // slot that sends gives at the moved scene's held version, SC's
 // `heldReasonAt`);
-// LK's (the links lit, P-RENDER's `drawsDoc`, T-LAYER's
+// LK's (the links lit, P-RENDER's `drawsPlace`, T-LAYER's
 // owner rule, `shownIn`, and a far document's first line, T-LAYER's
 // `firstOfFar` by T-ARTICLE's one rule); N-WALK's (Back's light, what a landing says,
 // `shownIn`, why no board is held, and the plane's selection, O-SELECTION's
@@ -299,7 +299,7 @@ function loop(/** @type {number} */ now) {
     const S = RENDER.stats, stood = LAYER.frameStats();
     const both = new Set([...S.labelled.filter((a) => LAYER.isMounted(a)), ...S.bars.filter(([a, i]) => LAYER.lineStands(a, i)).map(([a]) => a)]).size;
     const neither = new Set([...S.yielded.filter((a) => !LAYER.standing(a)), ...S.yieldedLines.filter(([a, i]) => !LAYER.lineStands(a, i)).map(([a]) => a)]).size;
-    frames.push({ t: now, interval: now - lastT, drawMs, lod: lod.name, docs: S.docsDrawn, both, neither, barred: S.barred, mounted: stood.mounted, standing: stood.standing, lines: stood.lines, phase: phase.name || undefined });
+    frames.push({ t: now, interval: now - lastT, drawMs, lod: lod.name, docs: S.docsDrawn, forms: S.forms.length, both, neither, barred: S.barred, mounted: stood.mounted, standing: stood.standing, lines: stood.lines, phase: phase.name || undefined });
     if (frames.length > FRAME_CAP) frames.splice(0, frames.length - FRAME_CAP);
     lastRev = rev; lastWriteRev = wrev; lastLayerRev = lrev; lastKeptRev = krev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
   }
@@ -389,7 +389,7 @@ async function boot() {
   // each reading scene's pane a site of its own: its selection O-SELECTION's, an overlay at it O-HOST's
   SEL.readers({ pane: SCENE.siteOf, focused: SCENE.focusedPane, heldReason: SCENE.heldReasonAt });
   HOST.readers({ pane: SCENE.siteOf });
-  LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null), first: LAYER.firstOfFar });
+  LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsPlace, owner: LAYER.originOwner, shown: GO.shownIn, text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null), first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords(), enter: () => { LINE.act(); HINT.act(); return KEYS.activate(); }, selection: () => SEL.selected('plane') });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', () => { resize(); LINE.fit(); }); resize();

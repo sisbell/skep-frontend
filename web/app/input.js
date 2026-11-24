@@ -122,10 +122,16 @@
 // (P-RENDER's `residueAtScreen`): the band its newest member's label stands
 // in, a teleport to that member — the version its box shows — and the rest
 // of the mark, which opens its members' list (O-MARK-LIST), the pointer's
-// shape over each its own while it hovers there (`aim`); below the readable
+// shape over each its own while it hovers there (`aim`), and nothing else
+// taking a look under the pointer, a box or a form alike; below the readable
 // threshold a document is a place wherever the pointer falls, bars or mounted text
 // alike — a teleport to the version its box shows, which P-RENDER's hit
-// test answers (FP-22); each LEAP a click makes is made where it fell, where
+// test answers (FP-22); the one form at an assigned slot is a place at every
+// scale it is drawn, a teleport to the slot's address (B11-S5's press); a
+// form, and a box drawn smaller than the least target, is pressed in an area
+// grown to that target about its rectangle, the nearer centre winning where
+// two areas meet and a drawn shape always its own place's (P-RENDER's
+// `placeAtScreen`; P-REG's TARGET); each LEAP a click makes is made where it fell, where
 // the face of a failure known at the act, or its reaching, stands (N-GO);
 // at the readable threshold and above, a press in a gutter or a margin of a
 // document is on its ground; an account at far is a teleport to its region,
@@ -795,7 +801,7 @@ function takeSelection(dragged, anew = false) {
   else void WALK.followCaret();
 }
 
-/** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes; a document's ground at its reading scale is the act the next key follows; an account at far goes to its region, where a board is held; else the click is the pointer's Esc, one step of its order (N-KEYS' `esc`) */
+/** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes — a document's outline, the one form's rectangle at an assigned slot, or the press area of a form or a box drawn smaller than the least target (P-RENDER's `placeAtScreen`), a form at every scale it is drawn, holding no text; a document's ground at its reading scale is the act the next key follows; an account at far goes to its region, where a board is held; else the click is the pointer's Esc, one step of its order (N-KEYS' `esc`) */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   acted();
   /** the point of the plane the click fell on: where a teleport it makes is made, and what the stop nearest it is read from */
@@ -815,7 +821,9 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   const lod = lodOf(CAM.cam.scale);
   const residue = RENDER.residueAtScreen(px, py);
   if (residue) { if (residue.target === 'newest') GO.leapTo(GO.shownIn(residue.newest), { how: 'click', site }); else { oneSelection(); void MARKLIST.open(residue.key, false); } return; }
-  const doc = RENDER.docAtScreen(px, py);
+  const place = RENDER.placeAtScreen(px, py);
+  if (place && place.form) { GO.leapTo(place.addr, { how: 'click', site }); return; }
+  const doc = place ? place.addr : null;
   if (doc) {
     if (!LAYER.atReadingScale(doc)) { GO.leapTo(doc, { how: 'click', site }); return; }
     // at reading scale a press on its text is held for the text (`afterFrame`); one in a gutter or a margin is on its ground
