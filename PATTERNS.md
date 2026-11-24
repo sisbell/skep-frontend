@@ -294,6 +294,18 @@ the top line means FP-37.
   step of Esc's order, and its last step keeps the caret, never drops
   it.
 
+## The press
+
+- **FP-44 A small place is pressed in an area at least 24 px each
+  way.** On the plane, the one form, and every document box drawn
+  smaller than 24 CSS px either way, is pressed anywhere in an area
+  grown about its drawn rectangle's centre to at least 24 px each way.
+  A point inside a place's drawn shape goes to that place; outside
+  every drawn shape, where areas meet, the place whose centre is
+  nearest wins. The drawing never changes for it. This binds every
+  press on a place of the plane — a document's box, the one form, and
+  any place a later lane draws.
+
 ## The jump
 
 - **FP-25 A jump moves the reader when made; the read only fills the
@@ -327,6 +339,19 @@ the top line means FP-37.
   the plane, the walk, a hit, the text layer and the pump leave it out.
   Every face that answers an act there offers the jump to its account's
   region.
+
+## The one form
+
+- **FP-43 An open frame stands only for the one form.** An open
+  frame — an L at each corner of a rectangle, the middle of every side
+  left open — means one thing on every surface: an assigned slot (2–5)
+  of an account whose home page is drawn, where no document the reader
+  can read stands. Every other mark that bounds a place — a box, a
+  frame, a region, solid or dashed — is closed all the way round. No
+  focus, selection, hover, arrival, crop or handle look takes corner
+  Ls, the walk's focus at a span included. This binds the plane, the
+  scene's panes, the overlays, and the form at reading scale, whose
+  face stands inside its corners.
 
 ## What stands
 
@@ -685,7 +710,7 @@ last. Each stands until a later decision says it changes it.
 - **B3-S7's put-back** (D5 K-102; the past states survey's P7, P43, P44): a past state's passages the current text lacks are marked in pane B by identity at their line's edge — those on one line one mark carrying their count, a walk element whose face holds C-49 and "put back in the current text" — and the act places a passage's words by identity, a member's by the member the preview names, where the words before it stand in the current text at the press, else before the words after it, one step of its own that Mod+Z takes back → FP-9, FP-11
 - **#675**: a draft's history list is headed by one row naming, in its own words cut between words and never wrapped, what the next press acts on — pane B's selection, else the passage held — its act bringing the passage into view in each pane holding it, else opening its words whole beneath, the row held at the column's top above the day heads; the step's row, its chords and its press land with #705, the record of the page's own acknowledged changes and the step built beneath them → FP-26, FP-36
 - **#771**: the plane's cell map alone says which numbers are reserved, no jump to one flies or takes a trail entry and no read of one is keyed to the account's first cell — a reserved address showing "reserved number" on the LEAP box's row as it is typed and wherever a link's far-end state shows until a read answers otherwise, a merged tail naming a state only where all its ends share one and the tail staying as #132 draws it, and after the press the face following the board's answer — nothing registered the reserved words then the board's own, withheld its withheld face with no reserved words, a document there this version draws nowhere offering "read it beside" in a reading scene's pane, any other answer the reserved words then its own — every arm offering the jump to the account's region, the LEAP box staying open on the typed address with the face at its row and the jump on the row below (changes #224) → FP-42, FP-25, FP-21, FP-26, FP-20, FP-36
-- **The one form's drawing** (`ux/questions/2026-11-24-one-form-drawing.decision.md`, parts 1–8; the owner's minimum press area): at each assigned slot of an account whose home page is drawn where no document the reader can read stands, the plane draws four open corner marks at the cell's first column slot — each arm a quarter of its side, one px, solid, in the labels' ink at the 3:1 floor, nothing inside — with the slot's label, its name then its address, wherever its region's boxes stand and at their alpha, the acting account's own bio and link page named "your bio" and "your link page" on every surface; it is a fixed walk stop among its account's children in record order, named by its label and ringed at its rectangle, with no hover look; a click, a tap or Enter anywhere in it is a LEAP to the slot's address, and it and every box drawn smaller than 24 px either way take a press area of 24 × 24 px about their centre, the nearer centre winning where areas meet and a drawn shape always its own place's; and a link the reader can read whose far end is the slot's address is a connection or a beam ending on its rectangle, none at rest at another person's mailbox, no tail drawn toward an assigned slot (changes #132) → FP-25, FP-26, FP-33, FP-42, FP-20
+- **The one form's drawing** (`ux/questions/2026-11-24-one-form-drawing.decision.md`, parts 1–8; the owner's minimum press area): at each assigned slot of an account whose home page is drawn where no document the reader can read stands, the plane draws four open corner marks at the cell's first column slot — each arm a quarter of its side, one px, solid, in the labels' ink at the 3:1 floor, nothing inside — with the slot's label, its name then its address, wherever its region's boxes stand and at their alpha, the acting account's own bio and link page named "your bio" and "your link page" on every surface; it is a fixed walk stop among its account's children in record order, named by its label and ringed at its rectangle, with no hover look; a click, a tap or Enter anywhere in it is a LEAP to the slot's address, and it and every box drawn smaller than 24 px either way take a press area of 24 × 24 px about their centre, the nearer centre winning where areas meet and a drawn shape always its own place's; and a link the reader can read whose far end is the slot's address is a connection or a beam ending on its rectangle, none at rest at another person's mailbox, no tail drawn toward an assigned slot (changes #132) → FP-25, FP-26, FP-33, FP-42, FP-20, FP-43, FP-44
 - **The one form's drawing, part 9** (`ux/questions/2026-11-24-one-form-drawing.decision.md`): #23's order stands — first line, slot's name, address — and at a fixed slot's cell, a form's or a slot document's, the address gives way before the first line is cut, the first line before the name, the four slot cells of a region's first row left bare together at the room the longest name needs, slot 5 going with them (changes #23) → FP-26
 - **#772**: a covered mailbox, and another person's mailbox, draw the one form, never the withheld box → FP-29, FP-25
 
