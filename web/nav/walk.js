@@ -223,7 +223,8 @@
 // answered `withheld`, its withheld box's words (B1-S2), its first line
 // standing for none, and for one the board said nothing about the words for
 // that (`L.far.unregistered`); then by its address, then, listed after it
-// where it has them, the first line its
+// where it has them, the name of the well-known slot it stands at, the words
+// its label sets (T-LAYER's `slotNamed`; B11-S5; FP-33), and the first line its
 // box's label sets as the mirror says it (T-LAYER's `mirrorLabel`, the one the
 // status region names it by), the version's own — its words quoted, the
 // client's words in their place bracketed — then its state (T-LAYER's
@@ -694,11 +695,13 @@ function named(n, i, total) {
   if (n.kind === 'mark') return item(plainly(ended(markCount(membersOf(n.addr).length, REC.countsExact()))), at);
   if (n.kind === 'document') {
     // led by its corner's first item — its kind, else a refused document's own words (T-LAYER's `mirrorLead`) — then its address;
-    // listed after them, a version's own first line, as its box's label names it (T-LAYER's `mirrorLabel`; FP-22), its state as
-    // its corner states it after that item, whole, where a read told it (T-LAYER's `mirrorState`), and its positions
-    const d = REC.doc(n.addr), label = LAYER.mirrorLabel(d), head = { kind: LAYER.mirrorLead(d), document: n.addr };
+    // listed after them, the name of the well-known slot it stands at, the words its label sets (T-LAYER's `slotNamed`; FP-33), a
+    // version's own first line, as its box's label names it (T-LAYER's `mirrorLabel`; FP-22), its state as its corner states it
+    // after that item, whole, where a read told it (T-LAYER's `mirrorState`), and its positions
+    const d = REC.doc(n.addr), label = LAYER.mirrorLabel(d), head = { kind: LAYER.mirrorLead(d), document: n.addr }, slot = LAYER.slotNamed(n.addr);
     const own = listSaid([
       { text: opening('L.mirror.document', head, ['kind']), html: openingHTML('L.mirror.document', head, { document: 'id' }, ['kind']), runs: openingRuns('L.mirror.document', head, { document: 'ident' }, ['kind']) },
+      slot ? { text: slot.text, html: `<span data-string="${esc(slot.id)}">${esc(slot.text)}</span>`, runs: asRuns(slot.text) } : plainly(''),
       { text: label.map((r) => r.text).join(''), html: facedHTML(label), runs: label },
       plainly(LAYER.mirrorState(d)),
       plainly(d.extent != null ? itemLength(d.extent) : ''),

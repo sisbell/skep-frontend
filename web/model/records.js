@@ -152,16 +152,23 @@
 // person's mailbox a read answered `withheld` (B11 call 3); the map's reading
 // of a document's number and where an account's next document stands are
 // read here (`numberKind`, `nextDocument`, the latter kept until the index
-// is next written). The system
+// is next written). So is the one table of the well-known slots' names, which
+// every face naming a document reads (FP-33; B11-F10, B11-F12): a slot's name
+// read off its address and its account's kind with no lookup — the mailbox,
+// the bio and the link page in every account but the system account, whose
+// slots take none, and none at a slot whose word is not given (`slotName`) —
+// the acting account's own mailbox shown by a name of its own (`isOwn`,
+// `slotNameShown`; B11-S7), and an account's named slots listed, created or
+// not (`namedSlots`; B11-S9). The system
 // account's rows are held and marked `system` for the drawing modules to
 // leave out. The model knows
 // nothing of pixels, zoom, selection or lenses: the links touching an
 // address are the raw set as delivered, and which of them show, and how, is
 // LK's.
 // Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14, FP-22, FP-23, FP-27, FP-29,
-// FP-34, FP-35, FP-38.
+// FP-33, FP-34, FP-35, FP-38.
 
-import { accountOf, documentOf, homeOf, cmpAddr, memberOf, isUnder, isTrunkMember, docOneOf } from './address.js';
+import { accountOf, documentOf, homeOf, cmpAddr, memberOf, isUnder, isTrunkMember, docOneOf, kindOf as addressKind } from './address.js';
 import { pathOf, cellNumberOf, assignedSlotOf, hasCell, LEAF, MAILBOX_SLOT, FIRST_ORDINARY_DOCUMENT } from '../plane/projection.js';
 import { byteOffsets, sliceBytes } from '../util.js';
 
@@ -1060,6 +1067,83 @@ export function numberKind(addr) {
   const p = pathOf(addr);
   if (p.length <= LEAF) return null;
   return p[LEAF] === 1 ? 'home' : assignedSlotOf(addr) != null ? 'slot' : cellNumberOf(p[LEAF]) == null ? 'reserved' : 'ordinary';
+}
+
+/** @typedef {'L.well-known.mailbox' | 'L.well-known.bio' | 'L.well-known.link-page' | 'L.well-known.your-mailbox'} SlotName a well-known slot's name, as its id in the strings table */
+
+/**
+ * The well-known slots' names (see the head), in slot order from
+ * MAILBOX_SLOT: the mailbox, the bio, the link page; LAST_NAMED_SLOT's, the
+ * policy document's, is a gap (O12), and its id goes in its place, last, once
+ * its word is given — none stands meanwhile.
+ * @type {ReadonlyArray<SlotName | null>}
+ */
+const SLOT_NAMES = Object.freeze(['L.well-known.mailbox', 'L.well-known.bio', 'L.well-known.link-page', null]);
+
+/** the name the acting account's own mailbox is shown by (`slotNameShown`) */
+const OWN_MAILBOX = 'L.well-known.your-mailbox';
+
+/** each address's slot's name as `slotName` reads it, kept, for every label the plane sets asks it on every frame and the name is the address's alone */
+/** @type {Map<string, SlotName | null>} */
+const slotNames = new Map();
+
+/**
+ * The name of the well-known slot an address names (see the head): read off
+ * the address and its account's kind with no lookup — a document numbered
+ * one of the assigned slots (P-PROJ's `assignedSlotOf`), a version member as
+ * its document — in every account but the system account, whose slots are a
+ * table of their own and take none; none at a slot whose word is not given,
+ * and none at the home page, a reserved number, an ordinary document or an
+ * address that names no document.
+ * @param {string} addr
+ * @returns {SlotName | null}
+ */
+export function slotName(addr) {
+  let id = slotNames.get(addr);
+  if (id === undefined) {
+    const n = addressKind(addr) !== 'document' || isUnder(SYSTEM_ACCOUNT, addr) ? null : assignedSlotOf(addr);
+    id = n == null ? null : SLOT_NAMES[n - MAILBOX_SLOT] ?? null;
+    slotNames.set(addr, id);
+  }
+  return id;
+}
+
+/**
+ * Is an address the acting account's own (see the head): its account the one
+ * the page's session acts as (`reader`), that account itself and never one
+ * under it; never for a guest, whose session names none.
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export function isOwn(addr) {
+  const acting = reader().account;
+  return !!acting && accountOf(addr) === acting;
+}
+
+/**
+ * A well-known slot's name as the reader is shown it (see the head): at the
+ * acting account's own mailbox (`isOwn`) the name its owner is shown it by,
+ * else its name (`slotName`).
+ * @param {string} addr
+ * @returns {SlotName | null}
+ */
+export function slotNameShown(addr) {
+  const id = slotName(addr);
+  return id && id === SLOT_NAMES[0] && isOwn(addr) ? OWN_MAILBOX : id;
+}
+
+/**
+ * An account's well-known slots that bear a name (`slotName`), in slot order:
+ * each the address of the document it holds, created or not, and its name;
+ * none at the system account.
+ * @param {string} account
+ * @returns {Array<{addr: string, id: SlotName}>}
+ */
+export function namedSlots(account) {
+  return SLOT_NAMES.flatMap((_, i) => {
+    const addr = `${account}.0.${MAILBOX_SLOT + i}`, id = slotName(addr);
+    return id ? [{ addr, id }] : [];
+  });
 }
 
 /** each account's next document as the index now lists it (`nextDocument`), kept until the index is next written, for a far end's words ask it on every frame */

@@ -45,6 +45,7 @@ PAGE_ORIGIN = 'http://127.0.0.1:8731'
 # draft W — so every seeded document's number is derived here and named nowhere else
 FIRST_ORDINARY = 64          # skep's `FIRST_ORDINARY_DOCUMENT`: an account's first number after its home; 2–63 are reserved, its mailbox at 2
 LAST_NAMED_SLOT = 5          # skep's `LAST_NAMED_SLOT`: the well-known slots are 2–5, and 6–63 are named by nothing and take no cell
+MAILBOX_SLOT = 2             # skep's `MAILBOX_SLOT`: the first of the well-known slots, the account's mailbox, its bio and its link page the next two
 FIRST_GRID = 48              # the cells of an account's first grid, its 49th the continuation (the plane's `G`: 7 × 7 at a document's digit)
 EDITIONS = 1000              # the seed's editions at the gate
 
@@ -58,6 +59,28 @@ def first_grid(account):
     """the documents an account's first grid holds, in reading order (B11-S3; the plane's `cellNumberOf`): its home and its
     slots at cells 1–5, then its ordinary documents from FIRST_ORDINARY at the cells after them"""
     return ['%s.0.%d' % (account, n) for n in [*range(1, LAST_NAMED_SLOT + 1), *range(FIRST_ORDINARY, FIRST_ORDINARY + FIRST_GRID - LAST_NAMED_SLOT)]]
+
+
+# the well-known slots' names as the strings table holds them (B11-F10, B11-F18 (2), (3)): the mailbox, the name the acting
+# account's own mailbox is shown by, the bio, the link page
+SLOT_NAMES = ('L.well-known.mailbox', 'L.well-known.your-mailbox', 'L.well-known.bio', 'L.well-known.link-page')
+
+
+# the width of a depth-0 box, in px, at which the claimant's mailbox — an empty draft, its outline one row — is framed at mid on
+# that row: its row about 45 px tall there, past the line box a label's row takes (measured on the test board; FP-18)
+MAILBOX_ROW_PX = 1000
+
+
+def frame_row(ctx, addr, px=MAILBOX_ROW_PX):
+    """the camera at mid on a document's first row — where its label stands — at the scale a depth-0 box stands `px` px wide"""
+    row = ctx.js('window.__skep.fold(%s)' % json.dumps(addr))['row']
+    ctx.set_view(row['x'] + row['w'] / 2, row['y'] + row['h'] / 2, ctx.extent_scale(px))
+
+
+def slot_words(ctx):
+    """the well-known slots' names in the page's words, by their ids (SLOT_NAMES) — an id bracketed where the page holds no such
+    entry, so a page without them reports red by its checks rather than aborting"""
+    return ctx.js('import("./strings.js").then(({t, STRINGS}) => Object.fromEntries(%s.map((id) => [id, STRINGS[id] ? t(id) : "⟨" + id + "⟩"])))' % json.dumps(list(SLOT_NAMES)))
 
 
 # the staging draft D, the claimant's first ordinary document: 6.27 MB at the owner's seed, every edition's bytes inserted
@@ -76,6 +99,11 @@ BEAMED = edition(32)         # a citer of FAR_LEAP whose citations reach four ed
 # (i)), so an edition's drawn links are its citations alone on either page
 AGENT_SPACE = '1.0.1.1'      # the claimant's delegated agent space
 SECOND_ACCOUNT = '1.0.2'     # the seed's keyless second account
+# the claimant's well-known slots (B11-F10): its mailbox, a draft of its own made with the account, empty on this board, its
+# outline one row; its bio and its link page, at which nothing is created on this board
+MAILBOX = '1.0.1.0.%d' % MAILBOX_SLOT
+BIO = '1.0.1.0.%d' % (MAILBOX_SLOT + 1)
+LINK_PAGE = '1.0.1.0.%d' % (MAILBOX_SLOT + 2)
 WITHHELD = SECOND_ACCOUNT + '.0.%d' % FIRST_ORDINARY  # its draft: withheld from every reader of this board, a box of its own
 VERSIONED = edition(41)      # an edition with two members, the latest holding all of it, far from every place the later cases read
 NO_MATCH = 'qzx no label holds this'  # LEAP text no address, share form, URL, label or address prefix answers

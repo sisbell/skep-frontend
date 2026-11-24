@@ -69,6 +69,15 @@
 // other answer stands at the row, it offers none. A new text, the rows
 // computed again or the box's close takes the face down; the close abandons
 // an act still reaching. Esc closes the box as ever.
+// A well-known slot's name typed lists the acting account's own slot first,
+// created or not, its address read off the account's with no lookup (N-MATCH's
+// `slot` row; M-REC's `namedSlots`; B11-S9): its address, then its account,
+// its slot's name and the first line the index lists for it, if any, each in
+// its face and a field's joiner apart; Enter on it, or a click, LEAPs to its
+// address as an address's row does, an assigned slot's arriving every time
+// (FP-25). An index place at a well-known slot, and a typed address at one,
+// name the slot on their rows in the words its label sets (T-LAYER's
+// `slotNamed`; FP-33). A guest's box lists no own slot.
 // THE CREATION ROW (B3-S1 THE START; foundations §2.3; D5 K-33): while an
 // account acts on a board the page holds, typed text that parses as no
 // address, share form or URL — a query (`isQuery`) — carries at the box's
@@ -173,7 +182,7 @@ import * as SEL from '../overlays/selection.js';
 import * as LAYER from '../text/layer.js';
 import { MAC, drawChord } from './keys.js';
 import { matches, isShareForm, isUrl } from './match.js';
-import { t, tHTML, tRuns, heard, joinRuns, fields } from '../strings.js';
+import { t, tHTML, tRuns, heard, joinRuns, fields, FIELD } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { markDirty } from '../plane/camera.js';
 import { documentOf, homeOf, kindOf, parseAddress, accountOf } from '../model/address.js';
@@ -341,15 +350,18 @@ export function attach(e, cur, reading = () => null, line = () => {}) {
 }
 export const isOpen = () => openState;
 
+/** what the rows are computed over (N-MATCH's `Ctx`): the model's index and landmarks, the trail, the place the line names, the board held, the account acting and its well-known slots that bear a name — created or not, read off its address (M-REC's `namedSlots`) — and the name each address shows (T-LAYER's `slotNamed`) */
 function ctx() {
   const s = REC.session();
-  const cur = currentAddress();
+  const cur = currentAddress(), home = s && s.account ? s.account : null;
   return {
     places: REC.places(), landmarks: REC.landmarks(),
     trail: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, label: GO.wordsOf(r.entry) })),
-    current: cur, board: REC.board() ? GO.boardNode() : null, home: s && s.account ? s.account : null,
+    current: cur, board: REC.board() ? GO.boardNode() : null, home,
     levelWords: { board: t('F.level.board'), home: t('F.level.home'), account: t('F.level.account'), document: t('F.level.document') },
     reserved: t('L.far.reserved'),
+    slots: home ? REC.namedSlots(home).map((x) => ({ addr: x.addr, text: t(x.id) })) : [],
+    named: LAYER.slotNamed,
   };
 }
 /** the rows for the text; typed text selects its first match, and nothing typed chooses no row (foundations §2.3) */
@@ -481,23 +493,35 @@ function releaseTab() {
 /**
  * A row's three cells as markup, each word in its face (see the head): its
  * address the identifier's; its title an address where it names one, a
- * document's words where it is a document's label, a trail entry's number
- * then its address, else the client's words; its last cell its address and
- * the client's mark after it, or a trail entry's words (N-GO's `wordsHTML`).
+ * document's words where it is a document's label — led by the name of the
+ * well-known slot it stands at, a field's joiner apart — a trail entry's
+ * number then its address, the acting account's own slot's account, its
+ * slot's name and the first line the index lists for it, each a field's
+ * joiner apart, else the client's words; its last cell its address and the
+ * client's mark after it, a trail entry's words (N-GO's `wordsHTML`), a
+ * typed address's slot's name, or nothing at an own slot's row, whose title
+ * holds its words.
  * @param {import('./match.js').Row} r
  * @returns {[string, string, string]}
  */
 function cellsOf(r) {
   const id = (/** @type {string} */ a) => (a ? `<span class="id">${esc(a)}</span>` : '');
-  const title = r.kind === 'address' || (r.addr && r.title === r.addr) ? id(r.title)
-    : r.kind === 'label' || r.kind === 'landmark' ? `<span class="reading">${esc(r.title)}</span>`
+  const reading = (/** @type {string} */ w) => (w ? `<span class="reading">${esc(w)}</span>` : '');
+  const named = r.slot ? `<span data-string="${esc(r.slot.id)}">${esc(r.slot.text)}</span>` : '';
+  const title = r.kind === 'slot' ? fieldsHTML(id(r.owner ?? ''), named, reading(r.sub))
+    : r.kind === 'label' && r.slot ? fieldsHTML(named, r.title === r.addr ? '' : reading(r.title))
+    : r.kind === 'address' || (r.addr && r.title === r.addr) ? id(r.title)
+    : r.kind === 'label' || r.kind === 'landmark' ? reading(r.title)
     : r.kind === 'trail' && r.addr && r.title.endsWith(r.addr) ? esc(r.title.slice(0, -r.addr.length)) + id(r.addr)
     : r.jump ? `<span data-string="L.reserved.jump">${tHTML('L.reserved.jump', { account: r.addr }, { account: 'id' })}</span>`
     : esc(r.title);
   const entry = r.kind === 'trail' && r.n != null ? TRAIL.numbered().find((x) => x.n === r.n) : undefined;
-  const sub = entry ? GO.wordsHTML(entry.entry) : r.reserved && r.sub ? `<span data-string="L.far.reserved">${esc(r.sub)}</span>` : r.addr && r.sub.startsWith(r.addr) ? id(r.addr) + esc(r.sub.slice(r.addr.length)) : esc(r.sub);
+  const sub = r.kind === 'slot' ? '' : entry ? GO.wordsHTML(entry.entry) : r.reserved && r.sub ? `<span data-string="L.far.reserved">${esc(r.sub)}</span>` : r.kind === 'address' && r.slot ? named : r.addr && r.sub.startsWith(r.addr) ? id(r.addr) + esc(r.sub.slice(r.addr.length)) : esc(r.sub);
   return [id(r.addr), title, sub];
 }
+
+/** a row's fields as markup, a field's joiner between each two that hold any, an empty one dropped with its joiner (ST's `fields`) */
+const fieldsHTML = (/** @type {string[]} */ ...parts) => parts.filter(Boolean).join(esc(FIELD));
 
 /**
  * A row's go as its name says it (`cellsOf`), as stretches in their faces —
@@ -509,13 +533,17 @@ function cellsOf(r) {
  */
 function cellRuns(r) {
   const id = (/** @type {string} */ a) => /** @type {import('../strings.js').Run[]} */ (a ? [{ text: a, face: 'ident' }] : []);
-  const title = r.kind === 'address' || (r.addr && r.title === r.addr) ? id(r.title)
-    : r.kind === 'label' || r.kind === 'landmark' ? [{ text: r.title, face: /** @type {const} */ ('reading') }]
+  const reading = (/** @type {string} */ w) => /** @type {import('../strings.js').Run[]} */ (w ? [{ text: w, face: 'reading' }] : []);
+  const named = r.slot ? r.slot.text : '';
+  const title = r.kind === 'slot' ? joinRuns(FIELD, [id(r.owner ?? ''), named, reading(r.sub)])
+    : r.kind === 'label' && r.slot ? joinRuns(FIELD, [named, r.title === r.addr ? [] : reading(r.title)])
+    : r.kind === 'address' || (r.addr && r.title === r.addr) ? id(r.title)
+    : r.kind === 'label' || r.kind === 'landmark' ? reading(r.title)
     : r.kind === 'trail' && r.addr && r.title.endsWith(r.addr) ? [{ text: r.title.slice(0, -r.addr.length), face: /** @type {const} */ ('client') }, ...id(r.addr)]
     : r.jump ? tRuns('L.reserved.jump', { account: id(r.addr) })
     : [{ text: r.title, face: /** @type {const} */ ('client') }];
   const entry = r.kind === 'trail' && r.n != null ? TRAIL.numbered().find((x) => x.n === r.n) : undefined;
-  const sub = entry ? GO.wordsRuns(entry.entry) : r.addr && r.sub.startsWith(r.addr) ? [...id(r.addr), { text: r.sub.slice(r.addr.length), face: /** @type {const} */ ('client') }] : [{ text: r.sub, face: /** @type {const} */ ('client') }];
+  const sub = r.kind === 'slot' ? [] : entry ? GO.wordsRuns(entry.entry) : r.addr && r.sub.startsWith(r.addr) ? [...id(r.addr), { text: r.sub.slice(r.addr.length), face: /** @type {const} */ ('client') }] : [{ text: r.sub, face: /** @type {const} */ ('client') }];
   return joinRuns(' ', [id(r.addr), title, sub, r.kind === 'landmark' ? t('F.landmark') : '']);
 }
 

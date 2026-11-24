@@ -228,6 +228,33 @@ test('an account\'s next document stands one past the greatest ordinary number i
   assert.equal(REC.nextDocument('1.0.4'), '1.0.4.0.71', 'the session\'s death drops the drafts\' rows: one past the greatest edition again');
 });
 
+test('the names table (B11-F10, B11-F12): a well-known slot\'s name read off its address and its account\'s kind with no lookup — the mailbox, the bio and the link page at slots 2, 3 and 4 of a person\'s account and an agent space alike, a version member as its document; none at the system account\'s slots, none at slot 5 while its word is a gap (O12), none at the home page, a reserved number, an ordinary number or an address that names no document (FP-42); and an account\'s named slots listed in slot order, created or not, none at the system account', () => {
+  const NAMES = ['L.well-known.mailbox', 'L.well-known.bio', 'L.well-known.link-page'];
+  assert.deepEqual(['1.0.4.0.2', '1.0.4.0.3', '1.0.4.0.4'].map(REC.slotName), NAMES, 'a person\'s account: its mailbox, its bio, its link page');
+  assert.deepEqual(['1.0.4.1.0.2', '1.0.4.1.0.3', '1.0.4.1.0.4'].map(REC.slotName), NAMES, 'an agent space: the same table');
+  assert.deepEqual(['1.0.4.0.2.1', '1.0.4.0.3.2', '1.0.4.0.4.7'].map(REC.slotName), NAMES, 'a version member: its document\'s');
+  const system = ['.0.2', '.0.3', '.0.4', '.0.5'].map((f) => REC.SYSTEM_ACCOUNT + f);
+  assert.deepEqual(system.map(REC.slotName), [null, null, null, null], `the system account's slots, its own table: none (${system})`);
+  assert.deepEqual(['1.0.4.0.5', '1.0.4.1.0.5', '1.0.4.0.5.1'].map(REC.slotName), [null, null, null], 'slot 5, its word a gap: none');
+  assert.deepEqual(['1.0.4.0.1', '1.0.4.0.6', '1.0.4.0.12', '1.0.4.0.63', '1.0.4.0.64', '1.0.4.0.70', '1.0.4.0.3.0.2.1', '1.0.4', '1'].map(REC.slotName), [null, null, null, null, null, null, null, null, null],
+    'the home page, a reserved number, an ordinary number, a link inside a slot document, an account, the board: none');
+  assert.deepEqual(REC.namedSlots('1.0.4'), [{ addr: '1.0.4.0.2', id: NAMES[0] }, { addr: '1.0.4.0.3', id: NAMES[1] }, { addr: '1.0.4.0.4', id: NAMES[2] }], 'an account\'s named slots, in slot order, the index listing none of them');
+  assert.deepEqual(REC.namedSlots('1.0.4.1').map((x) => x.addr), ['1.0.4.1.0.2', '1.0.4.1.0.3', '1.0.4.1.0.4'], 'an agent space\'s');
+  assert.deepEqual(REC.namedSlots(REC.SYSTEM_ACCOUNT), [], 'the system account\'s: none');
+});
+
+test('a slot\'s name as the reader is shown it (B11-S7): the acting account\'s own mailbox by a name of its own, and no other — another account\'s mailbox, the acting account\'s agent space\'s, the acting account\'s bio and link page by their names — and none of its own for a guest, whose session names no account', () => {
+  const SHOWN = (/** @type {string[]} */ as) => as.map(REC.slotNameShown);
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.4' });
+  assert.deepEqual(['1.0.4.0.2', '1.0.4.0.2.1', '1.0.4.1.0.2', '1.0.5.0.2', '1', '1.0.4'].map(REC.isOwn), [true, true, false, false, false, true], 'the acting account\'s own: its account the session\'s, never one under it');
+  assert.deepEqual(SHOWN(['1.0.4.0.2', '1.0.4.0.3', '1.0.4.0.4', '1.0.5.0.2', '1.0.4.1.0.2', '1.0.4.0.5']),
+    ['L.well-known.your-mailbox', 'L.well-known.bio', 'L.well-known.link-page', 'L.well-known.mailbox', 'L.well-known.mailbox', null], 'acting as 1.0.4: its own mailbox its own name, every other slot its plain one');
+  REC.setSession({ session: 's-2', principal: 1, account: '1.0.5' });
+  assert.deepEqual(SHOWN(['1.0.4.0.2', '1.0.5.0.2']), ['L.well-known.mailbox', 'L.well-known.your-mailbox'], 'acting as 1.0.5: its own');
+  REC.setSession(null);
+  assert.deepEqual([...SHOWN(['1.0.4.0.2', '1.0.5.0.2']), REC.isOwn('1.0.4.0.2')], ['L.well-known.mailbox', 'L.well-known.mailbox', false], 'a guest: no mailbox its own');
+});
+
 test('a document is covered where the class the page left could read it — its text, metadata or extent held, or its index listing it — and the change ending the session withholds it at once, or a read at the new class answers it `withheld`: never one the page never read, nor one withheld before the change, which waits on its read; each is a box the model knows (issues #177, #350)', () => {
   const READ = '1.0.1.0.2', LISTED = '1.0.1.0.4', HELD = '1.0.2.0.70', NEVER = '1.0.3.0.90';
   REC.takeIndex(/** @type {any} */ (PLACES));

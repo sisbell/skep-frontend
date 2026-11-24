@@ -111,7 +111,7 @@ test('where no board is held the plane names none — no board\'s outline, label
 });
 
 test('at mid scale a document\'s label is its contents line: its first line from where those words stand in its first column, cut on a word, its address at the end of that row — past its region\'s prefix where the one line names the region, whole where nothing in view names it — each line on a plate of its own and its address in the title\'s ink (issue #23)', () => {
-  const D = '1.0.1.0.3';
+  const D = '1.0.1.0.66';
   const { ctx, inked, rects } = recorder();
   RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
   CAM.setViewport(4000, 900);
@@ -133,14 +133,14 @@ test('at mid scale a document\'s label is its contents line: its first line from
     const named = frame(box.x + box.w / 2);
     assert.ok(named, 'its label set');
     const l = /** @type {import('./labels.js').SetLabel} */ (named), [first, address, badge] = l.lines;
-    assert.deepEqual(l.lines.map((x) => x.text), ['Notes on the…', '.0.3', t('L.arriving')], 'its first line leading, cut on a word, then its address past its region\'s prefix; its badge — its links arriving — beneath');
+    assert.deepEqual(l.lines.map((x) => x.text), ['Notes on…', '.0.66', t('L.arriving')], 'its first line leading, cut on a word, then its address past its region\'s prefix; its badge — its links arriving — beneath');
     assert.ok(badge.rect.y >= Math.max(first.rect.y + first.rect.h, address.rect.y + address.rect.h) - 1e-6, 'the badge beneath the row');
     assert.ok(Math.abs(first.rect.x - CAM.sx(box.x + lead.x)) < 1e-6, `its first line from where those words stand: ${first.rect.x} against ${CAM.sx(box.x + lead.x)}`);
     assert.ok(Math.abs(first.rect.y + first.rect.h / 2 - CAM.sy(box.y + lead.y + lead.h / 2)) < 1e-6, 'level with the line those words stand on');
     assert.ok(first.rect.x + first.rect.w <= CAM.sx(box.x + col.x + col.w) + 1e-6, 'inside its column');
     const row = firstRow(f), g = (GUTTER / 2) * f.fs;
     assert.ok(Math.abs(address.rect.x + address.rect.w - CAM.sx(box.x + row.x + row.w - g)) < 1e-6, 'its address ending at its row\'s end, the end of the outline\'s first row inside its half gutter');
-    assert.ok(inked.some((x) => x.text === '.0.3' && x.ink === COL.title), 'its address in the title\'s ink');
+    assert.ok(inked.some((x) => x.text === '.0.66' && x.ink === COL.title), 'its address in the title\'s ink');
     for (const x of l.lines) assert.ok(rects.some((r) => r.fill === COL.doc && r.x === x.rect.x && r.y === x.rect.y && r.w === x.rect.w && r.h === x.rect.h), `a plate of its ground behind ${x.text} alone`);
     // the camera's centre on the board's own cell, left of D's account: nothing in view names D's region
     const away = accountCell('1.0.1').x - 10;

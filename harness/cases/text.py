@@ -74,7 +74,7 @@ W-01 step 7's (`walks`), which runs after `keys` reads LK's visited set."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, NO_MATCH, VERSIONED, WINDOW, Result, byline_expected, byline_facts, byline_shown, placeholder_sweep
+from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, MAILBOX, NO_MATCH, VERSIONED, WINDOW, Result, byline_expected, byline_facts, byline_shown, frame_row, placeholder_sweep, slot_words
 
 TOKEN = re.compile(r'⟨[^⟩]*⟩')
 BLANK = re.compile(r'[\s\-–—·.…]*')  # a value that is no value: dashes, dots and spaces, or nothing
@@ -255,6 +255,35 @@ def reserved_strings(ctx, r):
             'the words at a reserved number are located where they are shown, each naming its string — the typed row\'s "reserved number", the face\'s reserved words and the board\'s, the jump\'s — at the box\'s row and at the viewport\'s corner, none set apart by its class (issue #771\'s decision)',
             {'typed': typed, 'answered': answered, 'faced': faced})
     r.note('L.reserved.held and L.reserved.beside — a document the board holds at a reserved number, and the act reading it beside — are shown nowhere on this board, which holds no document at a reserved number: their proof is the pure tests\' (go.test.js, faces.test.js, leap.test.js)')
+
+def slot_name_strings(ctx, r):
+    """THE SLOT NAMES, LOCATED WHERE THEY ARE SHOWN (B11-F10, B11-F18 (2)–(4); B11-S2, B11-S4, B11-S5, B11-S7, B11-S9): typed in
+    the LEAP box — `mailbox`, `bio`, `link page` — the own row's name and an index place's, each element naming its string; at
+    the claimant's own mailbox, landed at, the one line's name after its field and the mirror's item, each naming its string;
+    at its label on the plane, framed at mid on its row, the words its string holds, set by the canvas; none set apart by its
+    class in the inventory, and no template's placeholder shown or told"""
+    words = slot_words(ctx)
+    ctx.js('window.__skep.leap.open()'); ctx.frames(1)
+    boxed = {}
+    for typed in ('mailbox', 'bio', 'link page'):
+        ctx.js('(() => { const q = document.getElementById("leapq"); q.value = %s; q.dispatchEvent(new Event("input")); })()' % json.dumps(typed))
+        ctx.frames(2)
+        boxed[typed] = wording_marks(ctx, '#leap')
+    hits = placeholder_sweep(ctx)
+    ctx.js('window.__skep.leap.close()'); ctx.frames(1)
+    ctx.leap(MAILBOX)
+    line, mirror = wording_marks(ctx, '#line'), wording_marks(ctx, '#mirror')
+    hits += placeholder_sweep(ctx)
+    frame_row(ctx, MAILBOX)
+    label = next((l for l in ctx.js('window.__skep.labels()') if l['kind'] == 'doc' and l['place'] == MAILBOX), None)
+    canvas = [x['text'] for x in label['lines']] if label else []
+    r.check(not hits, 'the slot names in the LEAP box and at the claimant\'s own mailbox: no template placeholder the page shows or tells (FP-34; issue #208)', hits[:6])
+    marked = [x for marks in (*boxed.values(), line, mirror) for x in marks['marked']]
+    r.check(all(x in boxed['mailbox']['shown'] for x in ('L.well-known.your-mailbox', 'L.well-known.mailbox')) and 'L.well-known.bio' in boxed['bio']['shown'] and 'L.well-known.link-page' in boxed['link page']['shown']
+            and 'L.well-known.your-mailbox' in line['shown'] and 'L.well-known.your-mailbox' in mirror['shown'] and words['L.well-known.your-mailbox'] in canvas and not marked,
+            'the slot names are located where they are shown, each naming its string — the box\'s rows, the one line, the mirror\'s item — and the label on the plane sets the words its string holds; none set apart by its class (B11-F10, B11-F18)',
+            {'box': {k: v['shown'] for k, v in boxed.items()}, 'line': line['shown'], 'mirror': mirror['shown'], 'canvas': canvas, 'marked': marked})
+
 
 def run(ctx):
     r = Result()
@@ -521,6 +550,7 @@ def run(ctx):
     ctx.open_page('all')
     ctx.leap(DOC, WINDOW[0])
     reserved_strings(ctx, r)
+    slot_name_strings(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     r.figures['bylines'] = bylines
     r.figures['sweeps'] = sweeps

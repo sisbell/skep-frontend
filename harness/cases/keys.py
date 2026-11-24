@@ -339,7 +339,7 @@ import json
 import re
 import time
 
-from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, LAST_NAMED_SLOT, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, corner_fit, drawn_keys, edition, first_grid, heard, item_words, key_fingerprint, named_as, trunk_of
+from . import AGENT_SPACE, BEAMED, BIO, DOC, FAR_LEAP, GHOST, HOME, LAST_NAMED_SLOT, LINK_PAGE, MAILBOX, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, corner_fit, drawn_keys, edition, first_grid, heard, item_words, key_fingerprint, named_as, slot_words, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -4302,6 +4302,70 @@ def fixed_addresses(ctx, r):
     r.figures['fixed_addresses'] = figures
 
 
+# the time the LEAP box takes from a text to its rows drawn, in the page: the input event the text sets dispatched 21 times, the
+# median of the times its handler takes — its rows computed over the index and drawn — in ms
+ROWS_TIMED = """((text) => { const q = document.getElementById('leapq'), ms = [];
+  for (let i = 0; i < 21; i++) { q.value = text; const t0 = performance.now(); q.dispatchEvent(new Event('input')); ms.push(performance.now() - t0); }
+  ms.sort((a, b) => a - b); return Math.round(ms[10] * 1000) / 1000; })(%s)"""
+
+
+def slot_names_typed(ctx, r):
+    """A WELL-KNOWN SLOT'S NAME TYPED IN THE LEAP BOX — reads alone (B11-S9, B11-S7; B11-F18 (4); O1): `mailbox`, `bio` and
+    `link page`, each finding the claimant's own slot first, before any press, created or not — its address, then its account
+    and its name, its go named by them — the claimant's own mailbox listed once; Enter on `bio` twice, each LEAP arriving at the
+    unwritten bio with an entry of its own and the one line naming its slot after its field (B11-S4); Enter on `mailbox`, the line
+    naming the claimant's own mailbox by its own name. Its figures: the box's time from a text to its rows drawn with an own
+    slot's row and with none over the same matches, and each LEAP's time from Enter to its landing"""
+    words = slot_words(ctx)
+    names = {MAILBOX: words['L.well-known.your-mailbox'], BIO: words['L.well-known.bio'], LINK_PAGE: words['L.well-known.link-page']}
+    figures = {}
+    for typed, own in (('mailbox', MAILBOX), ('bio', BIO), ('link page', LINK_PAGE)):
+        type_in_box(ctx, typed)
+        box = ctx.js(BOX)
+        first = box['first'] or {}
+        r.check(bool(box['rows']) and box['rows'][0] == ['slot', own, False] and [x[1] for x in box['rows']].count(own) == 1 and first.get('text', '').startswith(own)
+                and ('1.0.1 · %s' % names[own]) in first.get('text', '') and names[own] in (first.get('name') or '') and own in (first.get('name') or ''),
+                '"%s" typed: the claimant\'s own %s its first row before any press, listed once — its address, then its account and "%s", its go named by them (B11-S9, B11-S7; B11-F18 (4))' % (typed, own, names[own]),
+                {'rows': box['rows'][:6], 'first': first})
+        if typed == 'mailbox':
+            agent = next((x for x in box['rows'] if x[1] == AGENT_SPACE + '.0.2'), None)
+            figures['mailbox_rows'] = box['rows'][:6]
+            r.check(bool(agent) and box['rows'].index(agent) > 0, 'the agent space\'s mailbox after it, matched by its slot\'s name (B11-F10)', box['rows'][:6])
+    # the box's time from a text to its rows drawn: with the own slot's row, and with none over the same matches
+    type_in_box(ctx, 'bio')
+    figures['rows_ms'] = {'bio': ctx.js(ROWS_TIMED % json.dumps('bio')), 'bi': ctx.js(ROWS_TIMED % json.dumps('bi')), 'mailbox': ctx.js(ROWS_TIMED % json.dumps('mailbox')), 'mailbo': ctx.js(ROWS_TIMED % json.dumps('mailbo'))}
+    chord(ctx, 'Escape')
+    # Enter on the own bio twice: each LEAP arriving, an entry of its own, the line naming the slot at the landing
+    left, t0 = state(ctx), trail(ctx)
+    for n in (1, 2):
+        type_in_box(ctx, 'bio')
+        ctx.js(TIMED % ('() => window.__skep.overlay().id === "face:doc_not_registered" && window.__skep.trail().cursor === %d' % (t0['cursor'] + n)))
+        chord(ctx, 'Enter')
+        overlay_up(ctx, 'face:')
+        took = ctx.js('window.__gateTimed', timeout=60)
+        figures.setdefault('bio_leap_ms', []).append(took)
+        s, t1 = state(ctx), trail(ctx)
+        newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+        shown = ctx.js('window.__skep.line()')['address']
+        dom = ctx.js('(() => { const e = document.querySelector("#line .seg.address .slot-name"); return e ? [e.dataset.string, e.textContent] : null; })()')
+        r.check(not s['leap'] and t1['cursor'] == t0['cursor'] + n and bool(newest) and newest['addr'] == BIO and not same_view(left, s)
+                and shown.get('doc') == BIO and (shown.get('name') or {}).get('text') == names[BIO] and dom == ['L.well-known.bio', names[BIO]],
+                'Enter on the own row "bio" %s: the box closed, the LEAP arriving at the unwritten bio with an entry of its own (O1), and the one line naming "%s" after its field (B11-S4, B11-S9)' % ('the first time' if n == 1 else 'again', names[BIO]),
+                {'cursor': [t0['cursor'], t1['cursor']], 'newest': newest and newest['addr'], 'moved': not same_view(left, s), 'line': {k: shown.get(k) for k in ('text', 'doc', 'name')}, 'dom': dom, 'ms': took})
+        chord(ctx, 'Escape')
+    # Enter on the own mailbox: the line naming it by its own name
+    type_in_box(ctx, 'mailbox')
+    chord(ctx, 'Enter')
+    ctx.settle(); ctx.frames(2)
+    shown = ctx.js('window.__skep.line()')['address']
+    dom = ctx.js('(() => { const e = document.querySelector("#line .seg.address .slot-name"); return e ? [e.dataset.string, e.textContent] : null; })()')
+    r.check(shown.get('doc') == MAILBOX and (shown.get('name') or {}).get('text') == names[MAILBOX] and dom == ['L.well-known.your-mailbox', names[MAILBOX]],
+            'Enter on the own row "mailbox": the LEAP to the claimant\'s own mailbox, the one line naming it "%s" after its field (B11-S7, B11-S4)' % names[MAILBOX],
+            {'line': {k: shown.get(k) for k in ('text', 'doc', 'name')}, 'dom': dom})
+    chord(ctx, 'Escape')
+    r.figures['slot_names_typed'] = figures
+
+
 def run(ctx):
     r = Result()
     ctx.leap(DOC, WINDOW[0])
@@ -5203,5 +5267,6 @@ def run(ctx):
     r.figures['paste_and_cut'] = paste_and_cut(ctx, r)
     r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click, a double-click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C with nothing selected, with a selection standing and with one drawn over no range of the platform\'s', 'a copy event with nothing selected and with a selection', 'a click on a column\'s blank room after a drag', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival', 'Mod+K, Mod+Shift+A, Mod+Shift+C, a printable key and Space at a selection in the moved scene\'s held version']
     fixed_addresses(ctx, r)
+    slot_names_typed(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

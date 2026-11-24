@@ -42,7 +42,8 @@
 // them (`edgeSigns`), the margin's marks beside words the board has not kept
 // as the frame placed them, on the plane and in a reading scene's editor
 // panes, each by the pane it stands in (`margin`), its first line and the
-// lead its label sets (`firstLine`), its kind as its corner's first slot states it by the one
+// lead its label sets (`firstLine`), the name of the well-known slot it stands
+// at as the reader is shown it (`slotName`), its kind as its corner's first slot states it by the one
 // test (`kind`) — what a check with no person present reads a document's kind
 // by, never a label — the size an address is set at in a label (`address`),
 // the places the line names (`named`) and
@@ -913,6 +914,8 @@ export function install(deps) {
     named: () => LINE.named(),
     /** a document's first line as every surface naming it reads it (T-LAYER's `firstOf`, by T-ARTICLE's one rule), the client's words in its place bracketed, and the lead its label sets before its address (T-LAYER's `firstLine`): its first line, which carries no kind; '' where none is known */
     firstLine: (/** @type {string} */ addr) => ({ first: LAYER.firstOf(REC.doc(addr)).map((r) => r.text).join(''), lead: LAYER.firstLine(REC.doc(addr)) }),
+    /** the name of the well-known slot an address stands at as the reader is shown it, which its label, the one line, the LEAP box's rows and the mirror's item read (T-LAYER's `slotNamed`): its string's id and its words; null where it names none */
+    slotName: (/** @type {string} */ addr) => LAYER.slotNamed(addr),
     /** a document's kind as its corner's first slot states it (T-LAYER's `kindOf`, by the one test; FP-33, FP-34): its state — draft, published, being read or not read — and the slot's words */
     kind: (/** @type {string} */ addr) => ({ kind: LAYER.kindOf(REC.doc(addr)), words: LAYER.kindSaid(REC.doc(addr)) }),
     /** P-REG's address size and weight, at which the harness measures an address's dots apart (FP-18) */

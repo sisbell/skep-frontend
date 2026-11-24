@@ -8,10 +8,14 @@ claims the canvas's labels asserts the canvas set them (the page's
 `labels`). Chrome composites the DOM text layer into the shot (C5 (b)).
 B11-S9's reserved number typed in the LEAP box is shot at 1440 px and at
 390 px, into `shots/B11-S9/`: its row's words before Enter, then the face at
-its row and the jump on the row below after it (issue #771's decision)."""
+its row and the jump on the row below after it (issue #771's decision). The
+claimant's well-known slots are shot at 1440 px and at 390 px too: its
+mailbox framed at mid on its row, its label holding the name its own mailbox
+is shown by, into `shots/B11-S7/`, and the LEAP box with `mailbox` typed, its
+own row first, into `shots/B11-S9/` (B11-S7, B11-S9, B11-F10)."""
 import json
 
-from . import DOC, GHOST, WINDOW, Result
+from . import DOC, GHOST, MAILBOX, WINDOW, Result, frame_row, slot_words
 
 RESERVED = '1.0.1.0.7'  # a reserved number of the claimant's: the map gives it no cell, and the board says nothing of it
 
@@ -38,6 +42,31 @@ def reserved_shots(ctx, r):
         shots.append(ctx.shot(f'B11-S9/reserved-face-{width}.png'))
         claimed(ctx, r, 'B11-S9 at %d px, after Enter' % width, '#leaphits .hit:first-child .face', 'the face at the typed row')
         claimed(ctx, r, 'B11-S9 at %d px, after Enter' % width, '#leaphits .hit:nth-child(2) .go', 'the jump on the row below')
+        ctx.js('window.__skep.leap.close()'); ctx.frames(1)
+        ctx.resize(*was)
+    return shots
+
+
+def slot_name_shots(ctx, r):
+    """B11-S7 and B11-S9 at the claimant's well-known slots (see the head): its mailbox framed at mid on its row, its label
+    holding the name its own mailbox is shown by — the canvas's labels asserting it set — and the LEAP box with `mailbox`
+    typed, the own row first — that row asserted in view — at 1440 px and at 390 px"""
+    shots = []
+    mine = slot_words(ctx)['L.well-known.your-mailbox']
+    for width, height in ((1440, 900), (390, 844)):
+        was = ctx.resize(width, height)
+        frame_row(ctx, MAILBOX)
+        shots.append(ctx.shot(f'B11-S7/your-mailbox-{width}.png'))
+        label = next((l for l in ctx.js('window.__skep.labels()') if l['kind'] == 'doc' and l['place'] == MAILBOX), None)
+        r.check(bool(label) and mine in [x['text'] for x in label['lines']], f'B11-S7 at {width} px: the claimant\'s mailbox\'s label holds "{mine}", as the caption claims (the canvas set it)',
+                label and [x['text'] for x in label['lines']])
+        ctx.js('window.__skep.leap.open()'); ctx.frames(1)
+        ctx.js('(() => { const q = document.getElementById("leapq"); q.value = "mailbox"; q.dispatchEvent(new Event("input")); })()')
+        ctx.frames(2)
+        shots.append(ctx.shot(f'B11-S9/slot-name-typed-{width}.png'))
+        first = ctx.js('window.__skep.leap.rows()[0] || null')
+        r.check(bool(first) and first['kind'] == 'slot' and first['addr'] == MAILBOX, f'B11-S9 at {width} px, "mailbox" typed: the own mailbox the first row, as the caption claims', first)
+        claimed(ctx, r, 'B11-S9 at %d px, "mailbox" typed' % width, '#leaphits .hit:first-child .go', 'the own row')
         ctx.js('window.__skep.leap.close()'); ctx.frames(1)
         ctx.resize(*was)
     return shots
@@ -121,5 +150,6 @@ def run(ctx):
     r.figures['screens'] = screens
     r.check(len(screens) >= 12, 'the B1 screens built are shot', len(screens))
     r.figures['b11_reserved'] = reserved_shots(ctx, r)
+    r.figures['b11_slot_names'] = slot_name_shots(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

@@ -126,7 +126,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as CAM from '../plane/camera.js';
 import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, EDGE_GAP, CHAR_W, LINE_H } from '../plane/layout.js';
 import { CORNER, ADDRESS, COL, HOLD, MARGIN, cornerWidth } from '../plane/register.js';
-import { holdTop, holdStack, lineHeight, runsOf } from '../plane/labels.js';
+import { holdTop, holdStack, lineHeight, runsOf, plain } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, cellNumberOf, numberAtCell, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { CLAUSE_READING, articleHTML, faceRuns, cornerTitle, titleHTML, titleRuns, keptWord } from './article.js';
@@ -1730,6 +1730,20 @@ test('a box\'s label is its contents line: its first line leading, at its em, it
   assert.equal(held.close, ']', 'a cut keeps its closing bracket');
   assert.deepEqual(LAYER.docLabel(REC.doc(D), 12).parts, [], 'no badge at a withheld box');
   assert.equal(LAYER.firstLineHTML(REC.doc(D)), `[${tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })}]`);
+});
+
+test('a slot document\'s label carries its slot\'s name between its first line and its address — at the address\'s size in the client\'s face and the title\'s ink, never cut — the acting account\'s own mailbox by its own name, another account\'s mailbox the reader may read and the acting account\'s agent space\'s by the plain one, a version member as its document; none at the home page, an ordinary number, slot 5 or the system account\'s slots; a guest\'s none of its own; and the status region\'s name of a document, which names it as the mirror\'s label does, carries none (B11-S2, B11-S7, B11-F10, B11-F12; FP-33; issue #369)', () => {
+  const nameOf = (/** @type {string} */ a) => { const n = LAYER.docLabel(REC.doc(a), 12).name; return n && [n.text, n.px, n.ink, n.fit, n.face ?? 'client']; };
+  const named = (/** @type {string} */ id) => [t(id), ADDRESS.px, COL.title, 'one', 'client'];
+  assert.deepEqual(['1.0.1.0.3', '1.0.1.0.4', '1.0.1.0.2', '1.0.2.0.2', '1.0.1.1.0.2', '1.0.1.0.3.2'].map(nameOf),
+    [named('L.well-known.bio'), named('L.well-known.link-page'), named('L.well-known.your-mailbox'), named('L.well-known.mailbox'), named('L.well-known.mailbox'), named('L.well-known.bio')],
+    'acting as 1.0.1: its bio, its link page and its own mailbox; another account\'s mailbox and its agent space\'s by the plain name; a member of its bio as its bio');
+  assert.deepEqual(['1.0.1.0.1', '1.0.1.0.64', '1.0.1.0.185', '1.0.1.0.5', REC.SYSTEM_ACCOUNT + '.0.2', REC.SYSTEM_ACCOUNT + '.0.3'].map(nameOf), [null, null, null, null, null, null], 'the home page, ordinary numbers, slot 5, the system account\'s slots: no name');
+  const lab = LAYER.docLabel(REC.doc('1.0.1.0.3'), 12);
+  assert.deepEqual([lab.lead && plain(lab.lead.text), lab.address.text], ['d', '.0.3'], 'beside it the first line and the address, as at every document');
+  assert.ok(!LAYER.placeName(REC.doc('1.0.1.0.3'), '1.0.1.0.3').includes(t('L.well-known.bio')), 'the status region\'s name: its first line and its address alone');
+  REC.setSession(null);
+  assert.deepEqual(['1.0.1.0.2', '1.0.2.0.2'].map(nameOf), [named('L.well-known.mailbox'), named('L.well-known.mailbox')], 'a guest: no mailbox its own');
 });
 
 test('a box\'s first line is read by one rule: its own text from its first position where the model holds it — a record\'s words by the record rule, bracketed, else its first typed line holding more than white space — else the index\'s first line at its bare address; none where none is known, and none at a version the model holds no text of (issue #23)', () => {

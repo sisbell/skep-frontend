@@ -26,11 +26,14 @@
 // §3.2) — or, where the walk stands on an account or the board, that place
 // as mid scale names it, the document's fields blank; where no board is held
 // `L.go-to-address` alone, at every scale (FP-35). Its exact fields come
-// first, each followed by its label: the document's its box's first line, as
+// first, each followed by its label: the document's the name of the
+// well-known slot it stands at, whole, in the client's face (T-LAYER's
+// `slotNamed`; B11-S4), then, a field's joiner apart, its box's first line, as
 // its label on the plane sets it (T-LAYER's `firstOf`), in the reading face, cut
-// on a word to the room the address part leaves past its fields at the step
-// the layout holds, each measured at the line's size (`labelHTML`,
-// `lineWidth`), giving way word by word and never a field (the style's); the
+// on a word to the room the address part leaves past its fields and the name at
+// the step the layout holds, each measured at the line's size (`labelHTML`,
+// `lineWidth`), giving way word by word from its end, the name last and whole,
+// and never a field (the style's); the
 // board and an account carry none, the page holding no name for either. Its accessible name is its fields in their
 // order and the document's label whole after its field — a name, carrying
 // no kind (`addressName`). The places it names are
@@ -235,7 +238,7 @@ import { lodOf } from '../plane/lod.js';
 import { boardCell, accountAt, docBox, numberAtCell, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
 import { memberOf, boardOf, accountOf, documentOf } from '../model/address.js';
 import { inFace, runsOf, runWidth, cutWords, LEAD_WORDS } from '../plane/labels.js';
-import { t, tHTML, tRuns, addressedHTML, facedHTML, lastRead, runningHTML, sentence, sentences, heard, joinRuns, asRuns, runsText, CLIENT_CLOSE } from '../strings.js';
+import { t, tHTML, tRuns, addressedHTML, facedHTML, lastRead, runningHTML, sentence, sentences, heard, joinRuns, asRuns, runsText, CLIENT_CLOSE, FIELD } from '../strings.js';
 import { esc, numeral } from '../util.js';
 
 /** @type {HTMLElement | null} */
@@ -787,6 +790,7 @@ function keptSaid() {
  * @property {string} text the segment's fields: the place, then the position where one is named
  * @property {string} place the place's words — the board, the account, or board › account › document — before the position's slot
  * @property {import('../text/article.js').Faced[]} label the label after the document's field: its box's first line as its label on the plane sets it (T-LAYER's `firstOf`), whole; none where no document is named or no first line is known
+ * @property {{id: string, text: string}} [name] the name of the well-known slot the document named stands at, as its label on the plane sets it (T-LAYER's `slotNamed`), ahead of its label; absent where no document is named or it stands at none that bears one
  * @property {number} slot the position's words' room, in characters: as many as the document's widest position takes in its words, which stand empty below the document's reading scale; 0 where no document is named
  * @property {string} addr the address named — the board, the account under the camera at mid, nearer the account or the board the walk stands on, or the document the walk stands in (its member where one is pinned): the LEAP box's prefill; '' where no board is held
  * @property {string | null} doc the document named, nearer than mid
@@ -876,7 +880,8 @@ export function addressDisplay() {
     const pos = readable && LAYER.atReadingScale(f.addr) ? WALK.landedAt() ?? f.pos ?? 1 : null;
     const widest = Math.max(1, LAYER.shownOf(f.addr).extent || 0, pos || 0);
     const win = pos != null && WALK.kept() ? windowOver(f.addr) : null;
-    return { text: place + positionWords(pos), place, label: LAYER.firstOf(REC.doc(f.addr)), slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, strip: readable, window: win };
+    const name = LAYER.slotNamed(f.addr);
+    return { text: place + positionWords(pos), place, label: LAYER.firstOf(REC.doc(f.addr)), ...(name ? { name } : {}), slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, strip: readable, window: win };
   }
   // nearer than mid the account or the board the walk stands on; at mid, or where it stands nowhere, the account under the camera
   const acct = f && nearer && (f.kind === 'account' || f.kind === 'board') ? (f.kind === 'account' ? f.addr : null) : accountAt(cam.x, cam.y, '1');
@@ -1276,29 +1281,33 @@ function labelRoom(a, at) {
 }
 
 /**
- * The document's label after its field (see the head): its box's lead,
- * whole where the room the part leaves past its fields holds it (`labelRoom`),
- * else cut on a word, LEAD_WORDS of it kept at the least (P-LABEL's
- * `cutWords`), else none — each stretch in its face (ST's `facedHTML`); the
- * style gives it the room left and lets it give way word by word, its first
- * word too, after the empty lead-in it opens with, which gives it a line, and
- * so the line's baseline, with no word in it. Its element stands, holding
- * only its lead-in, where no document is named.
+ * The document's label after its field (see the head): the name of the
+ * well-known slot it stands at, whole, in the client's face, then, a field's
+ * joiner apart, its box's lead, whole where the room the part leaves past its
+ * fields and the name holds it (`labelRoom`), else cut on a word, LEAD_WORDS
+ * of it kept at the least (P-LABEL's `cutWords`), else none — each stretch in
+ * its face (ST's `facedHTML`); the style gives it the room left and lets it
+ * give way word by word from its end, the lead's first word too and the name
+ * whole after it, after the empty lead-in it opens with, which gives it a
+ * line, and so the line's baseline, with no word in it. Its element stands,
+ * holding only its lead-in, where no document is named.
  * @param {AddressDisplay} a
  * @param {Step} at
  */
 function labelHTML(a, at) {
   const words = a.label.map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join(''), last = a.label[a.label.length - 1];
-  if (!words) return '<span class="label"><span class="lead-in"></span></span>';
-  const room = labelRoom(a, at), fits = (/** @type {string} */ s) => runsOf(s, 'client').reduce((w, r) => w + lineWidth(r.text, r.face), 0) <= room + 1e-6;
-  const shown = fits(words) ? words : cutWords(words, fits, last.face === 'client' && last.text === CLIENT_CLOSE ? CLIENT_CLOSE : '', LEAD_WORDS);
-  return `<span class="label"><span class="lead-in"></span>${shown ? facedHTML(runsOf(shown, 'client')) : ''}</span>`;
+  const name = a.name ? `<span class="slot-name" data-string="${esc(a.name.id)}">${esc(a.name.text)}</span>` : '';
+  if (!words) return `<span class="label"><span class="lead-in"></span>${name}</span>`;
+  const room = labelRoom(a, at) - (a.name ? lineWidth(a.name.text + FIELD, 'client') : 0), fits = (/** @type {string} */ s) => runsOf(s, 'client').reduce((w, r) => w + lineWidth(r.text, r.face), 0) <= room + 1e-6;
+  const shown = room <= 0 ? null : fits(words) ? words : cutWords(words, fits, last.face === 'client' && last.text === CLIENT_CLOSE ? CLIENT_CLOSE : '', LEAD_WORDS);
+  return `<span class="label"><span class="lead-in"></span>${name}${name && shown ? `<span class="joiner">${esc(FIELD)}</span>` : ''}${shown ? facedHTML(runsOf(shown, 'client')) : ''}</span>`;
 }
 
 /**
  * The address segment's accessible name's stretches (see the head;
  * `L.address.name`): its fields in their order, the document's label after
- * its field whole, in its faces, the position, then the version pinned, each
+ * its field whole — the slot's name, then its first line, a field's joiner
+ * apart — in its faces, the position, then the version pinned, each
  * after its own separator, none where it is empty — a name, which carries no
  * kind — rendered for the ear where it is set (ST's `heard`), the levels'
  * "›" a pause and the label kept as written.
@@ -1306,7 +1315,8 @@ function labelHTML(a, at) {
  * @returns {import('../strings.js').Run[]}
  */
 function addressName(a) {
-  const label = a.label.length ? [{ text: ' ', face: /** @type {const} */ ('client') }, ...a.label] : '';
+  const words = joinRuns(FIELD, [a.name ? a.name.text : '', a.label]);
+  const label = words.length ? [{ text: ' ', face: /** @type {const} */ ('client') }, ...words] : '';
   return tRuns('L.address.name', { place: a.place, label, position: positionWords(a.pos), version: a.member ? ', ' + t('L.version', { k: a.member }) : '' });
 }
 

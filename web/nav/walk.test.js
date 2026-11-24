@@ -93,9 +93,9 @@ import * as LK from '../links/links.js';
 import { farShort } from '../beams/held.js';
 import { page } from '../test/dom.js';
 
-const D = '1.0.1.0.3';
+const D = '1.0.1.0.64';
 /** a second document: a separator alone, then a span, a block of one space, a span — two elements of the walk among four blocks */
-const E = '1.0.1.0.5';
+const E = '1.0.1.0.66';
 const E_TEXT = '\n\nSecond.\n\n \n\nThird.';
 /** the reads of a document read whole: its extent, its metadata, its text, its image, its links (none) */
 const reads = (/** @type {string} */ doc, /** @type {Array<Record<string, unknown>>} */ items, /** @type {number} */ extent, /** @type {Array<Record<string, string>>} */ runs) => ({
@@ -106,7 +106,7 @@ const reads = (/** @type {string} */ doc, /** @type {Array<Record<string, unknow
   [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, extent) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
 });
 /** a third document, held in part as the viewport's read leaves it — its extent and its first paragraph — the rest of its text read on the walk's ask */
-const G = '1.0.1.0.65';
+const G = '1.0.1.0.68';
 const G_TEXT = 'First.\n\nSecond.\n\nThird.';
 /** the document at the account's 49th cell, its first continuation's first: its room a seventh of a depth-0 document's across, its type with it */
 const C1 = '1.0.1.0.107';
@@ -216,9 +216,9 @@ test('a block of white space alone is no element of the walk; a landing inside o
 });
 
 test('a landing the index does not list stands on its own node among the listed siblings, in address order (rule 12)', async () => {
-  await WALK.focusTo('1.0.1.0.4', null);
-  assert.deepEqual(WALK.siblingsNow().map((n) => n.addr), [D, '1.0.1.0.4', E], 'the document placed between the two the index lists');
-  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr], ['document', '1.0.1.0.4'], 'the focus on its own node, never a listed sibling');
+  await WALK.focusTo('1.0.1.0.65', null);
+  assert.deepEqual(WALK.siblingsNow().map((n) => n.addr), [D, '1.0.1.0.65', E], 'the document placed between the two the index lists');
+  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr], ['document', '1.0.1.0.65'], 'the focus on its own node, never a listed sibling');
   await WALK.focusTo('1.0.9.0.1', null);
   assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr], ['document', '1.0.9.0.1']);
   assert.deepEqual(WALK.siblingsNow().map((n) => n.addr), ['1.0.9.0.1'], 'an account the index lists nothing for: the document its own level\'s one node');
@@ -476,7 +476,7 @@ test('an account\'s counts that are a lower bound are drawn in the mirror\'s ite
 
 test('the mirror names a document no read or listing has told the kind of by its kind\'s slot being read, leading, and no state; one the board said nothing about led by a far end\'s words for it — never "published": the item a jump\'s walk stands on before its read answers, and after it learns the board says nothing; its metadata read, led by its kind (FP-25, FP-34; issue #137; issue #423\'s design decision: "the slot\'s word leads the item")', () => {
   // an address in an account the index lists nothing for, never read
-  const U = '1.0.7.0.4';
+  const U = '1.0.7.0.70';
   const unread = WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1);
   assert.equal(unread, `Being read document ${U}. Item 1 of 1.`, 'nothing told of it: its kind being read, no state — and no comma where no part follows, the item\'s place a sentence of its own');
   assert.ok(!unread.includes(t('F.published')) && !unread.includes(t('F.kind.draft')), `never "published", nor "draft": ${unread}`);
@@ -487,6 +487,26 @@ test('the mirror names a document no read or listing has told the kind of by its
   REC.takeMetadata(U, { doc: U, published: false, owner: '1.0.7', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
   assert.ok(WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1).startsWith(`Draft document ${U}`), 'its metadata read: led by its kind, "Draft"');
   REC.invalidate(U);
+});
+
+test('the mirror\'s item at a slot document says its slot\'s name after its address and before its first line — the words its label sets: the acting account\'s own mailbox by its own name, another account\'s bio by its plain one — unquoted, no word of the document\'s own; none at an ordinary document (B11-S5; FP-33)', () => {
+  // acting as an account no other test here reads, so nothing it holds reaches another test
+  const OWN = '1.0.6.0.2', THEIRS = '1.0.5.0.3', PLAIN = '1.0.5.0.70';
+  const meta = (/** @type {string} */ doc, /** @type {boolean} */ published, /** @type {string} */ owner) => ({ doc, published, owner, birth: published ? doc + '.1' : null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  const item = (/** @type {string} */ a) => WALK.nameOf({ kind: 'document', addr: a, pos: null, link: null }, 0, 1);
+  const bio = t('L.well-known.bio'), mine = t('L.well-known.your-mailbox');
+  try {
+    REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.6' }));
+    REC.takeMetadata(OWN, meta(OWN, false, '1.0.6'));
+    REC.takeMetadata(THEIRS, meta(THEIRS, true, '1.0.5'));
+    REC.takeMetadata(PLAIN, meta(PLAIN, true, '1.0.5'));
+    assert.ok(item(OWN).startsWith(`Draft document ${OWN}, ${mine}`), `the acting account's own mailbox: its own name after its address: ${item(OWN)}`);
+    assert.ok(item(THEIRS).startsWith(`Published document ${THEIRS}, ${bio}`), `another account's bio: its plain name: ${item(THEIRS)}`);
+    assert.ok(!item(PLAIN).includes(bio) && !item(PLAIN).includes(t('L.well-known.mailbox')), `an ordinary document: no slot's name: ${item(PLAIN)}`);
+    REC.takeSpanSet(THEIRS, [{ subspace: 1, ordinal: 1, positions: 6 }]);
+    REC.takeDelivery(THEIRS, [{ pos: 1, width: 6, kind: 'content', text: 'Hello.', ref: null, origin: null }]);
+    assert.ok(item(THEIRS).startsWith(heard(list(`Published document ${THEIRS}`, bio, '"Hello."'))), `its first line after the name, the document's own words alone quoted: ${item(THEIRS)}`);
+  } finally { for (const a of [OWN, THEIRS, PLAIN]) REC.invalidate(a); REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1' })); }
 });
 
 test('the mirror names a document a read answered `withheld` by its withheld box\'s words — its owner by the one owner rule — and never "published" (B1-S2)', () => {

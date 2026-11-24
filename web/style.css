@@ -98,9 +98,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    pass), then the strip's room (its 64px and 6px either side) and the marker's 2ch. Its fields stand at their own widths,
    whole; the document's label after its field takes the room they leave (`flex`, from none), its words wrapping onto a
    line it hides, so it gives way a whole word at a time — its first word too, after the empty lead-in it opens with, which
-   a line may break after and which gives an empty label its line, so it stands on the segment's baseline. Folded, the
-   board's field and the fold mark stand before the segment, the mark 2ch wide; the board's field and the version marker
-   bear the segment's act */
+   a line may break after and which gives an empty label its line, so it stands on the segment's baseline; the slot's name
+   leading it and the joiner after the name in the client's face, the name never broken, so it gives way whole and after
+   every word of the first line. Folded, the board's field and the fold mark stand before the segment, the mark 2ch wide;
+   the board's field and the version marker bear the segment's act */
 #line .address-part { display:inline-flex; align-items:baseline; width:calc(var(--words) * 1ch + 76px + 2ch); font-family:var(--face-ident); font-size:11px; vertical-align:top; }
 #line .address-part > * { flex:none; }
 #line .address-part b { white-space:pre; }
@@ -109,6 +110,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line button.address > * { flex:none; }
 #line button.address > .label { flex:1 1 0; width:0; min-width:0; height:1lh; margin:0 .25em; overflow:hidden; white-space:normal; overflow-wrap:normal; font-family:var(--face-reading); color:var(--ink); }
 #line button.address > .label > .lead-in { display:inline-block; width:0; }
+#line button.address > .label > :is(.slot-name, .joiner) { font-family:var(--face-client); }
+#line button.address > .label > .slot-name { white-space:nowrap; }
 #line button.fold { width:2ch; padding:0; margin:0; border:0; border-radius:0; background:none; color:var(--ink); font:inherit; line-height:inherit; text-align:center; }
 /* a walk's folded moment, a kept clause and the daemon's stopped, unreachable and halted forms: their words whole (FP-26, FP-36) */
 #line .seg.walk { color:var(--warn); }

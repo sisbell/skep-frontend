@@ -491,9 +491,9 @@ test('a held label\'s parts carry their runs: its address in the identifier\'s f
 // ---- the contents line, the region, the cut apart (issue #23) ---------------------------------------------------------
 
 /** a document's label as P-RENDER hands one over: its contents line on the row at `y`, its lead from `from` to `to`, its address ending at `end`, its kept clause at the address's size, its badge beneath, in `within` */
-const contents = (/** @type {{lead?: string | null, from?: number, to?: number, end?: number, address?: string, whole?: string, region?: string | null, y?: number, badge?: string, kept?: string, within?: Rect}} */ o = {}) => label(o.badge ? [part(o.badge, 'wrap')] : [], {
+const contents = (/** @type {{lead?: string | null, from?: number, to?: number, end?: number, address?: string, whole?: string, region?: string | null, y?: number, badge?: string, kept?: string, name?: string, within?: Rect}} */ o = {}) => label(o.badge ? [part(o.badge, 'wrap')] : [], {
   within: o.within ?? { x: 10, y: 10, w: 300, h: 200 }, x: 10, y: o.y ?? 40, region: o.region ?? null,
-  contents: { lead: o.lead === null ? null : part(o.lead ?? 'The artifact chain of custody', 'cut', 12), px: 12, address: { ...part(o.address ?? '.0.3'), whole: o.whole ?? '1.0.1.0.3', face: 'ident' }, kept: o.kept ? part(o.kept, 'wrap') : null, from: o.from ?? 20, to: o.to ?? 200, end: o.end ?? 300 },
+  contents: { lead: o.lead === null ? null : part(o.lead ?? 'The artifact chain of custody', 'cut', 12), name: o.name ? part(o.name) : null, px: 12, address: { ...part(o.address ?? '.0.3'), whole: o.whole ?? '1.0.1.0.3', face: 'ident' }, kept: o.kept ? part(o.kept, 'wrap') : null, from: o.from ?? 20, to: o.to ?? 200, end: o.end ?? 300 },
 });
 /** the line of a set label whose runs are all in the identifier's face: its address */
 const addressOf = (/** @type {import('./labels.js').SetLabel} */ l) => l.lines.find((x) => x.runs.every((q) => q.face === 'ident'));
@@ -555,6 +555,50 @@ test('a contents line held: its address at the line\'s end, whole, else no line;
   assert.deepEqual(at(50).map(([s]) => s), ['.0.3'], 'the badge dropped where it does not fit');
   assert.ok(Math.abs((heldContents(c, badge, 50, measure) || [])[0].x - (50 - 21.6)) < 1e-9, 'the address alone at the line\'s end');
   assert.equal(heldContents(c, badge, 20, measure), null, 'the address wider than the line: none');
+});
+
+// ---- a well-known slot's name (B11-F10, B11-S2) ------------------------------------------------------------------------
+
+test('a slot document\'s contents line: its first line cut on a word to the room before its slot\'s name, the name whole a space before its address, the address whole at the row\'s end, each centred on the row (B11-S2, B11-F10; issue #23)', () => {
+  // the address ".0.3" 21.6 px at 9 px, ending at 300; a space 5.4 px; "link page" 48.6 px; the first line at 12 px, 7.2 px a character, its column reaching the row's end
+  const r = run([contents({ name: 'link page', to: 300 })]);
+  const l = r.set[0], [first, n, a] = l.lines, lh = 12 * LINE_BOX;
+  assert.deepEqual([l.lines.map((x) => x.text), r.out], [['The artifact chain of…', 'link page', '.0.3'], []], 'its first line, cut on a word, its slot\'s name, its address: nothing left out');
+  assert.ok(a === addressOf(l) && Math.abs(a.rect.x + a.rect.w - 300) < 1e-9, `the address whole at the row's end: ${JSON.stringify(a.rect)}`);
+  assert.ok(Math.abs(n.rect.x + n.rect.w - (a.rect.x - 9 * 0.6)) < 1e-9 && Math.abs(n.rect.w - 9 * 9 * 0.6) < 1e-9, `the name whole, a space at its size before the address: ${JSON.stringify([n.rect, a.rect])}`);
+  assert.deepEqual([n.px, n.runs, n.ink], [a.px, [{ text: 'link page', face: 'client' }], '#fff'], 'the name at its part\'s size, in the client\'s face and its part\'s ink');
+  assert.ok(first.rect.x === 20 && first.rect.x + first.rect.w <= n.rect.x - 12 * 0.6 + 1e-9, `the first line from where its words stand, a space short of the name: ${JSON.stringify([first.rect, n.rect])}`);
+  assert.ok([first, n, a].every((x) => Math.abs(x.rect.y + x.rect.h / 2 - (40 + lh / 2)) < 1e-9), 'each centred on the row');
+  assert.deepEqual(run([contents({ to: 300 })]).set[0].lines.map((x) => x.text), ['The artifact chain of custody', '.0.3'], 'at no slot: the first line keeps the name\'s room, whole');
+  assert.deepEqual(run([contents({ name: 'link page', lead: null })]).set[0].lines.map((x) => x.text), ['link page', '.0.3'], 'no first line known: the name and the address alone');
+});
+
+test('short of room a slot document\'s first line gives way first, then its slot\'s name — the address never: it stands whole at the row\'s end, or the label is left out whole (FP-26; B11-S2, B11-F10; issue #23)', () => {
+  const row = (/** @type {number} */ w, /** @type {string} */ lead = 'Field notes') => run([contents({ name: 'link page', lead, to: 300, end: 10 + w, within: { x: 10, y: 10, w, h: 200 } })]);
+  const says = (/** @type {ReturnType<typeof run>} */ r) => [r.set[0] ? r.set[0].lines.map((x) => x.text) : [], r.out.map((o) => [o.text, o.reason])];
+  // a row 120 px wide ending at 130: the address at 108.4, the name at 54.4, the first line's room 27.2 px — "Field notes", 79.2 px, would fit beside the address alone
+  assert.deepEqual(says(row(120)), [['link page', '.0.3'], [['Field notes', 'width']]], 'the first line gives way first: the name and the address stand');
+  // 60 px: the name would start left of the row
+  assert.deepEqual(says(row(60)), [['.0.3'], [['link page', 'width'], ['Field notes', 'after']]], 'then the name, the first line left out with it: the address alone');
+  // 20 px: the address does not fit
+  assert.deepEqual(says(row(20)), [[], [['.0.3', 'width'], ['link page', 'after'], ['Field notes', 'after']]], 'the address past its room: no label at all, never the name or the first line alone');
+});
+
+test('a slot document\'s contents line held: its slot\'s name whole just before its address and a badge before the name, its first line from the line\'s start — the first line giving way first, then the name, then the badge; the address never (issue #169; FP-26; B11-F10)', () => {
+  const c = { lead: part('The artifact chain', 'cut'), name: part('bio'), address: part('.0.3') }, badge = [part('6 links', 'wrap')];
+  const at = (/** @type {number} */ w, /** @type {typeof c} */ cc = c) => (heldContents(cc, badge, w, measure) || []).map((m) => [m.text, +m.x.toFixed(2)]);
+  // ".0.3" 21.6, "bio" 16.2, a space 5.4, "6 links" 37.8, "The artifact chain" 97.2, "The artifact…" 70.2
+  assert.deepEqual(at(300), [['The artifact chain', 0], ['6 links', 213.6], ['bio', 256.8], ['.0.3', 278.4]], 'room for all: the first line, the badge, the name beside the address');
+  assert.deepEqual(at(161).map(([s]) => s), ['6 links', 'bio', '.0.3'], 'the first line gives way first');
+  assert.deepEqual(at(86).map(([s]) => s), ['6 links', '.0.3'], 'then the name, the badge a number that keeps its words');
+  assert.deepEqual(at(60).map(([s]) => s), ['bio', '.0.3'], 'the badge too wide beside the address alone: dropped, the name kept in the room it leaves');
+  assert.deepEqual(at(40).map(([s]) => s), ['.0.3'], 'then the name: the address alone');
+  assert.equal(heldContents(c, badge, 20, measure), null, 'the address wider than the line: none');
+  // a first line that fits beside the address alone gives way to the name: "Field notes" 59.4, "link page" 48.6
+  const near = { lead: part('Field notes', 'cut'), name: part('link page'), address: part('.0.3') };
+  assert.deepEqual((heldContents(near, [], 100, measure) || []).map((m) => m.text), ['link page', '.0.3'], 'the name kept, the first line dropped');
+  const held = setLabels([{ ...contents({ name: 'bio', y: -60 }), hold: { rects: [{ x: 0, y: -100, w: 400, h: 400 }], pad: 10, plate: null } }], [], SEEN, measure);
+  assert.deepEqual([held.set[0].held, held.set[0].lines.map((x) => x.text), held.out], [true, ['The artifact chain of custody', 'bio', '.0.3'], []], 'held below the one line: its first line, its name, its address');
 });
 
 // ---- a kept document's clause (issue #368) -----------------------------------------------------------------------------

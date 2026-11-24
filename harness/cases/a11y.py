@@ -98,7 +98,7 @@ Never a screen reader's voice — the seat's."""
 import json
 import re
 
-from . import DOC, FAR_LEAP, HOME, NO_MATCH, RUNS_IN, VERSIONED, WINDOW, Result, heard, item_words
+from . import BIO, DOC, FAR_LEAP, HOME, MAILBOX, NO_MATCH, RUNS_IN, VERSIONED, WINDOW, Result, heard, item_words, slot_words
 
 # how far apart the first lines of a landing's two runs stand, in body line boxes — the article's line height 1.45 of
 # its size, the case's own — so the label beside the second never stacks with the line beside the first (O-LAND's
@@ -148,6 +148,31 @@ def reserved_keys(ctx, r):
             'made where no site is named, the face at a reserved number stands at the viewport\'s corner offering its jump, and Tab from the walk\'s item reaches it, named by its words "%s", the face standing (issue #771\'s decision; issue #179: "Its offered act must be reachable by keyboard without dismissing the face")' % words[2],
             {'face': face, 'tabbed': at})
     ctx.esc()
+
+def slot_names_heard(ctx, r):
+    """A WELL-KNOWN SLOT'S NAME HEARD (B11-S5, B11-S4, B11-S9; FP-33): at the claimant's own mailbox, landed at, the mirror's
+    item names it by the name its label sets, after its address, and the DOM item says the same; the one line's address
+    segment is named by its fields and that name after the document's; and in the LEAP box, `bio` typed, the own row's go is
+    named by its address, its account and its slot's name"""
+    words = slot_words(ctx)
+    mine, bio = heard(ctx, words['L.well-known.your-mailbox']), heard(ctx, words['L.well-known.bio'])
+    ctx.leap(MAILBOX)
+    at = ctx.js('''(() => { const i = window.__skep.mirror.index(), li = document.getElementById('walk-' + i), f = window.__skep.view.focus(), seg = document.querySelector('#line .seg.address');
+      return {item: window.__skep.mirror.item(i), dom: li ? li.getAttribute('aria-label') : null, focus: f && {kind: f.kind, addr: f.addr}, line: seg ? seg.getAttribute('aria-label') : null}; })()''')
+    item = at['item'] or ''
+    r.check((at['focus'] or {}).get('addr') == MAILBOX and (MAILBOX + ', ' + mine) in item and at['dom'] == item,
+            'the mirror\'s item at the claimant\'s own mailbox names it "%s" after its address, as its label does, and the DOM item says the same (B11-S5; FP-33)' % mine, at)
+    r.check(bool(at['line']) and (MAILBOX + ' ' + mine) in at['line'],
+            'the one line\'s address segment at the claimant\'s own mailbox is named by its fields and "%s" after the document\'s (B11-S4; P2.22)' % mine, {'line': at['line']})
+    ctx.drv.key('l', mods=('Meta',)); ctx.settle(); ctx.frames(2)
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime('bio'); ctx.frames(2)
+    go = ctx.js('(() => { const g = document.getElementById("leap-go-0"); return g ? g.getAttribute("aria-label") : null; })()')
+    r.check(bool(go) and go.startswith(BIO) and ('1.0.1, ' + bio) in go,
+            'in the LEAP box, "bio" typed: the own row\'s go named by its address, then its account and "%s" (B11-S9; B11-F18 (4))' % bio, {'go': go})
+    ctx.drv.key('Escape'); ctx.frames(1)
+    r.figures['slot_names_heard'] = {'mirror_item': item, 'line': at['line'], 'own_row': go}
+
 
 def run(ctx):
     r = Result()
@@ -1242,6 +1267,7 @@ def run(ctx):
     r.check(bool(item) and not re.search(r'[{}]|skep-enroll|[0-9a-f]{64}', item), 'the record\'s item reads no raw value aloud: no JSON, no key\'s hex', item[:300])
     r.figures['record_item'] = item[:300]
     reserved_keys(ctx, r)
+    slot_names_heard(ctx, r)
     # leave the page as the case found it: the landing, the focus on no element
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')

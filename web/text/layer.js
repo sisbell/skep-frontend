@@ -344,12 +344,14 @@
 // element of the corner layer over its text — the canvas's words for its
 // box, read here (`docLabel`), so the two never part: its first line from
 // the line's start, the box's lead (`firstOf`, by T-ARTICLE's first-line
-// rule), which names the document and carries no kind, and its address at
-// the line's end, past its region's prefix where
+// rule), which names the document and carries no kind, the name of the
+// well-known slot it stands at just before its address (`slotNamed`), and its
+// address at the line's end, past its region's prefix where
 // that region is named in view (the reader `region`), else whole — a space
 // short of its kept clause there where no corner carries the clause — its
-// address in the identifier's face and the document's words in the reading
-// face's, each stretch measured and set in its own (`runHTML`), on one line
+// address in the identifier's face, the slot's name in the client's and the
+// document's words in the reading face's, each stretch measured and set in its
+// own (`runHTML`), on one line
 // across its outline's visible part, on its box's ground, pushed up under the
 // line by its outline's foot, beside its corner and never over it
 // (`besideCorner`), drawn and never announced, taking the pointer where its
@@ -3085,6 +3087,19 @@ export const kindSaid = (/** @type {Doc} */ d) => kindWord(kindOf(d)).text;
  */
 export const firstOf = (d) => firstLineOf(d, { label: memberOf(d.addr) == null ? d.label : null, reader: REC.reader(), owner: REC.ownerAccount(d) });
 
+/**
+ * The name of the well-known slot a box stands at, as the reader is shown it
+ * (M-REC's `slotNameShown`): its string's id and its words — never words of
+ * the document's own, so never its first line nor quoted as one; null where
+ * its address names no slot that bears one.
+ * @param {string} addr the box, or the version it shows
+ * @returns {{id: import('../model/records.js').SlotName, text: string} | null}
+ */
+export function slotNamed(addr) {
+  const id = REC.slotNameShown(addr);
+  return id ? { id, text: t(id) } : null;
+}
+
 /** the quote around a document's own words where the mirror's item and a place's name say them (`mirrorLabel`) */
 const QUOTE = /** @type {import('./article.js').Faced} */ ({ text: '"', face: 'client' });
 
@@ -3324,6 +3339,7 @@ export function keptCountIn(account) {
 /**
  * @typedef {Object} DocLabel — a document's label on the plane (`docLabel`): its contents line and its parts beneath it
  * @property {import('../plane/labels.js').Part | null} lead its first line (`leadPart`); null where none is known
+ * @property {import('../plane/labels.js').Part | null} name the name of the well-known slot it stands at (`slotNamed`), between its first line and its address; null where it stands at none that bears one
  * @property {import('../plane/labels.js').Part} address the address of the version its box shows, its fields past its region's prefix, whole where the region is not named in view (`Part.whole`)
  * @property {import('../plane/labels.js').Part | null} kept its kept clause (`keptIn`), after its address; null where it is not kept, or the one line names it, which carries the clause beside its address instead
  * @property {import('../plane/labels.js').Part[]} parts its links' badge; none at a withheld box
@@ -3333,7 +3349,10 @@ export function keptCountIn(account) {
 /**
  * A document's label on the plane — P-RENDER's contents line on its box, and
  * its held form over its mounted article (see the head) — read here, so the
- * two never part: its lead at its em (`leadPart`); the address of the
+ * two never part: its lead at its em (`leadPart`); the name of the
+ * well-known slot it stands at (`slotNamed`), at P-REG's ADDRESS size in the
+ * client's face and the title's ink, never cut, between the lead and the
+ * address; the address of the
  * version its box shows at P-REG's ADDRESS size and weight in the
  * identifier's face, past its region's prefix (`shortAddr`) where its region
  * is named in view, else whole; its kept clause after the address at that
@@ -3345,11 +3364,12 @@ export function keptCountIn(account) {
  * @returns {DocLabel}
  */
 export function docLabel(d, fsPx) {
-  const box = boxOf(d.addr), c = LK.countDoc(box), k = box === read.named() ? null : keptIn(d.addr);
+  const box = boxOf(d.addr), c = LK.countDoc(box), k = box === read.named() ? null : keptIn(d.addr), slot = slotNamed(d.addr);
   /** @type {import('../plane/labels.js').Part[]} */
   const parts = d.refused !== 'withheld' && (c.n || c.arriving) ? [{ text: c.arriving ? `${c.n ? numeral(c.n) + ' · ' : ''}${t('L.arriving')}` : plural(c.n, 'F.label.links.1', 'F.label.links'), px: ADDRESS.px, ink: COL.greek, fit: 'wrap' }] : [];
   return {
-    lead: leadPart(d, fsPx), address: { text: shortAddr(d), whole: d.addr, px: ADDRESS.px, ink: COL.title, weight: ADDRESS.weight, fit: 'one', face: 'ident' },
+    lead: leadPart(d, fsPx), name: slot ? { text: slot.text, px: ADDRESS.px, ink: COL.title, fit: 'one' } : null,
+    address: { text: shortAddr(d), whole: d.addr, px: ADDRESS.px, ink: COL.title, weight: ADDRESS.weight, fit: 'one', face: 'ident' },
     kept: k ? { text: k.text, px: ADDRESS.px, ink: COL.title, fit: 'wrap' } : null, parts, region: d.account,
   };
 }
@@ -4655,8 +4675,9 @@ export function marksStanding() {
  * FP-26): its rows across the column nearest the view's centre — its text and
  * its edge — at the reading line's pitch at the scale (`headLayout`, at the
  * width it stands at): on its first row the document's name, unless the one
- * line names it, its first line cut to the name's room, its badge where it
- * fits and its address at that room's end, each in its face as the held label
+ * line names it, its first line cut to the name's room, the name of the
+ * well-known slot it stands at and its badge where they fit, and its address
+ * at that room's end, each in its face as the held label
  * sets it (`heldContents`, `runHTML`), the kept clause after the address,
  * whole, where the line does not carry it beside its own address, then the
  * corner's items in their one order and compact forms, each in its slot with
@@ -4694,7 +4715,7 @@ function headOf(c, rec, column, open) {
   if (!named) {
     const label = docLabel(d, f.fs * scale);
     const address = label.region && !read.region(label.region) && label.address.whole ? { ...label.address, text: label.address.whole } : label.address;
-    const line = heldContents({ lead: label.lead, address, kept: null }, label.parts, L.name, measureRun);
+    const line = heldContents({ lead: label.lead, name: label.name, address, kept: null }, label.parts, L.name, measureRun);
     if (line) rows[0] += `<span class="name" aria-hidden="true">${line.map((m) => `<span style="left:${m.x}px;line-height:${pitch}px;color:${m.part.ink}">${m.runs.map((r) => runHTML(r, m.px, m.weight)).join('')}</span>`).join('')}</span>`;
   }
   /** @type {number[]} the rows each row takes, by row: the most a slot beginning on it takes, one for a row holding the name alone */
@@ -4963,7 +4984,7 @@ function placeHeld() {
     for (const s of besideCorner({ x: band.x0, w: band.x1 - band.x0 }, { y: band.y, h: band.lh }, c ? { x: c.x, y: c.y, w: c.w, h: c.h } : null)) {
       // on whole px, never past the stretch's right end
       const x = Math.round(s.x), w = Math.floor(s.x + s.w) - x;
-      line = heldContents({ lead: band.label.lead, address: band.address, kept: band.kept }, band.label.parts, w, measureRun);
+      line = heldContents({ lead: band.label.lead, name: band.label.name, address: band.address, kept: band.kept }, band.label.parts, w, measureRun);
       if (line) { room = { x, w }; break; }
     }
     if (line) placed.push({ rec, line, room, y: band.y, lh: band.lh });
@@ -5021,7 +5042,7 @@ function heldBand(rec, seen, top) {
   // a kept document's clause after its address where no corner carries it
   const kept = c ? null : label.kept;
   // one line box of its first line's size, known or not, or of its largest part: the address stands where it stood whatever first line arrives beside it
-  const lh = Math.max(lineHeight(f.fs * scale), ...[label.lead, address, kept, ...label.parts].map((p) => (p ? lineHeight(p.px) : 0))), foot = Math.max(...rects.map((r) => r.y + r.h)) - pad;
+  const lh = Math.max(lineHeight(f.fs * scale), ...[label.lead, label.name, address, kept, ...label.parts].map((p) => (p ? lineHeight(p.px) : 0))), foot = Math.max(...rects.map((r) => r.y + r.h)) - pad;
   const y = Math.round(holdTop(at, top, foot, lh)), a = across(rects, y, lh, pad);
   if (!a || y + lh <= seen.y + 0.5) return null;
   return { label, address, kept, x0: Math.max(a.x, seen.x), x1: Math.min(a.x + a.w, seen.x + seen.w), y, lh };

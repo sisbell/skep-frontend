@@ -65,7 +65,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as LINE from './line.js';
 import { drawChord, trailChord, keyShortcut } from '../nav/keys.js';
 
-const D = '1.0.1.0.3';
+const D = '1.0.1.0.67';
 /** the document at the account's 49th cell, its first continuation's first: its room a seventh of a depth-0 document's across */
 const C1 = '1.0.1.0.107';
 const C1_TEXT = 'Tumbler.\n\nThe first field.';
@@ -227,6 +227,43 @@ test('at reading scale the document\'s field is followed by its label — its bo
     assert.equal(seg.name, `${a.place.split(' › ').join(', ')} ${text} ${t('F.position', { p: 15 })}`, `${doc}: named by its fields, its label whole and its position — a name, carrying no kind, the levels a pause apart`);
     assert.ok(!/[›‹·—│]/.test(seg.name.replace(text, '')), `${doc}: no glyph in its name: ${seg.name}`);
   }
+});
+
+test('at a slot document the line names its slot after the document\'s field, ahead of its label, a field\'s joiner apart and in the client\'s face, kept whole as the label gives way — the bio and the link page by their names, the acting account\'s own mailbox by its own — and at an uncreated own slot the walk stands at, its name alone; the segment\'s accessible name says it after the field, before the first line (B11-S4, B11-S7, B11-F10; P2.22; issue #23)', async () => {
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  const BIO = '1.0.1.0.3', LINK = '1.0.1.0.4', MAIL = '1.0.1.0.2';
+  Object.assign(script, reads(BIO, 'Hello.\n\nMore.'), reads(LINK, LONG_TEXT), reads(MAIL, 'Mail kept here.'));
+  /** the segment as the line renders it: its label's words and markup, and its accessible name */
+  const segment = () => {
+    LINE.render(true);
+    const m = /<button class="seg address"[^>]*aria-label="([^"]*)"[^>]*><b>([^<]*)<\/b><span class="label"><span class="lead-in"><\/span>(.*?)<\/span><\/button>/.exec(host.innerHTML);
+    return /** @type {{name: string, place: string, label: string, labelHTML: string}} */ (m && { name: m[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'"), place: m[2], label: m[3].replace(/<[^>]*>/g, ''), labelHTML: m[3] });
+  };
+  /** the walk at a document's first position, the camera at its reading scale over it */
+  const at = async (/** @type {string} */ doc) => { await PUMP.loadWhole(doc); await WALK.focusTo(doc, 1); CAM.set({ ...LAYER.centreOf(doc, 1), scale: 12.5 / LAYER.foldOf(REC.doc(doc)).fs }); return LINE.addressDisplay(); };
+  const bio = t('L.well-known.bio'), link = t('L.well-known.link-page'), mine = t('L.well-known.your-mailbox');
+  // an uncreated own slot the walk stands at, as a LEAP's landing leaves it: no text read, no first line
+  await WALK.focusTo(LINK, null);
+  CAM.set({ ...LAYER.centreOf(LINK, null), scale: 12.5 / LAYER.foldOf(REC.doc(LINK)).fs });
+  let a = LINE.addressDisplay(), seg = segment();
+  assert.deepEqual([REC.doc(LINK).from, a.doc, a.name?.text, a.label, seg.label], [-1, LINK, link, [], link], 'its link page, no text read: its name alone, no joiner');
+  a = await at(BIO); seg = segment();
+  assert.deepEqual([a.name, a.label], [{ id: 'L.well-known.bio', text: bio }, [{ text: 'Hello.', face: 'reading' }]], 'the bio: its name, then its first line');
+  assert.equal(seg.label, `${bio} · Hello.`, 'drawn after the field: the name, a field\'s joiner, the first line');
+  assert.ok(seg.labelHTML.startsWith(`<span class="slot-name" data-string="L.well-known.bio">${bio}</span><span class="joiner"> · </span><span class="reading">`), `the name its own element, its string named, before the first line's: ${seg.labelHTML}`);
+  assert.equal(seg.name, `${a.place.split(' › ').join(', ')} ${heard(`${bio} · Hello.`)} ${t('F.position', { p: 1 })}`, `named by its fields, the slot's name, then its first line: ${seg.name}`);
+  // a first line too long for the room the name leaves: it gives way, word by word and then whole, the name standing whole
+  a = await at(LINK); seg = segment();
+  const first = LONG_TEXT.split('\n')[0];
+  assert.deepEqual([a.name?.text, seg.label], [link, link], `the link page: its first line given way, its name whole: ${seg.labelHTML}`);
+  assert.ok(seg.name.includes(heard(`${link} · ${first}`)), `its accessible name: the name and the first line whole: ${seg.name}`);
+  a = await at(MAIL); seg = segment();
+  assert.deepEqual([a.name?.text, seg.label], [mine, mine], 'the acting account\'s own mailbox: its own name, its first line given way');
+  assert.ok(seg.name.includes(heard(`${mine} · Mail kept here.`)), `named whole: ${seg.name}`);
+  // an ordinary document: none
+  a = await at(D);
+  assert.equal(a.name, undefined, 'an ordinary document: no slot\'s name');
 });
 
 test('at far scale the line names the board, the whole board in view at its clamp, and the box opens holding the board', async () => {
@@ -917,7 +954,7 @@ test('short of room the line gives way in steps, each keeping the ones before it
         assert.deepEqual(glyphs.map((g) => [/class="key( alone)?"/.test(g), g.includes('aria-hidden="true"'), g.includes('class="key alone"')]), who === 'a guest' ? [] : [[true, true, form === 3]],
           `${where}: ${who === 'a guest' ? 'no key\'s glyph' : `the key's glyph drawn, hidden from the accessibility tree${form === 3 ? ', alone' : ', before its words'}`}`);
         for (const row of rows) assert.ok(row.length === 1 || counted(row).reduce((a, b) => a + b, 0) + counted([SEP])[0] * (row.length - 1) <= room, `${where}: a row within its room, or one part alone: ${row.map(keyOf)}`);
-        const folded = /<b class="board" data-act="address" aria-hidden="true">1 › <\/b><button class="fold" data-act="fold" title="([^"]*)" aria-label="[^"]*">⋮<\/button><button class="seg address" data-act="address"[^>]*><b> › 1\.0\.1\.0\.3<\/b>/.exec(address);
+        const folded = /<b class="board" data-act="address" aria-hidden="true">1 › <\/b><button class="fold" data-act="fold" title="([^"]*)" aria-label="[^"]*">⋮<\/button><button class="seg address" data-act="address"[^>]*><b> › 1\.0\.1\.0\.67<\/b>/.exec(address);
         assert.equal(!!folded, step === 4, `${where}: ${step === 4 ? 'folded — the board\'s field, the mark in the account\'s place, the document\'s field' : 'unfolded'}: ${address}`);
         if (folded) assert.equal(folded[1], t('L.fold.name', { levels: '1.0.1' }), `${where}: the mark named by the levels it folds`);
         assert.ok(/<span class="marker" data-act="address" aria-hidden="true" title="">○<\/span><\/span>$/.test(address), `${where}: the marker whole, last in the address part`);

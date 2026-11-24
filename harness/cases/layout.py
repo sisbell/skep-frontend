@@ -479,7 +479,7 @@ import json
 import math
 import re
 
-from . import BEAMED, DOC, FAR_LEAP, FIRST_ORDINARY, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, edition, first_grid, heard
+from . import AGENT_SPACE, BEAMED, DOC, FAR_LEAP, FIRST_ORDINARY, GHOST, MAILBOX, SECOND_ACCOUNT, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, edition, first_grid, frame_row, heard, slot_words
 
 LEVELS_EM = [9, 12, 18, 30]
 # the room about the viewport the text layer stands a document's lines in (issue #122: a document stands by line) — the
@@ -803,7 +803,8 @@ def label_view(ctx):
     cell — and each tail drawn: its site, its links and their far documents, where its stroke leaves and ends; the shape of
     each held label's place (issue #169), by its kind and place — a document's outline's rects, a mark's cell for each
     of its labels (issue #42), an account's cell — the places the one line names, and for each document labelled the lead its label sets (the page's
-    first-line rule), where its first line stands in its fold (issue #23) and the clause it carries while it stands kept (issue #368)"""
+    first-line rule), where its first line stands in its fold (issue #23), the clause it carries while it stands kept (issue #368) and the name of
+    the well-known slot it stands at as the reader is shown it (B11-F10)"""
     return ctx.js('''(async () => {
       const P = await import('./plane/projection.js'), T = await import('./text/layer.js');
       const S = window.__skep, c = S.view.camera(), p = S.view.viewport(), lod = S.view.lod();
@@ -831,7 +832,9 @@ def label_view(ctx):
       const leads = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => { const at = S.fold(l.place).lead; return [l.place, {words: S.firstLine(l.place).lead, at: scr({x: at.x, y: at.y, w: 0, h: at.h})}]; }));
       // each document labelled: the clause it carries while it stands kept, else null
       const kept = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => { const k = T.keptIn(l.place); return [l.place, k ? k.text : null]; }));
-      return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})), leads, kept,
+      // each document labelled: the name of the well-known slot it stands at as the reader is shown it, else null
+      const names = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => { const n = S.slotName ? S.slotName(l.place) : null; return [l.place, n ? n.text : null]; }));
+      return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})), leads, kept, names,
               boxes, rows, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, connections, mounted: S.mountedAddrs(),
               tails: S.tails().map((t) => ({key: t.key, links: t.links, far: t.far, from: t.from, to: t.to})),
               held: Object.fromEntries(labels.filter((l) => l.held).map((l) => [l.kind + ' ' + l.place, shapeOf(l)])), named: S.named()};
@@ -975,28 +978,33 @@ def labels_hold(r, name, v):
     # address ending at the end of its outline's first row, or, while the document stands kept, before its clause, which ends there
     # (issue #368's design decision: "the clause follows the address"); its first line, where set, the page's lead cut on a whole word,
     # LEAD_WORDS kept at the least, starting where those words stand in its fold and centred on that line, unless its row is held to its
-    # first row's top
+    # first row's top; and at a well-known slot (B11-F10, B11-S2), the slot's name, where set, whole just before its address, its first
+    # line ending before the name
     astray = []
     for l in labels:
         if l['kind'] != 'doc' or l.get('held') or l['place'] not in v['rows']:
             continue
-        a, row, lead, kept = address_line(l), v['rows'][l['place']], v['leads'].get(l['place']), v['kept'].get(l['place'])
+        a, row, lead, kept, slot = address_line(l), v['rows'][l['place']], v['leads'].get(l['place']), v['kept'].get(l['place']), (v.get('names') or {}).get(l['place'])
         if a is None:
             continue
         mid = a['rect']['y'] + a['rect']['h'] / 2
         level = lambda x: abs(x['rect']['y'] + x['rect']['h'] / 2 - mid) <= LABEL_TOL_PX
         # its kept clause where it stands on the row: its words whole, level with the address
         after = next((x for x in l['lines'] if x is not a and kept and x['text'] == kept and level(x)), None)
-        on_row = [x for x in l['lines'] if x is not a and x is not after and level(x)]
-        row_top = mid - max([a['rect']['h']] + [x['rect']['h'] for x in on_row]) / 2
+        # its slot's name where it stands on the row: its words whole, level with the address and ending a space short of it
+        named = next((x for x in l['lines'] if x is not a and x is not after and slot and x['text'] == slot and level(x)), None)
+        on_row = [x for x in l['lines'] if x is not a and x is not after and x is not named and level(x)]
+        row_top = mid - max([a['rect']['h']] + [x['rect']['h'] for x in on_row + ([named] if named else [])]) / 2
         end = (after or a)['rect']
         end_ok = abs(end['x'] + end['w'] - (row['x'] + row['w'])) <= LABEL_TOL_PX and (after is None or a['rect']['x'] + a['rect']['w'] < after['rect']['x'])
+        name_ok = named is None or 0 < a['rect']['x'] - (named['rect']['x'] + named['rect']['w']) <= MIN_LABEL_PX
         lead_mid = lead and lead['at']['y'] + lead['at']['h'] / 2
         firsts_ok = len(on_row) <= 1 and all(lead and word_cut(x['text'], lead['words']) and abs(x['rect']['x'] - lead['at']['x']) <= LABEL_TOL_PX
+                                             and (named is None or x['rect']['x'] + x['rect']['w'] < named['rect']['x'])
                                              and (abs(mid - lead_mid) <= LABEL_TOL_PX or abs(row_top - row['y']) <= LABEL_TOL_PX) for x in on_row)
-        if not (end_ok and firsts_ok):
-            astray.append({'place': l['place'], 'address': a['rect'], 'kept': after and [after['text'], after['rect']], 'row': row, 'first': [[x['text'], x['rect']] for x in on_row], 'lead': lead})
-    r.check(not astray, f'{name}: (v-b) every document\'s label set in its place is one contents line — its address ending at its outline\'s first row\'s end, or before its kept clause, which ends there; its first line, where set, its lead cut on a whole word with {LEAD_WORDS} words kept at the least, starting where those words stand in its fold and level with that line — {LABEL_TOL_PX} px either way (issues #23, #368)', astray[:6])
+        if not (end_ok and name_ok and firsts_ok):
+            astray.append({'place': l['place'], 'address': a['rect'], 'kept': after and [after['text'], after['rect']], 'name': named and [named['text'], named['rect']], 'row': row, 'first': [[x['text'], x['rect']] for x in on_row], 'lead': lead})
+    r.check(not astray, f'{name}: (v-b) every document\'s label set in its place is one contents line — its address ending at its outline\'s first row\'s end, or before its kept clause, which ends there; at a well-known slot its slot\'s name, where set, whole just before its address; its first line, where set, its lead cut on a whole word with {LEAD_WORDS} words kept at the least, starting where those words stand in its fold and level with that line, ending before the name — {LABEL_TOL_PX} px either way (issues #23, #368; B11-F10)', astray[:6])
     # the connections' counts (foundations §2.1's register: "one connection drawn per document pair with its count"; P44 forbids a merged mark
     # that hides it): the numeral of its links on each holding two or more, else the rule that left it out named; none on one holding one
     conns = v['connections']
@@ -1054,6 +1062,44 @@ def labels_hold(r, name, v):
     return {'lod': v['lod'], 'set': by_kind, 'left_out': by_rule, 'left_out_parts': [[o['kind'], o['place'], o['text'][:48], o['reason']] for o in v['out'] if o['reason'] != 'after'][:12],
             'counts': {'connections': len(conns), 'holding_two_or_more': sum(1 for c in conns if c['count'] >= 2), 'set': len(counts), 'left_out': counts_out},
             'tails': {'drawn': len(tails), 'labels_set': len(tail_set), 'left_out': len(tail_left)}}
+
+
+def slot_name_holds(ctx, r):
+    """THE SLOT'S NAME AT ITS LABEL (B11-S2, B11-S7, B11-F10): the claimant's mailbox framed at mid on its one row
+    (`frame_row`): its label set there holds the name the acting account's own mailbox is shown by, whole, in the client's
+    face, level with its address and a space short of it, the address whole at the row's end — THE LABELS' checks holding in
+    that view, rule (v) at the slot's cell among them; the agent space's mailbox, framed so, named by the plain name wherever
+    a name of it stands (B11-S7: the acting account's own address alone), and the second account's, withheld from every
+    reader, drawn and labelled nowhere (B11 call 3). Its figures: what each label sets"""
+    words = slot_words(ctx)
+    mine, plain = words['L.well-known.your-mailbox'], words['L.well-known.mailbox']
+    figures = {}
+    def framed(addr):
+        """the camera at mid on a document's first row (`frame_row`); the label view there and the document's label"""
+        frame_row(ctx, addr)
+        v = label_view(ctx)
+        return v, next((l for l in v['labels'] if l['kind'] == 'doc' and l['place'] == addr), None)
+    v, l = framed(MAILBOX)
+    figures['mailbox'] = labels_hold(r, 'mailbox-row', v)
+    a = address_line(l) if l else None
+    named = next((x for x in l['lines'] if x is not a and x['text'] == mine), None) if l else None
+    level = bool(a) and bool(named) and abs(named['rect']['y'] + named['rect']['h'] / 2 - (a['rect']['y'] + a['rect']['h'] / 2)) <= LABEL_TOL_PX
+    r.check(v['lod'] == 'mid' and bool(l) and not l.get('held') and bool(named) and all(q['face'] == 'client' for q in named['runs']) and level
+            and 0 < a['rect']['x'] - (named['rect']['x'] + named['rect']['w']) <= MIN_LABEL_PX and mine != plain,
+            'the claimant\'s mailbox at mid, framed on its row: its label holds "%s", whole, in the client\'s face, level with its address and a space short of it — the name its own mailbox is shown by (B11-S7, B11-S2, B11-F10)' % mine,
+            {'lod': v['lod'], 'label': l and [[x['text'], x['rect'], [q['face'] for q in x['runs']]] for x in l['lines']], 'left_out': [[o['text'], o['reason']] for o in v['out'] if o['place'] == MAILBOX]})
+    figures['mailbox']['label'] = l and [x['text'] for x in l['lines']]
+    agent = AGENT_SPACE + '.0.2'
+    v, l = framed(agent)
+    shown = (ctx.js('window.__skep.slotName(%s)' % json.dumps(agent)) or {}).get('text') if ctx.js('typeof window.__skep.slotName === "function"') else None
+    r.check(shown == plain and not (l and any(x['text'] == mine for x in l['lines'])),
+            'the agent space\'s mailbox — the acting account\'s own address alone is its own: named "%s" wherever its name stands, never "%s" (B11-S7)' % (plain, mine),
+            {'shown': shown, 'label': l and [x['text'] for x in l['lines']], 'left_out': [[o['text'], o['reason']] for o in v['out'] if o['place'] == agent]})
+    figures['agent_space_mailbox'] = {'name': shown, 'label': l and [x['text'] for x in l['lines']], 'left_out': [[o['text'], o['reason']] for o in v['out'] if o['place'] == agent]}
+    theirs = SECOND_ACCOUNT + '.0.2'
+    known = ctx.js('import("./model/records.js").then((R) => R.known().includes(%s))' % json.dumps(theirs))
+    figures['second_account_mailbox'] = {'known': known, 'labelled': any(l['place'] == theirs for l in v['labels'])}
+    return figures
 
 
 def tails_hold(ctx, r):
@@ -5472,10 +5518,12 @@ def leap_across_resize(ctx, r):
 
 def step(ctx, em):
     """the camera over the first edition at an em, and what the frames that step drew show: the most documents any of
-    them drew as bars under their own mounted text (`both`), and yielded to text that was not mounted (`neither`)"""
-    t0 = ctx.js('performance.now()')
+    them drew as bars under their own mounted text (`both`), and yielded to text that was not mounted (`neither`) — the
+    frames the page logged after the last one before the move, for a frame is stamped with its animation frame's time,
+    which can stand before a clock read the step takes while that frame waits to run"""
+    t0 = ctx.js('(() => { const f = window.__skep.frames(); return f.length ? f[f.length - 1].t : -1; })()')
     ctx.view_doc_em(DOC, em)
-    f = ctx.js('window.__skep.frames().filter(f => f.t >= %s).map(f => [f.both, f.neither])' % t0)
+    f = ctx.js('window.__skep.frames().filter(f => f.t > %s).map(f => [f.both, f.neither])' % t0)
     return {'em': em, 'frames': len(f), 'both': max((x[0] for x in f), default=0), 'neither': max((x[1] for x in f), default=0)}
 
 
@@ -5840,6 +5888,7 @@ def run(ctx):
         ctx.frames(2)
         seen[name] = labels_hold(r, name, label_view(ctx))
     r.figures['labels'] = seen
+    r.figures['slot_names'] = slot_name_holds(ctx, r)
     r.figures['contents_handoff'] = lead_handoff(ctx, r)
     r.figures['address_dots'] = address_dots(ctx, r)
     # THE TYPE, THE READING SCENE, THE CARRY, THE VERSION MOVE, THE CHROME, THE TRAIL

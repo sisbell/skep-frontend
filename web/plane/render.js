@@ -31,9 +31,10 @@
 // document whose text has not arrived is its estimated columns, one whose
 // extent is unread its first column slot; its label, its contents
 // line (T-LAYER's `docLabel`) — its first line where those words stand in its
-// column (P-LAY's `leadOf`), its address at the end of that row, the end of
-// the outline's first row, a kept document's clause after its address
-// (FP-23) — and its history strip along its outline's top (`drawStrip`;
+// column (P-LAY's `leadOf`), the name of the well-known slot it stands at
+// just before its address (T-LAYER's `slotNamed`), its address at the end of
+// that row, the end of the outline's first row, a kept document's clause after
+// its address (FP-23) — and its history strip along its outline's top (`drawStrip`;
 // FP-22, FP-26): its document's members as ticks in chain order, the head in
 // a triangle of its own where the board ended the chain there, and the
 // version the box shows held in the one line's window mark (P-REG's WINDOW);
@@ -690,11 +691,11 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     if (mountedHere || whole) stats.yielded.push(d.addr);
     if (W >= 10 && !mountedHere) {
       // the label, its contents line (T-LAYER's `docLabel`): its first line from where its words stand in its column (P-LAY's `leadOf`), its row centred on that line, cut short of its column's
-      // end and of its address at the row's end, the end of the outline's first row, a kept document's clause after its address; its badge beneath, none at a withheld box — set by
+      // end and of its slot's name, which stands just before its address at the row's end, the end of the outline's first row, a kept document's clause after its address; its badge beneath, none at a withheld box — set by
       // the label pass in that row on the document's ground, else held below the one line in its outline, but where the line names the document
       const lab = LAYER.docLabel(d, fsPx), lead = leadOf(f), col = f.columns[lead.column], rowH = Math.max(lineHeight(lab.address.px), lineHeight(fsPx));
       pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X, y: Y, w: W, h: H }, x: sx(box.x + col.x), y: Math.max(Y, sy(box.y + lead.y + lead.h / 2) - rowH / 2), align: 'left', alpha: a, plate: ground,
-        contents: { lead: lab.lead, px: fsPx, address: lab.address, kept: lab.kept, from: sx(box.x + lead.x), to: sx(box.x + col.x + col.w), end: X + W },
+        contents: { lead: lab.lead, name: lab.name, px: fsPx, address: lab.address, kept: lab.kept, from: sx(box.x + lead.x), to: sx(box.x + col.x + col.w), end: X + W },
         parts: lab.parts, region: lab.region, hold: named.doc === doc ? null : { rects, pad: g * cam.scale, plate: ground } });
       // the history strip along the outline's top, from the first row's text: the members, the head, the version the box shows
       if (W > 60) { const s = drawStrip(ctx, d, doc, X, sy(box.y + row.y)); if (s) stats.strips.push(s); }

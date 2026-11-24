@@ -915,3 +915,29 @@ test('at a reserved number the board answers as a document, the face at the type
     assert.deepEqual([faceIn(), offering()], [true, []], 'with no document in view: the face, and no act at the row');
   } finally { view = null; LEAP.close(); PORT.boot(null); REC._reset(); }
 });
+
+test('a slot\'s name typed lists the acting account\'s own slot first — its address, then its account, its name and the first line the index lists, a field\'s joiner apart, each in its face, its name\'s string named — ahead of another account\'s slot document named by its name; Enter on it LEAPs to its address, unwritten as it is, the box closed and one trail entry taken, as an address\'s row does; a guest\'s box lists no own slot (B11-S9, B11-S7, B11-F18 (4))', async () => {
+  const BIO = '1.0.1.0.3', THEIRS = '1.0.2.0.3', bio = t('L.well-known.bio');
+  const fake = FAKE.create({ [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(BIO) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } } });
+  PORT.boot(fake);
+  REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1', writes: true }));
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: THEIRS, kind: 'edition', label: 'Hello from the second account', standing: 'public' }], counts: [{ account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
+  try {
+    LEAP.open();
+    type('bio');
+    assert.deepEqual(LEAP.currentRows().map((r) => [r.kind, r.addr]), [['slot', BIO], ['label', THEIRS]], 'the own bio first, unwritten and unlisted; then the other account\'s bio');
+    const own = rowMarkup(0), theirs = rowMarkup(1);
+    assert.ok(own.includes(`<span class="a" id="leap-addr-0"><span class="id">${BIO}</span></span><span><span class="id">1.0.1</span> · <span data-string="L.well-known.bio">${bio}</span></span><span class="a"></span>`), `the own row: its address, then its account and its name, a field's joiner apart, no first line where the index lists none: ${own}`);
+    assert.ok(/aria-label="([^"]*)"/.exec(own)?.[1].includes(bio), `its go named with the slot's name: ${own}`);
+    assert.ok(theirs.includes(`<span data-string="L.well-known.bio">${bio}</span> · <span class="reading">Hello from the second account</span>`), `the other account's bio: its name, then its first line in the reading face: ${theirs}`);
+    const before = TRAIL.length();
+    key('Enter');
+    await settled();
+    assert.deepEqual([LEAP.isOpen(), TRAIL.length(), TRAIL.current()?.addr], [false, before + 1, BIO], 'Enter: the box closed, the LEAP made to the own bio, one entry');
+    REC.setSession(null);
+    LEAP.open();
+    type('bio');
+    assert.deepEqual(LEAP.currentRows().map((r) => [r.kind, r.addr]), [['label', THEIRS]], 'a guest: no own row');
+  } finally { LEAP.close(); PORT.boot(null); REC._reset(); TRAIL._reset(); }
+});
