@@ -163,7 +163,15 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     open, and its session is closed the same way (issue #735; FP-29): the
     card taken down ending nothing, the selection standing on the same words
     as its text is read at the guest's class, and the status region saying
-    nothing of it — neither that it ended nor where it stands.
+    nothing of it — neither that it ended nor where it stands;
+(j) another person's mailbox, typed (B11-S4, B11-S5; O1; B11 call 3): on the
+    guest's page, after (d), the claimant's mailbox typed in the LEAP box —
+    a read the board answers `withheld` — arrives: the camera flown to its
+    place and an entry of its own, `withheld · ⟨owner⟩` the act's answer at
+    the landing, gone at the next act; and after it no box stands at cell 2
+    — the model knows none, no label names it at mid scale, the walk lists
+    no stop for it under the account, and a click at the cell's centre finds
+    no document there, making no LEAP.
 Shots into `shots/guest/`. The owner's page is opened again at the end and
 the first edition read, as the cases after this one expect."""
 import json
@@ -480,6 +488,42 @@ def inside_rect(a, b):
     """is the rect `a` inside the rect `b`, half a pixel either way"""
     return a['x'] >= b['x'] - 0.5 and a['y'] >= b['y'] - 0.5 and a['x'] + a['w'] <= b['x'] + b['w'] + 0.5 and a['y'] + a['h'] <= b['y'] + b['h'] + 0.5
 
+
+
+def mailbox_typed(ctx, r):
+    """(j) the claimant's mailbox typed by the guest (see the head): the LEAP arriving at its own withheld words, and no box,
+    no walk stop and no hit at cell 2 after it"""
+    mailbox = '1.0.1.0.2'
+    t0, left = ctx.js('window.__skep.trail()'), ctx.js('window.__skep.view.camera()')
+    ctx.drv.key('l', mods=('Meta',)); ctx.settle(); ctx.frames(2)
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(mailbox); ctx.frames(2)
+    ctx.drv.key('Enter'); ctx.settle(); ctx.frames(2)
+    faced = wait_for(ctx, 'window.__skep.overlay().id === "face:withheld"')
+    o, t1, went = ctx.js('window.__skep.overlay()'), ctx.js('window.__skep.trail()'), ctx.js('window.__skep.view.camera()')
+    newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+    owner = t(ctx, 'F.corner.withheld', {'owner': '1.0.1'})
+    moved = abs(went['x'] - left['x']) > 1e-6 or abs(went['y'] - left['y']) > 1e-6 or abs(went['scale'] - left['scale']) > 1e-9
+    r.check(faced and owner in (o['text'] or '') and t1['cursor'] == t0['cursor'] + 1 and bool(newest) and newest['addr'] == mailbox
+            and (newest.get('notice') or {}).get('face') == 'withheld' and moved and not ctx.js('window.__skep.leap.isOpen()'),
+            '(j) the guest types the claimant\'s mailbox: the LEAP arrives — the camera flown to its place, an entry of its own holding its withheld words — "%s" the act\'s answer at the landing (B11-S4; O1)' % owner,
+            {'overlay': o['id'], 'text': (o['text'] or '')[:160], 'cursor': [t0['cursor'], t1['cursor']], 'newest': newest and {'addr': newest['addr'], 'notice': newest.get('notice')}, 'moved': moved})
+    r.figures.setdefault('shots', []).append(ctx.shot('guest/mailbox-landing.png'))
+    ctx.drv.key('H', mods=('Meta', 'Shift')); ctx.settle(); ctx.frames(2)
+    r.check(ctx.js('window.__skep.overlay().id') != 'face:withheld', '(j) the face gone at the next act, HOME', ctx.js('window.__skep.overlay().id'))
+    known = ctx.js('import("./model/records.js").then((R) => R.known().includes(%s))' % json.dumps(mailbox))
+    kids = ctx.js('window.__skep.walk.children ? window.__skep.walk.children("1.0.1") : null')
+    box = ctx.js('import("./plane/projection.js").then((P) => P.docBox(%s))' % json.dumps(mailbox))
+    ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, 3 / ctx.js('window.__skep.constants.STANDARD_FS'))
+    labelled = [l['place'] for l in ctx.js('window.__skep.labels()') if l['kind'] == 'doc']
+    vp, t2 = ctx.js('window.__skep.view.viewport()'), ctx.js('window.__skep.trail()')
+    ctx.drv.mouse(vp['VW'] / 2, vp['VH'] / 2); ctx.settle(); ctx.frames(2)
+    t3 = ctx.js('window.__skep.trail()')
+    clicked = t3['entries'][t3['cursor']]['addr'] if 0 <= t3['cursor'] < len(t3['entries']) else None
+    r.check(not known and kids is not None and ['document', mailbox] not in kids and mailbox not in labelled and t3['cursor'] == t2['cursor'] and len(t3['entries']) == len(t2['entries']),
+            '(j) after it no box stands at cell 2: the model knows none, the walk lists no stop for it under the account, no label names it at mid scale, and a click at the cell\'s centre finds no document there — no LEAP made, the trail unmoved (B11 call 3; B11-F24 (3))',
+            {'known': known, 'children': len(kids or []), 'its_stop': kids is None or ['document', mailbox] in kids, 'labelled': labelled, 'clicked': clicked})
+    ctx.esc()
 
 def run(ctx):
     r = Result()
@@ -986,6 +1030,7 @@ def run(ctx):
             {'lod': lod, 'cursor': [t0['cursor'], t1['cursor']], 'entry': went})
     r.figures['withheld_box_found'] = {'retaken': retaken, 'clicked': went}
     ctx.esc()
+    mailbox_typed(ctx, r)
 
     # (a) the whole guest run: the page's own log, and the provider's from the navigation on
     mine = calls(ctx)

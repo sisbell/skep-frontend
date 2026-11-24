@@ -475,3 +475,26 @@ test('the walk\'s span in a text holding typed words is ringed on the lines the 
     assert.deepEqual(RENDER.focusBox(visibleView(0)), { x, y, w: Math.max(...lines.map((r) => r.x + r.w)) - x, h: Math.max(...lines.map((r) => r.y + r.h)) - y }, 'the ring\'s box the bounds of the lines the text shown holds the span on');
   } finally { LAYER.clear(); LAYER.attach(/** @type {any} */ (null), null); REC._reset(); WRITE._reset(); globalThis.document = platform.document; globalThis.window = platform.window; }
 });
+
+test('the plane draws no box for another person\'s mailbox a read answered `withheld`, nor for a number the map gives no cell however a read answered it — no label, no press finding it under its place — where it draws a withheld draft at an ordinary number and the home page; a link ending at either has no place to end at (B11 call 3; issue #771\'s decision: "No read of one is keyed to the account\'s first cell")', () => {
+  const { ctx } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  CAM.setViewport(1440, 900);
+  REC._reset(); WRITE._reset();
+  const THEIRS = '1.0.6.0.2', DRAFT = '1.0.6.0.64', HOME = '1.0.6.0.1', RESERVED = '1.0.6.0.7';
+  try {
+    REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: HOME, kind: 'edition', label: 'home', standing: 'public' }], counts: [{ account: '1.0.6', documents: 1 }], state: { arm: 'complete' } }));
+    REC.takeRefused(THEIRS, 'withheld'); REC.takeRefused(DRAFT, 'withheld');
+    REC.takeSpanSet(RESERVED, [{ subspace: 1, ordinal: 1, positions: 9 }]);
+    REC.takeDelivery(RESERVED, [{ pos: 1, width: 9, kind: 'content', text: 'Reserved.', ref: null, origin: null }]);
+    assert.deepEqual([THEIRS, RESERVED, DRAFT, HOME].map(RENDER.drawsDoc), [false, false, true, true], 'drawn nowhere: the mailbox and the reserved number; the withheld draft and the home page drawn');
+    /** the documents a frame centred on a document's box, at mid scale, labels */
+    const labelled = (/** @type {string} */ addr) => { const box = docBox(addr); CAM.set({ x: box.x + box.w / 2, y: box.y + box.h / 2, scale: 3 / LAYER.foldOf(REC.doc(DRAFT)).fs }); RENDER.draw(); return RENDER.stats.labels.filter((l) => l.kind === 'doc').map((l) => l.place); };
+    assert.deepEqual([labelled(DRAFT).includes(DRAFT), labelled(THEIRS).includes(THEIRS), labelled(RESERVED).includes(RESERVED)], [true, false, false], 'a frame at mid scale labels the withheld draft\'s box, and neither the mailbox nor the reserved number where their places would stand');
+    /** what a press finds at the middle of a document's outline, as the plane would draw it */
+    const pressed = (/** @type {string} */ addr) => { const s = LAYER.shapeOf(addr); return RENDER.docAtScreen(CAM.sx(s.x + s.w / 2), CAM.sy(s.y + s.h / 2)); };
+    assert.deepEqual([pressed(THEIRS), pressed(DRAFT)], [null, DRAFT], 'a press at the mailbox\'s place finds nothing; at the withheld draft\'s, its box');
+    assert.notEqual(pressed(RESERVED), RESERVED, 'a press at the account\'s first cell never finds the reserved number');
+  } finally { REC._reset(); WRITE._reset(); }
+});

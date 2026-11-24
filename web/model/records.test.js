@@ -183,8 +183,53 @@ test('a change of class keeps each document the view stood on that the class it 
   assert.deepEqual([REC.doc(DR).refused, REC.covered(DR), REC.owed(DR), REC.doc(DR).extent], [null, false, false, 60], 'a read answering it: the cover lifted');
 });
 
+/** a document's metadata as the board answers it: a draft, or a published document, its owner the account it lies under */
+const metaOf = (/** @type {string} */ doc, published = false) => ({ doc, published, owner: doc.split('.0.').slice(0, -1).join('.0.'), birth: doc + '.1', birthExtent: 9, placed: null, baseExtent: null, source: null, asOf: 1 });
+
+test('another person\'s mailbox a read answered `withheld` is no box the model knows — before a read as after it — while a withheld draft at an ordinary number is one, existence and owner, and so is the reader\'s own mailbox, as any document of theirs, and a mailbox the reader may read, as any readable draft (B11 call 3; B11-F24 (3))', () => {
+  const THEIRS = '1.0.2.0.2', SUB = '1.0.2.1.0.2', DRAFT = '1.0.2.0.71', MINE = '1.0.1.0.2', SHARED = '1.0.3.0.2';
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  assert.deepEqual([THEIRS, SUB, DRAFT].map((a) => REC.known().includes(a)), [false, false, false], 'before any read: none');
+  for (const a of [THEIRS, SUB, DRAFT]) REC.takeRefused(a, 'withheld');
+  REC.takeMetadata(MINE, metaOf(MINE));
+  REC.takeMetadata(SHARED, metaOf(SHARED));
+  assert.deepEqual([THEIRS, SUB, DRAFT, MINE, SHARED].map((a) => REC.known().includes(a)), [false, false, true, true, true],
+    'another account\'s mailbox and a sub-account\'s, withheld: no box; a withheld draft at an ordinary number, the reader\'s own mailbox and one the reader reads: a box each');
+  assert.deepEqual([REC.doc(THEIRS).refused, REC.has(THEIRS)], ['withheld', true], 'the record held: drawn nowhere');
+});
+
+test('a number the plane\'s map gives no cell is no box the model knows, whatever a read answered for it — the board\'s index listing a document there, its text, its metadata, its extent or a `withheld` refusal held — nor a version member of one; every other number of the account is one as before (issue #771\'s decision: "No read of one is keyed to the account\'s first cell")', () => {
+  const LISTED = '1.0.4.0.7', READ = '1.0.4.0.63', HELD = '1.0.4.0.40', MEMBER = '1.0.4.0.12.1', HOME = '1.0.4.0.1', ORDINARY = '1.0.4.0.64';
+  REC.takeIndex(/** @type {any} */ ({ docs: [LISTED, HOME, ORDINARY].map((doc) => ({ doc, kind: 'edition', label: doc, standing: 'public' })), counts: [{ account: '1.0.4', documents: 3 }], state: { arm: 'complete' } }));
+  REC.takeSpanSet(READ, [{ subspace: 1, ordinal: 1, positions: 9 }]);
+  REC.takeDelivery(READ, [{ pos: 1, width: 9, kind: 'content', text: 'Reserved.', ref: null, origin: null }]);
+  REC.takeMetadata(READ, metaOf(READ, true));
+  REC.takeRefused(HELD, 'withheld');
+  REC.takeMetadata(MEMBER, metaOf(MEMBER, true));
+  assert.deepEqual([LISTED, READ, HELD, MEMBER, '1.0.4.0.12'].map((a) => REC.known().includes(a)), [false, false, false, false, false], 'none of them a box: listed, read whole, withheld, a member');
+  assert.deepEqual([HOME, ORDINARY].map((a) => REC.known().includes(a)), [true, true], 'the home page and an ordinary document: a box each');
+  assert.deepEqual([REC.doc(READ).from, REC.place(LISTED)?.doc], [1, LISTED], 'what the reads brought held: the record and the index row stand');
+  assert.deepEqual([HOME, '1.0.4.0.3', LISTED, ORDINARY, MEMBER, '1.0.4', '1'].map(REC.numberKind), ['home', 'slot', 'reserved', 'ordinary', 'reserved', null, null], 'the map\'s reading of each number, a member\'s its document\'s');
+});
+
+test('an account\'s next document stands one past the greatest ordinary number its index lists, else at the first ordinary number — its home page, its slots and its reserved numbers counted nowhere — and moves at every write to the index: a listing, a feed row, the page\'s own mint, a change of class dropping the drafts\' rows (issue #770)', () => {
+  const listing = (/** @type {string[]} */ docs) => REC.takeIndex(/** @type {any} */ ({ docs: docs.map((doc) => ({ doc, kind: 'edition', label: doc, standing: 'public' })), counts: [{ account: '1.0.4', documents: docs.length }], state: { arm: 'complete' } }));
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.4' });
+  listing(['1.0.4.0.1', '1.0.4.0.3', '1.0.4.0.40']);
+  assert.equal(REC.nextDocument('1.0.4'), '1.0.4.0.64', 'no ordinary number listed: the first ordinary number');
+  listing(['1.0.4.0.1', '1.0.4.0.64', '1.0.4.0.70']);
+  assert.equal(REC.nextDocument('1.0.4'), '1.0.4.0.71', 'a new listing: one past its greatest');
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12324, at: 12324, op: 'create_new_document', docs: ['1.0.4.0.71'], class: 'drafts', session: 's-1' }));
+  assert.equal(REC.nextDocument('1.0.4'), '1.0.4.0.72', 'a feed row naming the next: one past it');
+  REC.takeMinted('1.0.4.0.72', 12325);
+  assert.equal(REC.nextDocument('1.0.4'), '1.0.4.0.73', 'the page\'s own mint: one past it');
+  assert.equal(REC.nextDocument('1.0.5'), '1.0.5.0.64', 'an account the index lists nothing of: the first ordinary number');
+  REC.sessionDied(/** @type {any} */ ('expired'));
+  assert.equal(REC.nextDocument('1.0.4'), '1.0.4.0.71', 'the session\'s death drops the drafts\' rows: one past the greatest edition again');
+});
+
 test('a document is covered where the class the page left could read it — its text, metadata or extent held, or its index listing it — and the change ending the session withholds it at once, or a read at the new class answers it `withheld`: never one the page never read, nor one withheld before the change, which waits on its read; each is a box the model knows (issues #177, #350)', () => {
-  const READ = '1.0.1.0.2', LISTED = '1.0.1.0.4', HELD = '1.0.2.0.7', NEVER = '1.0.3.0.9';
+  const READ = '1.0.1.0.2', LISTED = '1.0.1.0.4', HELD = '1.0.2.0.70', NEVER = '1.0.3.0.90';
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeSpanSet(READ, [{ subspace: 1, ordinal: 1, positions: 12 }]);
@@ -205,7 +250,7 @@ test('a document is covered where the class the page left could read it — its 
 });
 
 test('a session regained as another principal leaves every draft the class it left held a box waiting to be read, whatever the view stood on — none of its text, no refusal, its read owed, a box the model knows — and covers none before a read says so: a read withholding one covers it, one answering lifts the wait (issue #350\'s design decision: "the face shown straight after the change is \'waiting to be read\', except when signed out")', () => {
-  const STOOD = '1.0.1.0.2', AWAY = '1.0.1.0.1013', HELD = '1.0.2.0.7';
+  const STOOD = '1.0.1.0.2', AWAY = '1.0.1.0.1013', HELD = '1.0.2.0.70';
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeSpanSet(STOOD, [{ subspace: 1, ordinal: 1, positions: 12 }]);

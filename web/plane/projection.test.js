@@ -1,6 +1,7 @@
 // P-PROJ's test: a document's number mapped to its cell — the home page and
 // the slots their own, an ordinary document from cell 6 in mint order, a
-// reserved number none; reading order with the continuation (foundations
+// reserved number none — and the assigned slot an address names; reading
+// order with the continuation (foundations
 // §2.1); a mint moves no place; siblings never collide; each continuation's
 // cell holds its documents and none shallower; a mark's name read back, and
 // its members each account's documents its continuation holds; the residue
@@ -10,7 +11,7 @@
 // cell.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, boardLabelCell, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf, cellNumberOf, numberAtCell, hasCell, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
+import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, boardLabelCell, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf, cellNumberOf, numberAtCell, hasCell, assignedSlotOf, MAILBOX_SLOT, LAST_NAMED_SLOT, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
 
 /** the document of account 1.0.1 standing at a cell, counted from 1 */
 const atCell = (/** @type {number} */ cell) => '1.0.1.0.' + numberAtCell(cell);
@@ -28,6 +29,13 @@ test('a document\'s number takes its cell: the home page and the slots 2 … 5 t
   assert.deepEqual([6, 12, 63, 0].map(cellNumberOf), [null, null, null, null], 'a reserved number, and none at all: no cell');
   for (const c of [1, 5, 6, 48, 49, 576, 577]) assert.equal(cellNumberOf(numberAtCell(c)), c, `cell ${c} read back`);
   assert.deepEqual([hasCell('1.0.1.0.5'), hasCell('1.0.1.0.64'), hasCell('1.0.1.0.64.2'), hasCell('1.0.1.0.7'), hasCell('1.0.1.0.7.2'), hasCell('1.0.1.0.7.0.2.1'), hasCell('1.0.1'), hasCell('1')], [true, true, true, false, false, false, true, true], 'a reserved number has no place, nor its members or elements; every board and account has one');
+});
+
+test('an address names an assigned slot where its document\'s number is one of the well-known slots 2 … 5, in any account and on any board — a member as its document — and none at the home page, a reserved number 6 … 63, an ordinary document from 64, or a board\'s or an account\'s own address; the cell map unchanged by it (B11-S5; O1)', () => {
+  assert.deepEqual(['1.0.1.0.2', '1.0.1.0.3', '1.0.1.0.4', '1.0.1.0.5', '1.0.2.1.0.2', '2.0.1.0.5', '1.0.1.0.3.2'].map(assignedSlotOf), [2, 3, 4, 5, 2, 5, 3], 'the slots, the mailbox first, of an account, a sub-account and another board\'s account — a member as its document');
+  assert.deepEqual(['1.0.1.0.1', '1.0.1.0.6', '1.0.1.0.7', '1.0.1.0.63', '1.0.1.0.64', '1.0.1.0.65', '1.0.1.0.1049578', '1.0.1', '1.0.1.1', '1'].map(assignedSlotOf), [null, null, null, null, null, null, null, null, null, null], 'the home page, the reserved numbers, the ordinary documents, an account and a board: none');
+  assert.deepEqual([MAILBOX_SLOT, LAST_NAMED_SLOT], [2, 5], 'skep\'s mailbox slot and its last named slot');
+  assert.deepEqual(['1.0.1.0.2', '1.0.1.0.5', '1.0.1.0.6', '1.0.1.0.63', '1.0.1.0.64'].map(hasCell), [true, true, false, false, true], 'the slots keep their cells, the reserved numbers none');
 });
 
 test('a reserved number answers the account\'s first cell, at depth 0 inside no continuation, which no mark counts', () => {

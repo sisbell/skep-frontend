@@ -36,7 +36,14 @@
 // far end, met by a follow or by a reading scene opened from the link's end,
 // the far end's whole form in its one state (LK's `emptyAt`; FP-21, FP-26),
 // its first words the short form the far end's label and rows name it by,
-// each later part beneath them (`unregistered`; `Asked.far`); `withheld` →
+// each later part beneath them (`unregistered`; `Asked.far`); at a number the
+// plane's map gives no cell, the face at a reserved number in its place, by
+// the board's answer (`reserved`, `reservedWords`; B11-S5) —
+// the reserved words then the board's own where it says nothing of it or
+// gives any other answer, the words for a document there that this version
+// draws nowhere with the "read it beside" N-GO hands in, the withheld face
+// with no reserved words — each offering the jump to the account's region
+// (`jumpAt`); `withheld` →
 // the document-level withheld face (B1 §1's A-170; B1-S8; R56) — "who wrote
 // this?" or "who uses this?" asked of a document the reader may not read, a
 // follow's far end withheld — of the
@@ -247,7 +254,9 @@ import { below, spoken } from './statement.js';
 import { entitlementArm, placeholderOf, faceRuns, CLAUSE_READING } from '../text/article.js';
 import { retries, lineOf, floatingSaid } from '../beams/held.js';
 import { drawChord } from '../nav/keys.js';
-import { t, tRuns, addressedHTML, facedHTML, endingOf, opening, sentence, sentences, heard, duration, runningHTML, runsText, asRuns, FIELD } from '../strings.js';
+import { t, tRuns, tHTML, addressedHTML, facedHTML, endingOf, opening, sentence, sentences, heard, duration, runningHTML, runsText, asRuns, FIELD } from '../strings.js';
+import { hasCell } from '../plane/projection.js';
+import { accountOf } from '../model/address.js';
 import { esc, fingerprintCue } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -286,6 +295,14 @@ import { esc, fingerprintCue } from '../util.js';
  * @property {boolean} [notice] the face is one a read brought once it answered (O-HOST's notice): no act on the chrome, standing below what the reader opened, its clause's reads made beside it (`whenRead`)
  * @property {() => boolean} [stands] a notice still stands to be shown — no act made since its read answered (N-GO's): one whose clause's reads answer after it no longer stands shows nothing
  * @property {boolean} [far] the fifth cell answers an act at a link's far end — a follow, or a reading scene opened from the link's end (N-GO's): its words the far end's whole form (LK's `emptyAt`), not the board's alone
+ * @property {((byKey: boolean) => void) | null} [beside] at a reserved number the board answers as a document, "read it beside": the reading scene N-GO opens on it beside the document the act was made from (`reserved`); none where the act was made from no document
+ */
+
+/**
+ * @typedef {Object} Reserved — the board's answer to an act at a number the plane's map gives no cell, as its face says it (see the head; N-GO's, N-LEAP's)
+ * @property {'reaching' | 'nothing' | 'withheld' | 'document' | 'other'} arm `reaching` while the act's read is out; `nothing` the board says nothing of it (`doc_not_registered`); `withheld` it withholds a document there from the reader; `document` it answers for a document there; `other` any other answer, `refusal` it
+ * @property {string} addr the address the act named
+ * @property {Refusal | null} refusal the other answer, by the one refusal shape; null at every other arm
  */
 
 /**
@@ -641,6 +658,7 @@ function toAnchor(a) {
  * @param {Asked} [asked] a notice where a read brought it once it answered; `far` where it answers an act at a link's far end
  */
 export function unregistered(addr, anchor = null, asked = {}) {
+  if (!hasCell(addr)) { reserved(addr, anchor, { arm: 'nothing', addr, refusal: null }, asked); return; }
   if (asked.far) {
     const [first, ...rest] = LK.emptyAt(addr).whole;
     const notes = rest.map((p) => `<div class="note" data-string="${esc(p.id)}">${addressedHTML(p.text)}</div>`).join('');
@@ -650,6 +668,81 @@ export function unregistered(addr, anchor = null, asked = {}) {
   /** @type {RefusedByBoard} the board's `doc_not_registered`, as the shell hands it up: no site named */
   const answer = { kind: 'refused', name: 'doc_not_registered', status: 200, code: 'doc_not_registered', detail: null, op: 'doc_metadata', body: null, site: {} };
   showRefusal(anchor, answer, addr, 'read', asked);
+}
+
+/**
+ * The words of the face at a reserved number, line by line, by the board's
+ * answer (see the head; B11-S5): while the act's read is out,
+ * the reaching words; the board saying nothing of it, the reserved words, then
+ * the board's own — the one state's whole form (LK's `emptyAt`); withheld,
+ * the words a withheld document's faces name its state by (`withheldWords`),
+ * no reserved words; a document there, that this board holds one this
+ * version draws nowhere; any other answer, the reserved words (LK's
+ * `reservedAt`), then that answer's own as a read's (`wordsFor`).
+ * @param {Reserved} a
+ * @returns {Face[]}
+ */
+export function reservedWords(a) {
+  const line = (/** @type {{id: string, text: string, runs?: import('../strings.js').Run[]}} */ w) => /** @type {Face} */ ({ ...w, acts: [] });
+  if (a.arm === 'reaching') return [line({ id: 'L.reaching', text: t('L.reaching', { address: a.addr }) })];
+  if (a.arm === 'nothing') return LK.emptyAt(a.addr).whole.map(line);
+  if (a.arm === 'withheld') return [line(withheldWords(a.addr))];
+  if (a.arm === 'document') return [line({ id: 'L.reserved.held', text: t('L.reserved.held', { address: a.addr }) })];
+  return [...LK.reservedAt(a.addr).whole.map(line), ...(a.refusal ? [wordsFor(a.refusal, 'read', { addr: a.addr })] : [])];
+}
+
+/**
+ * The words of the face at a reserved number as markup (`reservedWords`):
+ * its first line the face's words, each later line beneath them, every
+ * address in the identifier's face; the reaching words then the one running
+ * mark, their element busy (`runningFaceHTML`) — what the face draws, and
+ * what N-LEAP's row draws where the act was made there.
+ * @param {Reserved} a
+ * @returns {string}
+ */
+export function reservedHTML(a) {
+  const [first, ...rest] = reservedWords(a);
+  if (a.arm === 'reaching') return runningFaceHTML(first.id, first.text);
+  const words = (/** @type {Face} */ w) => (w.runs ? facedHTML(w.runs) : addressedHTML(w.text));
+  return `<div class="face-text" data-string="${esc(first.id)}">${words(first)}</div>` + rest.map((w) => `<div class="note" data-string="${esc(w.id)}">${words(w)}</div>`).join('');
+}
+
+/** a face's acts as markup: a row of native buttons, each keyed by its `data-run` and named by its words */
+const actsHTML = (/** @type {Array<{key: string, id: string, html: string}>} */ acts) => `<div class="acts">${acts.map((a) => `<button data-run="${esc(a.key)}" data-string="${esc(a.id)}">${a.html}</button>`).join('')}</div>`;
+
+/**
+ * The jump every face at a reserved number offers (B11-S5): to
+ * the nearest drawn place that holds the address, its account's region — a
+ * teleport and a trail entry (N-GO's `toAccount`) — named "⟨account⟩'s
+ * documents", the account by its address in the identifier's face.
+ * @param {string} addr
+ * @returns {{key: string, id: string, html: string, run: import('./host.js').Act}}
+ */
+function jumpAt(addr) {
+  const account = accountOf(addr) || '';
+  return { key: 'jump', id: 'L.reserved.jump', html: tHTML('L.reserved.jump', { account }), run: (_el, byKey) => { void GO.toAccount(account, byKey); } };
+}
+
+/**
+ * The face at a reserved number (see the head; FP-25), at the
+ * act's site — the answer neither a flight nor a trail entry took: its words
+ * by the board's answer (`reservedHTML`), then its acts — at a document there
+ * "read it beside", where N-GO hands it in, and on every arm the jump to the
+ * account's region (`jumpAt`). Withheld, the document's own withheld face,
+ * the jump with it and no reserved words (`withheld`). It takes no focus and
+ * is heard through the status region as every face is.
+ * @param {string} addr
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the act's site; null where it names none — the viewport's corner
+ * @param {Reserved} a
+ * @param {Asked} [asked]
+ */
+export function reserved(addr, anchor, a, asked = {}) {
+  if (a.arm === 'withheld') { withheld(addr, anchor, asked); return; }
+  const beside = a.arm === 'document' && asked.beside ? asked.beside : null;
+  /** @type {Array<{key: string, id: string, html: string, run: import('./host.js').Act}>} */
+  const acts = [...(beside ? [{ key: 'beside', id: 'L.reserved.beside', html: esc(t('L.reserved.beside')), run: /** @type {import('./host.js').Act} */ ((_el, byKey) => beside(byKey)) }] : []), jumpAt(addr)];
+  HOST.show({ kind: 'face', id: 'face:reserved', anchor: toAnchor(anchor), told: asked.told, notice: !!asked.notice,
+    acts: Object.fromEntries(acts.map((x) => [x.key, x.run])), html: captionHTML(asked.caption) + reservedHTML(a) + actsHTML(acts) });
 }
 
 /**
@@ -675,13 +768,15 @@ export function unregistered(addr, anchor = null, asked = {}) {
 export function withheld(addr, anchor = null, asked = {}) {
   const at = toAnchor(anchor);
   if (accessChanged(addr) && endingWords()) { coveredFace(addr, at, asked); return; }
+  const jump = hasCell(addr) ? null : jumpAt(addr);
   const show = (/** @type {boolean} */ open, /** @type {boolean | undefined} */ told) => {
     const w = ownWords(addr, at), clause = clauseFace(w.clause, asked.follow);
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = { head: () => show(!open, false) };
     if (open && clause.follow) acts.follow = clause.follow;
+    if (jump) acts.jump = jump.run;
     if (open) seenWhole.add(addr);
-    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, told, acts, html: captionHTML(asked.caption) + ownHTML(w, open, clause.html), notice: !!asked.notice });
+    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, told, acts, html: captionHTML(asked.caption) + ownHTML(w, open, clause.html) + (jump ? actsHTML([jump]) : ''), notice: !!asked.notice });
   };
   whenRead(addr, () => show(!seenWhole.has(addr), asked.told), null, noticeStands(asked));
 }

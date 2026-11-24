@@ -5,10 +5,42 @@ for the typography and a11y seats, not asserted beyond "written", save that
 a screen whose caption claims an element asserts it in view (inside its clip
 and the viewport, by the page's `visible` oracle), and one whose caption
 claims the canvas's labels asserts the canvas set them (the page's
-`labels`). Chrome composites the DOM text layer into the shot (C5 (b))."""
+`labels`). Chrome composites the DOM text layer into the shot (C5 (b)).
+B11-S9's reserved number typed in the LEAP box is shot at 1440 px and at
+390 px, into `shots/B11-S9/`: its row's words before Enter, then the face at
+its row and the jump on the row below after it (issue #771's decision)."""
 import json
 
 from . import DOC, GHOST, WINDOW, Result
+
+RESERVED = '1.0.1.0.7'  # a reserved number of the claimant's: the map gives it no cell, and the board says nothing of it
+
+
+def claimed(ctx, r, sid, selector, what, xfail=None):
+    """a shot's caption claiming an element: asserted in view, inside its clip and the viewport (the page's `visible`)"""
+    vis = ctx.js('window.__skep.visible(%s)' % json.dumps(selector))
+    r.check(bool(vis) and all(v['inClip'] and v['inView'] for v in vis), f'{sid}: {what} is in view, as the caption claims (inside its clip and the viewport)', [{'rect': v['rect'], 'clip': v['clip'], 'inClip': v['inClip'], 'inView': v['inView']} for v in vis][:3], xfail=xfail)
+
+
+def reserved_shots(ctx, r):
+    """B11-S9 at a reserved number (see the head): the box with the typed row's words, then with the face at its row and the
+    jump below it, at 1440 px and at 390 px — each claim in view"""
+    shots = []
+    for width, height in ((1440, 900), (390, 844)):
+        was = ctx.resize(width, height)
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(RESERVED))
+        ctx.js('window.__skep.leap.open()'); ctx.frames(1)
+        ctx.js('(() => { const q = document.getElementById("leapq"); q.value = %s; q.dispatchEvent(new Event("input")); })()' % json.dumps(RESERVED))
+        ctx.frames(2)
+        shots.append(ctx.shot(f'B11-S9/reserved-row-{width}.png'))
+        claimed(ctx, r, 'B11-S9 at %d px, typed' % width, '#leaphits .hit:first-child .go > span.a:last-of-type', 'the typed row\'s "reserved number"')
+        ctx.drv.key('Enter'); ctx.settle(); ctx.frames(3)
+        shots.append(ctx.shot(f'B11-S9/reserved-face-{width}.png'))
+        claimed(ctx, r, 'B11-S9 at %d px, after Enter' % width, '#leaphits .hit:first-child .face', 'the face at the typed row')
+        claimed(ctx, r, 'B11-S9 at %d px, after Enter' % width, '#leaphits .hit:nth-child(2) .go', 'the jump on the row below')
+        ctx.js('window.__skep.leap.close()'); ctx.frames(1)
+        ctx.resize(*was)
+    return shots
 
 
 def run(ctx):
@@ -88,5 +120,6 @@ def run(ctx):
     ctx.esc()
     r.figures['screens'] = screens
     r.check(len(screens) >= 12, 'the B1 screens built are shot', len(screens))
+    r.figures['b11_reserved'] = reserved_shots(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

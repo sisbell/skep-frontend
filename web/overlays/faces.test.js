@@ -605,6 +605,41 @@ test('the fifth cell answering a follow says the far end\'s whole form in its on
   }
 });
 
+test('the face at a reserved number says the board\'s answer by its arm — nothing registered, the reserved words, new documents starting at 64, then the board\'s own; a document there, that this version draws it nowhere, offering "read it beside" where it is handed in; any other answer, the reserved words, then that answer\'s as a read\'s — and on every arm offers the jump to the account\'s region, an act; withheld there, the document\'s own withheld face with no reserved words, the jump beneath it; the fifth cell met at one, a typed address or a follow alike, this face (issue #771\'s decision)', async () => {
+  const at = { span: { addr: '1.0.1.0.3', pos: 11, width: 5 } }, R = '1.0.1.0.7', HELD = '1.0.2.0.9';
+  const reserved = t('L.far.reserved.whole', { first: 64 }), jump = tRuns('L.reserved.jump', { account: [{ text: '1.0.1', face: 'ident' }] });
+  /** the notes beneath the face's words: each one's string and its words as a person reads them */
+  const notes = () => [...hostEl.innerHTML.matchAll(/<div class="note" data-string="([^"]*)">((?:[^<]|<\/?span[^>]*>)*)<\/div>/g)].map((m) => [m[1], text(m[2].replace(/<[^>]*>/g, ''))]);
+  /** the face's acts, by key, and the words each button draws */
+  const buttons = () => [...hostEl.innerHTML.matchAll(/<button data-run="([^"]*)" data-string="([^"]*)">(.*?)<\/button>/g)].map((m) => [m[1], m[2], text(m[3].replace(/<[^>]*>/g, ''))]);
+  readAs(READERS[0]);
+  let opened = 0;
+  FACES.reserved(R, at, { arm: 'nothing', addr: R, refusal: null });
+  assert.deepEqual([faceShown()?.id, faceShown()?.words, notes(), buttons()], ['face:reserved', ['L.far.reserved.whole', reserved], [['B1.doc_not_registered', t('B1.doc_not_registered', { address: R })]], [['jump', 'L.reserved.jump', runsText(jump)]]], 'nothing registered: the reserved words, the board\'s beneath them, the jump');
+  assert.equal(live.textContent, heard(`${reserved} ${t('B1.doc_not_registered', { address: R })}`), 'heard in that order');
+  FACES.unregistered(R, at, { far: true });
+  assert.deepEqual([faceShown()?.id, notes().map((n) => n[0])], ['face:reserved', ['B1.doc_not_registered']], 'the fifth cell met at a reserved number — a follow\'s far end too — is this face');
+  FACES.reserved(R, at, { arm: 'document', addr: R, refusal: null }, { beside: () => { opened++; } });
+  assert.deepEqual([faceShown()?.words, notes(), buttons().map((b) => [b[0], b[2]])], [['L.reserved.held', t('L.reserved.held', { address: R })], [], [['beside', t('L.reserved.beside')], ['jump', runsText(jump)]]], 'a document there: this version draws it nowhere; "read it beside", then the jump');
+  /** @type {any} */ (HOST.currentState()?.acts?.beside)(hostEl, false);
+  assert.equal(opened, 1, '"read it beside" makes the act handed in');
+  FACES.reserved(R, at, { arm: 'document', addr: R, refusal: null });
+  assert.deepEqual(buttons().map((b) => b[0]), ['jump'], 'none handed in: the jump alone');
+  const r = /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreachable', text: '' });
+  FACES.reserved(R, at, { arm: 'other', addr: R, refusal: r });
+  assert.deepEqual([faceShown()?.words, notes(), buttons().map((b) => b[0])], [['L.far.reserved.whole', reserved], [['F.daemon.unreachable', t('F.daemon.unreachable')]], ['jump']], 'any other answer: the reserved words, then its own as a read\'s; the jump');
+  HOST.dismiss();
+  REC.takeRefused(HELD, 'withheld'); REC.takeEditionClaims(HELD, []);
+  FACES.withheld(HELD, at);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([faceShown()?.id, hostEl.innerHTML.includes(reserved), buttons().map((b) => b[0])], ['face:withheld', false, ['jump']], 'withheld at a reserved number: its own withheld face, no reserved words, the jump beneath it');
+  FACES.withheld(X, at);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(!hostEl.innerHTML.includes('data-run="jump"'), 'at any other number: no jump');
+  HOST.dismiss();
+  assert.deepEqual(FACES.reservedWords({ arm: 'reaching', addr: R, refusal: null }).map((w) => [w.id, w.text]), [['L.reaching', t('L.reaching', { address: R })]], 'while the act\'s read is out: the reaching words');
+});
+
 test('the face of a passage the person\'s own removal took says so in the decision\'s words and offers one act, "put back in the current text", the put-back handed in; a notice no longer standing to be shown shows nothing (foundations §2.3)', () => {
   const D = '1.0.1.0.102', at = { span: { addr: D, pos: 12 }, sign: D };
   let back = 0;

@@ -228,6 +228,34 @@ def copy_at_entries(r, copy, strings):
     r.note('%d of %d ruled strings of `ux/copy.md` (its `C-n` headings) no entry of `strings.js` carries, by its id or its `cid` — listed in `copy.lacking`, reported and never failed' % (len(lacking), len(heads)))
 
 
+
+def reserved_strings(ctx, r):
+    """THE WORDS AT A RESERVED NUMBER, located where they are shown (issue #771's decision; B11-S5, B11-S9): typed in the
+    LEAP box — the row's "reserved number" before Enter; after it the face at the row, the reserved words and the board's,
+    and the jump's words on the row below — and the face where no site is named, at the viewport's corner, with its jump;
+    each element naming its string, none set apart by its class in the inventory, no template's placeholder shown. The
+    words for a document the board holds at a reserved number and "read it beside" stand nowhere on this board, which
+    holds no document there: reported, their proof the pure tests'"""
+    reserved = '1.0.1.0.7'
+    ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(reserved))
+    ctx.js('window.__skep.leap.open()'); ctx.frames(1)
+    ctx.js('(() => { const q = document.getElementById("leapq"); q.value = %s; q.dispatchEvent(new Event("input")); })()' % json.dumps(reserved))
+    ctx.frames(2)
+    typed = wording_marks(ctx, '#leap')
+    ctx.drv.key('Enter'); ctx.settle(); ctx.frames(3)
+    answered = wording_marks(ctx, '#leap')
+    hits = placeholder_sweep(ctx)
+    r.check(not hits, 'the LEAP box at a reserved number, its face at its row: no template placeholder the page shows or tells (FP-34; issue #208)', hits[:6])
+    ctx.js('window.__skep.leap.close()'); ctx.frames(1)
+    ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(reserved)); ctx.settle(); ctx.frames(2)
+    faced = wording_marks(ctx, '#overlay')
+    ctx.esc()
+    r.check('L.far.reserved' in typed['shown'] and all(x in answered['shown'] for x in ('L.far.reserved.whole', 'B1.doc_not_registered', 'L.reserved.jump'))
+            and all(x in faced['shown'] for x in ('L.far.reserved.whole', 'B1.doc_not_registered', 'L.reserved.jump')) and not typed['marked'] and not answered['marked'] and not faced['marked'],
+            'the words at a reserved number are located where they are shown, each naming its string — the typed row\'s "reserved number", the face\'s reserved words and the board\'s, the jump\'s — at the box\'s row and at the viewport\'s corner, none set apart by its class (issue #771\'s decision)',
+            {'typed': typed, 'answered': answered, 'faced': faced})
+    r.note('L.reserved.held and L.reserved.beside — a document the board holds at a reserved number, and the act reading it beside — are shown nowhere on this board, which holds no document at a reserved number: their proof is the pure tests\' (go.test.js, faces.test.js, leap.test.js)')
+
 def run(ctx):
     r = Result()
     head = ctx.design_head()
@@ -491,6 +519,8 @@ def run(ctx):
     bylines['guest'] = byline_holds('the first edition on the guest\'s page', '#domlayer article.dtext[data-addr="%s"]' % DOC, DOC, None)
     swept('the guest\'s page at the first edition\'s head')
     ctx.open_page('all')
+    ctx.leap(DOC, WINDOW[0])
+    reserved_strings(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     r.figures['bylines'] = bylines
     r.figures['sweeps'] = sweeps

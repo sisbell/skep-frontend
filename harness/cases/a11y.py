@@ -87,8 +87,14 @@ mirror's items named by their `aria-label`, its hidden descriptions and the
 overlay dialog's name its words as heard, and the one line's acts, its
 address segment, the overlay's dismiss, the selection card's slots and the
 scene bar's acts named in the AX tree with none of the table's glyphs, each
-chord's key exposed, the line's separators hidden. Never a screen reader's
-voice — the seat's."""
+chord's key exposed, the line's separators hidden. At a reserved number
+(issue #771's decision; B11-S9), last: typed in the LEAP box, Enter keeps the
+input's focus, the typed row's go named with "reserved number" and described
+by the face at its row, and ↓ carries the active descendant to the jump on
+the row below, named by its words, which Enter makes; made where no site is
+named, the face stands at the viewport's corner and Tab from the walk's item
+reaches its jump, named by its words, the face standing (`reserved_keys`).
+Never a screen reader's voice — the seat's."""
 import json
 import re
 
@@ -107,6 +113,41 @@ def capital(words):
     """words opening a sentence: their first letter a capital, the rest as they stand (style S1)"""
     return words[:1].upper() + words[1:]
 
+
+
+def reserved_keys(ctx, r):
+    """A RESERVED NUMBER BY KEYBOARD (see the head): the box's faced row and its jump, and a face's jump reached by Tab"""
+    reserved = '1.0.1.0.7'
+    # each entry's words for the ear; its id, bracketed, where the page holds no such entry, so a page without them reports red
+    words = ctx.js('import("./strings.js").then(({t, heard, STRINGS}) => [["L.far.reserved", {}], ["L.far.reserved.whole", {first: 64}], ["L.reserved.jump", {account: "1.0.1"}]].map(([id, v]) => (STRINGS[id] ? heard(t(id, v)) : "⟨" + id + "⟩")))')
+    ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(reserved))
+    ctx.drv.key('l', mods=('Meta',)); ctx.settle(); ctx.frames(2)
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(reserved); ctx.frames(2)
+    ctx.drv.key('Enter'); ctx.settle(); ctx.frames(3)
+    BOX = """(() => { const q = document.getElementById('leapq'), go = (i) => document.getElementById('leap-go-' + i);
+      return {open: window.__skep.leap.isOpen(), focused: document.activeElement === q, active: q.getAttribute('aria-activedescendant'),
+        name0: go(0) && go(0).getAttribute('aria-label'), described0: go(0) && go(0).getAttribute('aria-description'), name1: go(1) && go(1).getAttribute('aria-label')}; })()"""
+    box = ctx.js(BOX)
+    r.check(box['open'] and box['focused'] and words[0] in (box['name0'] or '') and words[1] in (box['described0'] or '') and words[2] in (box['name1'] or ''),
+            'at a reserved number typed in the LEAP box, Enter keeps the input\'s focus; the typed row\'s go is named with "%s" and described by the face at its row, and the row below it is the jump, named "%s" (issue #771\'s decision)' % (words[0], words[2]), box)
+    ctx.drv.key('ArrowDown'); ctx.frames(2)
+    chosen = ctx.js(BOX)
+    t0 = ctx.js('window.__skep.trail()')
+    ctx.drv.key('Enter'); ctx.settle(); ctx.frames(2)
+    t1, f = ctx.js('window.__skep.trail()'), ctx.js('window.__skep.view.focus()')
+    r.check(chosen['active'] == 'leap-go-1' and chosen['focused'] and not ctx.js('window.__skep.leap.isOpen()') and t1['cursor'] == t0['cursor'] + 1 and (f or {}).get('kind') == 'account' and (f or {}).get('addr') == '1.0.1',
+            '↓ carries the active descendant to the jump, the input keeping the focus, and Enter makes it: the account\'s region, one entry (combobox pattern; D5 K-32)', {'chosen': chosen, 'cursor': [t0['cursor'], t1['cursor']], 'focus': f})
+    # made where no site is named: the face at the viewport's corner, its jump reached by Tab from the walk's item
+    ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(reserved)); ctx.settle(); ctx.frames(2)
+    face = ctx.js('({id: window.__skep.overlay().id, acts: [...document.querySelectorAll("#overlay [data-run]")].map((b) => b.dataset.run)})')
+    ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})'); ctx.frames(1)
+    ctx.drv.key('Tab'); ctx.frames(2)
+    at = ctx.js('(() => { const a = document.activeElement; return a && a.closest && a.closest("#overlay") ? {run: a.dataset.run || null, text: a.textContent, id: window.__skep.overlay().id} : {run: null, text: a ? a.id || a.tagName : null, id: window.__skep.overlay().id}; })()')
+    r.check(face['id'] == 'face:reserved' and face['acts'] == ['jump'] and at['run'] == 'jump' and at['id'] == 'face:reserved' and words[2] == at['text'],
+            'made where no site is named, the face at a reserved number stands at the viewport\'s corner offering its jump, and Tab from the walk\'s item reaches it, named by its words "%s", the face standing (issue #771\'s decision; issue #179: "Its offered act must be reachable by keyboard without dismissing the face")' % words[2],
+            {'face': face, 'tabbed': at})
+    ctx.esc()
 
 def run(ctx):
     r = Result()
@@ -1200,6 +1241,7 @@ def run(ctx):
             dict(rec, item=item[:300], spoken=spoken))
     r.check(bool(item) and not re.search(r'[{}]|skep-enroll|[0-9a-f]{64}', item), 'the record\'s item reads no raw value aloud: no JSON, no key\'s hex', item[:300])
     r.figures['record_item'] = item[:300]
+    reserved_keys(ctx, r)
     # leave the page as the case found it: the landing, the focus on no element
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')

@@ -3382,3 +3382,23 @@ test('a reading scene\'s pane\'s article is marked by its own pane\'s selection 
   LAYER.markPaneSelection(pane, null);
   assert.deepEqual(marked(), [], 'its end unmarks them');
 }));
+
+test('a record at a number the plane\'s map gives no cell, its text held, is set nowhere: no frame mounts it at the account\'s first cell, where its box would stand over the home page, and no view reads it there, though the model met it first — the home page standing there as ever (issue #771\'s decision: "No read of one is keyed to the account\'s first cell")', () => onLayer(() => {
+  const HOME = '1.0.5.0.1', RESERVED = '1.0.5.0.7';
+  /** a document's text delivered whole, its extent with it */
+  const given = (/** @type {string} */ addr, /** @type {string} */ text) => {
+    const n = new TextEncoder().encode(text).length;
+    REC.takeSpanSet(addr, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(addr, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+  };
+  try {
+    given(RESERVED, 'A document at a reserved number.\n\nIts second paragraph, longer than the home page holds.');
+    given(HOME, 'The home page.\n\nIts second paragraph.');
+    assert.deepEqual([docBox(RESERVED).x, docBox(RESERVED).y], [docBox(HOME).x, docBox(HOME).y], 'its box the account\'s first cell: the home page\'s');
+    const f = LAYER.foldOf(REC.doc(HOME)), box = docBox(HOME);
+    CAM.set({ x: box.x + f.columns[0].x + f.columns[0].w / 2, y: box.y + f.columns[0].y + f.columns[0].h / 3, scale: 12.5 / f.fs });
+    for (let i = 0; i < 4; i++) LAYER.frame();
+    assert.deepEqual([LAYER.isMounted(HOME), LAYER.isMounted(RESERVED)], [true, false], 'the home page set there; the reserved number not');
+    assert.equal(LAYER.readAt(CAM.cam)?.addr, HOME, 'the view reads the home page alone');
+  } finally { REC.invalidate(HOME); REC.invalidate(RESERVED); }
+}, 1440, 900));

@@ -412,7 +412,10 @@
 // the source of the words it carries (`leapTo`'s `source`) lighting no link;
 // a withheld document's face stands where it is shown whatever the camera
 // does, no sign hiding it, so its acts are reached by Tab with the face
-// standing. A failure known at the act — the board answered for the document
+// standing. Every act aimed at an assigned slot's address on the board the
+// page opened arrives, whatever the board answered for it before (`arrives`;
+// B11-S5), its own read's answer faced where its camera went. A failure
+// known at the act — the board answered for the document
 // with nothing; a follow's far end projected into such a document, or a
 // follow's far end or source withheld whose text the page holds or held
 // (O-FACES' `accessChanged`); for a jump that must read, the board marked
@@ -424,15 +427,23 @@
 // ones its label and rows name it by first, then the rest of its one state
 // (O-FACES' `unregistered`; LK's `emptyAt`; FP-21) — and a jump to an address
 // the board's words alone. A
-// jump where only a read can place the destination reaches (`reachFor`), as
-// does one to an address the projection gives no cell, whatever the page
-// holds of it: its entry taken at the act, the camera still, its reaching
-// face at the act's site (O-FACES' `reaching`); Esc, Back and every later act
-// abandon it, its entry given back (`giveUp`; N-TRAIL's `giveBack`); its read
-// refused, or answered for an address with no cell — faced as the fifth cell,
-// as a refusal saying nothing of the document is (B11-S5) — it faces at the
-// site and gives its entry back; answered for a place with a cell, the camera
-// leaves as above.
+// jump where only a read can place the destination reaches (`reachFor`): its
+// entry taken at the act, the camera still, its reaching face at the act's
+// site (O-FACES' `reaching`); Esc, Back and every later act abandon it, its
+// entry given back (`giveUp`; N-TRAIL's `giveBack`); its read refused, it
+// faces at the site and gives its entry back; answered, the camera leaves as
+// above. An act at an address the projection gives no cell, a reserved
+// number — a LEAP, a follow — never flies and takes no trail entry at any
+// moment, the map knowing at the act (`atReserved`; FP-25): an answer known at
+// the act stands there at once; else it reaches at the act's site while it
+// reads, Esc, Back and every later act abandoning it, and the board's answer
+// stands there — the reserved words then the board's own, the words for a
+// document there this version draws nowhere offering "read it beside" in a
+// reading scene beside the document the act was made from (`readBeside`),
+// or the withheld face — each with the jump to the account's region
+// (O-FACES' `reserved`); a LEAP made at the LEAP box's row hands its
+// reaching and its answer to that row, which says them (N-LEAP's). A
+// reading scene opened on one is faced so where its reads are refused.
 // A cursor move (`moveCursor`; `back`, `forward`, `toTrailEntry`) is a
 // return, never an arrival by address (FP-21, FP-25): it restores each
 // version the entry kept — the one its walk stood in, the one its view read,
@@ -547,8 +558,8 @@ import * as PROV from '../overlays/provenance.js';
 import * as MARKLIST from '../overlays/mark-list.js';
 import * as HINT from '../overlays/hint.js';
 import * as FOCUS from './focus.js';
-import { accountCell, boardCell, continuationCell, continuationOf, hasCell } from '../plane/projection.js';
-import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf, accountOf } from '../model/address.js';
+import { accountCell, boardCell, continuationCell, continuationOf, hasCell, assignedSlotOf } from '../plane/projection.js';
+import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf, accountOf, isUnder } from '../model/address.js';
 import { sameSpan } from '../text/span.js';
 import * as PAST from '../model/past.js';
 import { t, sentence, asRuns, asSentenceRuns, sentenceRuns, joinRuns } from '../strings.js';
@@ -576,6 +587,7 @@ import { esc, byteLength } from '../util.js';
 /** @typedef {import('./trail.js').Departure} Departure */
 /** @typedef {import('./trail.js').Stood} Stood */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+/** @typedef {import('../overlays/faces.js').Reserved} Reserved */
 
 /** @typedef {{pos: number, width: number}} Run one run of a marked span in the text landed in: its first position and its positions */
 
@@ -1646,7 +1658,8 @@ const UNREACHABLE = /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreac
 
 /**
  * A failure known at the act (see the head; FP-25): the board answered for
- * the document with nothing; for a follow, the far end's projection into
+ * the document with nothing, save at an assigned slot's address, where every
+ * act arrives (`arrives`); for a follow, the far end's projection into
  * such a document, or a far document withheld from the reader — known so, or
  * by the far end's projection — whose text the page holds or held under the
  * class it left (O-FACES' `accessChanged`), any other withheld far document
@@ -1664,12 +1677,22 @@ function known(addr, reads, end = null, follows = !!end) {
   const d = REC.has(addr) ? REC.doc(addr) : null;
   const p = end ? REC.projection(end.link, end.slot, addr) : undefined;
   /** @type {Notice['face'] | null} */
-  const face = (d && d.refused === 'unregistered') || p === 'unregistered' ? 'unregistered'
+  const face = ((d && d.refused === 'unregistered') || p === 'unregistered') && !arrives(addr) ? 'unregistered'
     : follows && ((d && d.refused === 'withheld') || p === 'withheld') && FACES.accessChanged(addr) ? 'withheld'
       : reads && REC.daemon() === 'unreachable' ? 'refused' : null;
   if (!face) return null;
   return { face, addr, refusal: face === 'refused' ? UNREACHABLE : null, site: null, ...(end && face === 'unregistered' ? { far: true } : {}) };
 }
+
+/**
+ * Does every act aimed at an address arrive at its place, whatever the board
+ * answered for it (see the head; B11-S5): an assigned slot's address (P-PROJ's
+ * `assignedSlotOf`) on the board the page opened — never the system
+ * account's, which the plane draws nowhere.
+ * @param {string} addr
+ * @returns {boolean}
+ */
+const arrives = (addr) => assignedSlotOf(addr) != null && boardOf(addr) === boardNode() && !isUnder(REC.SYSTEM_ACCOUNT, addr);
 
 /**
  * Can the plane place a document before any read of it (see the head)? Never
@@ -1689,14 +1712,12 @@ function placeable(addr) {
 /**
  * A jump reaching (see the head; FP-25): its reaching face at the act's site
  * in the place of what stands there, the camera still, its read made. Where
- * the jump was abandoned meanwhile, nothing; where its read answered for a
- * place the projection gives a cell, the camera may leave; where the board
- * refused it, or answered for an address with no cell (P-PROJ's `hasCell`;
- * B11-S5), the entry given back and the answer faced at the site as O-HOST's
- * notice (`asNotice`) — the fifth cell, in the far end's words where the jump
- * is a follow (O-FACES' `Asked.far`), at an answer with no cell and at a
- * follow's refusal saying the board will say nothing of the document; else
- * the refusal's face, the withheld face among them, by its name.
+ * the jump was abandoned meanwhile, nothing; where its read answered, the
+ * camera may leave; where the board refused it, the entry given back and the
+ * refusal faced at the site as O-HOST's notice (`asNotice`) — the fifth cell
+ * in the far end's words at a follow's refusal saying the board will say
+ * nothing of the document (O-FACES' `Asked.far`); else the refusal's face,
+ * the withheld face among them, by its name.
  * @param {number} act
  * @param {string} addr
  * @param {Entry | null} entry
@@ -1711,11 +1732,91 @@ async function reachFor(act, addr, entry, site, far = false) {
   const w = await PUMP.wholeOf(addr);
   if (!reach || reach.act !== act) return null;
   reach = null;
-  if (hasCell(addr) && (placeable(addr) || !w.refused)) return { refused: w.refused };
+  if (placeable(addr) || !w.refused) return { refused: w.refused };
   if (entry) TRAIL.giveBack(entry);
-  if (!w.refused || (far && w.refused.name === 'doc_not_registered')) FACES.unregistered(addr, at, { ...asNotice(act), far });
+  if (far && w.refused.name === 'doc_not_registered') FACES.unregistered(addr, at, { ...asNotice(act), far });
   else FACES.showRefusal(at, w.refused, addr, 'read', asNotice(act));
   return null;
+}
+
+/**
+ * An act at a number the plane's map gives no cell (see the head; FP-25): no
+ * flight and no trail entry at any moment, the map knowing at the act, and
+ * its answer at the act's site by the board's reply (O-FACES' `Reserved`):
+ * one known at the act at once, nothing asked (`known`); else the act
+ * reaching there while it reads — Esc, Back and every later act abandoning
+ * it (`giveUp`) — then the face its read brings, as O-HOST's notice
+ * (`asNotice`): O-FACES' `reserved`, at a document there with "read it
+ * beside" (`readBeside`), or the document's own withheld face where the
+ * board withholds one there, a follow's captioned by the follow. Where the
+ * act was made at a LEAP box's row that says its own answer (N-LEAP's), the
+ * reaching and the answer are handed to that row instead (`row`). A link the
+ * act was made along is lit where its failure is known at the act, as
+ * anywhere.
+ * @param {number} act
+ * @param {string} addr
+ * @param {{site: Site | null, end?: {link: string, slot: 1 | 2} | null, shown?: Shown | null, link?: string | null, source?: boolean, row?: ((a: Reserved) => void) | null}} o `site` the act's site; `end` a follow's far end and `shown` its link as drawn; `link` the door's link; `source` a follow's LEAP to a source; `row` the LEAP box's row the act was made at, which says the answer itself
+ * @returns {Promise<null>}
+ */
+async function atReserved(act, addr, o) {
+  const follows = !!o.end || !!o.source, link = o.end ? o.end.link : o.link ?? null, at = signed(o.site);
+  /** the answer at the act's site, or handed to the row the act was made at */
+  const answer = (/** @type {Reserved} */ a, /** @type {import('../overlays/faces.js').Asked} */ asked) => {
+    if (o.row) { o.row(a); return; }
+    if (a.arm === 'withheld') FACES.withheld(addr, o.site && unsigned(o.site), { ...asked, follow: pointTo(o.site), ...(follows ? { caption: t('B1.follow.to', { far: addr }) } : {}) });
+    else FACES.reserved(addr, at, a, { ...asked, far: !!o.end, beside: readBeside(addr, o) });
+    CAM.markDirty();
+  };
+  const fails = known(addr, true, o.end ?? null, follows);
+  if (fails) {
+    if (link) lit = [link];
+    answer({ arm: fails.face === 'unregistered' ? 'nothing' : fails.face === 'withheld' ? 'withheld' : 'other', addr, refusal: fails.face === 'refused' ? fails.refusal : null }, {});
+    return null;
+  }
+  reach = { act, addr, entry: null };
+  if (o.row) o.row({ arm: 'reaching', addr, refusal: null });
+  else FACES.reaching(addr, at, () => { if (reach && reach.act === act) giveUp(); });
+  const w = await PUMP.wholeOf(addr);
+  if (!reach || reach.act !== act) return null;
+  reach = null;
+  answer(reservedAnswer(addr, w.doc, w.refused), asNotice(act));
+  return null;
+}
+
+/**
+ * A read's answer at a reserved number, as its face says it (O-FACES'
+ * `Reserved`): the board saying nothing of it, or withholding a document
+ * there, as the model holds that answer now; a document there, its extent
+ * answered; else the refusal the read met.
+ * @param {string} addr
+ * @param {Doc | null} doc the record the read answered with
+ * @param {Refusal | null} refused the refusal it met
+ * @returns {Reserved}
+ */
+function reservedAnswer(addr, doc, refused) {
+  const d = REC.doc(addr);
+  if (d.refused === 'unregistered' || (refused && refused.name === 'doc_not_registered')) return { arm: 'nothing', addr, refusal: null };
+  if (d.refused === 'withheld' || (refused && refused.name === 'withheld')) return { arm: 'withheld', addr, refusal: null };
+  if (d.extent != null || (doc && !refused)) return { arm: 'document', addr, refusal: null };
+  return refused ? { arm: 'other', addr, refusal: refused } : { arm: 'nothing', addr, refusal: null };
+}
+
+/**
+ * "read it beside" at a reserved number the board answers as a document
+ * (O-FACES' `Asked.beside`; see the head): the reading scene opened through
+ * `toScene` on the document the act was made from — a follow's near
+ * document, the link its step, else the one the act's site names, else the
+ * one the view reads at its reading scale — beside the document at the
+ * reserved number; none where the act was made from no document.
+ * @param {string} addr
+ * @param {{site: Site | null, shown?: Shown | null}} o
+ * @returns {(() => void) | null}
+ */
+function readBeside(addr, o) {
+  const s = o.shown ?? null, view = LAYER.readAt(CAM.destination());
+  const near = s ? s.near : o.site && o.site.span ? o.site.span.addr : view ? view.addr : null;
+  if (!near || boxOf(near) === boxOf(addr)) return null;
+  return () => { void toScene(LAYER.paneSource(near), addr, s ? { posA: s.pos, widthA: s.width, posB: null, wholeB: s.farWhole } : {}, { from: s ? { shown: s } : null, site: o.site }); };
 }
 
 /**
@@ -2501,23 +2602,27 @@ function sayFollowed(act, s, entry, placed, pos) {
  * a follow does at a source the board withholds from the reader: at that
  * document whole, its own withheld words at its place (`landWithheld`), no
  * link lit; and one whose text the page holds or held is faced at `site` at
- * the act, captioned by the follow (`known`). A LEAP
+ * the act, captioned by the follow (`known`). So does every LEAP to a
+ * document the board withholds that no box stands for — another person's
+ * mailbox (M-REC's `known`; B11-S4) — the door's link lit. A LEAP
  * whose failure is known at the act never leaves, its face at `site`, the
  * arrival standing — the door's link lit; one to
  * an address on a board the plane does not draw reaches for it first
- * (`reachFor`), and one to an address the projection gives no cell reaches
- * for it whatever the page holds of it, never leaving; where no board is
- * held, none leaves, the no-board face at `site` (see the head). Where the
+ * (`reachFor`), and one to an address the projection gives no cell never
+ * leaves and takes no entry at any moment, its answer at `site`, else the
+ * box's row (`atReserved`); where no board is held, none leaves, the no-board
+ * face at `site` (see the head). Where the
  * reader took the camera over while it was
  * in the air its reads only mark; where an act was made while it read, it
  * goes on nowhere and faces nothing: its read fills its entry alone.
  * @param {string} addr a document address
- * @param {{pos?: number | null, runs?: Run[] | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, passage?: ISpan | null, carry?: Carry | null, source?: boolean, site?: Site | null, push?: boolean, ms?: number, byKey?: boolean}} [opts] `runs` every run of the span landed on, `pos` the first position of one of them, where the landing names a span; `passage` the passage those runs hold, by identity, which labels them (the door's); `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `source` the LEAP is follow's to the source of the words `carry` carries (O-SELECTION's), landing as a follow does at a source withheld from the reader; `site` where the act was made — a run's bytes, a card's span, a point of the plane — where the face of a failure known at the act stands, and a reaching face, null (the LEAP box) at the viewport's corner; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act
+ * @param {{pos?: number | null, runs?: Run[] | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, passage?: ISpan | null, carry?: Carry | null, source?: boolean, site?: Site | null, push?: boolean, ms?: number, byKey?: boolean, row?: ((a: Reserved) => void) | null}} [opts] `runs` every run of the span landed on, `pos` the first position of one of them, where the landing names a span; `passage` the passage those runs hold, by identity, which labels them (the door's); `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `source` the LEAP is follow's to the source of the words `carry` carries (O-SELECTION's), landing as a follow does at a source withheld from the reader; `site` where the act was made — a run's bytes, a card's span, a point of the plane — where the face of a failure known at the act stands, and a reaching face, null (the LEAP box) at the viewport's corner; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act; `row` the LEAP box's row the act was made at, which says the act's answer at a reserved number itself (N-LEAP's; `atReserved`)
  * @returns {Promise<import('../model/records.js').Doc | null>} the document landed in; null where it never left, faced in the place of a landing, an act made while it read took its place, the reader took the camera over, or its flight was cut short before it landed
  */
 export async function leapTo(addr, opts = {}) {
   const act = nextAct();
   if (!REC.board()) { FACES.noBoard(opts.site ?? null); return null; }
+  if (!hasCell(addr)) return atReserved(act, addr, { site: opts.site ?? null, link: opts.link ?? null, source: !!opts.source, row: opts.row ?? null });
   let pos = opts.pos ?? null, runs = pos != null && opts.runs ? inTextOrder(opts.runs) : null;
   const link = opts.link ?? null, site = opts.site ?? null, ms = opts.ms ?? (opts.how === 'click' ? 420 : 620);
   const c = opts.carry ?? null, passage = runs ? opts.passage ?? null : null;
@@ -2541,7 +2646,7 @@ export async function leapTo(addr, opts = {}) {
   const entry = opts.push === false ? null : TRAIL.push({ addr, pos, width: widthAt(runs, pos), view: viewFor(addr, pos), label: null, notice: waiting }, departure(), !!waiting, step);
   /** @type {Refusal | null} the refusal the text's whole read met, which a carried passage's line says it could not tell by */
   let met = null;
-  if (!hasCell(addr) || (unread && !placeable(addr))) {
+  if (unread && !placeable(addr)) {
     const read = await reachFor(act, addr, entry, site);
     if (!read) return null;
     met = read.refused; d = REC.doc(addr); unread = false;
@@ -2569,6 +2674,8 @@ export async function leapTo(addr, opts = {}) {
   }
   // a follow's source the board withholds from the reader: landed at its own withheld words, as a follow's far end is
   if (opts.source && d.refused === 'withheld') return (await landWithheld(act, addr, c ? c.addr : actFrom || addr, null, entry, opts.byKey, first)) ? d : null;
+  // a document the board withholds that no box stands for — another person's mailbox (M-REC's `known`): landed at its own withheld words too
+  if (d.refused === 'withheld' && !REC.known().includes(boxOf(addr))) return (await landWithheld(act, addr, c ? c.addr : actFrom || addr, link, entry, opts.byKey, first)) ? d : null;
   if (passage && runs && !named) { named = namedRuns(addr, runs, passage); runs = named.runs; pos = firstOf(runs, named.pieces); }
   const placed = c ? carriedLanding(c, d, await reproject(c, d, met), pos) : null;
   if (placed) { pos = placed.pos; runs = placed.runs; }
@@ -2875,8 +2982,9 @@ export function arrived(member, at = null, newest = null) {
  * the overlay it was pressed from, the chrome under it standing. The control
  * the follow was pressed on, the anatomy card's follow or a "which" list's
  * row, is never its site. A far document on a board the plane does not draw
- * is reached for first (`reachFor`), and one at an address the projection
- * gives no cell too, never leaving. Where the reader took the camera over
+ * is reached for first (`reachFor`); one at an address the projection gives
+ * no cell never leaves and takes no entry at any moment, its answer at the
+ * link's own bytes (`atReserved`). Where the reader took the camera over
  * while it was in the air its reads only mark; where an act was made while it
  * read, it goes on nowhere, faces nothing and lights nothing: its read fills
  * its entry alone. The entry it departs records the follow (see the head):
@@ -2895,6 +3003,7 @@ export async function follow(s, byKey = false, at = null) {
   /** @type {Site} where the follow is made — the link's own bytes: a face known at the act, and a reaching face, stand there */
   const site = at ?? { span: { addr: s.near, pos: s.pos, width: s.width }, sign: s.near };
   if (!far) { FACES.invalidFollow(site); return; }
+  if (!hasCell(far)) { await atReserved(act, far, { site, end: { link: l.addr, slot: s.farSlot }, shown: s }); return; }
   const fails = known(far, true, { link: l.addr, slot: s.farSlot });
   if (fails) {
     lit = [l.addr];
@@ -3005,8 +3114,10 @@ export async function toScene(a, b, held = {}, opts = {}) {
   reach = null;
   TRAIL.giveBack(entry);
   if (!out.refused) return false;
-  // a link's end's near pane is a document the page draws: the board saying nothing of an address names the far one
-  if (end && out.refused.name === 'doc_not_registered') FACES.unregistered(end.far, site, { ...asNotice(act), far: true });
+  // at a reserved number, the face its answer brings there; a link's end's near pane is a document the page draws: the board
+  // saying nothing of an address names the far one
+  if (!hasCell(addr)) FACES.reserved(addr, site, reservedAnswer(addr, null, out.refused), { ...asNotice(act), far: !!end });
+  else if (end && out.refused.name === 'doc_not_registered') FACES.unregistered(end.far, site, { ...asNotice(act), far: true });
   else FACES.showRefusal(site, out.refused, addr, 'read', asNotice(act));
   return false;
 }

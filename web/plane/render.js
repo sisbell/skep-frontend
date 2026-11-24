@@ -38,7 +38,9 @@
 // a triangle of its own where the board ended the chain there, and the
 // version the box shows held in the one line's window mark (P-REG's WINDOW);
 // a document a read answered `withheld`, whether the index lists it or not,
-// as the withheld box (B1-S2). The mid connections come
+// as the withheld box (B1-S2) — save another person's mailbox, for which no
+// box stands (M-REC's `known`); none at a number the map gives no cell,
+// whatever a read answered for it. The mid connections come
 // from LK's `connections`, each end at the outline that draws a document or
 // the mark that holds it — none where the plane draws its document nowhere
 // (`drawsDoc`, the one test LK reads through the reader the app hands it) —
@@ -457,7 +459,8 @@ function firstBar(/** @type {import('./layout.js').Bar[]} */ B, /** @type {numbe
  * its read, drawn covered or as a box no read has answered for (the index at
  * guest class lists no draft; a LEAP to one learns it exists, and a change of
  * class leaves every draft it drops owed its read, M-REC's `owed`) — the
- * system account's rows left out.
+ * system account's rows, every number the map gives no cell and another
+ * person's mailbox a read answered `withheld` left out.
  * @returns {Doc[]}
  */
 function drawable() {

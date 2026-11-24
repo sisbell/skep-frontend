@@ -824,7 +824,8 @@ export function install(deps) {
       wholeLinks: (/** @type {string} */ a) => LK.wholeLinks(a).map((l) => l.addr),
       othersTouching: (/** @type {string} */ a) => LK.othersTouching(a).map((l) => l.addr),
     },
-    walk: { key: (/** @type {'down' | 'up' | 'in' | 'out' | 'first' | 'last'} */ k) => WALK.key(k), enter: () => WALK.enter() },
+    /** the walk's keys, Enter, and an account's children as the walk lists them, each its kind and its address (N-WALK's `childrenOf`) */
+    walk: { key: (/** @type {'down' | 'up' | 'in' | 'out' | 'first' | 'last'} */ k) => WALK.key(k), enter: () => WALK.enter(), children: (/** @type {string} */ account) => WALK.childrenOf({ kind: 'account', addr: account, pos: null, link: null }).then((ns) => ns.map((n) => [n.kind, n.addr])) },
     dismiss: () => HOST.dismiss(),
     esc: () => KEYS.esc(),
     mounts: () => LAYER.mounts(),

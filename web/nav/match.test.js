@@ -44,3 +44,9 @@ test('nothing typed, no board held: no board\'s level is listed — the rows beg
   assert.deepEqual(r, [], 'nothing to list: no board, no HOME, no address named');
   assert.deepEqual(matches('', { ...ctx, board: null }).map((x) => x.kind), ['home', 'document', 'landmark', 'trail'], 'the board row alone left out');
 });
+test('an address typed at a number the plane\'s map gives no cell is one row as any address is, marked reserved and saying the words handed in for it, before any press; an ordinary address, a slot\'s and the home page\'s say nothing of it (issue #771\'s decision: "It shows on the LEAP box\'s row as soon as the address is typed")', () => {
+  const at = { ...ctx, reserved: 'reserved number' };
+  assert.deepEqual(matches('1.0.1.0.7', at), [{ kind: 'address', addr: '1.0.1.0.7', title: '1.0.1.0.7', sub: 'reserved number', exact: true, reserved: true }], 'a reserved number: one row, its words beside its address');
+  assert.deepEqual(matches('1.0.2.0.63.2', at).map((r) => [r.reserved, r.sub]), [[true, 'reserved number']], 'a version address under one, on another account: the same');
+  for (const a of ['1.0.1.0.64', '1.0.1.0.3', '1.0.1.0.5', '1.0.1.0.1', '1.0.1']) assert.deepEqual(matches(a, at).map((r) => [r.kind, r.reserved, r.sub]), [['address', undefined, '']], `${a}: no reserved words`);
+});

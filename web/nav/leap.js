@@ -56,6 +56,19 @@
 // (`takeReading`), a focus standing on one kept on the act bearing the same
 // key, else given to the input (N-FOCUS's `keep`). Where no board is held
 // the act closes the box onto O-FACES' no-board face, as Enter does.
+// A typed address at a number the plane's map gives no cell says so on its
+// row as it is typed, before any press (N-MATCH's `Row.reserved`). Enter at
+// that row, or a click on it, makes the LEAP through N-GO, which makes no
+// flight and takes no trail entry, and the box stands open over its text,
+// its caret and its focus (`reserve`): the act reaching, then the board's
+// answer — O-FACES' face at a reserved number — stands at the row, said in
+// the status region and describing the row's go, and the row below it is the
+// jump to the account's region, which ↓ chooses and Enter makes as any
+// account's row does (`faceAt`). At a document the board holds there the
+// row's act is "read it beside" — "open beside", by that name — and while any
+// other answer stands at the row, it offers none. A new text, the rows
+// computed again or the box's close takes the face down; the close abandons
+// an act still reaching. Esc closes the box as ever.
 // THE CREATION ROW (B3-S1 THE START; foundations §2.3; D5 K-33): while an
 // account acts on a board the page holds, typed text that parses as no
 // address, share form or URL — a query (`isQuery`) — carries at the box's
@@ -160,10 +173,10 @@ import * as SEL from '../overlays/selection.js';
 import * as LAYER from '../text/layer.js';
 import { MAC, drawChord } from './keys.js';
 import { matches, isShareForm, isUrl } from './match.js';
-import { t, heard, joinRuns, fields } from '../strings.js';
+import { t, tHTML, tRuns, heard, joinRuns, fields } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { markDirty } from '../plane/camera.js';
-import { documentOf, homeOf, kindOf, parseAddress } from '../model/address.js';
+import { documentOf, homeOf, kindOf, parseAddress, accountOf } from '../model/address.js';
 
 /** @typedef {import('./match.js').Row} Row */
 
@@ -172,8 +185,14 @@ import { documentOf, homeOf, kindOf, parseAddress } from '../model/address.js';
 /** @type {Parts | null} */
 let els = null;
 let openState = false;
-/** @type {Row[]} */
+/** @type {Row[]} the rows the box lists: those the text computes, and below a row the face at a reserved number stands at, once its answer is in, the jump it offers */
 let rows = [];
+/** @type {Row[]} the rows the text computes (N-MATCH's), before any jump is set among them */
+let computed = [];
+/** @type {{i: number, addr: string, answer: import('../overlays/faces.js').Reserved} | null} the face standing at a row (see the head): the act made there at a reserved number, reaching while its read is out, then its answer */
+let faced = null;
+/** the acts made at a reserved row, counted: the answer to one the box has moved on from is dropped */
+let asks = 0;
 /** the selected row, or −1 where none is chosen — the box as opened, before ↓, ↑ or a keystroke */
 let sel = -1;
 /** ↓ or ↑ has carried the choice into the rows — set only where a row stands, so `sel` names one */
@@ -330,11 +349,12 @@ function ctx() {
     trail: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, label: GO.wordsOf(r.entry) })),
     current: cur, board: REC.board() ? GO.boardNode() : null, home: s && s.account ? s.account : null,
     levelWords: { board: t('F.level.board'), home: t('F.level.home'), account: t('F.level.account'), document: t('F.level.document') },
+    reserved: t('L.far.reserved'),
   };
 }
 /** the rows for the text; typed text selects its first match, and nothing typed chooses no row (foundations §2.3) */
 function compute(/** @type {string} */ text) {
-  rows = matches(text, ctx()); sel = text.trim() ? 0 : -1; inRows = false;
+  computed = matches(text, ctx()); rows = computed; faced = null; sel = text.trim() ? 0 : -1; inRows = false;
   // rows computed while the index's first answer is on its way are computed again as it lands (`takeIndex`)
   if (PUMP.readingIndex() && REC.indexState() == null) stale = true;
 }
@@ -472,9 +492,10 @@ function cellsOf(r) {
   const title = r.kind === 'address' || (r.addr && r.title === r.addr) ? id(r.title)
     : r.kind === 'label' || r.kind === 'landmark' ? `<span class="reading">${esc(r.title)}</span>`
     : r.kind === 'trail' && r.addr && r.title.endsWith(r.addr) ? esc(r.title.slice(0, -r.addr.length)) + id(r.addr)
+    : r.jump ? `<span data-string="L.reserved.jump">${tHTML('L.reserved.jump', { account: r.addr }, { account: 'id' })}</span>`
     : esc(r.title);
   const entry = r.kind === 'trail' && r.n != null ? TRAIL.numbered().find((x) => x.n === r.n) : undefined;
-  const sub = entry ? GO.wordsHTML(entry.entry) : r.addr && r.sub.startsWith(r.addr) ? id(r.addr) + esc(r.sub.slice(r.addr.length)) : esc(r.sub);
+  const sub = entry ? GO.wordsHTML(entry.entry) : r.reserved && r.sub ? `<span data-string="L.far.reserved">${esc(r.sub)}</span>` : r.addr && r.sub.startsWith(r.addr) ? id(r.addr) + esc(r.sub.slice(r.addr.length)) : esc(r.sub);
   return [id(r.addr), title, sub];
 }
 
@@ -491,6 +512,7 @@ function cellRuns(r) {
   const title = r.kind === 'address' || (r.addr && r.title === r.addr) ? id(r.title)
     : r.kind === 'label' || r.kind === 'landmark' ? [{ text: r.title, face: /** @type {const} */ ('reading') }]
     : r.kind === 'trail' && r.addr && r.title.endsWith(r.addr) ? [{ text: r.title.slice(0, -r.addr.length), face: /** @type {const} */ ('client') }, ...id(r.addr)]
+    : r.jump ? tRuns('L.reserved.jump', { account: id(r.addr) })
     : [{ text: r.title, face: /** @type {const} */ ('client') }];
   const entry = r.kind === 'trail' && r.n != null ? TRAIL.numbered().find((x) => x.n === r.n) : undefined;
   const sub = entry ? GO.wordsRuns(entry.entry) : r.addr && r.sub.startsWith(r.addr) ? [...id(r.addr), { text: r.sub.slice(r.addr.length), face: /** @type {const} */ ('client') }] : [{ text: r.sub, face: /** @type {const} */ ('client') }];
@@ -525,17 +547,63 @@ function besideOf(r, at) {
  * @param {string | null} at the document in view; null where none is
  */
 function rowHTML(r, i, at) {
-  const [addr, title, sub] = cellsOf(r);
-  const act = at && besideOf(r, at) ? `<button type="button" id="${besideId(i)}" data-beside="${i}" data-key="${esc(keyOf(r))}" aria-labelledby="${besideId(i)} ${addrId(i)}">${esc(t('F.open-beside'))}</button>` : '';
+  const f = faced && faced.i === i && faced.addr === r.addr ? faced.answer : null;
+  // a read that answered otherwise than "reserved number" — the board withholding a document there, or holding one — takes its words off the row
+  const shown = f && (f.arm === 'withheld' || f.arm === 'document') ? { ...r, sub: '' } : r;
+  const [addr, title, sub] = cellsOf(shown);
+  // the row's act: "open beside"; where the face stands at it, "read it beside" at a document the board holds there, else none
+  const offer = !f || f.arm === 'document';
+  const act = offer && at && besideOf(r, at) ? `<button type="button" id="${besideId(i)}" data-beside="${i}" data-key="${esc(keyOf(r))}" aria-labelledby="${besideId(i)} ${addrId(i)}">${esc(t(f ? 'L.reserved.beside' : 'F.open-beside'))}</button>` : '';
+  const face = f ? `<div class="face">${FACES.reservedHTML(f)}</div>` : '';
+  const described = f ? ` aria-description="${esc(heard(faceWords(f)))}"` : '';
   return `<div class="hit${i === sel ? ' sel' : ''}" id="${rowId(i)}" data-i="${i}" role="row" aria-selected="${i === sel}">`
-    + `<div class="go" id="${goId(i)}" role="gridcell" aria-label="${esc(heard(cellRuns(r)))}"><span class="a" id="${addrId(i)}">${addr}</span><span>${title}</span><span class="a">${sub}${r.kind === 'landmark' ? ' ' + esc(t('F.landmark')) : ''}</span></div>`
+    + `<div class="go" id="${goId(i)}" role="gridcell" aria-label="${esc(heard(cellRuns(shown)))}"${described}><span class="a" id="${addrId(i)}">${addr}</span><span>${title}</span><span class="a">${sub}${r.kind === 'landmark' ? ' ' + esc(t('F.landmark')) : ''}</span>${face}</div>`
     + `<div class="beside" role="gridcell">${act}</div></div>`;
+}
+
+/** the face at a reserved number's words, as the face says them (O-FACES' `reservedWords`): what its row is described by and the status region says */
+const faceWords = (/** @type {import('../overlays/faces.js').Reserved} */ a) => FACES.reservedWords(a).map((w) => w.text).join(' ');
+
+/** the jump the face at a reserved row offers on the row below it (see the head): the account's region, named "⟨account⟩'s documents" */
+const jumpRow = (/** @type {string} */ addr) => { const account = accountOf(addr) || ''; return /** @type {Row} */ ({ kind: 'account', addr: account, title: t('L.reserved.jump', { account }), sub: '', exact: false, jump: true }); };
+
+/**
+ * The face at a row (see the head; FP-20): the answer to the
+ * act made there at a reserved number — the act reaching while its read is
+ * out — drawn at the row, said in the status region, and once its answer is
+ * in, the jump on the row below it, the row chosen kept on the row faced.
+ * @param {number} i
+ * @param {import('../overlays/faces.js').Reserved} a
+ */
+function faceAt(i, a) {
+  faced = { i, addr: a.addr, answer: a };
+  rows = a.arm === 'reaching' ? computed : [...computed.slice(0, i + 1), jumpRow(a.addr), ...computed.slice(i + 1)];
+  render();
+  FOCUS.say(faceWords(a), false, true);
+}
+
+/**
+ * Enter at a row naming a reserved number, or a press on it (see the head;
+ * FP-25): the LEAP made there through N-GO, which makes no
+ * flight and takes no trail entry, the box standing open over its text, its
+ * caret and its focus, the act's reaching and its answer handed to the row
+ * (`faceAt`); an answer to an act the box has moved on from — its text
+ * changed, its rows computed again, another act made at the row, the box
+ * closed — is dropped.
+ * @param {number} i
+ * @param {Row} r
+ * @param {boolean} byKey
+ */
+async function reserve(i, r, byKey) {
+  const n = ++asks, over = computed;
+  await GO.leapTo(r.addr, { how: 'leap', byKey, row: (a) => { if (n === asks && openState && computed === over) faceAt(i, a); } });
 }
 
 /** close the box: the hint its refused "open beside" raised taken down where it stands, and the focus back through the focus's owner — to the surface a key made at a landing opened beside it, where that stands, else to the opener where no landing passed over the box, else to the walk's element; one that left the box already stays where it went */
 export function close(toWalk = false) {
   if (!els || !openState) return;
-  openState = false; inRows = false; tabHeld = false; els.box.classList.remove('on');
+  if (faced && faced.answer.arm === 'reaching') GO.abandon();
+  openState = false; inRows = false; tabHeld = false; faced = null; asks++; els.box.classList.remove('on');
   comboState();
   drawStart();
   if (refused && HINT.standing()?.id === refused) HINT.act();
@@ -672,6 +740,7 @@ export async function go(i, byKey = false) {
   if (!REC.board()) { close(); FACES.noBoard(null); return; }
   if (!rows.length) return;
   const r = rows[i]; if (!r) { close(); return; }
+  if (r.reserved) { await reserve(i, r, byKey); return; }
   close();
   if (r.kind === 'share' || r.kind === 'url') return; // the share form's decoding and the intake are not built: the row goes nowhere
   if (r.kind === 'home') { await GO.home(byKey); return; }

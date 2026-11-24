@@ -31,7 +31,9 @@
 // visible view's centre — its bytes where the version's image places them,
 // else its position (P-LAY's `holdOf`, P-CAM's `reanchor`).
 // No document at reading size is ever drawn as bars (FP-12): every document
-// in view whose text has arrived stands as text in the frame its em reaches
+// in view whose text has arrived — save one at a number the plane's map
+// gives no cell, which no loop here sets or reads at any place (`mountable`) —
+// stands as text in the frame its em reaches
 // P-LOD's readable threshold (LOD_TXT_LO, an em of 8 px), whatever else that
 // frame mounts. Below it a document mounts from the mount threshold
 // (MOUNT_EM, 6.5, so bars become text while they are still too small to read
@@ -632,7 +634,7 @@ import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, landingPx, panBy, leastPan, flying, fly, set as setView, viewAt, reducedMotion } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
-import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
+import { docBox, intersects, clearLeftOf, hasCell } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W, GRID } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX, ELLIPSIS } from '../plane/labels.js';
@@ -1055,6 +1057,8 @@ const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: 
 let read = noReaders();
 /** is a version the one its box shows (see the head)? */
 const isShown = (/** @type {string} */ addr) => read.shown(addr) === addr;
+/** a held record the plane sets as text (see the head): its text held, never the system account's, and never at a number the plane's map gives no cell (P-PROJ's `hasCell`), which is drawn nowhere and keyed to no cell */
+const mountable = (/** @type {Doc} */ d) => d.from >= 0 && !d.system && hasCell(d.addr);
 
 /**
  * @param {HTMLElement} el the text layer's element
@@ -2237,7 +2241,7 @@ const seenTop = () => (Number.isFinite(framedTop) ? framedTop : read.top());
  */
 function docAt(p) {
   for (const rec of mounted.values()) if (holds(shapeAt(rec.d.addr, rec.fold), p)) return rec.d;
-  for (const d of REC.docs()) if (d.from >= 0 && !d.system && isShown(d.addr) && holds(docBox(d.addr), p) && holds(shapeIn(d), p)) return d;
+  for (const d of REC.docs()) if (mountable(d) && isShown(d.addr) && holds(docBox(d.addr), p) && holds(shapeIn(d), p)) return d;
   return null;
 }
 
@@ -3686,7 +3690,7 @@ function chosen(v, focused, span, spent) {
   /** the boxes an article stands in: under a press, another version's may still */
   const taken = new Set([...mounted.keys()].map(boxOf));
   for (const d of REC.docs()) {
-    if (d.from < 0 || d.system || mounted.has(d.addr) || !isShown(d.addr) || taken.has(boxOf(d.addr))) continue;
+    if (!mountable(d) || mounted.has(d.addr) || !isShown(d.addr) || taken.has(boxOf(d.addr))) continue;
     const box = docBox(d.addr);
     if (!intersects(box, v) || !intersects(shapeIn(d), v)) continue;
     const mine = focused(d.addr);
@@ -3877,7 +3881,7 @@ export function holdAcross(from, to, at = null) {
 export function readAt(view) {
   const top = seenTop(), c = centreAt(view, top);
   for (const d of REC.docs()) {
-    if (d.from < 0 || d.system || !isShown(d.addr) || !holds(docBox(d.addr), c) || !holds(shapeIn(d), c)) continue;
+    if (!mountable(d) || !isShown(d.addr) || !holds(docBox(d.addr), c) || !holds(shapeIn(d), c)) continue;
     const f = foldOf(d);
     if (!readsAt(f.fs, view.scale)) continue;
     const box = docBox(d.addr), p = { x: c.x - box.x, y: c.y - box.y }, pos = posIn(f, p.x, p.y);
@@ -4057,7 +4061,7 @@ function setMeasure() {
  */
 function measureInView(v) {
   const t0 = performance.now(), cx = cam.x, cy = cam.y;
-  const want = REC.docs().filter((d) => d.from >= 0 && !d.system && isShown(d.addr) && !mounted.has(d.addr) && !docBox(d.addr).residue && intersects(docBox(d.addr), v)
+  const want = REC.docs().filter((d) => mountable(d) && isShown(d.addr) && !mounted.has(d.addr) && !docBox(d.addr).residue && intersects(docBox(d.addr), v)
     && foldOf(d).fs * cam.scale >= BARS_EM && !(folds.get(d.addr) || { set: true }).set);
   want.sort((a, b) => { const p = docBox(a.addr), q = docBox(b.addr); return Math.hypot(p.x + p.w / 2 - cx, p.y + p.h / 2 - cy) - Math.hypot(q.x + q.w / 2 - cx, q.y + q.h / 2 - cy); });
   for (const d of want) {

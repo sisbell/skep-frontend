@@ -96,7 +96,10 @@
 //     else "no document known here" — whose whole form, its short form
 //     first as a sentence, O-FACES' face at a follow of it says, N-WALK's
 //     item for it is described by and O-ANATOMY's inert "read side by side"
-//     gives as its reason; withheld, with its owner by the one owner rule (the
+//     gives as its reason — at a number the plane's map gives no cell,
+//     "reserved number" in every account, which stands there from before any
+//     answer until a read answers otherwise (`reservedAt`, `stateOf`; M-REC's
+//     `numberKind`); withheld, with its owner by the one owner rule (the
 //     reader `owner`) — each of these the client's words in its first line's
 //     place, bracketed (ST's `bracketed`); its first line by the one rule a
 //     box's label reads (the reader `first`, T-ARTICLE's `firstLineOf`) where
@@ -111,7 +114,9 @@
 //     no document (`endRuns`), the symbol drawn beside them kept out of the
 //     name; a tail holding several
 //     links carries that short form after its count only where every one of
-//     its far ends stands in the same such state (`tailFaced`);
+//     its far ends stands in the same such state (`tailFaced`); a link to a
+//     reserved number is tailed as any link whose far document the plane
+//     draws nowhere is, whatever a read answered there;
 //   - a link shows as a symbol at its span where the reveal has reached stage
 //     2 (`symbols`) and as a beam where it has reached stage 3 (`beams`); the
 //     lenses by owner, type and endorsement filter the set per document for
@@ -171,13 +176,13 @@
 // drawing modules — BM, T-LAYER, P-RENDER, SC, the cards — draw what `shown`,
 // `shownAt`, `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`,
 // `markOf`, `mergedMark`, `lit`, `floats`, `farPos`, `besideAt`, `farWords`, `farFaced`,
-// `farLabel`, `farLabelHTML`, `farLabelRuns`, `wayOf`, `endRuns`, `farEmpty`, `emptyAt`, `tailFaced`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
+// `farLabel`, `farLabelHTML`, `farLabelRuns`, `wayOf`, `endRuns`, `farEmpty`, `emptyAt`, `reservedAt`, `tailFaced`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
 // size the fold of what `utmost` gives takes.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-21, FP-22, FP-30.
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
-import { commonsType, documentOf, accountOf, isUnder, fieldsOf } from '../model/address.js';
+import { commonsType, documentOf, accountOf, isUnder } from '../model/address.js';
 import { t, facedHTML, bracketed, withheldLine, typeName, sentence, joinRuns } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
@@ -650,25 +655,42 @@ export function farWords(s) { return farFaced(s).map((r) => r.text).join(''); }
  * another board — and the index, run unbroken from the board's first
  * position, lists no document at it, "no document here yet", its whole form
  * saying nothing has been made there, then that the account's next new
- * document goes there where the address is the next its document chain
- * mints — one past the greatest document number the index lists in the
- * account — else that the account's new documents take its addresses in
- * order; everywhere else "no document known here", its whole form that
- * short form as a sentence (ST's `sentence`), then the fifth cell's words
- * (`B1.doc_not_registered`).
+ * document goes there where the address is the next its counter mints
+ * (M-REC's `nextDocument`), else, at an ordinary document's number, that the
+ * account's new documents take its addresses in order — and nothing more
+ * at its home page or a slot, which the counter never hands out (M-REC's
+ * `numberKind`); everywhere else "no document known here", its whole form
+ * that short form as a sentence (ST's `sentence`), then the fifth cell's
+ * words (`B1.doc_not_registered`). At a number the plane's map gives no cell
+ * the one state is "reserved number" in every account (M-REC's `numberKind`;
+ * `reservedAt`), its whole form the reserved words, then the fifth cell's.
  * Decided by the address, the session and the index alone: a caller states
  * it only where the board answered the address with nothing (`farEmpty`).
  * @param {string} addr
  * @returns {Empty}
  */
 export function emptyAt(addr) {
+  if (REC.numberKind(addr) === 'reserved') { const r = reservedAt(addr); return { short: r.short, whole: [...r.whole, { id: 'B1.doc_not_registered', text: t('B1.doc_not_registered', { address: addr }) }] }; }
   const me = REC.session(), account = accountOf(addr);
   if (me && me.account && account === me.account && REC.countsExact() && !REC.place(addr)) {
-    const last = REC.placesOf(account).reduce((n, p) => Math.max(n, fieldsOf(p.doc)[2]?.[0] ?? 0), 0);
-    const clause = addr === `${account}.0.${last + 1}` ? 'L.far.empty.next' : 'L.far.empty.order';
-    return { short: t('L.far.empty'), whole: [{ id: 'L.far.empty.whole', text: t('L.far.empty.whole', { address: addr }) }, { id: clause, text: t(clause) }] };
+    const clause = addr === REC.nextDocument(account) ? 'L.far.empty.next' : REC.numberKind(addr) === 'ordinary' ? 'L.far.empty.order' : null;
+    return { short: t('L.far.empty'), whole: [{ id: 'L.far.empty.whole', text: t('L.far.empty.whole', { address: addr }) }, ...(clause ? [{ id: clause, text: t(clause) }] : [])] };
   }
   return { short: t('L.far.unknown'), whole: [{ id: 'L.far.unknown', text: sentence('L.far.unknown') }, { id: 'B1.doc_not_registered', text: t('B1.doc_not_registered', { address: addr }) }] };
+}
+
+/**
+ * A number the plane's map gives no cell, in its one state (see the head;
+ * FP-21): "reserved number", its whole form the reserved
+ * words — new documents start at M-REC's FIRST_ORDINARY_DOCUMENT — what
+ * stands of it before any answer, and leads every face that answers an act
+ * there save the withheld document's and the one at a document the board
+ * holds there (O-FACES' `reservedWords`).
+ * @param {string} _addr the address: one state at every reserved number
+ * @returns {Empty}
+ */
+export function reservedAt(_addr) {
+  return { short: t('L.far.reserved'), whole: [{ id: 'L.far.reserved.whole', text: t('L.far.reserved.whole', { first: REC.FIRST_ORDINARY_DOCUMENT }) }] };
 }
 
 /** what the page holds of a far end's document: its record, where it holds one; the far end's projection into it, where the end names a passage; its index row */
@@ -698,8 +720,9 @@ export function farEmpty(s) {
  * A drawn end's far end in words (see the head), each stretch with its face
  * (P-REG's FACE), from the answers the page
  * holds of its document, read as they stand now: where the board will say
- * nothing of the address, the short form of its one state (`farEmpty`);
- * where it is withheld
+ * nothing of the address, the short form of its one state (`farEmpty`) — at
+ * a reserved number "reserved number", which stands there too before any
+ * answer, until a read answers otherwise (`stateOf`); where it is withheld
  * from the reader — the projection or a read of the document refused
  * `withheld` — "withheld · ⟨owner⟩"; each of these the client's words in its
  * first line's place, bracketed (ST's `bracketed`); where it is
@@ -714,26 +737,49 @@ export function farEmpty(s) {
  */
 export function farFaced(s) {
   if (!s.far) return [];
-  const empty = farEmpty(s);
-  if (empty) return bracketed([{ text: empty.short, face: 'client' }]);
+  const state = stateOf(s);
+  if (state) return bracketed([{ text: state.short, face: 'client' }]);
   const { d, projected, place } = heldOf(s);
   if ((d && d.refused === 'withheld') || projected === 'withheld') return withheldLine(read.owner(s.far));
-  if (!(Array.isArray(projected) || place || (d && (d.from >= 0 || d.meta || d.extent != null)))) return [];
+  if (!readable(s)) return [];
   return read.first(d, place ? place.label : null);
+}
+
+/** is a far end's document one the page holds an answer for that it can be read — its projection answered, its span set, text or metadata read, or the index listing it (`farFaced`) */
+function readable(/** @type {FarEnd} */ s) {
+  const { d, projected, place } = heldOf(s);
+  return Array.isArray(projected) || !!place || !!(d && (d.from >= 0 || d.meta || d.extent != null));
+}
+
+/**
+ * A far end's one state as its words name it (see the head): where the board
+ * will say nothing of its document (`farEmpty`); else, at a number the
+ * plane's map gives no cell, "reserved number" until a read answers
+ * otherwise — withheld, or a document there (`reservedAt`); null for every
+ * other far end.
+ * @param {FarEnd} s
+ * @returns {Empty | null}
+ */
+function stateOf(s) {
+  const empty = farEmpty(s);
+  if (empty || !s.far || REC.numberKind(s.far) !== 'reserved') return empty;
+  const { d, projected } = heldOf(s);
+  return (d && d.refused === 'withheld') || projected === 'withheld' || readable(s) ? null : reservedAt(s.far);
 }
 
 /**
  * A tail's words after its address or its count (see the head), each
  * stretch with its face: one far end's, its words (`farFaced`); several, the
- * short form they share where the board will say nothing of every one's
- * document and every one stands in the same state (`farEmpty`), bracketed as
- * one far end's is; else none.
+ * short form they share where every one stands in the same one state —
+ * the board saying nothing of each one's document, or each a reserved
+ * number nothing answered otherwise (`stateOf`) — bracketed as one far end's
+ * is; else none.
  * @param {FarEnd[]} ends a tail's far ends, each link once
  * @returns {Array<{text: string, face: import('../plane/register.js').Face}>}
  */
 export function tailFaced(ends) {
   if (ends.length === 1) return farFaced(ends[0]);
-  const said = ends.map((e) => farEmpty(e)?.short ?? null);
+  const said = ends.map((e) => stateOf(e)?.short ?? null);
   return said[0] && said.every((x) => x === said[0]) ? bracketed([{ text: said[0], face: 'client' }]) : [];
 }
 

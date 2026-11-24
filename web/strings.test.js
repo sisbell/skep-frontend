@@ -1337,3 +1337,23 @@ test('where a draft\'s history act opens no state, its line\'s head is the lane\
   assert.equal(sentence('L.history.unshown', { draft: 'Field notes 1.0.1.0.2' }), 'Could not show Field notes 1.0.1.0.2’s history.', 'a sentence of its own, its token filled, none left');
   for (const id of ['L.history.unshown', 'L.history.unanswered', 'B3.history.reclaimed']) assert.equal(STRINGS[id].hint, 'whole', `${id}: a notice the history act raises at the act, whole at every press`);
 });
+
+test('the words at a reserved number are the lane\'s own as issue #771 decided them, each DRAFT with no design source, its screen naming B11-S5 or B11-S9 and the decision, listed for the report — the state\'s short form, "reserved number", and the act\'s and the jump\'s words as the decision quotes them; filled, none leaves a token, the first ordinary number handed in (B11-S5, B11-S9)', () => {
+  /** @type {Record<string, [string, string]>} each entry's words and its kind */
+  const want = {
+    'L.far.reserved': ['reserved number', 'K31'],
+    'L.far.reserved.whole': ['Reserved number: new documents start at ⟨first⟩.', 'K31'],
+    'L.reserved.held': ['This board holds a document at ⟨address⟩ that this version draws nowhere.', 'K31'],
+    'L.reserved.beside': ['read it beside', 'K1'],
+    'L.reserved.jump': ['⟨account⟩\'s documents', 'K1'],
+  };
+  for (const [id, [text, kind]] of Object.entries(want)) {
+    const e = STRINGS[id];
+    assert.deepEqual([e.text, e.cls, e.source, e.lane, e.kind, /B11-S[59]/.test(e.screen ?? ''), (e.screen ?? '').includes('#771')], [text, 'DRAFT', '', true, kind, true, true], id);
+    assert.ok(lacking().some((x) => x.id === id), `${id}: listed for the report`);
+  }
+  assert.equal(t('L.far.reserved.whole', { first: 64 }), 'Reserved number: new documents start at 64.', 'the first ordinary number filled');
+  assert.equal(t('L.reserved.jump', { account: '1.0.1' }), '1.0.1\'s documents', 'the account filled');
+  const short = t('L.far.reserved');
+  assert.ok(t('L.far.reserved.whole', { first: 64 }).startsWith(short.charAt(0).toUpperCase() + short.slice(1)), 'the whole form begins with the short form, a sentence\'s capital first');
+});

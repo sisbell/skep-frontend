@@ -290,7 +290,7 @@ import * as REC from './records.js';
 import * as F from './frames.js';
 import { cam, viewportWorld, measure, fit } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
-import { docBox, intersects, withinContinuation } from '../plane/projection.js';
+import { docBox, intersects, withinContinuation, hasCell } from '../plane/projection.js';
 import { estimate, estimatedSpan, LINE_H } from '../plane/layout.js';
 import { versionAddress, homeOf, documentOf, memberOf, isTrunkMember, kindOf, accountOf, parentAccount, cmpAddr, isUnder } from './address.js';
 import { stretchIn } from './derive.js';
@@ -2521,7 +2521,9 @@ const nameOf = (/** @type {Refusal} */ r) => r.name;
 
 /**
  * The documents in view: every indexed or held document whose box meets the
- * viewport (the system account's rows left out) and stands shallower than
+ * viewport (the system account's rows left out, and every one at a number the
+ * plane's map gives no cell, P-PROJ's `hasCell`, whose box is no place of its
+ * own and so keys no read) and stands shallower than
  * the continuation the scale draws as one mark (P-LOD's `residueDepth`) — a
  * held one holding what a read brought, a `withheld` refusal, or its read
  * owed at the page's class (M-REC's `owed`), each a box M-REC knows (`known`)
@@ -2548,11 +2550,11 @@ export function visibleDocs(pad = 80) {
     if (s !== d.addr && !seen.has(s)) { out.push(REC.doc(s)); seen.add(s); }
   };
   for (const p of REC.places()) {
-    if (p.system || withinContinuation(p.doc, k)) continue;
+    if (p.system || !hasCell(p.doc) || withinContinuation(p.doc, k)) continue;
     if (intersects(docBox(p.doc), v)) take(REC.doc(p.doc));
   }
   for (const d of REC.docs()) {
-    if (seen.has(d.addr) || d.system || withinContinuation(d.addr, k)) continue;
+    if (seen.has(d.addr) || d.system || !hasCell(d.addr) || withinContinuation(d.addr, k)) continue;
     const doc = plain(d.addr);
     if (doc !== d.addr) { if (shown(doc) === d.addr && !seen.has(doc) && intersects(docBox(doc), v)) take(REC.doc(doc)); continue; }
     if ((d.from >= 0 || d.meta || d.extent != null || d.refused === 'withheld' || REC.owed(d.addr)) && intersects(docBox(d.addr), v)) take(d);

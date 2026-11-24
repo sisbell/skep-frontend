@@ -1,7 +1,9 @@
 // N-MATCH — the LEAP box's matching rules (the structure record §3.2;
 // foundations §2.3). Layer 2, pure: no state, the index read as values
 // (FP-6). Input that parses as an address is exact, one row whose target is
-// its own address; a share form (`skep://⟨token⟩`,
+// its own address — at a number the plane's map gives no cell (P-PROJ's
+// `hasCell`) marked reserved, its words the words the caller hands in for it
+// (B11-S9); a share form (`skep://⟨token⟩`,
 // `https://skep.network/l/⟨token⟩`, `skep.link/⟨token⟩`; deployment §3) and
 // a URL (B8) are each recognized as one row of their kind, its token not
 // decoded and its target empty. Label matching takes only text that parses
@@ -16,6 +18,7 @@
 // Rules: FP-1, FP-2, FP-6, FP-35.
 
 import { parseAddress, accountOf, documentOf, boardOf, cmpAddr } from '../model/address.js';
+import { hasCell } from '../plane/projection.js';
 
 /** @typedef {import('../model/records.js').Place} Place */
 
@@ -27,6 +30,8 @@ import { parseAddress, accountOf, documentOf, boardOf, cmpAddr } from '../model/
  * @property {string} sub
  * @property {boolean} exact
  * @property {number} [n] a trail entry's row: the entry, numbered newest-first
+ * @property {boolean} [reserved] a typed address at a number the plane's map gives no cell: an act there makes no flight (N-GO's), and the row says so before any press
+ * @property {boolean} [jump] the jump the face at a reserved row offers on the row below it, to the account's region (N-LEAP's)
  */
 
 /** a share form of the address (deployment §3) */
@@ -37,7 +42,7 @@ export const isUrl = (/** @type {string} */ s) => /^https?:\/\//i.test(s.trim())
 /**
  * The rows for the typed text.
  * @param {string} text
- * @param {{places: Place[], landmarks: Place[], trail: Array<{n: number, addr: string, label: string | null}>, current: string | null, board: string | null, home: string | null, levelWords: {board: string, home: string, account: string, document: string}}} ctx `board` the node of the board held; null where none is
+ * @param {{places: Place[], landmarks: Place[], trail: Array<{n: number, addr: string, label: string | null}>, current: string | null, board: string | null, home: string | null, levelWords: {board: string, home: string, account: string, document: string}, reserved?: string}} ctx `board` the node of the board held; null where none is; `reserved` the words a typed address at a reserved number says on its row
  * @param {number} [limit]
  * @returns {Row[]}
  */
@@ -45,7 +50,7 @@ export function matches(text, ctx, limit = 24) {
   const q = text.trim();
   if (!q) return levels(ctx);
   const addr = parseAddress(q);
-  if (addr) return [{ kind: 'address', addr, title: addr, sub: '', exact: true }];
+  if (addr) return [hasCell(addr) ? { kind: 'address', addr, title: addr, sub: '', exact: true } : { kind: 'address', addr, title: addr, sub: ctx.reserved ?? '', exact: true, reserved: true }];
   if (isShareForm(q)) return [{ kind: 'share', addr: '', title: q, sub: '', exact: true }];
   if (isUrl(q)) return [{ kind: 'url', addr: '', title: q, sub: '', exact: true }];
   const lq = q.toLowerCase();

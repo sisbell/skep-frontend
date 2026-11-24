@@ -500,7 +500,7 @@ test('the tails: one per place a drawn document stands at, holding once each lin
 });
 
 test('a far end is named by its address, then what the page holds of its document: nothing answered, the address alone; readable, its first line; withheld, "withheld · ⟨owner⟩" by the owner rule handed in; the board saying nothing of it, "no document here yet" in the reader\'s own account under a complete index listing none there, else "no document known here" — never from the index\'s silence alone; each of the client\'s words bracketed in the first line\'s place (issues #132, #23, #224)', () => {
-  const GHOST = '1.0.1.0.1049578', HIDDEN = '1.0.2.0.7', THEIR_GHOST = '1.0.2.0.99';
+  const GHOST = '1.0.1.0.1049578', HIDDEN = '1.0.2.0.77', THEIR_GHOST = '1.0.2.0.99';
   const [TO_GHOST, TO_HIDDEN, TO_THEIRS] = [20, 21, 22].map((k) => `${D}.0.2.${k}`);
   REC.takeLinks(D, [TO_GHOST, TO_HIDDEN, TO_THEIRS]);
   REC.takeLink({ addr: TO_GHOST, from: [span(D, 60, 3)], to: [whole(GHOST)], type: CITE });
@@ -550,16 +550,92 @@ const opened = (/** @type {string} */ words) => words.charAt(0).toUpperCase() + 
 /** a far end's one state as its parts' strings: its short form, and the ids of its whole form's parts in order */
 const stateOf = (/** @type {import('./links.js').Empty} */ e) => [e.short, e.whole.map((p) => p.id)];
 
-test('an address the board will say nothing of stands, as a far end, in one state: in exactly the account the reader acts as, the index complete and listing nothing there, "no document here yet", its whole form saying nothing has been made there, then that the account\'s next new document goes there — one past the greatest document number the index lists in it — else that its new documents take its addresses in order (issue #224\'s design decision)', () => {
-  // the index lists D, 1.0.1.0.3, alone in the reader's account: the next document it mints is 1.0.1.0.4
-  const next = LK.emptyAt('1.0.1.0.4');
-  assert.deepEqual(stateOf(next), [t('L.far.empty'), ['L.far.empty.whole', 'L.far.empty.next']], 'the account\'s next address');
-  assert.deepEqual(next.whole.map((p) => p.text), [t('L.far.empty.whole', { address: '1.0.1.0.4' }), t('L.far.empty.next')], 'its words, the address filled');
-  assert.deepEqual(stateOf(LK.emptyAt('1.0.1.0.9')), [t('L.far.empty'), ['L.far.empty.whole', 'L.far.empty.order']], 'an address past it: its new documents take its addresses in order');
-  assert.deepEqual(stateOf(LK.emptyAt('1.0.1.0.4.2')), [t('L.far.empty'), ['L.far.empty.whole', 'L.far.empty.order']], 'a version member of the next address is no document the chain mints');
-  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: '1.0.1.0.40', kind: 'draft', label: 'e', standing: 'private' }, { doc: OTHER_HOME, kind: 'edition', label: 'o', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
-  assert.deepEqual([stateOf(LK.emptyAt('1.0.1.0.41'))[1][1], stateOf(LK.emptyAt('1.0.1.0.4'))[1][1]], ['L.far.empty.next', 'L.far.empty.order'], 'a draft listed at 1.0.1.0.40: the next is 1.0.1.0.41, and 1.0.1.0.4 an address in order before it');
+/** the index listing the reader's account at these numbers, beside the other account's home */
+const listing = (/** @type {number[]} */ ns) => /** @type {any} */ ({
+  docs: [...ns.map((n) => ({ doc: `1.0.1.0.${n}`, kind: n === 2 ? 'draft' : 'edition', label: `n${n}`, standing: n === 2 ? 'private' : 'public' })), { doc: OTHER_HOME, kind: 'edition', label: 'o', standing: 'public' }],
+  counts: [{ account: '1.0.1', documents: ns.length }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' },
+});
+
+test('an address the board will say nothing of stands, as a far end, in one state: in exactly the account the reader acts as, the index complete and listing nothing there, "no document here yet", its whole form saying nothing has been made there, then that the account\'s next new document goes there — one past the greatest ordinary number the index lists in it, else the first ordinary number, 64 — else, at an ordinary number, that its new documents take its addresses in order, and nothing more at a slot (issue #224\'s design decision; issue #770)', () => {
+  // the index lists the home page and the mailbox alone in the reader's account: the next document it mints is the first ordinary one
+  REC.takeIndex(listing([1, 2]));
+  const next = LK.emptyAt('1.0.1.0.64');
+  assert.deepEqual(stateOf(next), [t('L.far.empty'), ['L.far.empty.whole', 'L.far.empty.next']], 'the first ordinary number: the account\'s next address');
+  assert.deepEqual(next.whole.map((p) => p.text), [t('L.far.empty.whole', { address: '1.0.1.0.64' }), t('L.far.empty.next')], 'its words, the address filled');
+  assert.deepEqual(stateOf(LK.emptyAt('1.0.1.0.3')), [t('L.far.empty'), ['L.far.empty.whole']], 'a slot the counter never hands out: neither clause, the whole form\'s first sentence alone');
+  assert.deepEqual(stateOf(LK.emptyAt('1.0.1.0.70')), [t('L.far.empty'), ['L.far.empty.whole', 'L.far.empty.order']], 'an ordinary address past it: its new documents take its addresses in order');
+  assert.deepEqual(stateOf(LK.emptyAt('1.0.1.0.64.2')), [t('L.far.empty'), ['L.far.empty.whole', 'L.far.empty.order']], 'a version member of the next address is no document the chain mints');
+  // listing 1, 2, 64 and 66 … 70: the next is one past the greatest, the gap below it and an address past it in order
+  REC.takeIndex(listing([1, 2, 64, 66, 67, 68, 69, 70]));
+  assert.deepEqual([LK.emptyAt('1.0.1.0.71'), LK.emptyAt('1.0.1.0.65'), LK.emptyAt('1.0.1.0.90'), LK.emptyAt('1.0.1.0.4')].map((e) => stateOf(e)[1].slice(1)), [['L.far.empty.next'], ['L.far.empty.order'], ['L.far.empty.order'], []],
+    '1.0.1.0.71 the next, 1.0.1.0.65 below it and 1.0.1.0.90 past it in order, the link page\'s slot neither');
   assert.ok(next.whole[0].text.startsWith(opened(next.short)), 'the whole form begins with the short form, a sentence\'s capital first');
+});
+
+test('a far end at a number the plane\'s map gives no cell stands in a state of its own, "reserved number" — before any answer, and where the board says nothing of it, in the reader\'s own account under a complete index as in another\'s, never "no document here yet" nor "no document known here" — its whole form the reserved words, new documents starting at 64, then the board\'s own; until a read answers otherwise: withheld there, "withheld · ⟨owner⟩"; a document there, its first line (issue #771\'s decision, which changes #224\'s at these numbers)', () => {
+  const MINE = '1.0.1.0.40', THEIRS = '1.0.2.0.7', L = D + '.0.2.30', T = D + '.0.2.31';
+  REC.takeLinks(D, [L, T]);
+  REC.takeLink({ addr: L, from: [span(D, 60, 3)], to: [span(MINE, 1, 3)], type: CITE });
+  REC.takeLink({ addr: T, from: [span(D, 64, 3)], to: [whole(THEIRS)], type: CITE });
+  const end = (/** @type {string} */ l) => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === l));
+  const bracket = (/** @type {string} */ words) => t('L.client-words', { words });
+  const reserved = bracket(t('L.far.reserved'));
+  assert.ok(REC.countsExact() && REC.session()?.account === '1.0.1' && !REC.place(MINE), 'the reader\'s own account, the index complete and listing nothing there');
+  assert.deepEqual([LK.farWords(end(L)), LK.farWords(end(T)), LK.farEmpty(end(L))], [reserved, reserved, null], 'nothing answered: "reserved number" already, in the reader\'s own account and another\'s — though the board has said nothing yet');
+  REC.takeRefused(MINE, 'unregistered');
+  REC.takeRefused(THEIRS, 'unregistered');
+  assert.deepEqual([LK.farWords(end(L)), LK.farWords(end(T))], [reserved, reserved], 'the board saying nothing of either: the same state');
+  for (const w of [t('L.far.empty'), t('L.far.unknown')]) assert.ok(!LK.farWords(end(L)).includes(w) && !LK.farWords(end(T)).includes(w), `never "${w}"`);
+  assert.deepEqual(LK.emptyAt(MINE).whole.map((p) => [p.id, p.text]), [['L.far.reserved.whole', 'Reserved number: new documents start at 64.'], ['B1.doc_not_registered', t('B1.doc_not_registered', { address: MINE })]], 'its whole form: the reserved words, new documents starting at 64, then the board\'s own');
+  assert.deepEqual([LK.farEmpty(end(L))?.short, LK.farEmpty(end(T))?.whole.map((p) => p.id)], [t('L.far.reserved'), ['L.far.reserved.whole', 'B1.doc_not_registered']], 'the state its follow\'s face, its mirror item and its card\'s inert "read side by side" read');
+  REC.takeRefused(MINE, 'withheld');
+  assert.equal(LK.farWords(end(L)), bracket(t('F.corner.withheld', { owner: '1.0.1' })), 'a read answering it withheld: "withheld · ⟨owner⟩", no reserved words');
+  LK.readers({ first: (d, label) => firstLineOf(d, { label, reader: REC.reader(), owner: '' }) });
+  REC.takeSpanSet(MINE, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+  REC.takeDelivery(MINE, [{ pos: 1, width: 12, kind: 'content', text: 'At forty.\n\nx', ref: null, origin: null }]);
+  assert.equal(LK.farWords(end(L)), 'At forty.', 'a read answering a document there: its first line, as any readable far end');
+});
+
+test('a merged tail names a state only where all its ends share one: every end at a reserved number, "reserved number", whether nothing has answered or the board says nothing of them; one beside an end in "no document here yet", or in any other state, no state words — the tail holding every link still (issue #771\'s decision; issue #224\'s)', () => {
+  const R1 = '1.0.1.0.12', R2 = '1.0.1.0.13', EMPTY = '1.0.1.0.96', NAMED = '1.0.1.0.127';
+  const [A, B, C, E] = [32, 33, 34, 35].map((k) => `${D}.0.2.${k}`);
+  REC.takeLinks(D, [A, B, C, E]);
+  REC.takeLink({ addr: A, from: [span(D, 60, 3)], to: [whole(R1)], type: CITE });
+  REC.takeLink({ addr: B, from: [span(D, 64, 3)], to: [whole(R2)], type: CITE });
+  REC.takeLink({ addr: C, from: [span(D, 68, 3)], to: [whole(EMPTY)], type: CITE });
+  REC.takeLink({ addr: E, from: [span(D, 72, 3)], to: [whole(NAMED)], type: CITE });
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: NAMED, kind: 'edition', label: 'The far edition', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+  const end = (/** @type {string} */ l) => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === l));
+  const words = (/** @type {string[]} */ ls) => LK.tailFaced(ls.map(end)).map((r) => r.text).join('');
+  const reserved = t('L.client-words', { words: t('L.far.reserved') });
+  assert.equal(words([A, B]), reserved, 'two ends at reserved numbers, nothing answered: the state they share');
+  REC.takeRefused(R1, 'unregistered');
+  assert.equal(words([A, B]), reserved, 'one the board says nothing of, the other unanswered: one state still');
+  REC.takeRefused(EMPTY, 'unregistered');
+  assert.equal(words([C]), t('L.client-words', { words: t('L.far.empty') }), 'the other end, alone: "no document here yet"');
+  assert.deepEqual([words([A, C]), words([C, B]), words([A, E])], ['', '', ''], 'a reserved number beside "no document here yet", either first, or beside a far end its first line names: no words');
+  const tail = LK.tails([D], (a) => (a === D ? D : null))[0];
+  assert.ok([A, B, C, E].every((l) => tail.ends.some((e) => e.link.addr === l)), 'the tail holds every link, its count with them');
+});
+
+test('a link to a reserved number stays in the shown set and is tailed — counted, its symbol set, never a beam and never dropped — where nothing has answered and where a read answered a document there, which the plane draws nowhere (issue #771\'s decision: "The tail stays as #132 draws it"; issue #132)', () => {
+  const R = '1.0.1.0.20', L = D + '.0.2.36';
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 60, 3)], to: [span(R, 1, 3)], type: CITE });
+  // the plane's test of where a far end can stand, as P-RENDER reads it: a box M-REC knows
+  LK.readers({ drawn: (a) => REC.known().includes(a.split('.').slice(0, 5).join('.')) });
+  LK.reveal(D, 3);
+  const own = () => /** @type {import('./links.js').Shown | undefined} */ (LK.shown(D).find((s) => s.link.addr === L));
+  for (const what of ['nothing answered', 'a read answering a document there']) {
+    if (what !== 'nothing answered') {
+      REC.takeSpanSet(R, [{ subspace: 1, ordinal: 1, positions: 9 }]);
+      REC.takeDelivery(R, [{ pos: 1, width: 9, kind: 'content', text: 'Reserved.', ref: null, origin: null }]);
+    }
+    const s = own();
+    assert.ok(s && LK.tailed(s), `${what}: in the shown set, tailed`);
+    assert.ok(LK.symbols(D).some((x) => x.link.addr === L) && !LK.beams(D).some((x) => x.link.addr === L), `${what}: its symbol set, no beam`);
+    assert.ok(LK.tails([D], (a) => (a === D ? D : REC.known().includes(a) ? a : null))[0]?.ends.some((e) => e.link.addr === L), `${what}: one of its near end's tail`);
+  }
 });
 
 test('an address the board will say nothing of stands everywhere else in the weaker state — "no document known here", its whole form that short form as a sentence, then the fifth cell\'s words unchanged — a sub-account, the same digits on another board, another account, a guest, an index not run unbroken from the board\'s first position, and an address the index lists (issue #224\'s design decision)', () => {
@@ -584,7 +660,7 @@ test('an address the board will say nothing of stands everywhere else in the wea
 });
 
 test('a far end stands in its one state only where the page holds the board\'s answer that it will say nothing of its document — its projection refused so, or a read of the document — and nowhere else (issue #224)', () => {
-  const GHOST = '1.0.1.0.9', L = D + '.0.2.20';
+  const GHOST = '1.0.1.0.94', L = D + '.0.2.20';
   REC.takeLinks(D, [L]);
   REC.takeLink({ addr: L, from: [span(D, 60, 3)], to: [span(GHOST, 1, 3)], type: CITE });
   const end = () => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === L));
@@ -601,7 +677,7 @@ test('a far end stands in its one state only where the page holds the board\'s a
 });
 
 test('a tail\'s words after its address or its count: one far end\'s words; several, the short form they share where the board will say nothing of every one\'s document in the same state, bracketed — none where any is another state or none is said (issue #224\'s design decision: "A merged tail keeps its count. Its label carries state words only when every member shares them")', () => {
-  const GHOST = '1.0.1.0.9', GHOST2 = '1.0.1.0.10', THEIRS = '1.0.2.0.99', NAMED = '1.0.1.0.127';
+  const GHOST = '1.0.1.0.94', GHOST2 = '1.0.1.0.95', THEIRS = '1.0.2.0.99', NAMED = '1.0.1.0.127';
   const [A, B, C, E] = [20, 21, 22, 23].map((k) => `${D}.0.2.${k}`);
   REC.takeLinks(D, [A, B, C, E]);
   REC.takeLink({ addr: A, from: [span(D, 60, 3)], to: [whole(GHOST)], type: CITE });

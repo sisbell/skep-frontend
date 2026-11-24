@@ -825,3 +825,93 @@ test('a mint the board refuses is answered at the box: nothing typed, no trail e
     assert.deepEqual([LEAP.isOpen(), HINT.standing()], [false, null], 'the box\'s close takes the hint it raised down');
   } finally { unminted(); }
 });
+
+/** the reads of a document read whole as the board answers them: its extent, its metadata, its text, its image, no links */
+const readsOf = (/** @type {string} */ doc, /** @type {string} */ text) => ({
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } },
+  [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: doc + '.1', birth_extent: String(text.length), placed: null, base_extent: null, source: null } },
+  [FAKE.keyOf('op', { frame: F.retrieveV(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: text }] } },
+  [FAKE.keyOf('op', { frame: F.image(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: doc + '.0.1.1', width: String(text.length) }] } },
+  [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+});
+/** the row at `i` as the rows were last drawn: its markup */
+const rowMarkup = (/** @type {number} */ i) => (String(rows.innerHTML).match(new RegExp(`<div class="hit[^"]*" id="leap-row-${i}"[^>]*>.*?<div class="beside" role="gridcell">.*?</div></div>`)) || [''])[0];
+
+test('an address at a reserved number typed in the box says "reserved number" on its row before any press, an ordinary address\'s row nothing of it; Enter there leaves the box open on the text as typed, its caret and its focus, and takes no trail entry — the act reaching at the row while its read is out, then the face its answer brings at the row, and the jump to the account\'s region on the row below, which ↓ chooses and Enter makes, a teleport and an entry; Esc closes the box; an ordinary address\'s Enter closes the box first (issue #771\'s decision; #171\'s rule 2, as #267 changes it)', async () => {
+  const RESERVED = '1.0.1.0.7', ORDINARY = '1.0.1.0.64';
+  const fake = FAKE.create({ [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(RESERVED) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } } });
+  PORT.boot(fake);
+  REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  try {
+    LEAP.open();
+    type(ORDINARY);
+    assert.ok(!rowMarkup(0).includes(t('L.far.reserved')), `an ordinary address's row: no reserved words: ${rowMarkup(0)}`);
+    type(RESERVED);
+    assert.ok(rowMarkup(0).includes(`<span class="a"><span data-string="L.far.reserved">${t('L.far.reserved')}</span></span>`) && LEAP.currentRows()[0].reserved, `typed, before any press: "reserved number" on its row, beside its address, named by its string: ${rowMarkup(0)}`);
+    input.selected = [4, 4];
+    const before = TRAIL.length(), release = fake.hold('op', { frame: F.retrieveDocVSpanSet(RESERVED) });
+    key('Enter');
+    await new Promise((r) => setTimeout(r, 0));
+    const standing = () => [LEAP.isOpen(), input.value, input.selected, globalThis.document.activeElement === /** @type {any} */ (input), TRAIL.length()];
+    assert.deepEqual(standing(), [true, RESERVED, [4, 4], true, before], 'Enter: the box open on the text as typed, its caret and its focus; no trail entry');
+    assert.ok(rowMarkup(0).includes('data-string="L.reaching"') && rowMarkup(0).includes('aria-busy="true"'), `reaching at its row while the read is out: ${rowMarkup(0)}`);
+    release();
+    await settled();
+    assert.deepEqual(standing(), [true, RESERVED, [4, 4], true, before], 'answered: the box as it stood, no entry');
+    assert.deepEqual(LEAP.currentRows().map((r) => [r.kind, r.addr, r.title]), [['address', RESERVED, RESERVED], ['account', '1.0.1', t('L.reserved.jump', { account: '1.0.1' })]], 'the typed row, then the jump on the row below');
+    const faced = rowMarkup(0);
+    assert.ok(faced.includes(`<div class="face"><div class="face-text" data-string="L.far.reserved.whole">${t('L.far.reserved.whole', { first: 64 })}</div><div class="note" data-string="B1.doc_not_registered">`), `the face at its row, the number reserved, then the board's words: ${faced}`);
+    assert.ok(faced.includes(`aria-description="${esc(heard(`${t('L.far.reserved.whole', { first: 64 })} ${t('B1.doc_not_registered', { address: RESERVED })}`))}"`), 'its go described by the face\'s words');
+    assert.ok(rowMarkup(1).includes('<span class="id">1.0.1</span>\'s documents'), `the jump's row, its account in the identifier's face: ${rowMarkup(1)}`);
+    key('Enter');
+    await settled();
+    assert.deepEqual([LEAP.isOpen(), TRAIL.length(), faceIn()], [true, before, true], 'Enter again at the typed row: known at the act, the face again, still open, no entry');
+    key('ArrowDown');
+    key('Enter');
+    assert.deepEqual([LEAP.isOpen(), TRAIL.current()?.addr, TRAIL.length()], [false, '1.0.1', before + 1], '↓ and Enter: the jump — the box closed, the account\'s region its one entry');
+    await settled();
+    LEAP.open();
+    type(RESERVED);
+    key('Enter');
+    await settled();
+    assert.equal(LEAP.isOpen(), true, 'the face at its row again');
+    key('Escape');
+    assert.equal(LEAP.isOpen(), false, 'Esc closes the box');
+    LEAP.open();
+    type(ORDINARY);
+    key('Enter');
+    assert.equal(LEAP.isOpen(), false, 'an ordinary address\'s Enter closes the box first');
+    await settled();
+  } finally { LEAP.close(); PORT.boot(null); REC._reset(); }
+});
+
+/** does the box's first row stand faced: the face at a reserved number drawn at it */
+const faceIn = () => rowMarkup(0).includes('<div class="face">');
+
+test('at a reserved number the board answers as a document, the face at the typed row says the board holds one this version draws nowhere, no "reserved number" beside the address, and the row\'s act is "read it beside" — the reading scene on the document in view and that document, the box closed and the scene\'s entry pushed at the act, as "open beside" does — with no document in view, none; every other answer standing at the row offers none (issue #771\'s decision)', async () => {
+  const ANSWERED = '1.0.1.0.8', TEXT = 'A document at a reserved number.';
+  PORT.boot(FAKE.create(readsOf(ANSWERED, TEXT)));
+  REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  try {
+    view = D;
+    LEAP.open();
+    type(ANSWERED);
+    assert.deepEqual(offering(), [ANSWERED], 'before the press: the row\'s "open beside"');
+    key('Enter');
+    await settled();
+    const faced = rowMarkup(0);
+    assert.ok(faced.includes(`data-string="L.reserved.held">${esc(t('L.reserved.held', { address: ANSWERED })).replace(ANSWERED, `<span class="id">${ANSWERED}</span>`)}`), `the face: the board holds a document there this version draws nowhere: ${faced}`);
+    assert.ok(!faced.includes(`<span data-string="L.far.reserved">`), 'no "reserved number" beside the address: a read answered otherwise');
+    assert.ok(faced.includes(`>${esc(t('L.reserved.beside'))}</button>`) && offering()[0] === ANSWERED, 'its act "read it beside"');
+    acts[0].focus();
+    rows.fire('click', { target: acts[0] });
+    assert.deepEqual([LEAP.isOpen(), scene()?.a, scene()?.b], [false, D, ANSWERED], 'pressed: the box closed and the scene\'s entry pushed at the act, the document at the reserved number beside the document in view');
+    await settled();
+    view = null;
+    LEAP.open();
+    type(ANSWERED);
+    key('Enter');
+    await settled();
+    assert.deepEqual([faceIn(), offering()], [true, []], 'with no document in view: the face, and no act at the row');
+  } finally { view = null; LEAP.close(); PORT.boot(null); REC._reset(); }
+});

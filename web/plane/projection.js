@@ -21,11 +21,12 @@
 // cells 1 … 5, and an ordinary document — numbered from
 // FIRST_ORDINARY_DOCUMENT, as skep's counter hands them out — at the cell
 // after them in mint order, so the account's first grid holds its home, its
-// slots and its first 43 ordinary documents. The reserved numbers between
-// take no cell (`hasCell`): a jump to one is answered where it was made
-// (N-GO's `placeable`), and anything else that asks where one stands is
-// answered the account's first cell, a finite place at depth 0 inside no
-// continuation.
+// slots and its first 43 ordinary documents; which slot an address names, if
+// any, is read off its number alone (`assignedSlotOf`). The reserved numbers
+// between take no cell (`hasCell`): an act at one is answered where it was
+// made (N-GO's), no box is drawn for one (M-REC's `known`), and anything
+// else that asks where one stands is answered the account's first cell, a
+// finite place at depth 0 inside no continuation.
 //
 // The continuations: an account's continuation k is the last cell of its
 // document grid k − 1 (`continuationCell`), holding every document at
@@ -82,6 +83,8 @@ export const G = [2, 3, 2, 3, 2, 7];
 export const LEAF = G.length - 1;
 /** the deepest continuation grid the arithmetic positions soundly (see the head) */
 export const DEPTH_SOUND = 11;
+/** skep's `MAILBOX_SLOT`: the first of the well-known slots, the account's mailbox */
+export const MAILBOX_SLOT = 2;
 /** skep's `LAST_NAMED_SLOT`: the last of the well-known slots 2 … 5, each of which takes its own number's cell */
 export const LAST_NAMED_SLOT = 5;
 /** skep's `FIRST_ORDINARY_DOCUMENT`: the first number an account's counter hands out after its home, the numbers between it and the slots reserved */
@@ -190,6 +193,8 @@ export function cellOf(a, depthCap = DEPTH_SOUND) {
 const _boxCache = new Map();
 /** @type {Map<string, Cell>} */
 const _cellCache = new Map();
+/** @type {Map<string, boolean>} whether each address has a place of its own (`hasCell`): every frame's drawn set reads it for every document */
+const _hasCellCache = new Map();
 
 /** @param {string} key @returns {Cell} */
 export function cellOfKey(key) {
@@ -206,8 +211,24 @@ export function cellOfKey(key) {
  * @returns {boolean}
  */
 export function hasCell(key) {
+  let h = _hasCellCache.get(key);
+  if (h === undefined) { const p = pathOf(key); h = p.length <= LEAF || cellNumberOf(p[LEAF]) != null; _hasCellCache.set(key, h); }
+  return h;
+}
+
+/**
+ * The assigned slot an address names (see the head): its document's number
+ * where that is one of the well-known slots MAILBOX_SLOT … LAST_NAMED_SLOT —
+ * a version member answering its document's — else null: a board's or an
+ * account's own address, the home page, a reserved number, an ordinary
+ * document.
+ * @param {string} key
+ * @returns {number | null}
+ */
+export function assignedSlotOf(key) {
   const p = pathOf(key);
-  return p.length <= LEAF || cellNumberOf(p[LEAF]) != null;
+  const n = p.length > LEAF ? p[LEAF] : 0;
+  return n >= MAILBOX_SLOT && n <= LAST_NAMED_SLOT ? n : null;
 }
 
 /**
@@ -398,4 +419,4 @@ export const intersects = (/** @type {{x:number,y:number,w:number,h:number}} */ 
   !(b.x + b.w < v.x0 || b.x > v.x1 || b.y + b.h < v.y0 || b.y > v.y1);
 
 /** reset the caches (tests) */
-export function _reset() { _boxCache.clear(); _cellCache.clear(); }
+export function _reset() { _boxCache.clear(); _cellCache.clear(); _hasCellCache.clear(); }

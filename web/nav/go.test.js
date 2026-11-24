@@ -1152,7 +1152,7 @@ test('an act made while a LEAP reads stands after the LEAP\'s entry and lands; t
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a LEAP to an address the page already knows the board says nothing about never leaves: no flight, no entry, nothing asked, the fifth cell at the act\'s site — the LEAP box\'s at the viewport\'s corner — in the place of the card standing there, the camera and the walk where it was made (FP-25; issue #137)', async () => {
+test('a LEAP to an ordinary address — no assigned slot\'s — the page already knows the board says nothing about never leaves: no flight, no entry, nothing asked, the fifth cell at the act\'s site — the LEAP box\'s at the viewport\'s corner — in the place of the card standing there, the camera and the walk where it was made (FP-25; issue #137; B11-S5)', async () => {
   await run(GO.leapTo(D));
   await run(GO.leapTo(FAR));
   await run(GO.back());
@@ -1435,28 +1435,41 @@ Object.assign(script, reads(CITING, CITING_TEXT, [RESERVED_LINK]), reads(ANSWERE
 /** the words of the face the host shows, as a person reads them: its words, then each part beneath them, in order */
 const faceWords = () => (hostEl.innerHTML.match(/<div class="(?:face-text|note)"[^>]*>.*?<\/div>/g) || []).map((m) => m.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')).join(' ');
 
-test('a LEAP to a reserved number — an address the projection gives no cell — never leaves: its entry taken at the act, the camera still, a reaching face at the act\'s site; the board saying nothing of it, the fifth cell faced there in the board\'s words, its entry given back and the walk where it stood; a LEAP to it again known at the act, nothing asked (B11-S5)', async () => {
+/** the acts the face standing offers, by their keys */
+const offered = () => [...hostEl.innerHTML.matchAll(/data-run="([^"]*)"/g)].map((m) => m[1]);
+/** the face standing's act pressed by its key, a pointer's press, and every flight it starts stepped to its end */
+const pressFace = async (/** @type {string} */ key) => { const act = HOST.currentState()?.acts?.[key]; assert.ok(act, `the face offers ${key}`); act(/** @type {any} */ (hostEl), false); await reopening(); };
+/** the jump a face at a reserved number of the account 1.0.1 offers, as its button draws it */
+const jumpHTML = () => tHTML('L.reserved.jump', { account: '1.0.1' });
+/** the reserved words, new documents starting at 64 */
+const reservedWords = () => t('L.far.reserved.whole', { first: 64 });
+
+test('a LEAP to a reserved number — an address the projection gives no cell — never leaves and takes no trail entry at any moment: the camera still, a reaching face at the act\'s site while it reads; the board saying nothing of it, the face there says the number is reserved and new documents start at 64, then the board\'s own words, and offers one act, the jump to the account\'s region — a teleport and a trail entry; a LEAP to it again known at the act, nothing asked (B11-S5; issue #771\'s decision)', async () => {
   await run(GO.leapTo(D));
   const site = { span: { addr: D, pos: 11, width: 5 } }, signed = { ...site, sign: D };
   const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view(), walked = walkAt();
   REC.invalidate(RESERVED);
   const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(RESERVED) });
   const leap = GO.leapTo(RESERVED, { site });
-  assert.deepEqual([addrs(), CAM.flying(), GO.inAir(), GO.isReaching()], [[...before, RESERVED], false, false, true], 'its entry taken at the act, the camera still, nothing in the air');
+  assert.deepEqual([addrs(), CAM.flying(), GO.inAir(), GO.isReaching()], [before, false, false, true], 'no entry taken at the act, the camera still, nothing in the air, reaching');
   assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['reaching:' + RESERVED, signed], 'reaching, at the act\'s site');
   release();
   await run(leap);
-  assert.deepEqual([addrs(), TRAIL.cursorIndex(), faceShown()?.id, HOST.currentState()?.anchor, faceWords()], [before, cursor, 'face:doc_not_registered', signed, t('B1.doc_not_registered', { address: RESERVED })], 'the fifth cell at the act\'s site in the board\'s words, its entry given back');
+  assert.deepEqual([addrs(), TRAIL.cursorIndex(), faceShown()?.id, HOST.currentState()?.anchor, faceWords()], [before, cursor, 'face:reserved', signed, `${reservedWords()} ${t('B1.doc_not_registered', { address: RESERVED })}`], 'no entry after its read either; the face at the act\'s site: the number reserved, then the board\'s words');
+  assert.ok(![t('L.far.empty'), t('L.far.unknown')].some((w) => hostEl.innerHTML.includes(w)), 'none of the words for an empty address');
+  assert.deepEqual([offered(), hostEl.innerHTML.includes(jumpHTML())], [['jump'], true], 'its one act: the jump, named "1.0.1\'s documents"');
   assert.deepEqual([same(CAM.view(), at), walkAt()], [true, walked], 'the camera never left, the walk where it stood');
-  HOST.dismiss();
-  const from = fake.asked.length;
+  await pressFace('jump');
+  assert.deepEqual([addrs(), TRAIL.current()?.addr, walkAt()?.slice(0, 2)], [[...before.slice(0, cursor + 1), '1.0.1'], '1.0.1', ['account', '1.0.1']], 'the jump: a teleport to the account\'s region and its one entry');
+  await run(GO.back());
+  const from = fake.asked.length, back = CAM.view();
   await run(GO.leapTo(RESERVED, { site }));
-  assert.deepEqual([fake.asked.slice(from), addrs(), faceShown()?.id, same(CAM.view(), at)], [[], before, 'face:doc_not_registered', true], 'again: known at the act, nothing asked, no entry, the camera still');
+  assert.deepEqual([fake.asked.slice(from), TRAIL.cursorIndex(), TRAIL.length(), faceShown()?.id, offered(), same(CAM.view(), back)], [[], cursor, cursor + 2, 'face:reserved', ['jump'], true], 'again: known at the act, nothing asked, no entry, the same face, the camera still');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a follow of a link whose far end is a reserved number never leaves: its entry taken at the act and the camera still, reaching at the link\'s own bytes; the board saying nothing of it, the far end\'s words faced there, its entry given back and the link not counted as followed (B11-S5; FP-25)', async () => {
+test('a follow of a link whose far end is a reserved number never leaves and takes no trail entry at any moment: the camera still, reaching at the link\'s own bytes; the board saying nothing of it, the face there says the number is reserved, then the board\'s words, and offers the jump; the link not counted as followed — and "read side by side" from that link\'s end, the page knowing the board says nothing of it, the same face at its site (B11-S5; issue #771\'s decision; FP-25)', async () => {
   REC.takeLink({ addr: RESERVED_LINK, from: [span(CITING, 3, 8)], to: [span(RESERVED, 1, 5)], type: CITE, age: UNDATED });
   await PUMP.loadWhole(CITING);
   await run(GO.leapTo(CITING));
@@ -1467,31 +1480,154 @@ test('a follow of a link whose far end is a reserved number never leaves: its en
   REC.invalidate(RESERVED);
   const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(RESERVED) });
   const following = GO.follow(s);
-  assert.deepEqual([addrs(), CAM.flying(), GO.inAir(), GO.isReaching()], [[...before, RESERVED], false, false, true], 'its entry taken at the act, the camera still');
+  assert.deepEqual([addrs(), CAM.flying(), GO.inAir(), GO.isReaching()], [before, false, false, true], 'no entry taken at the act, the camera still');
   assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['reaching:' + RESERVED, signed], 'reaching, at the link\'s own bytes');
   release();
   await run(following);
-  assert.deepEqual([addrs(), TRAIL.cursorIndex(), faceShown()?.id, HOST.currentState()?.anchor], [before, cursor, 'face:doc_not_registered', signed], 'the fifth cell at the link\'s own bytes, its entry given back');
-  assert.equal(faceWords(), LK.emptyAt(RESERVED).whole.map((p) => p.text).join(' '), 'in the far end\'s words');
+  assert.deepEqual([addrs(), TRAIL.cursorIndex(), faceShown()?.id, HOST.currentState()?.anchor, offered()], [before, cursor, 'face:reserved', signed, ['jump']], 'the face at the link\'s own bytes, no entry, its one act the jump');
+  assert.equal(faceWords(), LK.emptyAt(RESERVED).whole.map((p) => p.text).join(' '), 'in the far end\'s whole form there: the reserved words, then the board\'s');
+  assert.equal(faceWords(), `${reservedWords()} ${t('B1.doc_not_registered', { address: RESERVED })}`, 'which the number reserved leads');
   assert.deepEqual([same(CAM.view(), at), LK.visited(RESERVED_LINK)], [true, false], 'the camera never left, the link not counted as followed');
+  HOST.dismiss();
+  const opened = GO.toScene(CITING, RESERVED, {}, { from: { shown: s }, site: signed });
+  assert.deepEqual([addrs(), faceShown()?.id, HOST.currentState()?.anchor, offered()], [before, 'face:reserved', signed, ['jump']], '"read side by side" from the link\'s end: the same face at its site, no entry');
+  await run(opened);
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a LEAP to a reserved number the board answers as a document never leaves: answered at its read, or held by the page already, the camera stays, its entry given back and the fifth cell faced at the act\'s site in the board\'s words (B11-S5)', async () => {
+test('a LEAP to a reserved number the board answers as a document never leaves and takes no trail entry: answered at its read, or held by the page already, the camera stays and the face at the act\'s site says the board holds a document there that this version draws nowhere, offering "read it beside" — a reading scene opened through `toScene` on it beside the document the act was made from — and the jump; the record held, no box the model knows (B11-S5; issue #771\'s decision)', async () => {
   await run(GO.leapTo(D));
   const site = { span: { addr: D, pos: 11, width: 5 } }, signed = { ...site, sign: D };
   const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view(), walked = walkAt();
   REC.invalidate(ANSWERED);
   for (const what of ['answered at its read', 'held by the page']) {
     const leap = GO.leapTo(ANSWERED, { site });
-    assert.deepEqual([CAM.flying(), GO.inAir(), GO.isReaching()], [false, false, true], `${what}: reaching, the camera still`);
+    assert.deepEqual([addrs(), CAM.flying(), GO.inAir(), GO.isReaching()], [before, false, false, true], `${what}: reaching, no entry, the camera still`);
     await run(leap);
-    assert.deepEqual([addrs(), TRAIL.cursorIndex(), faceShown()?.id, HOST.currentState()?.anchor, faceWords()], [before, cursor, 'face:doc_not_registered', signed, t('B1.doc_not_registered', { address: ANSWERED })], `${what}: the fifth cell at the act's site, its entry given back`);
+    assert.deepEqual([addrs(), TRAIL.cursorIndex(), faceShown()?.id, HOST.currentState()?.anchor, faceWords()], [before, cursor, 'face:reserved', signed, t('L.reserved.held', { address: ANSWERED })], `${what}: the face at the act's site, that this version draws it nowhere, no entry`);
+    assert.deepEqual([offered(), hostEl.innerHTML.includes(`>${t('L.reserved.beside')}</button>`), hostEl.innerHTML.includes(reservedWords())], [['beside', 'jump'], true, false], `${what}: "read it beside", then the jump; no reserved words`);
     assert.deepEqual([same(CAM.view(), at), walkAt()], [true, walked], `${what}: the camera never left, the walk where it stood`);
+  }
+  assert.deepEqual([REC.doc(ANSWERED).extent, REC.known().includes(ANSWERED)], [ANSWERED_TEXT.length, false], 'the page holds what the board answered, and no box the model knows stands for it');
+  /** @type {any} */ (HOST.currentState()?.acts?.beside)(hostEl, false);
+  const opened = TRAIL.current()?.scene;
+  assert.deepEqual([opened?.b, typeof opened?.a === 'string' ? opened.a : opened?.a?.addr, same(CAM.view(), at)], [ANSWERED, D, true], 'read it beside: a reading scene opened through `toScene` — its entry taken at the act, as any scene\'s — the document at the reserved number beside D, the camera still');
+  // no scene to show here: its opening gives its entry back
+  await reopening();
+  assert.deepEqual([addrs(), TRAIL.cursorIndex()], [before, cursor], 'its entry given back');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// HELD_AT: a reserved number the board withholds a document at; REFUSED_AT: one whose read the board refuses by a name that says
+// nothing of the document
+const HELD_AT = '1.0.1.0.9', REFUSED_AT = '1.0.1.0.10';
+Object.assign(script, noClaims(HELD_AT), {
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(HELD_AT) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(REFUSED_AT) })]: { refused: { kind: 'refused', name: 'no_such_thing', code: 'no_such_thing' } },
+});
+
+test('a LEAP to a reserved number the board withholds a document at never leaves and takes no trail entry: the document\'s own withheld face at the act\'s site, no reserved words, and the jump beneath it (B11-S5; issue #771\'s decision)', async () => {
+  await run(GO.leapTo(D));
+  const site = { span: { addr: D, pos: 11, width: 5 } };
+  const before = addrs(), at = CAM.view();
+  await run(GO.leapTo(HELD_AT, { site }));
+  assert.deepEqual([addrs(), faceShown()?.id, same(CAM.view(), at)], [before, 'face:withheld', true], 'the withheld face at the act\'s site, no entry, the camera still');
+  assert.ok(hostEl.innerHTML.includes(addressedHTML(t('F.corner.withheld', { owner: '1.0.1' }))) && !hostEl.innerHTML.includes(reservedWords()) && !hostEl.innerHTML.includes('L.far.reserved'), `its own withheld words, no reserved words: ${hostEl.innerHTML}`);
+  assert.ok(offered().includes('jump') && hostEl.innerHTML.includes(jumpHTML()), 'the jump beneath it');
+  await pressFace('jump');
+  assert.deepEqual([TRAIL.current()?.addr, addrs().length], ['1.0.1', TRAIL.cursorIndex() + 1], 'the jump: the account\'s region, one entry');
+  await run(GO.back());
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP to a reserved number the board gives any other answer for never leaves and takes no trail entry: the reserved words, then that answer\'s own — the board marked unreachable known at the act, nothing asked; a refusal by a name that says nothing of the document, as a read\'s — and the jump (B11-S5; issue #771\'s decision)', async () => {
+  await run(GO.leapTo(D));
+  const site = { span: { addr: D, pos: 11, width: 5 } };
+  const before = addrs(), at = CAM.view();
+  REC.invalidate(RESERVED);
+  REC.setDaemon('unreachable');
+  try {
+    const from = fake.asked.length;
+    await run(GO.leapTo(RESERVED, { site }));
+    assert.deepEqual([fake.asked.slice(from), addrs(), faceShown()?.id, faceWords(), offered()], [[], before, 'face:reserved', `${reservedWords()} ${t('F.daemon.unreachable')}`, ['jump']], 'unreachable: known at the act, nothing asked; the reserved words, then the board\'s silence; the jump');
+  } finally { REC.setDaemon('running'); }
+  HOST.dismiss();
+  await run(GO.leapTo(REFUSED_AT, { site }));
+  const r = /** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'refused', name: 'no_such_thing', code: 'no_such_thing' });
+  assert.deepEqual([addrs(), faceShown()?.id, faceWords(), offered(), same(CAM.view(), at)], [before, 'face:reserved', `${reservedWords()} ${FACES.wordsFor(r, 'read', { addr: REFUSED_AT }).text}`, ['jump'], true], 'a refusal by name: the reserved words, then its words as a read\'s; the jump; no entry, the camera still');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// SLOT: an assigned slot of the second account the board holds nothing at — its bio, never written; SLOT_FAR its link page,
+// never written either, which SLOT_LINK cites from SLOT_NEAR
+const SLOT = '1.0.2.0.3', SLOT_FAR = '1.0.2.0.4', SLOT_NEAR = '1.0.1.0.130', SLOT_NEAR_TEXT = 'A citation of a link page never written.', SLOT_LINK = SLOT_NEAR + '.0.2.1';
+Object.assign(script, reads(SLOT_NEAR, SLOT_NEAR_TEXT, [SLOT_LINK]), Object.fromEntries([SLOT, SLOT_FAR].map((a) => [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(a) }), { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } }])));
+
+test('every LEAP to an assigned slot\'s address the board holds nothing at arrives, each time — the page knowing the board says nothing of it holding none back: its camera leaving at the act for the slot\'s place, an entry each, the fifth cell faced where the camera went; Back returning to each (B11-S5)', async () => {
+  await run(GO.leapTo(D));
+  const cursor = TRAIL.cursorIndex(), from = CAM.view();
+  const went = GO.viewFor(SLOT, null), there = { span: { addr: SLOT, pos: 1 }, sign: SLOT };
+  for (const n of [1, 2]) {
+    const leap = GO.leapTo(SLOT);
+    assert.deepEqual([CAM.flying(), same(CAM.destination(), went), GO.inAir()], [true, true, true], `LEAP ${n}: the camera left at the act, for the slot's place`);
+    await run(leap);
+    const e = TRAIL.current();
+    assert.deepEqual([REC.doc(SLOT).refused, TRAIL.cursorIndex(), e?.addr, e?.notice?.face, e?.notice?.site], ['unregistered', cursor + n, SLOT, 'unregistered', there], `LEAP ${n}: an entry of its own, holding the fifth cell where the camera went`);
+    assert.deepEqual([faceShown()?.id, HOST.currentState()?.anchor, same(CAM.view(), went)], ['face:doc_not_registered', there, true], `LEAP ${n}: the fifth cell there, the camera staying where it went`);
     HOST.dismiss();
   }
-  assert.equal(REC.doc(ANSWERED).extent, ANSWERED_TEXT.length, 'the page holds what the board answered');
+  await run(GO.back());
+  assert.deepEqual([TRAIL.current()?.addr, TRAIL.cursorIndex(), faceShown()?.id, same(CAM.view(), went)], [SLOT, cursor + 1, 'face:doc_not_registered', true], 'Back: the first LEAP\'s entry, its answer shown there again');
+  await run(GO.back());
+  assert.deepEqual([TRAIL.current()?.addr, TRAIL.cursorIndex(), same(CAM.view(), from)], [D, cursor, true], 'Back again: where the LEAPs were made');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('every follow of a link whose far end is an assigned slot\'s address the board holds nothing at lands, each time — the page knowing the board says nothing of it holding none back: its camera leaving at the act for the far end\'s place, an entry each, the far end\'s words faced where the camera went (B11-S5)', async () => {
+  REC.takeLink({ addr: SLOT_LINK, from: [span(SLOT_NEAR, 3, 8)], to: [{ ...span(SLOT_FAR, 1, 3), account: '1.0.2' }], type: CITE, age: UNDATED });
+  await PUMP.loadWhole(SLOT_NEAR);
+  await run(GO.leapTo(SLOT_NEAR));
+  const s = /** @type {import('../links/links.js').Shown} */ (LK.shown(SLOT_NEAR).find((x) => x.link.addr === SLOT_LINK));
+  assert.equal(s && s.far, SLOT_FAR, 'the citation drawn at its near document, its far end the slot');
+  const cursor = TRAIL.cursorIndex(), went = GO.viewFor(SLOT_FAR, null), there = { span: { addr: SLOT_FAR, pos: 1 }, sign: SLOT_FAR };
+  for (const n of [1, 2]) {
+    const following = GO.follow(s);
+    assert.deepEqual([CAM.flying(), same(CAM.destination(), went)], [true, true], `follow ${n}: the camera left at the act, for the far end's place`);
+    await run(following);
+    const e = TRAIL.current();
+    assert.deepEqual([TRAIL.cursorIndex(), e?.addr, e?.notice?.face, e?.notice?.far, e?.notice?.site], [cursor + 1, SLOT_FAR, 'unregistered', true, there], `follow ${n}: an entry of its own, holding the far end's words where the camera went`);
+    assert.deepEqual([faceShown()?.id, faceWords(), same(CAM.view(), went)], ['face:doc_not_registered', LK.emptyAt(SLOT_FAR).whole.map((p) => p.text).join(' '), true], `follow ${n}: the far end's words faced there, the camera staying where it went`);
+    HOST.dismiss();
+    await run(GO.back());
+    assert.deepEqual([TRAIL.current()?.addr, TRAIL.cursorIndex()], [SLOT_NEAR, cursor], `follow ${n}: Back to the near document`);
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// MAILBOX: another person's mailbox, which the board withholds from the reader: every read naming it refused `withheld`, no edition
+// claim on it
+const MAILBOX = '1.0.3.0.2';
+Object.assign(script, { [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(MAILBOX) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } } }, noClaims(MAILBOX));
+
+test('a LEAP to another person\'s mailbox lands there, each time, its read\'s `withheld · ⟨owner⟩` the act\'s answer at its place — no box standing there to say so — its entry holding that face, so Back to it shows it again; gone at the next act (B11-S4; B11 call 3)', async () => {
+  await run(GO.leapTo(D));
+  const cursor = TRAIL.cursorIndex(), went = GO.viewFor(MAILBOX, null), owner = t('F.corner.withheld', { owner: '1.0.3' });
+  for (const n of [1, 2]) {
+    const leap = GO.leapTo(MAILBOX);
+    assert.deepEqual([CAM.flying(), same(CAM.destination(), went)], [true, true], `LEAP ${n}: the camera left at the act, for the mailbox's place`);
+    await run(leap);
+    const e = TRAIL.current();
+    assert.deepEqual([REC.doc(MAILBOX).refused, REC.known().includes(MAILBOX), TRAIL.cursorIndex(), e?.addr, e?.notice?.face], ['withheld', false, cursor + n, MAILBOX, 'withheld'], `LEAP ${n}: withheld, no box the model knows; its entry holding its own withheld words`);
+    assert.deepEqual([faceShown()?.id, same(CAM.view(), went), walkAt()], ['face:withheld', true, ['document', MAILBOX, null]], `LEAP ${n}: the withheld face at its place, the camera there, the walk on it`);
+    assert.ok(hostEl.innerHTML.includes(`data-string="F.corner.withheld"`) && hostEl.innerHTML.includes(addressedHTML(owner)), `LEAP ${n}: its words "${owner}": ${hostEl.innerHTML}`);
+  }
+  await run(GO.leapTo(D));
+  assert.equal(faceShown(), null, 'gone at the next act');
+  await run(GO.back());
+  assert.deepEqual([TRAIL.current()?.addr, faceShown()?.id], [MAILBOX, 'face:withheld'], 'Back to its entry: the face shown again');
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 

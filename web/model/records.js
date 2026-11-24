@@ -147,7 +147,12 @@
 // refusing it `withheld` covers it or confirms its cover, one that answers
 // lifts it, and only such an answer settles what a box is owed: a drop keeps
 // it owed. Every document the model knows exists — listed, answered for, or
-// owed its read — is one box (`known`). The system
+// owed its read — is one box (`known`), save one at a number the plane's map
+// gives no cell, whose record may be held and is drawn nowhere, and another
+// person's mailbox a read answered `withheld` (B11 call 3); the map's reading
+// of a document's number and where an account's next document stands are
+// read here (`numberKind`, `nextDocument`, the latter kept until the index
+// is next written). The system
 // account's rows are held and marked `system` for the drawing modules to
 // leave out. The model knows
 // nothing of pixels, zoom, selection or lenses: the links touching an
@@ -157,7 +162,10 @@
 // FP-34, FP-35, FP-38.
 
 import { accountOf, documentOf, homeOf, cmpAddr, memberOf, isUnder, isTrunkMember, docOneOf } from './address.js';
+import { pathOf, cellNumberOf, assignedSlotOf, hasCell, LEAF, MAILBOX_SLOT, FIRST_ORDINARY_DOCUMENT } from '../plane/projection.js';
 import { byteOffsets, sliceBytes } from '../util.js';
+
+export { FIRST_ORDINARY_DOCUMENT };
 
 /** @typedef {import('./frames.js').Run} Run */
 /** @typedef {import('./frames.js').DocMeta} DocMeta */
@@ -638,7 +646,7 @@ function dropClass(stood, ended) {
   /** @type {Set<string>} the drafts holding words the board has not kept, which a change that ends the session leaves as read (`keptAtEnding`) */
   const held = new Set(ended ? [...state.docs.values()].filter((d) => !d.refused && d.from >= 0 && !published(d.addr) && unkept(d.addr)).map((d) => d.addr) : []);
   for (const [doc, p] of [...state.index]) if (p.kind !== 'edition' && !held.has(doc)) state.index.delete(doc);
-  state.counts.clear(); state.indexState = null;
+  state.counts.clear(); state.indexState = null; nextOf.clear();
   for (const d of state.docs.values()) {
     if (held.has(d.addr)) continue;
     if (kept.has(d.addr)) {
@@ -917,7 +925,7 @@ export function labelOf(fingerprint) {
  */
 export function takeIndex(answer, meanwhile = { rows: [], state: false }) {
   const listed = [...state.index.keys()];
-  state.index.clear(); state.counts.clear();
+  state.index.clear(); state.counts.clear(); nextOf.clear();
   for (const p of answer.docs) putPlace(p);
   for (const c of answer.counts) state.counts.set(c.account, c.documents);
   for (const u of meanwhile.rows) listRow(u);
@@ -939,6 +947,7 @@ function putPlace(p) {
   /** @type {Place} */
   const row = { doc: p.doc, kind: p.kind, label: p.label, standing: p.standing, account, system };
   state.index.set(p.doc, row);
+  nextOf.clear();
   const d = doc(p.doc);
   d.kind = p.kind; d.label = p.label; d.standing = p.standing; d.system = system;
 }
@@ -1004,10 +1013,13 @@ export const docs = () => [...state.docs.values()];
  * in address order, then each held record a read answered for, its text, its
  * metadata or a `withheld` refusal (existence and owner, never bytes: B1-S2),
  * or one owed its read at the page's class (`owed`), in the order first held
- * — the system account's rows left out. The plane draws a box for each
- * (P-RENDER's `drawable`), the walk lists each under its account (N-WALK's
- * `childrenOf`), and a press and the walk's re-take find each under a point
- * (P-RENDER's `docAtScreen`, N-WALK's `documentAt`), so none of them part.
+ * — the system account's rows left out, every one at a number the plane's
+ * map gives no cell (P-PROJ's `hasCell`), whatever a read answered for it,
+ * and another person's mailbox a read answered `withheld` (`unboxed`). The
+ * plane draws a box for each (P-RENDER's `drawable`), the walk lists each
+ * under its account (N-WALK's `childrenOf`), and a press and the walk's
+ * re-take find each under a point (P-RENDER's `docAtScreen`, N-WALK's
+ * `documentAt`), so none of them part.
  * @returns {string[]}
  */
 export function known() {
@@ -1015,9 +1027,62 @@ export function known() {
   const out = [];
   const seen = new Set();
   const take = (/** @type {string} */ doc) => { seen.add(doc); out.push(doc); };
-  for (const p of places()) if (!p.system && !seen.has(p.doc)) take(p.doc);
-  for (const d of state.docs.values()) { const doc = documentOf(d.addr) || d.addr; if (!seen.has(doc) && !d.system && (d.from >= 0 || d.meta || d.refused === 'withheld' || state.owed.has(d.addr))) take(doc); }
+  for (const p of places()) if (!p.system && !seen.has(p.doc) && hasCell(p.doc)) take(p.doc);
+  for (const d of state.docs.values()) {
+    const doc = documentOf(d.addr) || d.addr;
+    if (!seen.has(doc) && !d.system && hasCell(doc) && (d.from >= 0 || d.meta || (d.refused === 'withheld' && !unboxed(d)) || state.owed.has(d.addr))) take(doc);
+  }
   return out;
+}
+
+/**
+ * Is a held record another person's mailbox a read answered `withheld` (B11
+ * call 3; B11-F24 (3)): its number the mailbox's slot (P-PROJ's
+ * `MAILBOX_SLOT`), the reader refused it, and the class the page last left
+ * could not read it — a mailbox that class read is a covered one (`covered`),
+ * which keeps its box. No box stands for it (`known`).
+ * @param {Doc} d
+ * @returns {boolean}
+ */
+const unboxed = (d) => d.refused === 'withheld' && assignedSlotOf(d.addr) === MAILBOX_SLOT && !state.readBefore.has(d.addr);
+
+/**
+ * What a document's number is on the plane's map (P-PROJ's `cellNumberOf`,
+ * `assignedSlotOf`; B11-S3): the account's home page; one of its assigned
+ * slots; a reserved number, which takes no cell; or an ordinary document,
+ * numbered from FIRST_ORDINARY_DOCUMENT — a version member its document's;
+ * null for an address naming no document. LK reads the map through it
+ * (FP-11).
+ * @param {string} addr
+ * @returns {'home' | 'slot' | 'reserved' | 'ordinary' | null}
+ */
+export function numberKind(addr) {
+  const p = pathOf(addr);
+  if (p.length <= LEAF) return null;
+  return p[LEAF] === 1 ? 'home' : assignedSlotOf(addr) != null ? 'slot' : cellNumberOf(p[LEAF]) == null ? 'reserved' : 'ordinary';
+}
+
+/** each account's next document as the index now lists it (`nextDocument`), kept until the index is next written, for a far end's words ask it on every frame */
+/** @type {Map<string, string>} */
+const nextOf = new Map();
+
+/**
+ * Where the next document an account's counter mints stands, as the index
+ * lists the account: one past the greatest ordinary number it lists, else
+ * FIRST_ORDINARY_DOCUMENT itself — its home page and its slots counted
+ * nowhere, for the counter hands out neither (`numberKind`).
+ * @param {string} account
+ * @returns {string}
+ */
+export function nextDocument(account) {
+  let next = nextOf.get(account);
+  if (next === undefined) {
+    let last = FIRST_ORDINARY_DOCUMENT - 1;
+    for (const p of state.index.values()) if (p.account === account && numberKind(p.doc) === 'ordinary') last = Math.max(last, pathOf(p.doc)[LEAF]);
+    next = `${account}.0.${last + 1}`;
+    nextOf.set(account, next);
+  }
+  return next;
 }
 
 /** could the class the page last left read a document — its record holding its text, its metadata or its extent, or its index listing it, as the change found them (see the head)? None before the page's class first changes */
@@ -2648,7 +2713,7 @@ export function shownBy(d) {
 /** reset everything (tests) */
 export function _reset() {
   state.board = null; state.noBoard = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
-  state.keys = null; state.daemon = null; state.daemonReason = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
+  state.keys = null; state.daemon = null; state.daemonReason = null; state.index.clear(); nextOf.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.owed.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.feedAt = null; state.draftsAt = null; state.rev = 0;
   state.minted.clear(); state.mints.clear();

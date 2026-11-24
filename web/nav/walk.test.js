@@ -2264,3 +2264,19 @@ test('Esc at a live caret, and a walk key at one, ask the draft\'s open burst co
     assert.deepEqual([committed, LAYER.caret()?.live], [[W, W], false], 'a walk key off the caret: committed as the text is left');
   } finally { WRITE.machine(null); WRITE.setFlight(W, false); LAYER.dropCaret(); REC.invalidate(W); }
 });
+
+test('an account\'s documents are the boxes the plane draws there: another person\'s mailbox a read answered `withheld` and a number the map gives no cell, however a read answered it, are no stop of the walk and no re-take stands on either — the walk taking the account there — while a withheld draft at an ordinary number is a stop (B11 call 3; issue #771\'s decision)', async () => {
+  const ACCOUNT = '1.0.6', THEIRS = ACCOUNT + '.0.2', RESERVED = ACCOUNT + '.0.7', DRAFT = ACCOUNT + '.0.64';
+  REC.takeRefused(THEIRS, 'withheld'); REC.takeRefused(DRAFT, 'withheld');
+  REC.takeSpanSet(RESERVED, [{ subspace: 1, ordinal: 1, positions: 9 }]);
+  REC.takeDelivery(RESERVED, [{ pos: 1, width: 9, kind: 'content', text: 'Reserved.', ref: null, origin: null }]);
+  try {
+    const kids = await WALK.childrenOf({ kind: 'account', addr: ACCOUNT, pos: null, link: null });
+    assert.deepEqual(kids.map((n) => [n.kind, n.addr]), [['document', DRAFT]], 'the account\'s one stop: the withheld draft');
+    for (const addr of [THEIRS, RESERVED]) {
+      at(middle(docBox(addr)), 3 / LAYER.foldOf(REC.doc(DRAFT)).fs);
+      await WALK.retakeFromView();
+      assert.deepEqual(walkAt()?.slice(0, 2), ['account', ACCOUNT], `a re-take over ${addr}'s place stands on the account`);
+    }
+  } finally { for (const a of [THEIRS, RESERVED, DRAFT]) REC.invalidate(a); }
+});

@@ -651,4 +651,11 @@ def run(ctx):
     r.figures['agent_space'] = {'places': [p['doc'] for p in agent_places], 'census': fold.get(AGENT_SPACE)}
     r.note('the agent space %s holds its home document %s at the daemon (published, the delegation\'s mint) and its mailbox %s; "the empty agent space" of the record §8.4 is not empty on this board — reported' % (AGENT_SPACE, AGENT_SPACE + '.0.1', AGENT_SPACE + '.0.2'))
     ctx.leap(DOC, WINDOW[0])
+    # the ghost, an ordinary number, keeps issue #224's one state at the far end citing it — never the reserved number's, which
+    # issue #771's decision sets only where the plane's map gives no cell; this board holds no link to a slot or a reserved
+    # number, whose far ends' words are the pure tests' (links.test.js)
+    named = ctx.js('''((doc, ghost) => { const S = window.__skep; return S.links.shown(doc).filter((x) => x.far === ghost).map((x) => S.links.farLabel(doc, x.link)); })(%s, %s)''' % (json.dumps(DOC), json.dumps(GHOST)))
+    states = ctx.js('import("./strings.js").then(({t, STRINGS}) => ["L.far.empty", "L.far.unknown", "L.far.reserved"].map((id) => (STRINGS[id] ? t(id) : "⟨" + id + "⟩")))')
+    r.check(bool(named) and all((states[0] in n or states[1] in n) and states[2] not in n for n in named),
+            'the far end citing the ghost, an ordinary number the board says nothing of, keeps issue #224\'s one state — "%s" or "%s" — and never "%s" (issue #771\'s decision)' % tuple(states), named)
     return r.out()

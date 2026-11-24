@@ -321,6 +321,19 @@ flavors and removes its selection, each a page-local edit; at a span holding
 no caret, an edition, another's document and an unwritable draft each says
 its line and places nothing, a cut at text the person may not edit and both
 in a field left to the platform (`paste_and_cut`; D5 K-93; B3-S5).
+
+The acts at fixed addresses, typed in the LEAP box and read alone, last on the
+page (`fixed_addresses`; B11-S5, B11-S9; issue #771's decision): the
+claimant's bio, a slot the board holds nothing at, typed twice — each LEAP
+flying for its place and taking an entry of its own, the fifth cell where the
+camera went, Back returning to each; a reserved number typed — "reserved
+number" on its row before Enter, then no flight and no entry, the box open on
+the text as typed with its caret and its focus, the face at its row in the
+reserved words then the board's, and the jump on the row below, which ↓ and
+Enter make, a teleport to the account's region and one entry, Esc closing
+the box; and an ordinary address the board says nothing of, whose Enter still
+closes the box first and faces C-42 — each read's time from Enter to its
+face measured in the page.
 """
 import json
 import re
@@ -4176,6 +4189,119 @@ def paste_and_cut(ctx, r):
 QUERY = 'ceremony'
 
 
+# the time from Enter in the LEAP box to the first frame a test holds, measured in the page: armed before the key, awaited after
+# it — null where ten seconds pass without it
+TIMED = """((test) => { window.__gateTimed = new Promise((resolve) => { let t0 = null; const armed = performance.now();
+  document.getElementById('leapq').addEventListener('keydown', (e) => { if (e.key === 'Enter') t0 = performance.now(); }, {once: true, capture: true});
+  const tick = () => { if (t0 != null && test()) resolve(Math.round((performance.now() - t0) * 10) / 10); else if (performance.now() - armed > 10000) resolve(null); else requestAnimationFrame(tick); };
+  requestAnimationFrame(tick); }); return true; })(%s)"""
+# the box as it stands: open or not, its text, its caret and focus, its rows, and the face standing at its first row and the row below it
+BOX = """(() => { const q = document.getElementById('leapq'), hits = [...document.querySelectorAll('#leaphits .hit')];
+  const row = (h) => h ? {text: h.textContent, sub: (h.querySelector('.go > span.a:last-of-type') || {}).textContent || '', name: h.querySelector('.go').getAttribute('aria-label'),
+    described: h.querySelector('.go').getAttribute('aria-description'), face: [...h.querySelectorAll('.face [data-string]')].map((e) => [e.dataset.string, e.textContent]), busy: !!h.querySelector('.face [aria-busy="true"]')} : null;
+  return {open: window.__skep.leap.isOpen(), value: q.value, focused: document.activeElement === q, caret: [q.selectionStart, q.selectionEnd],
+    rows: window.__skep.leap.rows().map((r) => [r.kind, r.addr, !!r.reserved]), first: row(hits[0]), next: row(hits[1])}; })()"""
+
+
+def type_in_box(ctx, text):
+    """the LEAP box opened by Mod+L, emptied, the text typed into it as an input method commits it"""
+    chord(ctx, 'l', mods=('Meta',))
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(text)
+    ctx.frames(2)
+
+
+def fixed_addresses(ctx, r):
+    """THE ACTS AT FIXED ADDRESSES, typed in the LEAP box — reads alone (B11-S5, B11-S9; O1; issue #771's decision): the
+    claimant's bio, a slot the board holds nothing at, typed twice, each LEAP arriving with an entry of its own, Back
+    returning to each; a reserved number typed, its row saying so before Enter, Enter leaving the box open with the face
+    at its row and the jump below it, no flight and no entry; the jump; Esc; and GHOST, an ordinary address the board says
+    nothing of, whose Enter still closes the box first"""
+    figures = {}
+    # ---- T1: the claimant's bio, a slot the board holds nothing at, typed twice ---------------------------------------
+    slot = '1.0.1.0.3'
+    ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(slot))
+    listed = ctx.js('window.__skep.model.places().some((p) => p.doc === %s)' % json.dumps(slot))
+    left, t0 = state(ctx), trail(ctx)
+    went = None
+    for n in (1, 2):
+        type_in_box(ctx, slot)
+        ctx.js(TIMED % ('() => window.__skep.overlay().id === "face:doc_not_registered" && window.__skep.trail().cursor === %d' % (t0['cursor'] + n)))
+        chord(ctx, 'Enter')
+        overlay_up(ctx, 'face:')
+        took = ctx.js('window.__gateTimed', timeout=60)
+        figures.setdefault('slot_leap_ms', []).append(took)
+        s, t1 = state(ctx), trail(ctx)
+        newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+        refused = ctx.js('window.__skep.model.doc(%s).refused' % json.dumps(slot))
+        went = went or s
+        r.check(not listed and refused == 'unregistered' and ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and not s['leap']
+                and t1['cursor'] == t0['cursor'] + n and len(t1['entries']) == t0['cursor'] + 1 + n and bool(newest) and newest['addr'] == slot
+                and (newest.get('notice') or {}).get('face') == 'unregistered' and not same_view(left, s) and (s['focus'] or {}).get('addr') == slot,
+                'Enter on the claimant\'s bio, typed — a slot the board holds nothing at, as its read answers — %s: the box closed, the camera flown to the slot\'s place, an entry of its own holding the fifth cell, faced where the camera went, the walk there (B11-S5; O1)' % ('the first time' if n == 1 else 'again, the page knowing the board says nothing of it'),
+                {'listed': listed, 'refused': refused, 'face': ctx.js('window.__skep.overlay().id'), 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])],
+                 'newest': newest and {'addr': newest['addr'], 'notice': newest.get('notice')}, 'moved': not same_view(left, s), 'focus': s['focus'], 'ms': took})
+        chord(ctx, 'Escape')
+    chord(ctx, '[', mods=('Meta',))
+    overlay_up(ctx, 'face:')
+    s, t2 = state(ctx), trail(ctx)
+    r.check(t2['cursor'] == t0['cursor'] + 1 and t2['entries'][t2['cursor']]['addr'] == slot and ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and same_view(went, s),
+            'Mod+[ returns to the first LEAP\'s entry, the slot\'s place, its answer shown there again (B11-S5: "Back returns")', {'cursor': [t0['cursor'], t2['cursor']], 'overlay': ctx.js('window.__skep.overlay().id')})
+    chord(ctx, 'Escape')
+    chord(ctx, '[', mods=('Meta',))
+    s, t3 = state(ctx), trail(ctx)
+    r.check(t3['cursor'] == t0['cursor'] and same_view(left, s), 'Mod+[ again returns to where the LEAPs were made', {'cursor': [t0['cursor'], t3['cursor']]})
+    # ---- T4: a reserved number typed ----------------------------------------------------------------------------------
+    # the reserved number's words — each its entry's id, bracketed, where the page holds no such entry, so a page without them reports red
+    words = ctx.js('import("./strings.js").then(({t, STRINGS}) => [["L.far.reserved", {}], ["L.far.reserved.whole", {first: 64}], ["L.reserved.jump", {account: "1.0.1"}]].map(([id, v]) => (STRINGS[id] ? t(id, v) : "⟨" + id + "⟩")))')
+    for reserved in ('1.0.1.0.7', '1.0.1.0.63'):
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(reserved))
+        before, t0 = state(ctx), trail(ctx)
+        type_in_box(ctx, reserved)
+        typed = ctx.js(BOX)
+        r.check(typed['rows'] == [['address', reserved, True]] and bool(typed['first']) and typed['first']['sub'] == words[0] and words[0] in (typed['first']['name'] or ''),
+                'typed, before Enter: %s\'s row says "%s" beside its address, in its name too (issue #771\'s decision)' % (reserved, words[0]), typed)
+        end = ctx.js('document.getElementById("leapq").value.length')
+        ctx.js(TIMED % '() => !!document.querySelector("#leaphits .hit .face .face-text:not([aria-busy])")')
+        chord(ctx, 'Enter')
+        took = ctx.js('window.__gateTimed', timeout=60)
+        figures.setdefault('reserved_leap_ms', []).append(took)
+        ctx.frames(2)
+        box, s, t1 = ctx.js(BOX), state(ctx), trail(ctx)
+        fifth = ctx.js('import("./strings.js").then(({t}) => t("B1.doc_not_registered", {address: %s}))' % json.dumps(reserved))
+        r.check(box['open'] and box['value'] == reserved and box['focused'] and box['caret'] == [end, end] and same_view(before, s) and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries'])
+                and box['first']['face'] == [['L.far.reserved.whole', words[1]], ['B1.doc_not_registered', fifth]] and box['rows'] == [['address', reserved, True], ['account', '1.0.1', False]]
+                and bool(box['next']) and words[2] in box['next']['text'] and words[1] in (box['first']['described'] or ''),
+                'Enter at %s: no flight and no entry, the box open on the text as typed, its caret and its focus; the face at its row — the reserved words, then the board\'s — describing it, and the jump, "%s", on the row below (issue #771\'s decision)' % (reserved, words[2]),
+                dict(box, cursor=[t0['cursor'], t1['cursor']], entries=[len(t0['entries']), len(t1['entries'])], cam_same=same_view(before, s), ms=took))
+        if reserved == '1.0.1.0.7':
+            chord(ctx, 'ArrowDown')
+            chord(ctx, 'Enter')
+            s, t2 = state(ctx), trail(ctx)
+            newest = t2['entries'][t2['cursor']] if 0 <= t2['cursor'] < len(t2['entries']) else None
+            r.check(not s['leap'] and t2['cursor'] == t0['cursor'] + 1 and bool(newest) and newest['addr'] == '1.0.1' and (s['focus'] or {}).get('kind') == 'account' and (s['focus'] or {}).get('addr') == '1.0.1',
+                    '↓ and Enter on the row below: the jump — the box closed, a teleport to the account\'s region and its one entry (issue #771\'s decision)', {'leap': s['leap'], 'cursor': [t0['cursor'], t2['cursor']], 'newest': newest and newest['addr'], 'focus': s['focus']})
+        else:
+            chord(ctx, 'Escape')
+            s = state(ctx)
+            r.check(not s['leap'] and s['overlay'] is None, 'Esc closes the box the face stands in, as ever', {'leap': s['leap'], 'overlay': s['overlay']})
+    # ---- an ordinary address the board says nothing of: its Enter closes the box first, C-42 faced as before ----------
+    t0, known = trail(ctx), ctx.js('window.__skep.model.doc(%s).refused' % json.dumps(GHOST)) == 'unregistered'
+    type_in_box(ctx, GHOST)
+    typed = ctx.js(BOX)
+    chord(ctx, 'Enter')
+    overlay_up(ctx, 'face:')
+    s, t1 = state(ctx), trail(ctx)
+    o = ctx.js('window.__skep.overlay()')
+    fifth = ctx.js('import("./strings.js").then(({t}) => t("B1.doc_not_registered", {address: %s}))' % json.dumps(GHOST))
+    r.check(typed['rows'] == [['address', GHOST, False]] and words[0] not in typed['first']['text'] and not s['leap'] and o['id'] == 'face:doc_not_registered' and fifth in (o['text'] or '')
+            and t1['cursor'] == t0['cursor'] + (0 if known else 1),
+            'GHOST, an ordinary address the board says nothing of, typed: no reserved words on its row; Enter closes the box first and faces C-42 as before — at the act, no entry, where the page knows the board says nothing of it, else where its camera went (FP-25; issues #136, #137)',
+            {'typed': typed['first'], 'known': known, 'leap': s['leap'], 'overlay': o['id'], 'cursor': [t0['cursor'], t1['cursor']]})
+    chord(ctx, 'Escape')
+    r.figures['fixed_addresses'] = figures
+
+
 def run(ctx):
     r = Result()
     ctx.leap(DOC, WINDOW[0])
@@ -5076,5 +5202,6 @@ def run(ctx):
     # ---- the paste and the cut at the caret, through the doors, and their keydowns at each site (K-93; B3-S5) ------------------
     r.figures['paste_and_cut'] = paste_and_cut(ctx, r)
     r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K at the whole board', 'Mod+Shift+O, Mod+Shift+R, Mod+Shift+L, Mod+Enter and Mod+Shift+Enter at the whole board', 'Enter', 'Mod+Shift+Enter in the LEAP box as opened and on a typed address, Esc closing the scene', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+K, Mod+Shift+A and Mod+Shift+C at the walk\'s block', 'a press on the "link to…" slot', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click, a double-click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+K in the scene', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C with nothing selected, with a selection standing and with one drawn over no range of the platform\'s', 'a copy event with nothing selected and with a selection', 'a click on a column\'s blank room after a drag', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival', 'Mod+K, Mod+Shift+A, Mod+Shift+C, a printable key and Space at a selection in the moved scene\'s held version']
+    fixed_addresses(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

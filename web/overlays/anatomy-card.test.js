@@ -718,7 +718,7 @@ test('the home row says what the page reads of the link\'s home in every frame t
 test('in exactly the account the reader acts as, under a complete index, the reason "read side by side" gives at a far end the board will say nothing of is "no document here yet", that nothing has been made there and where the account\'s next document goes — the state the far end\'s words on the card name — never the fifth cell\'s words (issue #324; FP-21, FP-33)', async () => {
   const p = cardPage(), said = listening();
   HOST.attach(/** @type {any} */ (p.host));
-  const NEXT = '1.0.1.0.4', UNMADE = '1.0.1.0.3.0.2.43';
+  const NEXT = '1.0.1.0.64', UNMADE = '1.0.1.0.3.0.2.43';
   try {
     REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
     REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: '1.0.1.0.3', kind: 'edition', label: null, standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
