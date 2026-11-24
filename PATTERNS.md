@@ -133,7 +133,13 @@ fix; nothing here depends on their names.
   is never cut mid-word, and a number or an exception keeps its words.
   A compact sign opens whole on its act, and the mirror reads every
   sign whole. A document drawn smaller than its neighbours is framed
-  and says so.
+  and says so. At a fixed slot's cell (2–5) inside a region named in
+  view, the slot's name spells the address's fields past the region's
+  prefix exactly: short of room those fields give way first and the
+  name stands for them, whole or not at all; the slot names of one
+  region's first row stand or give way together, at the room the
+  longest needs. A held row, and a label away from a named region,
+  keep the address whole.
 
 - **FP-37 The strip under the top line follows one rule; draw order
   never decides what shows there.** Upward stubs — the plane's, the
