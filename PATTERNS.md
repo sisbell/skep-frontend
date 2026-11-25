@@ -296,15 +296,32 @@ the top line means FP-37.
 
 ## The press
 
-- **FP-44 A small place is pressed in an area at least 24 px each
-  way.** On the plane, the one form, and every document box drawn
-  smaller than 24 CSS px either way, is pressed anywhere in an area
-  grown about its drawn rectangle's centre to at least 24 px each way.
-  A point inside a place's drawn shape goes to that place; outside
-  every drawn shape, where areas meet, the place whose centre is
-  nearest wins. The drawing never changes for it. This binds every
-  press on a place of the plane — a document's box, the one form, and
-  any place a later lane draws.
+- **FP-44 A small target, or a byline's act, is pressed in an area at
+  least 24 px each way, and the nearest shape wins.** On the plane a
+  press inside a target's drawn shape — a box, the one form, a
+  continuation's mark, a tail's stroke or label — goes to that target;
+  where two shapes meet, the topmost wins, and no area takes a press
+  from another target's ink. Every target drawn smaller than 24 CSS px
+  either way — the one form, a document box, a continuation's mark
+  standing as one target, a tail — is pressed anywhere in an area
+  grown about it to at least 24 px each way; a tail's stroke and label
+  lines grow as one rectangle, away from the edge it leaves and evenly
+  above and below its stroke. Outside every drawn shape, the target whose
+  area holds the point and whose drawn shape is nearest wins. The
+  drawing never changes for it. A document's byline, on the plane and
+  in a reading scene's pane, sets each of its rows in a line box at
+  least 24 px tall wherever it holds an act, and at an arrival's
+  reading size each act — its token with its sign — is pressed
+  in an area grown about it to at least 24 px each way. Such an area
+  grows only into its own row's leading and the separators' space,
+  never over a drawn glyph of another token, of the head's address row
+  or of the document's text; a press on a glyph goes to that glyph's
+  owner, and where areas meet the act whose drawn shape is nearest
+  wins. Below that size, still at reading scale, the areas scale with
+  the drawing and the keys carry the acts. This binds every press on a
+  target of the plane — a document's box, the one form, a continuation's
+  mark, a tail, and any target a later lane draws — and every press on
+  a byline's act.
 
 ## The jump
 
@@ -396,11 +413,17 @@ the top line means FP-37.
   board refuses for its size asked again in parts first — the landing
   unmarked, its line saying it could not tell and why, keyed on the
   refusal and never its token. "Part" names an amount only; nothing
-  counts "places". The state ends only at another landing, at find
-  opening, at Esc after anything nearer, at the person's edit of the
-  bytes it stands in, or at a change of the page's class (FP-23); a
-  pan, a zoom, a selection or a step keeps it, and a return restores
-  outlines and labels as left. Stepping the pieces follows find's concept, in passage order,
+  counts "places". The state ends only at another landing (a press
+  in its own document below reading scale excepted), at find opening, at Esc after
+  anything nearer, at the person's edit of the bytes it stands in, or
+  at a change of the page's class (FP-23); a pan, a zoom, a selection
+  or a step keeps it, and a return restores outlines and labels as
+  left. Below reading scale an outlined run is no press target of its
+  own: a press there is its document's (FP-44). A press in the
+  arrival's own document lands at the text under it with a trail entry
+  (FP-25), the arrival standing whole; inside a piece's outline it
+  lands at that piece, found from the bytes pressed, and elsewhere the
+  current piece stays. Stepping the pieces follows find's concept, in passage order,
   wrapping, with the focus on the piece. Where the board will not read
   the runs' bytes, no run is numbered: each is labelled one of its
   count, the line says only part and why, and stepping follows the
