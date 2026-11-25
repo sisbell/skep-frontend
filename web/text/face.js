@@ -36,17 +36,20 @@
 // the plain word that no act of this client creates the page, and at their
 // bio what every other reader meets there meanwhile (P10); the link act's
 // plain word; and the list region, beneath the acts. Its corner (the slot's
-// face decision, point 1) stands where the slot's document's would: beside
-// the column, in its edge, level with the head's first row, while the fit
-// keeps the column beside the corner (P-CAM's `fit`); else at the face's
-// head, on a row of its own directly beneath the head's first row, which
-// stands with it — never at a foot. It holds to the top of the face's
+// face decision, point 1) stands where the slot's document's would, by
+// T-LAYER's rule for a row's first column: beside the column on its left, its
+// right edge P-REG's CORNER gap short of the column's text, in the strip left
+// of the slot's box, whole or compact by the room there and the view's fit
+// (T-LAYER's `roomBeside`, `formFor`), level with the head's first row, while
+// the fit keeps the column beside the corner (P-CAM's `fit`); else at the
+// face's head, on a row of its own directly beneath the head's first row,
+// which stands with it — never at a foot. It holds to the top of the face's
 // visible part below the one line while any of the rectangle is in view
 // (P-LABEL's `holdTop`; FP-37) and goes once it leaves; at one column the
 // head's two rows hold together, the body reserving their band. Its items, in
 // order: the count of the links the face's read kept that end at the slot's
-// address — whole where its edge holds it, else compact, each saying the
-// links end there — and the social mark (LK's `slotFold`, rule (i)'s one
+// address — in the corner's form, whole or compact, each saying the links
+// end there — and the social mark (LK's `slotFold`, rule (i)'s one
 // test); hollow while the read is out, "links not read" where it failed,
 // nothing at zero (P69), each item its own act and the corner one line of
 // acts (a toolbar, one Tab stop, ← and → along it), every item at least the
@@ -77,8 +80,8 @@ import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
 import * as LAYER from './layer.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, fit, panInto } from '../plane/camera.js';
-import { docBox, intersects } from '../plane/projection.js';
-import { LAY_FS, LINE_H, EDGE_GAP } from '../plane/layout.js';
+import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
+import { LAY_FS, LINE_H } from '../plane/layout.js';
 import { CORNER, HOLD, ADDRESS, TARGET } from '../plane/register.js';
 import { holdTop, cutWords } from '../plane/labels.js';
 import { accountOf, documentOf, commonsType } from '../model/address.js';
@@ -565,7 +568,8 @@ function draw(f) {
     FOCUS.keep(f.body, keyOf, () => { f.body.innerHTML = html; });
     f.html = html;
   }
-  const compact = !F.head && LAYER.cornerPx(countWords(Math.max(1, LK.slotFold(f.slot).count.length), false)) > roomBeside(f);
+  // beside the column, the form a document's corner takes by a row's first column: by the strip left of the slot's box and the view's fit
+  const compact = !F.head && LAYER.formFor(LAYER.roomBeside(LAYER.formFold(f.slot), clearLeftOf(f.slot), 0, cam.scale).room, false, F.compact) === 'compact';
   const c = cornerHTML(f, F.head, compact);
   if (c !== f.cornerHtml) {
     FOCUS.keep(f.corner, keyOf, () => { f.corner.innerHTML = c; });
@@ -575,12 +579,6 @@ function draw(f) {
   f.head = F.head;
   stops(f, focused);
   sayCorner(f);
-}
-
-/** the room the column's edge leaves the corner beside it, px (see the head) */
-function roomBeside(/** @type {Face} */ f) {
-  const ff = LAYER.formFold(f.slot), box = docBox(f.slot), shape = LAYER.shapeOf(f.slot), col = ff.columns[0];
-  return (shape.x + shape.w - (box.x + col.x + col.w + EDGE_GAP * ff.fs)) * cam.scale;
 }
 
 /** the key a control of a face bears, which a rebuild puts the focus back on (N-FOCUS's `keep`) */
@@ -621,9 +619,11 @@ function sayCorner(/** @type {Face} */ f) {
 
 /**
  * A face placed for the frame (see the head): its body by transform at the
- * column's top-left, its corner beside the column in its edge or across it at
- * the head, held to the top of the rectangle's visible part below the one
- * line while any of it is in view, and gone once it leaves.
+ * column's top-left; its corner beside the column on its left, its right edge
+ * P-REG's CORNER gap short of the column's text, or across the column at the
+ * head — its width and its showing written before its size is read — held to
+ * the top of the rectangle's visible part below the one line while any of it
+ * is in view, and gone once it leaves.
  * @param {Face} f
  */
 function place(f) {
@@ -631,13 +631,13 @@ function place(f) {
   const s = cam.scale * ff.fs / LAY_FS;
   f.body.style.transform = `translate(${sx(box.x + col.x)}px, ${sy(box.y + col.y)}px) scale(${s})`;
   const top = read.top() + HOLD.gap, rowTop = sy(box.y + col.y), foot = sy(shape.y + shape.h);
-  const h = f.corner.offsetHeight || cornerHeight(f);
   const gone = foot < read.top() || rowTop > viewport().VH;
+  f.corner.style.width = f.head ? `${(col.w * cam.scale).toFixed(2)}px` : '';
   f.corner.style.display = gone || !f.cornerHtml ? 'none' : '';
-  const x = f.head ? sx(box.x + col.x) : sx(box.x + col.x + col.w + EDGE_GAP * ff.fs);
+  const w = f.corner.offsetWidth, h = f.corner.offsetHeight || cornerHeight(f);
+  const x = f.head ? sx(box.x + col.x) : sx(box.x + col.x) - CORNER.gap - w;
   const y = holdTop(rowTop, top, foot, h);
   f.corner.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
-  if (f.head) f.corner.style.width = `${(col.w * cam.scale).toFixed(2)}px`; else f.corner.style.width = '';
 }
 
 /** the corner's height where the platform lays nothing out: its rows at their pitch (see the head) */
@@ -649,16 +649,18 @@ function cornerHeight(/** @type {Face} */ f) {
 
 /**
  * Where a face's corner stands on screen (see the head), for the gate and
- * the tests: its box as placed, and the body's head row's top on screen.
+ * the tests: its box as placed — its left, its top, its width and its height
+ * — and the body's head row's top and its column's left and right edges, on
+ * screen.
  * @param {string} slot
- * @returns {{corner: {x: number, y: number, h: number, head: boolean, shown: boolean}, rowTop: number, columnRight: number} | null}
+ * @returns {{corner: {x: number, y: number, w: number, h: number, head: boolean, shown: boolean}, rowTop: number, columnLeft: number, columnRight: number} | null}
  */
 export function cornerAt(slot) {
   const f = faces.get(slot);
   if (!f) return null;
   const ff = LAYER.formFold(slot), box = docBox(slot), col = ff.columns[0];
   const m = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(f.corner.style.transform || '');
-  return { corner: { x: m ? Number(m[1]) : NaN, y: m ? Number(m[2]) : NaN, h: f.corner.offsetHeight || cornerHeight(f), head: f.head, shown: f.corner.style.display !== 'none' }, rowTop: sy(box.y + col.y), columnRight: sx(box.x + col.x + col.w) };
+  return { corner: { x: m ? Number(m[1]) : NaN, y: m ? Number(m[2]) : NaN, w: f.corner.offsetWidth, h: f.corner.offsetHeight || cornerHeight(f), head: f.head, shown: f.corner.style.display !== 'none' }, rowTop: sy(box.y + col.y), columnLeft: sx(box.x + col.x), columnRight: sx(box.x + col.x + col.w) };
 }
 
 /**

@@ -5634,8 +5634,9 @@ def slot_face_site(ctx, r):
     part 1) — reads alone: at 1440 and at 390, landed at the second account's bio — the face set inside the one form's corners, its
     head row within the form's rectangle on screen and the form's four corner marks still drawn; its head's first row the slot's
     name, its state, then its address; at zero no corner item; and the landing again with its four-set held at the act, the
-    count's place hollow — beside the column level with the head's first row, its left at or past the column's right edge, at
-    1440; on a row of its own beneath the head's first row at 390 — every row of the face where it stood once the read answers.
+    count's place hollow — beside the column on its left where a document's corner stands, its right edge CORNER_GAP_PX short
+    of the column's text, in view and level with the head's first row, at 1440; on a row of its own beneath the head's first
+    row at 390 — every row of the face where it stood once the read answers.
     Its figures: at each face on the board, what its four-set answered and what its read kept"""
     bio2 = SECOND_ACCOUNT + '.0.%d' % (MAILBOX_SLOT + 1)
     want = ctx.js('import("./strings.js").then(({t, STRINGS}) => STRINGS["L.slot-face.unwritten"] ? t("L.well-known.bio") + " — " + t("L.slot-face.unwritten") : "⟨L.slot-face.unwritten⟩")')
@@ -5668,13 +5669,16 @@ def slot_face_site(ctx, r):
         corner, row = (held or {}).get('corner') or {}, ((held or {}).get('head') or {})
         item = next((i for i in (held or {}).get('items', []) if 'arriving' in i['cls']), None) if held else None
         if w >= 1000:
-            site = bool(item) and abs(item['rect']['y'] - row.get('y', -99)) <= 1 and item['rect']['x'] >= (held or {}).get('columnRight', 1e9) - 0.5
-            what = 'beside the column, level with the head\'s first row, its left at or past the column\'s right edge (the slot\'s face decision, point 1, test 1)'
+            box, left = corner.get('rect') or {}, (held or {}).get('columnLeft')
+            site = (bool(item) and bool(box) and left is not None and abs(item['rect']['y'] - row.get('y', -99)) <= 1
+                    and abs(box['x'] + box['w'] - (left - CORNER_GAP_PX)) <= 1
+                    and box['x'] >= 0 and box['y'] >= 0 and box['x'] + box['w'] <= w and box['y'] + box['h'] <= h)
+            what = 'beside the column on its left, where a document\'s corner stands: its right edge %d px short of the column\'s text, in view, level with the head\'s first row (the slot\'s face decision, point 1; #151)' % CORNER_GAP_PX
         else:
             site = bool(item) and corner.get('head') is True and item['rect']['y'] >= row.get('y', 1e9) + row.get('h', 0) - 0.5
             what = 'on a row of its own beneath the head\'s first row (the slot\'s face decision, point 1, test 2)'
         r.check(bool(held) and bool(item) and item['rect']['w'] > 0 and item['rect']['h'] > 0 and site,
-                '%d: its read held, the count\'s place hollow — drawn, never blank — %s' % (w, what), {'items': held and held['items'], 'corner': corner, 'head': row})
+                '%d: its read held, the count\'s place hollow — drawn, never blank — %s' % (w, what), {'items': held and held['items'], 'corner': corner, 'head': row, 'columnLeft': (held or {}).get('columnLeft')})
         ctx.drv.answer_op('whole')
         ctx.drv.unhold()
         wait(bio2, '!f.items.some((i) => i.cls.includes("arriving"))')

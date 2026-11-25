@@ -27,7 +27,7 @@ import * as SLOTFACE from './face.js';
 import { page } from '../test/dom.js';
 import { docBox } from '../plane/projection.js';
 import { LINE_H, LAY_FS } from '../plane/layout.js';
-import { HOLD } from '../plane/register.js';
+import { HOLD, CORNER } from '../plane/register.js';
 import { unitSpan } from '../model/address.js';
 import { t, sentence } from '../strings.js';
 
@@ -295,7 +295,7 @@ test('its head carries the form\'s label: the slot\'s name, its state set in aft
   }
 });
 
-test('the corner beside the column at 1440: level with the head\'s first row, its left at or past the column\'s right edge, in its edge; one line of acts (the slot\'s face decision, point 1, test 1; #436; #151)', async () => {
+test('the corner beside the column at 1440 stands where a document\'s corner stands beside a row\'s first column: on the column\'s left, its right edge a gap short of the column\'s text whatever its width, level with the head\'s first row; one line of acts (the slot\'s face decision, point 1; #151; foundations §3.1)', async () => {
   seedKinds(SLOT, ['cite', 'social']);
   void PUMP.readLinksEndingAt(SLOT);
   atFace(SLOT);
@@ -303,9 +303,62 @@ test('the corner beside the column at 1440: level with the head\'s first row, it
   const at = /** @type {NonNullable<ReturnType<typeof SLOTFACE.cornerAt>>} */ (SLOTFACE.cornerAt(SLOT)), head = rowOn(SLOT, 'head');
   assert.ok(!at.corner.head && at.corner.shown, 'beside the column');
   assert.ok(head && Math.abs(at.corner.y - head.top) <= 1, `level with the head's first row: ${at.corner.y} against ${head && head.top}`);
-  assert.ok(at.corner.x >= at.columnRight, `its left at or past the column's right edge: ${at.corner.x} against ${at.columnRight}`);
+  const right = (/** @type {NonNullable<ReturnType<typeof SLOTFACE.cornerAt>>} */ c) => c.corner.x + c.corner.w;
+  assert.ok(Math.abs(right(at) - (at.columnLeft - CORNER.gap)) <= 1 && right(at) <= at.columnLeft, `its right edge a gap short of the column's text, wholly left of the column: ${right(at)} against ${at.columnLeft}`);
   const f = /** @type {NonNullable<ReturnType<typeof SLOTFACE.faceOf>>} */ (SLOTFACE.faceOf(SLOT));
+  // the platform sets the corner as wide as its items: it stands out leftward from that edge
+  /** @type {any} */ (f.corner).offsetWidth = 140;
+  SLOTFACE.frame();
+  const wide = /** @type {NonNullable<ReturnType<typeof SLOTFACE.cornerAt>>} */ (SLOTFACE.cornerAt(SLOT));
+  assert.ok(Math.abs(wide.corner.x - (wide.columnLeft - CORNER.gap - 140)) <= 1 && Math.abs(right(wide) - (wide.columnLeft - CORNER.gap)) <= 1 && Math.abs(wide.corner.y - at.corner.y) <= 0.5, `140 px wide: its left 140 px past that edge, its right edge and its top where they stood — ${JSON.stringify(wide)}`);
   assert.deepEqual([f.corner.querySelectorAll('[role="toolbar"]').length, f.corner.querySelectorAll('[role="toolbar"] button').length], [1, 2], 'one line of acts holding the count and the social mark');
+});
+
+test('the corner is placed by its width as it stands in that frame: its first frame beside the column after it stood across the column at its head, and its first frame shown after it stood hidden holding no item, each stand its right edge a gap short of the column\'s text (the slot\'s face decision, point 1; FP-8)', async () => {
+  seedKinds(SLOT, ['cite']);
+  CAM.setViewport(390, 844);
+  void PUMP.readLinksEndingAt(SLOT);
+  atFace(SLOT);
+  await settle();
+  const f = /** @type {any} */ (SLOTFACE.faceOf(SLOT));
+  // the platform's width of the corner: none while it is hidden, the width set on it where one is, else its items' own
+  Object.defineProperty(f.corner, 'offsetWidth', { configurable: true, get: () => (f.corner.style.display === 'none' ? 0 : f.corner.style.width ? parseFloat(f.corner.style.width) : 90) });
+  SLOTFACE.frame();
+  assert.ok(SLOTFACE.cornerAt(SLOT)?.corner.head && f.corner.offsetWidth > 90, `390: across the column at its head, as wide as the column — ${f.corner.offsetWidth}`);
+  const beside = () => { const at = /** @type {NonNullable<ReturnType<typeof SLOTFACE.cornerAt>>} */ (SLOTFACE.cornerAt(SLOT)); return { head: at.corner.head, shown: at.corner.shown, x: at.corner.x, want: at.columnLeft - CORNER.gap - 90 }; };
+  CAM.setViewport(1440, 900);
+  atFace(SLOT);
+  SLOTFACE.frame();
+  const wide = beside();
+  assert.ok(!wide.head && wide.shown && Math.abs(wide.x - wide.want) <= 1, `1440, its first frame beside the column: by its items' width, never the column's — ${JSON.stringify(wide)}`);
+  found(SLOT, []);
+  void PUMP.readLinksEndingAt(SLOT); SLOTFACE.landed(SLOT);
+  await settle();
+  assert.deepEqual([SLOTFACE.faceOf(SLOT)?.items, SLOTFACE.cornerAt(SLOT)?.corner.shown], [[], false], 'zero: no item, the corner hidden');
+  const release = fake.hold('op', { frame: F.linksEndingAt(SLOT) });
+  try {
+    void PUMP.readLinksEndingAt(SLOT); SLOTFACE.landed(SLOT);
+    SLOTFACE.frame();
+    const shown = beside();
+    assert.ok(shown.shown && Math.abs(shown.x - shown.want) <= 1, `its read out again, its first frame shown: by its items' width, never none — ${JSON.stringify(shown)}`);
+  } finally { release(); await settle(); }
+});
+
+test('beside the column the corner takes the form a document\'s corner takes by a row\'s first column — by the strip left of the slot\'s box and the view\'s fit (T-LAYER\'s `roomBeside`, `formFor`): at 1440 two links\' count whole; at 700 px, where the fit holds a column beside the compact corner alone, one link\'s count compact (the slot\'s face decision, point 1; FP-26; #151)', async () => {
+  const count = () => /** @type {any} */ (SLOTFACE.faceOf(SLOT))?.corner.querySelector('.fcount');
+  seedKinds(SLOT, ['cite', 'other']);
+  void PUMP.readLinksEndingAt(SLOT);
+  atFace(SLOT);
+  await settle();
+  assert.deepEqual([CAM.fit().compact, CAM.fit().head], [false, false], '1440: the fit holds the whole corner beside the column');
+  assert.ok(count()?.dataset.string === 'L.slot-face.count' && count()?.textContent === t('L.slot-face.count', { n: '2' }), `whole: ${count()?.textContent}`);
+  CAM.setViewport(700, 900);
+  seedKinds(SLOT, ['cite']);
+  void PUMP.readLinksEndingAt(SLOT);
+  atFace(SLOT);
+  await settle();
+  assert.deepEqual([CAM.fit().compact, CAM.fit().head, SLOTFACE.cornerAt(SLOT)?.corner.head], [true, false, false], '700 px: the fit holds the compact corner beside the column');
+  assert.ok(count()?.dataset.string === 'L.slot-face.count.compact.1' && count()?.textContent === t('L.slot-face.count.compact.1', { n: '1' }), `compact: ${count()?.textContent}`);
 });
 
 test('the corner at one column — 390 px and 320 CSS px: on its own row directly beneath the head\'s first row, which stands with it, above the told line or the statement; its items on that row, wrapped only between items; none below the face\'s acts (the slot\'s face decision, point 1, test 2; WCAG 1.4.10)', async () => {
@@ -573,7 +626,7 @@ test('what the own-record read waits on stands as built: no own item in the corn
   assert.ok(!f.corner.textContent.includes(t('L.slot-face.yours')) && rows(SLOT).some((r) => r.cls === 'act' && r.text === sentence('L.slot-face.no-link-act')), 'the link act its plain word');
 });
 
-test('a created, empty slot page read by reader: its owner meets "nothing here yet" and the corner\'s whole line; every other reader its state alone, no act named, and "bio — not written yet" in the empty line\'s place — one state read one way at the face and at the page; a feed row creating the slot while its face stands draws no flight, the face giving way to the page, the count of the same links the same by the face\'s read and by the page\'s own (B11-S4; seat-settled 14; the slot\'s face decision, point 1, test 8)', async () => {
+test('a created, empty slot page read by reader: its owner meets "nothing here yet" and the corner\'s whole line; every other reader its state alone, no act named, and "bio — not written yet" in the empty line\'s place — one state read one way at the face and at the page; a feed row creating the slot while its face stands draws no flight, the face giving way to the page, the count of the same links the same by the face\'s read and by the page\'s own, the page\'s corner standing where the face\'s stood — its right edge and its top (B11-S4; seat-settled 14; the slot\'s face decision, point 1, test 8)', async () => {
   const { articleHTML } = await import('./article.js');
   const created = (/** @type {string} */ slot) => {
     REC.takeIndex(/** @type {any} */ ({ docs: [ME + '.0.1', THEM + '.0.1', NEAR, OTHER, slot].map((doc) => ({ doc, kind: 'edition', label: null, standing: 'public' })), counts: [], state: { arm: 'complete' } }));
@@ -586,10 +639,24 @@ test('a created, empty slot page read by reader: its owner meets "nothing here y
   atFace(SLOT);
   await settle();
   assert.deepEqual([SLOTFACE.stands(SLOT), LK.slotFold(SLOT).count.map((x) => x.addr)], [true, [l]], 'the face, its count 1');
+  // the face's corner 110 px wide and the page's stand-in none wide: the two stand at one site by their right edges and tops
+  /** @type {any} */ (SLOTFACE.faceOf(SLOT)?.corner).offsetWidth = 110;
+  SLOTFACE.frame();
+  const faced = /** @type {NonNullable<ReturnType<typeof SLOTFACE.cornerAt>>} */ (SLOTFACE.cornerAt(SLOT));
   created(SLOT);
   REC.takeLinks(SLOT, [l]);
   SLOTFACE.frame();
   assert.deepEqual([SLOTFACE.stands(SLOT), CAM.flying(), REC.isForm(SLOT), REC.known().includes(SLOT)], [false, false, false, true], 'created: no flight, the face gives way to the page\'s box');
+  const textLayer = pg.element('div'), cornerLayer = pg.element('div');
+  textLayer.clientWidth = 1440; textLayer.clientHeight = 900;
+  LAYER.attach(/** @type {any} */ (textLayer), /** @type {any} */ (cornerLayer));
+  try {
+    LAYER.frame();
+    const placed = LAYER.cornerPlace(SLOT);
+    assert.ok(LAYER.isMounted(SLOT) && placed && LAYER.cornerAt(SLOT)?.head === false, `the page's corner beside its column: ${JSON.stringify(placed)}`);
+    const was = { right: faced.corner.x + faced.corner.w, top: faced.corner.y };
+    assert.ok(Math.abs(/** @type {any} */ (placed).right - was.right) <= 1 && Math.abs(/** @type {any} */ (placed).top - was.top) <= 1, `the corner stands where the face's stood: the page's corner's right edge and top the face's corner's — ${JSON.stringify({ was, placed })}`);
+  } finally { LAYER.clear(); LAYER.attach(/** @type {any} */ (null), null); }
   console.log(`# figures: across creation, the same link — the face's read counted ${LK.slotFold(SLOT).count.length}, the page's own whole links ${LK.wholeLinks(SLOT).length}`);
   assert.equal(LK.wholeLinks(SLOT).length, LK.slotFold(SLOT).count.length, 'one count of the same links by either read');
   const d = REC.doc(SLOT), html = articleHTML(d, LAYER.viewFor(d), THEM);
