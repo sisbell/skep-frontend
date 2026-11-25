@@ -124,7 +124,9 @@
 // document's bars are the lines of T-LAYER's fold (`foldOf`), each bar where
 // its line's glyphs will stand, in its column, so the handoff swaps bars for
 // text in place and mid scale greeks the columns the mount sets (law 8; S1
-// Q7); a line T-LAYER stands as text yields its bar (`standing`), line by
+// Q7) — none where the text shown holds no position (T-LAYER's `shownOf`),
+// whose empty line is a sign of the page's; a line T-LAYER stands as text
+// yields its bar (`standing`), line by
 // line, a document whose article stands in the mount band its label, and one
 // whose article stands in another fold — a stale one a press holds — the
 // whole of it. The app's loop runs T-LAYER's frame before `draw`, so what
@@ -807,9 +809,10 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     if (W < 26) continue;
     if (d.refused === 'withheld') { if (W > 60) { ctx.strokeStyle = COL.greek; ctx.setLineDash([2, 4]); ctx.strokeRect(X + W * 0.04, Y + H * 0.3, W * 0.92, H * 0.5); ctx.setLineDash([]); } continue; }
     if (landmark) { ctx.fillStyle = COL.land; const s = Math.max(4, Math.min(11, W * 0.03)), cx = sx(box.x + row.x + row.w / 2), ty = sy(box.y + row.y); ctx.beginPath(); ctx.moveTo(cx, ty - s * 1.6); ctx.lineTo(cx + s, ty - s * 0.3); ctx.lineTo(cx, ty + s); ctx.lineTo(cx - s, ty - s * 0.3); ctx.closePath(); ctx.fill(); }
-    if (fsPx < 3 || whole || d.from < 0) continue;
+    if (fsPx < 3 || whole || LAYER.shownOf(d.addr).from < 0) continue;
     // the bars, column by column: the article's own lines, each where its glyphs will stand, a line standing as text yielding its bar — and
-    // at the readable em every line in view stands, for bars mean only too small to read (FP-12)
+    // at the readable em every line in view stands, for bars mean only too small to read (FP-12); none where the text shown holds no
+    // position, its empty line a sign of the page's
     const B = laidOut(d).bars;
     let set = 0;
     const below = wy(VH + fsPx) - box.y;

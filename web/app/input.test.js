@@ -75,7 +75,8 @@
 // that pane's selection once, a drag in each of two panes leaving both
 // standing and a click in one ending its own; and a click, in its rectangle
 // or its press area, and Enter at its stop each a LEAP to the one form's slot,
-// with no look under the pointer over a form or a document (FP-9, FP-10,
+// with no look under the pointer over a form or a document; and a click on an
+// empty document's line on its ground, selecting nothing (FP-9, FP-10,
 // FP-12, FP-20, FP-21, FP-24, FP-25, FP-30, FP-34, FP-35, FP-36, FP-40).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -672,7 +673,7 @@ test('a press at the readable em on a document whose text does not stand yet is 
     LAYER.frame();
     assert.ok(LAYER.isMounted(D), 'the frame stands the first edition\'s text');
     const article = { dataset: { addr: D } }, sp = { dataset: { addr: D, pos: String(second.pos) } };
-    under = { id: '', closest: (/** @type {string} */ sel) => (sel === '#domlayer article.dtext' || sel === 'article' ? article : sel === '.sp' ? sp : null) };
+    under = { id: '', closest: (/** @type {string} */ sel) => (sel === '#domlayer article.dtext' || sel === 'article' ? article : sel === '.sp' || sel === '.sp:not(.empty)' ? sp : null) };
     INPUT.afterFrame();
     assert.deepEqual(SEL.selected(), { addr: D, pos: second.pos, width: second.width }, 'the click selects the block under it whole');
     assert.deepEqual([TRAIL.all().length, CAM.flying()], [entries, false], 'no trail entry and no flight: never a move to the place');
@@ -733,7 +734,7 @@ test('a press or a click on a box the plane draws that the index does not list f
     LAYER.frame();
     assert.ok(LAYER.isMounted(D), 'the frame stands its text');
     const article = { dataset: { addr: D } }, sp = { dataset: { addr: D, pos: String(second.pos) } };
-    under = { id: '', closest: (/** @type {string} */ sel) => (sel === '#domlayer article.dtext' || sel === 'article' ? article : sel === '.sp' ? sp : null) };
+    under = { id: '', closest: (/** @type {string} */ sel) => (sel === '#domlayer article.dtext' || sel === 'article' ? article : sel === '.sp' || sel === '.sp:not(.empty)' ? sp : null) };
     INPUT.afterFrame();
     assert.deepEqual([SEL.selected(), TRAIL.all().length], [{ addr: D, pos: second.pos, width: second.width }, 0], 'the click selects the block under it whole, and moves to no place');
     SEL.clear();
@@ -1111,7 +1112,7 @@ async function onDrafts(body) {
     const partOf = (/** @type {string} */ addr, /** @type {number} */ pos) => {
       const art = LAYER.sceneArticle(REC.doc(addr));
       const sp = Object.assign(new globalThis.HTMLElement(), { nodeType: 1, dataset: { addr, pos: String(pos) }, contains: () => false });
-      Object.assign(sp, { closest: (/** @type {string} */ sel) => (sel === '.sp' || sel === '.run > .sp' ? sp : sel === 'article.dtext' || sel === 'article' ? art : null) });
+      Object.assign(sp, { closest: (/** @type {string} */ sel) => (sel === '.sp' || sel === '.sp:not(.empty)' || sel === '.run > .sp' ? sp : sel === 'article.dtext' || sel === 'article' ? art : null) });
       return sp;
     };
     /** the platform's selection collapsed at a part's start, as a click leaves it */
@@ -1826,6 +1827,25 @@ test('with no caret standing, a click on a document\'s sign or ground — a colu
     assert.deepEqual([walkAt(), FOCUS.ringShown(), WALK.panelShown()], [['block', O, second.pos], true, false], `${what}: the walk on O's span holding its second line, the ring drawn there, no panel`);
     await closeAll();
   }
+}));
+
+test('a click on the line an empty document\'s article stands in its text\'s place — "nothing here yet", the page\'s own sign, a `.sp` that is no block — is on its ground: nothing selected and no acts shown, never a span at a position the document does not hold, the walk on the document (issue #782; FP-27, FP-40)', () => onDrafts(async ({ press }) => {
+  PORT.boot(FAKE.create({}));
+  noneDrawn();
+  const E = '1.0.2.0.70';
+  REC.takeSpanSet(E, []);
+  REC.takeMetadata(E, { doc: E, published: false, owner: '1.0.2', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  const f = LAYER.foldOf(REC.doc(E)), box = docBox(E), c = f.columns[0];
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: 12 / f.fs });
+  assert.ok(LAYER.atReadingScale(E) && REC.textHeld(REC.doc(E)), 'an empty document at its reading scale, its empty text held');
+  const art = { dataset: { addr: E } };
+  /** a stand-in of its empty line's element, answering as the platform does: a `.sp`, never a block's `.sp:not(.empty)` */
+  const line = { dataset: { addr: E, pos: '1', width: '0' }, isConnected: false, closest: (/** @type {string} */ sel) => (sel === '.sp' ? line : sel === 'article' ? art : null) };
+  await WALK.restAt('1.0.1');
+  press(line, LAYER.centreOf(E, 1));
+  await tick();
+  assert.deepEqual([SEL.selected(), HOST.currentState(), walkAt()?.[1]], [null, null, E], 'nothing selected and no acts shown; the walk on the document');
+  await closeAll();
 }));
 
 // placed last: it attaches a mirror the walk's item takes the focus on, which no test after it should meet

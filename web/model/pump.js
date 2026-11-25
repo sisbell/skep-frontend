@@ -159,7 +159,9 @@
 // window is writing in, wherever the plane places them (`keptNow`,
 // `beingWritten`), which
 // stand as held while they are read again and are set in one step as their
-// reads land (`readAgain`; M-REC's `setAgain`), a row naming one while they
+// reads land (`readAgain`; M-REC's `setAgain`) — the text of one of no
+// content read with its extent, so its first words are set with it (M-REC's
+// `textHeld`; `readFresh`) — a row naming one while they
 // are out queueing one more read — the view's answers for each address
 // dropped forgotten, and what it touched told after the drop (`onDrop`;
 // FP-23), a whole read of a document read again waiting for those reads first
@@ -3630,10 +3632,12 @@ function memberShown(d, c) {
  * where a refusal is held of it, or its read is owed at the page's class
  * (M-REC's `owed`) — its metadata, its links — within the view's scan
  * permits, a scan the board kept
- * busy said unheard — and each one's value, and, where its box shows it, its
- * text over the window it holds, as many positions longer as the text grew —
- * from the first position where the text is now shorter than the window's
- * start — with its image there; where the slots
+ * busy said unheard — and each one's value, and, where its box shows it and
+ * the page holds its text (M-REC's `textHeld`), its text over the window it
+ * holds, as many positions longer as the text grew — from the first position
+ * where the text is now shorter than the window's start, a text of no
+ * content's window [1, 1), so its first words are set with their extent —
+ * with its image there; where the slots
  * of the links touching it project, and where every link's slot projects into
  * it, a floating end's among them, each projection held (M-REC's
  * `projectionsOf`, `projectionsInto`); its owner's byline facts where a cause
@@ -3694,10 +3698,11 @@ async function readFresh(addr, chains, facts) {
       f.links = links; f.values = values;
     }
   }
-  if (drawn && d.from >= 0) {
-    // the window held, from its first position, as many positions longer as the text grew, so a window to its end reaches the new end
+  if (drawn && REC.textHeld(d)) {
+    // the window held — a text of no content's [1, 1) — from its first position, as many positions longer as the text grew, so a window to its end reaches the new end
     const grew = Math.max(0, extent - (d.extent ?? extent));
-    const from = d.from <= extent ? d.from : 1, to = Math.min(extent + 1, from + d.to - d.from + grew);
+    const win = d.from >= 0 ? { from: d.from, to: d.to } : { from: 1, to: 1 };
+    const from = win.from <= extent ? win.from : 1, to = Math.min(extent + 1, from + win.to - win.from + grew);
     if (to > from) {
       // in parts, so a window past one delivery's items is read whole (`textParts`)
       const t = /** @type {{runs: import('./frames.js').Run[], asOf: number | null} | {refused: Refusal}} */ (await textParts(addr, from, to - from));
@@ -3724,7 +3729,7 @@ async function readFresh(addr, chains, facts) {
     else if (out.refused.kind === 'refused') projections.push({ ...p, runs: declinedAs(out.refused) });
   });
   if (projections.length) f.projections = projections;
-  const owner = drawn && d.from >= 0 ? REC.ownerAccount(d) : '', held = owner ? REC.accountKey(owner) : undefined;
+  const owner = drawn && REC.textHeld(d) ? REC.ownerAccount(d) : '', held = owner ? REC.accountKey(owner) : undefined;
   if (held && 'cause' in held) {
     let p = facts.get(owner);
     if (!p) { p = factsOf(owner); facts.set(owner, p); }

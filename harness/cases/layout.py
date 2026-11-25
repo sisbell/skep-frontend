@@ -479,7 +479,7 @@ import json
 import math
 import re
 
-from . import AGENT_SPACE, BEAMED, BIO, DOC, FAR_LEAP, FIRST_ORDINARY, GHOST, LAST_NAMED_SLOT, LINK_PAGE, MAILBOX, MAILBOX_SLOT, SECOND_ACCOUNT, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, edition, first_grid, frame_row, heard, is_slot, slot_words
+from . import AGENT_SPACE, BEAMED, BIO, DOC, FAR_LEAP, FIRST_ORDINARY, GHOST, LAST_NAMED_SLOT, LINK_PAGE, MAILBOX, MAILBOX_SLOT, SECOND_ACCOUNT, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, edition, first_grid, heard, hold_mailbox, is_slot, slot_words
 
 LEVELS_EM = [9, 12, 18, 30]
 # the room about the viewport the text layer stands a document's lines in (issue #122: a document stands by line) — the
@@ -1090,37 +1090,38 @@ def labels_hold(r, name, v):
 
 
 def slot_name_holds(ctx, r):
-    """THE SLOT'S NAME AT ITS LABEL (B11-S2, B11-S7, B11-F10): the claimant's mailbox framed at mid on its one row
-    (`frame_row`): its label set there holds the name the acting account's own mailbox is shown by, whole, in the client's
-    face, level with its address and a space short of it, the address whole at the row's end — THE LABELS' checks holding in
-    that view, rule (v) at the slot's cell among them; the agent space's mailbox, framed so, named by the plain name wherever
-    a name of it stands (B11-S7: the acting account's own address alone); the second account's, withheld from every reader, no
-    box but the one form, whose label the forms' row reads (B11 call 3; B11-S5). Its figures: what each label sets"""
+    """THE SLOT'S NAME AT ITS LABEL (B11-S2, B11-S7, B11-F10): the claimant's mailbox — of no content, its article its head and
+    its empty line, standing in the mount band, where the canvas sets no label of it (issue #782) — named by its label held
+    below the one line over its article at mid, where the line names its account (`hold_mailbox`): that label holds the name
+    the acting account's own mailbox is shown by, whole, in the client's face, just before its address at the line's end,
+    level with it and a space short of it — THE LABELS' checks holding in that view; the agent space's mailbox, held so, named
+    by the plain name wherever a name of it stands (B11-S7: the acting account's own address alone); the second account's,
+    withheld from every reader, no box but the one form, whose label the forms' row reads (B11 call 3; B11-S5). Its figures:
+    what each label sets"""
     words = slot_words(ctx)
     mine, plain = words['L.well-known.your-mailbox'], words['L.well-known.mailbox']
     figures = {}
-    def framed(addr):
-        """the camera at mid on a document's first row (`frame_row`); the label view there and the document's label"""
-        frame_row(ctx, addr)
-        v = label_view(ctx)
-        return v, next((l for l in v['labels'] if l['kind'] == 'doc' and l['place'] == addr), None)
-    v, l = framed(MAILBOX)
-    figures['mailbox'] = labels_hold(r, 'mailbox-row', v)
-    a = address_line(l) if l else None
-    named = next((x for x in l['lines'] if x is not a and x['text'] == mine), None) if l else None
+    h = hold_mailbox(ctx, MAILBOX)
+    v = label_view(ctx)
+    figures['mailbox'] = labels_hold(r, 'mailbox-held', v)
+    parts = h['parts'] or []
+    a = parts[-1] if parts else None
+    named = parts[-2] if len(parts) >= 2 and parts[-2]['text'] == mine else None
     level = bool(a) and bool(named) and abs(named['rect']['y'] + named['rect']['h'] / 2 - (a['rect']['y'] + a['rect']['h'] / 2)) <= LABEL_TOL_PX
-    r.check(v['lod'] == 'mid' and bool(l) and not l.get('held') and bool(named) and all(q['face'] == 'client' for q in named['runs']) and level
-            and 0 < a['rect']['x'] - (named['rect']['x'] + named['rect']['w']) <= MIN_LABEL_PX and mine != plain,
-            'the claimant\'s mailbox at mid, framed on its row: its label holds "%s", whole, in the client\'s face, level with its address and a space short of it — the name its own mailbox is shown by (B11-S7, B11-S2, B11-F10)' % mine,
-            {'lod': v['lod'], 'label': l and [[x['text'], x['rect'], [q['face'] for q in x['runs']]] for x in l['lines']], 'left_out': [[o['text'], o['reason']] for o in v['out'] if o['place'] == MAILBOX]})
-    figures['mailbox']['label'] = l and [x['text'] for x in l['lines']]
+    r.check(h['mounted'] and (h['named'] or {}).get('doc') is None and bool(named) and a['text'] in (MAILBOX[len(account_of(MAILBOX)):], MAILBOX)
+            and all(f.startswith('system-ui') for f in named['faces']) and level and 0 < a['rect']['x'] - (named['rect']['x'] + named['rect']['w']) <= MIN_LABEL_PX and mine != plain,
+            'the claimant\'s mailbox, its article standing in the mount band and the one line naming no document: its label held over its article holds "%s", whole, in the client\'s face, just before its address at the line\'s end, level with it and a space short of it — the name its own mailbox is shown by (B11-S7, B11-S2, B11-F10; issue #782)' % mine,
+            {'lod': v['lod'], 'held': h})
+    figures['mailbox']['held'] = [p['text'] for p in parts]
     agent = AGENT_SPACE + '.0.2'
-    v, l = framed(agent)
+    ha = hold_mailbox(ctx, agent)
+    v = label_view(ctx)
+    held = [p['text'] for p in ha['parts'] or []]
     shown = (ctx.js('window.__skep.slotName(%s)' % json.dumps(agent)) or {}).get('text') if ctx.js('typeof window.__skep.slotName === "function"') else None
-    r.check(shown == plain and not (l and any(x['text'] == mine for x in l['lines'])),
-            'the agent space\'s mailbox — the acting account\'s own address alone is its own: named "%s" wherever its name stands, never "%s" (B11-S7)' % (plain, mine),
-            {'shown': shown, 'label': l and [x['text'] for x in l['lines']], 'left_out': [[o['text'], o['reason']] for o in v['out'] if o['place'] == agent]})
-    figures['agent_space_mailbox'] = {'name': shown, 'label': l and [x['text'] for x in l['lines']], 'left_out': [[o['text'], o['reason']] for o in v['out'] if o['place'] == agent]}
+    r.check(shown == plain and plain in held and mine not in held,
+            'the agent space\'s mailbox — the acting account\'s own address alone is its own: named "%s" wherever its name stands, its label held over its article among them, never "%s" (B11-S7)' % (plain, mine),
+            {'shown': shown, 'held': ha})
+    figures['agent_space_mailbox'] = {'name': shown, 'held': held}
     theirs = SECOND_ACCOUNT + '.0.2'
     known = ctx.js('import("./model/records.js").then((R) => R.known().includes(%s))' % json.dumps(theirs))
     figures['second_account_mailbox'] = {'known': known, 'labelled': [l['kind'] for l in v['labels'] if l['place'] == theirs]}

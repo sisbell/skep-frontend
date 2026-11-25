@@ -40,7 +40,8 @@
 // and a read again out as the window begins writing in a draft keeping it
 // once the view has left it, set where it is typed in and waiting for the
 // acks where words of it are out; a row naming a document the view
-// shows, which keeps it as held until its reads again set it in one step,
+// shows, which keeps it as held until its reads again set it in one step — a
+// document of no content's first words with their extent —
 // rows meanwhile queueing one more read, kept from the row's arrival — each
 // setting recorded changed or unchanged with the stamp it stood from, none
 // where it is let go unset, the board's by whether its catch-up took a row; a row
@@ -2814,6 +2815,30 @@ test('a shown document a feed row named whose read again is refused as withheld 
   await settle();
   const d = REC.doc(D);
   assert.deepEqual([d.refused, d.from, d.extent, REC.known().includes(D)], ['withheld', -1, null, true], 'withheld: nothing of its text held, the withheld box the model knows standing in its place');
+});
+
+test('a feed row naming a shown document of no content keeps it as held — of no content, its empty text held — while it is read again, then sets the words the board now holds with their extent and their image in one step, never its extent apart from its text (issue #782; FP-23)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  // D of no content to the view's read, then the thirty positions a writer gave it
+  inTurn(s, F.retrieveDocVSpanSet(D), { result: { as_of: 1, resp: 'span_set', set: [] } }, script[opKeyOf(F.retrieveDocVSpanSet(D))]);
+  const fake = readingD(s);
+  await settle();
+  assert.deepEqual([REC.doc(D).extent, REC.doc(D).from, REC.textHeld(REC.doc(D))], [0, -1, true], 'D read at its reading em: of no content, its empty text held');
+  /** whether a step set D's extent apart from its text, from the row until its read again lands */
+  let apart = false, watching = true;
+  REC.watch(() => { if (watching && REC.has(D) && (REC.doc(D).extent ?? 0) > 0 && REC.doc(D).from < 0) apart = true; });
+  try {
+    const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+    fake.fire('feed', writing(20, [D]));
+    await untilAsked(fake, F.retrieveV(D, 1, 30), true);
+    for (let i = 0; i < 5; i++) { PUMP.pump(); await flush(); }
+    assert.deepEqual([REC.doc(D).extent, REC.doc(D).from, PUMP.settled()], [0, -1, false], 'while its read again is out: D as held, of no content, the page not settled');
+    release();
+    await settle();
+    assert.deepEqual([REC.textBetween(D, 1, 27), REC.doc(D).extent, REC.doc(D).imageFor, apart], ['Tumbler.\n\nThe first field.', 30, [1, 31], false], 'set in one step from its read again: its words, their extent and their image — never its extent apart from its text');
+    assert.equal(timesAsked(fake, F.retrieveV(D, 1, 30)), 1, 'its text read once, by its read again');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { watching = false; }
 });
 
 /** long enough for what stands held while it is read again to have stood KEPT_MS */

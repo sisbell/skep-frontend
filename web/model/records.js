@@ -164,7 +164,10 @@
 // no read asked, kept until the model next moves (`forms`, `isForm`); at
 // another person's mailbox no line ends at it at rest (`theirMailboxForm`);
 // at each slot past the mailbox its face stands at reading scale
-// (`faceSlot`).
+// (`faceSlot`). The page holds a document's text where its runs were
+// delivered, or where a read answered its extent empty at a box the model
+// knows (`textHeld`): a document of no content, whose text no delivery is
+// read for.
 // The map's reading of a document's number and where an account's next
 // document stands are read here (`numberKind`, `nextDocument`, the latter
 // kept until the index is next written). So is the one table of the
@@ -1051,6 +1054,19 @@ export function doc(addr) {
 export const has = (addr) => state.docs.has(addr);
 /** every held document */
 export const docs = () => [...state.docs.values()];
+
+/**
+ * Does the page hold a record's text (see the head): its delivered runs, or
+ * an extent a read answered empty — a document of no content, whose text no
+ * delivery is read for — at a box the model knows (`known`), its metadata
+ * read or the index listing it, no read refusing it. A record derived from a
+ * draft's page-local edits answers by its own window and extent. T-LAYER
+ * sets an article where it holds, and M-PUMP reads a shown document's text
+ * again where it holds.
+ * @param {Doc} d
+ * @returns {boolean}
+ */
+export const textHeld = (d) => d.from >= 0 || (d.extent === 0 && !d.refused && (!!d.meta || state.index.has(documentOf(d.addr) || d.addr)));
 
 /**
  * Every document the model knows exists, ONE A BOX (see the head): by its

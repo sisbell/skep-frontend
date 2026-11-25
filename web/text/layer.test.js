@@ -111,7 +111,10 @@
 // there, a range read with its site, and its blocks marked by its own
 // selection, never the plane's; and the one form never mounted, its fold its
 // cell's first column slot and its label its slot's name and address, read
-// off its address with no record made (FP-8,
+// off its address with no record made; and a document of no content — its
+// extent answered empty, or its every byte taken out by the person's edits —
+// standing as text, its head and its empty line, a created, empty slot page's
+// words and corner by reader (FP-8,
 // FP-10, FP-12, FP-20, FP-22, FP-23, FP-24, FP-26, FP-27, FP-30, FP-31, FP-33,
 // FP-34, FP-36, FP-37, FP-38, FP-39).
 import { test, beforeEach } from 'node:test';
@@ -3439,3 +3442,83 @@ test('the text layer never mounts the one form, a place holding no text: at read
   assert.deepEqual(label(FIVE)[1], null, 'slot 5: no name, its address alone');
   assert.ok(![BIO, THEIRS, FIVE].some(REC.has), 'no record made');
 });
+
+// ---- a document of no content: its head and its empty line ------------------------------------------------------------
+
+/** a draft of the session's account, listed by the index beside D */
+const EMPTY = '1.0.1.0.77';
+/** the index listing D and EMPTY */
+const listEmpty = () => REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: EMPTY, kind: 'draft', label: null, standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+/** the camera over the middle of a document's first column, a line of it `em` px */
+const overFirst = (/** @type {string} */ addr, /** @type {number} */ em) => { const f = LAYER.foldOf(REC.doc(addr)), box = docBox(addr), c = f.columns[0]; CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2, scale: em / f.fs }); };
+/** a mounted article's HTML: the stand-ins lay nothing out, so it stands whole in its one column; null where none stands */
+const articleOn = (/** @type {string} */ addr) => { const rec = LAYER.mountedSet().get(addr); return rec ? /** @type {any} */ (rec.el).children[0].innerHTML : null; };
+/** a fold's lines past its head, by kind and position */
+const pastHead = (/** @type {Fold} */ f) => f.lines.filter((l) => l.kind !== 'head').map((l) => [l.kind, l.pos]);
+
+test('a document a read answered empty stands as text in the frame its em reaches the reading scale — its head and its empty line, "nothing here yet", folded on those lines with no position estimated after them, the view reading that line, a return landing on it, and its text kept "as last read" while it is read again — never while its extent is unread nor while a read refuses it, and its first words set in its place (issue #782; FP-12; foundations §2.6)', () => onLayer(() => {
+  listEmpty();
+  overFirst(EMPTY, 12);
+  LAYER.frame();
+  assert.equal(LAYER.isMounted(EMPTY), false, 'its extent unread: no article');
+  REC.takeSpanSet(EMPTY, []);
+  overFirst(EMPTY, 12);
+  LAYER.frame();
+  const f = LAYER.foldOf(REC.doc(EMPTY)), html = articleOn(EMPTY);
+  assert.ok(LAYER.isMounted(EMPTY) && html, 'answered empty: its article stands in the one frame');
+  assert.ok(html.includes('<div class="hd">') && html.includes(`<p class="sp empty" data-addr="${EMPTY}" data-pos="1" data-width="0">${esc(t('B1.empty_subspace'))}</p>`), `its head and its empty line — ${html}`);
+  assert.deepEqual(pastHead(f), [['text', 1]], 'its fold: the head\'s lines, then the empty line');
+  assert.deepEqual(f.unheld, [], 'no position estimated after them');
+  assert.deepEqual(LAYER.mountedLines(EMPTY), [{ column: 0, first: 0, end: f.lines.length }], 'every line of it standing');
+  const r = LAYER.readAt(CAM.view());
+  assert.deepEqual([r?.addr, r?.pos], [EMPTY, 1], 'the view reads it, at its empty line');
+  assert.ok(r && LAYER.keptAt(CAM.view(), r, r.pos), 'a return by the trail lands on that line');
+  assert.equal(LAYER.keptWords(REC.doc(EMPTY), REC.doc(EMPTY), { met: null, since: 0 })?.id, 'L.kept.text', 'kept while it is read again: its text "as last read"');
+  REC.takeRefused(EMPTY, 'withheld');
+  LAYER.frame();
+  assert.equal(LAYER.isMounted(EMPTY), false, 'a read refusing it: its article taken down');
+  REC.takeSpanSet(EMPTY, []);
+  LAYER.frame();
+  assert.equal(LAYER.isMounted(EMPTY), true, 'answered empty again: it stands again');
+  const words = 'Its first words.', n = byteLength(words);
+  REC.takeSpanSet(EMPTY, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(EMPTY, [{ pos: 1, width: n, kind: 'content', text: words, ref: null, origin: null }]);
+  LAYER.frame();
+  const now = articleOn(EMPTY);
+  assert.ok(now && now.includes(words) && !now.includes(esc(t('B1.empty_subspace'))), `its first words arrived: set in its place, the empty line gone — ${now}`);
+}, 1440, 900));
+
+test('a draft whose page-local edits took out every byte stands as its head and its empty line, every line standing — never an article holding no line — while the model\'s record holds its text as the board served it (issue #782; FP-12, FP-38)', () => onLayer(() => {
+  listEmpty();
+  const text = 'Words the person takes out.', n = byteLength(text);
+  REC.takeSpanSet(EMPTY, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(EMPTY, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+  REC.takeImage(EMPTY, 1, [{ iStart: EMPTY + '.0.1.1', width: n }]);
+  overFirst(EMPTY, 12);
+  LAYER.frame();
+  assert.ok(LAYER.isMounted(EMPTY) && LAYER.editable(EMPTY), 'the session\'s own draft standing at reading scale');
+  WRITE.addEdit(EMPTY, { pos: 1, width: n, text: '' });
+  LAYER.frame();
+  const f = LAYER.foldOf(REC.doc(EMPTY)), html = articleOn(EMPTY);
+  assert.deepEqual([LAYER.shownOf(EMPTY).from, REC.doc(EMPTY).from], [-1, 1], 'the text shown holds no position; the model\'s record holds the text as the board served it');
+  assert.deepEqual([pastHead(f), f.unheld], [[['text', 1]], []], 'its fold: the head\'s lines, then the empty line, nothing estimated after them');
+  assert.deepEqual(LAYER.mountedLines(EMPTY), [{ column: 0, first: 0, end: f.lines.length }], 'every line of it standing');
+  assert.ok(html && html.includes(esc(t('B1.empty_subspace'))), `its empty line — ${html}`);
+}, 1440, 900));
+
+test('a created, empty slot page stands as text at reading scale, read by reader: to every reader but its owner the slot\'s plain name with its state in the empty line\'s place and its corner\'s state alone; to its owner "nothing here yet" and the corner\'s whole line (issue #782; B11-S4; FP-12)', () => onCorner((items) => {
+  const SLOT = '1.0.2.0.3', HOME = '1.0.2.0.1';
+  REC.takeIndex(/** @type {any} */ ({ docs: [HOME, SLOT].map((doc) => ({ doc, kind: 'edition', label: null, standing: 'public' })), counts: [{ account: '1.0.2', documents: 2 }], state: { arm: 'complete' } }));
+  REC.takeSpanSet(SLOT, []);
+  REC.takeMetadata(SLOT, { doc: SLOT, published: true, owner: '1.0.2', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  overFirst(SLOT, 12);
+  LAYER.frame();
+  const theirs = `${t('L.well-known.bio')} — ${t('L.slot-face.unwritten')}`;
+  assert.ok(LAYER.isMounted(SLOT) && articleOn(SLOT)?.includes(esc(theirs)) && !articleOn(SLOT)?.includes(esc(t('B1.empty_subspace'))), `another reader: its article stands, "${theirs}" in the empty line's place — ${articleOn(SLOT)}`);
+  assert.ok(items(SLOT).includes(esc(t('L.corner.no-versions.state'))) && !items(SLOT).includes(esc(t('F.corner.no-versions'))), `its corner's state alone, no act named — ${items(SLOT)}`);
+  REC.setSession({ session: 's-2', principal: 2, account: '1.0.2' });
+  LAYER.bump();
+  LAYER.frame();
+  assert.ok(articleOn(SLOT)?.includes(esc(t('B1.empty_subspace'))) && !articleOn(SLOT)?.includes(esc(theirs)), `its owner: "nothing here yet" — ${articleOn(SLOT)}`);
+  assert.ok(items(SLOT).includes(esc(t('F.corner.no-versions'))), `and the corner's whole line — ${items(SLOT)}`);
+}));

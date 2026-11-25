@@ -67,15 +67,35 @@ def first_grid(account):
 SLOT_NAMES = ('L.well-known.mailbox', 'L.well-known.your-mailbox', 'L.well-known.bio', 'L.well-known.link-page', 'L.well-known.your-bio', 'L.well-known.your-link-page')
 
 
-# the width of a depth-0 box, in px, at which the claimant's mailbox — an empty draft, its outline one row — is framed at mid on
-# that row: its row about 45 px tall there, past the line box a label's row takes (measured on the test board; FP-18)
-MAILBOX_ROW_PX = 1000
+# the em, in px, at which a mailbox of no content — its article its head and its empty line, its outline one row — is named by
+# its label held over its article: in the mount band and below its reading scale, at mid, where the one line names the account
+# under the camera whatever the walk stands on, its one-row outline about 42 px tall in the gate's 1440 px view and 61 px at
+# 390 px, deep enough beside the hold for that label's line (measured on the test board; FP-18)
+MAILBOX_HELD_EM = 7
+# how far below the one line's bottom the hold stands, where a mailbox's outline is centred so its first row rises above it
+HELD_BELOW_LINE_PX = 8
+
+# a document's label held below the one line over its article, as the page set it (T-LAYER's held label): each part — its words,
+# its box on screen and the font family of each of its runs — what the one line names, and whether its article stands
+HELD_PARTS = '''((a) => { const S = window.__skep, el = document.querySelector(`#corners .held[data-held="${a}"]`);
+  return {parts: el ? [...el.children].map((p) => { const r = p.getBoundingClientRect(); return {text: p.textContent, rect: {x: r.left, y: r.top, w: r.width, h: r.height}, faces: [...p.children].map((q) => getComputedStyle(q).fontFamily)}; }) : null,
+    named: S.named(), mounted: S.mountedAddrs().includes(a), lod: S.view.lod().name}; })(%s)'''
 
 
-def frame_row(ctx, addr, px=MAILBOX_ROW_PX):
-    """the camera at mid on a document's first row — where its label stands — at the scale a depth-0 box stands `px` px wide"""
-    row = ctx.js('window.__skep.fold(%s)' % json.dumps(addr))['row']
-    ctx.set_view(row['x'] + row['w'] / 2, row['y'] + row['h'] / 2, ctx.extent_scale(px))
+def hold_mailbox(ctx, addr, em=MAILBOX_HELD_EM):
+    """a mailbox of no content named where its name stands once its article mounts — its label held below the one line over its
+    article (T-LAYER's held label): the camera at its em `em` over its first column, its one-row outline's middle at the hold, so
+    its first row has risen above it — set twice, the first view having the page read it, so the second stands on its article's
+    outline — and the walk left where it stood, as no act moved it; answers the held label's parts as the page set them
+    (`HELD_PARTS`)"""
+    for _ in range(2):
+        s = ctx.js('window.__skep.scaleFor(%s, "em", %s)' % (json.dumps(addr), em))
+        o = ctx.js('window.__skep.fold(%s)' % json.dumps(addr))['outline']
+        x = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(addr))['x']
+        hold = ctx.js("document.getElementById('line').getBoundingClientRect().bottom") + HELD_BELOW_LINE_PX
+        ctx.set_view(x, o['y'] + o['h'] / 2 - (hold - ctx.js('window.__skep.view.viewport()')['VH'] / 2) / s, s)
+    ctx.frames(2)
+    return ctx.js(HELD_PARTS % json.dumps(addr))
 
 
 def slot_words(ctx):

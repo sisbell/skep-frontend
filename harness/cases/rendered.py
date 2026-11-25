@@ -18,8 +18,11 @@ column goes on past it, kept there as the reader scrolls and the lines after
 stand in parts of their own; a draft of the claimant's,
 read, shows C-28's chip at its corner, and the region at mid holds it — a
 box of its own, or, deep in its account's continuations, inside the
-continuation drawn as one mark; at HOME the account's first continuation is
-ONE mark (foundations §2.1; P44) holding law 13's count of what it holds,
+continuation drawn as one mark; the claimant's mailbox, of no content,
+LEAPt to stands as text — its empty line's words, its corner naming its
+kind — the canvas setting no label of it and a drag along that line
+selecting none of it; at HOME the account's first
+continuation is ONE mark (foundations §2.1; P44) holding law 13's count of what it holds,
 the mid connections into it end at it and at none of its members, each
 counting its links once and carrying that count on its stroke where it holds
 two or more, and the mark is two targets (issue #42's design decision): the
@@ -52,7 +55,7 @@ lists no document a row never names."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, SECOND_ACCOUNT, WINDOW, XFAIL_UNNAMED_BY_FEED, Result, edition, is_slot
+from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, MAILBOX, SECOND_ACCOUNT, WINDOW, XFAIL_UNNAMED_BY_FEED, Result, edition, is_slot
 
 WS = re.compile(r'\s+')
 # the board's time document: genesis places it published and memberless, and the time writer's first record — made at the
@@ -347,6 +350,38 @@ def blank_ground(ctx, r, runs, texture):
     return {'block': b['pos'], 'lines': [first['y'], last['y'], nxt['y']], 'pieces': {k: len(v) for k, v in mine.items()}, 'feet': len(feet)}
 
 
+def empty_mailbox(ctx, r):
+    """A DOCUMENT OF NO CONTENT AT READING SCALE (issue #782; FP-12; foundations §2.6): the claimant's mailbox — a draft of its
+    own made with the account, of no content on this board — LEAPt to: its article stands, its text the empty line's words,
+    "nothing here yet"; its corner beside it, its kind "draft"; and the canvas sets no label of it, its article's head naming it;
+    a drag along that line, the page's own sign, selects none of it (FP-27). Its figures: the model's extent and window, what
+    stands, what the drag left selected"""
+    ctx.leap(MAILBOX)
+    words = ctx.js('import("./strings.js").then(({t, STRINGS}) => Object.fromEntries(["B1.empty_subspace", "F.kind.draft"].map((id) => [id, STRINGS[id] ? t(id) : "⟨" + id + "⟩"])))')
+    at = ctx.js('''((a) => { const S = window.__skep, d = S.model.doc(a), m = S.mounted(a), k = document.querySelector(`#corners [data-corner="${a}"] .kind[data-kind="draft"]`);
+      return {extent: d.extent, from: d.from, mounted: S.mountedAddrs().includes(a), text: m ? m.text : null, kind: k ? k.textContent : null,
+        labelled: S.labels().filter((l) => l.kind === 'doc' && l.place === a).length, lod: S.view.lod().name}; })(%s)''' % json.dumps(MAILBOX))
+    r.check(at['extent'] == 0 and at['from'] == -1, 'the claimant\'s mailbox holds no content on this board, its extent read as none — a fact of the seeded board', at)
+    r.check(at['lod'] == 'near' and at['mounted'] and squash(at['text']) == squash(words['B1.empty_subspace']) and squash(at['kind']) == squash(words['F.kind.draft']) and not at['labelled'],
+            'the claimant\'s mailbox, of no content, LEAPt to: its article stands at reading scale — its text the empty line\'s "%s" — its corner beside it naming its kind, "%s", and the canvas sets no label of it (issue #782; FP-12; foundations §2.6)' % (words['B1.empty_subspace'], words['F.kind.draft']),
+            at)
+    # a drag along its empty line, the page's own sign: the platform selects none of it, and the page holds no selection (FP-27)
+    line = ctx.js('''((a) => { const e = document.querySelector(`#domlayer article[data-addr="${a}"] .sp.empty`); if (!e) return null; const r = e.getBoundingClientRect(); return {x: r.left, y: r.top, w: r.width, h: r.height}; })(%s)''' % json.dumps(MAILBOX))
+    dragged = None
+    if line:
+        y = line['y'] + line['h'] / 2
+        ctx.drv.drag(line['x'] + 2, y, line['x'] + line['w'] - 2, y)
+        ctx.frames(2)
+        dragged = ctx.js('(() => { const s = window.getSelection(); return {text: s ? s.toString() : "", page: window.__skep.selection()}; })()')
+        ctx.js('(async () => { const s = window.getSelection(); if (s) s.removeAllRanges(); (await import("./overlays/selection.js")).clear(); })()')
+        ctx.frames(1)
+    r.check(bool(line) and dragged is not None and dragged['text'] == '' and dragged['page'] is None,
+            'a drag along the claimant\'s mailbox\'s empty line selects nothing — the page\'s own sign, never the document\'s text — and leaves the page no selection (FP-27; issue #782)',
+            {'line': line, 'dragged': dragged})
+    at['dragged'] = dragged
+    return at
+
+
 def census(ctx, account, cap, stop_after=200):
     """the guest's census of an account: doc_metadata over its document numbers until a long run of unregistered"""
     out = {}
@@ -571,6 +606,8 @@ def run(ctx):
             r.check(depth > 11, 'the draft lies past the continuation rule\'s precision floor (depth 11): its box is the account\'s RESIDUE cell, drawn with its corner at its own scale', {'depth': depth})
         r.figures['draft_shown']['residue'] = bool(dbox.get('residue'))
         r.figures['draft_shown']['mark_at_mid'] = {k: holding[0][k] for k in ('k', 'n', 'exact', 'newest', 'rect', 'lines')} if holding else None
+    # ---- the claimant's mailbox, a document of no content, at reading scale ----
+    r.figures['empty_mailbox'] = empty_mailbox(ctx, r)
     # ---- S2: HOME — the account's first continuation as one mark, two targets: its newest's label and its list (foundations §2.1; P44; issue #42) ----
     ctx.js('window.__skep.go.home()')
     ctx.settle()

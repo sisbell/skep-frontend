@@ -31,9 +31,11 @@
 // visible view's centre — its bytes where the version's image places them,
 // else its position (P-LAY's `holdOf`, P-CAM's `reanchor`).
 // No document at reading size is ever drawn as bars (FP-12): every document
-// in view whose text has arrived — save one at a number the plane's map
-// gives no cell, which no loop here sets or reads at any place (`mountable`) —
-// stands as text in the frame its em reaches
+// in view whose text the page holds — delivered, or its extent answered empty,
+// its head and its empty line then all its article sets (M-REC's `textHeld`;
+// foundations §2.6) — save one at a number the plane's map gives no cell,
+// which no loop here sets or reads at any place (`mountable`) — stands as
+// text in the frame its em reaches
 // P-LOD's readable threshold (LOD_TXT_LO, an em of 8 px), whatever else that
 // frame mounts. The one form at an assigned slot no document stands at
 // (M-REC's `forms`; B11-S5) holds no text and is never mounted: its fold is
@@ -1065,8 +1067,8 @@ const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: 
 let read = noReaders();
 /** is a version the one its box shows (see the head)? */
 const isShown = (/** @type {string} */ addr) => read.shown(addr) === addr;
-/** a held record the plane sets as text (see the head): its text held, never the system account's, and never at a number the plane's map gives no cell (P-PROJ's `hasCell`), which is drawn nowhere and keyed to no cell */
-const mountable = (/** @type {Doc} */ d) => d.from >= 0 && !d.system && hasCell(d.addr);
+/** a held record the plane sets as text (see the head): its text held — delivered, or its extent answered empty (M-REC's `textHeld`) — never the system account's, and never at a number the plane's map gives no cell (P-PROJ's `hasCell`), which is drawn nowhere and keyed to no cell */
+const mountable = (/** @type {Doc} */ d) => REC.textHeld(d) && !d.system && hasCell(d.addr);
 
 /**
  * @param {HTMLElement} el the text layer's element
@@ -1719,8 +1721,10 @@ export function keptSaid(addr, how) {
  * those lines and the plan carrying the most link chrome any reveal can set
  * in it (LK's `utmost`), the positions it does not hold estimated — those
  * between its held blocks in columns of their own, those after them after its
- * last line; P-LAY's estimate where its text has not arrived, its first
- * column slot where its extent is unread — each beneath its head's band
+ * last line — a text of no content its head and its empty line, nothing
+ * after them; P-LAY's estimate where the page holds none of its text
+ * (M-REC's `textHeld`), its first column slot where its extent is unread —
+ * each beneath its head's band
  * where its corner stands at its head (`headBand`). Folded again only where
  * the plans, the extent, the positions held, the lines set or the head's
  * rows changed, however often the model moves. Every size it answers is one the camera's zoom-in bound
@@ -1795,7 +1799,7 @@ export function scaleBelowReading(addr) { return (LOD_TXT_LO / placeFold(addr).f
 function folded(d) {
   d = shownDoc(d);
   const room = docBox(d.addr), cpl = measure(), head = headKey(d);
-  if (d.from < 0) {
+  if (!REC.textHeld(d)) {
     const key = `${d.extent != null ? `est:${d.extent}` : 'slot'}:${cpl}${head ? `:${head}:${REC.rev()}:${WRITE.rev()}` : ''}`;
     const f = folds.get(d.addr);
     if (f && f.key === key) return f.fold;
@@ -1813,11 +1817,12 @@ function folded(d) {
   const m = measured.get(d.addr), set = m && m.key === layoutKey(d, v, owner, cpl) ? m : null;
   const u = LK.utmost(d.addr, d);
   const rows = articlePlan(d, { ...v, marks: u.shown, symbols: u.shown }, owner);
-  const after = Math.max(0, (d.extent || 0) + 1 - d.to);
+  // the window held: an empty text's [1, 1), which leaves no position after it to estimate
+  const to = d.from >= 0 ? d.to : 1, after = Math.max(0, (d.extent || 0) + 1 - to);
   const band = headBand(d, v);
   const plan = `${cpl}|${d.extent}|${d.from}|${d.to}|${JSON.stringify(rows)}|${JSON.stringify(now)}|${set ? set.n : 0}|${band}`;
   if (f && f.plan === plan) { folds.set(d.addr, { key, plan, fold: f.fold, set: !!set }); return f.fold; }
-  const opts = { after, heldTo: d.to, cpl, band };
+  const opts = { after, heldTo: to, cpl, band };
   const most = fold(gapped(d, layoutOf(rows, cpl).lines), room, opts);
   const out = fold(gapped(d, set ? set.lines : layoutOf(now, cpl).lines), room, { ...opts, step: most.step });
   folds.set(d.addr, { key, plan, fold: out, set: !!set });
@@ -2952,7 +2957,7 @@ function originRunsAt(d, made, view, units, f) {
  * @returns {Mounted | null}
  */
 function mount(d, v, span, banded) {
-  if (!layer || mounted.has(d.addr) || d.from < 0) return null;
+  if (!layer || mounted.has(d.addr) || !REC.textHeld(d)) return null;
   const t0 = performance.now();
   const base = d;
   d = shownDoc(d);
@@ -3036,13 +3041,13 @@ function measureAside(d) {
  * its article laid out aside (`measureAside`) — so a view placed on it now is
  * placed on the lines its article mounts in (`frameOf`, `keptAt`). The fold
  * as it stands where the platform does not set the articles, or the page
- * holds none of the document's text.
+ * holds none of the document's text (M-REC's `textHeld`).
  * @param {Doc} d
  * @returns {Fold}
  */
 function renderedFold(d) {
   const f = foldOf(d);
-  if (!engine || !layer || d.from < 0 || (folds.get(d.addr) || { set: true }).set) return f;
+  if (!engine || !layer || !REC.textHeld(d) || (folds.get(d.addr) || { set: true }).set) return f;
   setMeasure();
   measureAside(d);
   return foldOf(d);
@@ -3293,7 +3298,8 @@ export function mirrorState(d) { return d.refused || !d.meta ? '' : cornerWords(
 
 /**
  * The clause a kept document carries while it stands held past a second as
- * it is read again (see the head; FP-23, FP-33): a draft holding its text
+ * it is read again (see the head; FP-23, FP-33): a draft holding its text —
+ * its runs, or a text of no content (M-REC's `textHeld`) —
  * "as last read"; else, where its links are read, "links as last read" — an
  * edition's words never change, so its text takes none — each at the page's
  * clock at the row or drop that left it behind, the failed read's words
@@ -3308,7 +3314,7 @@ export function mirrorState(d) { return d.refused || !d.meta ? '' : cornerWords(
  */
 export function keptWords(d, links, kept, now = Date.now()) {
   if (!kept || d.refused) return null;
-  if (isDraft(d) === true && d.from >= 0) return keptClause('L.kept.text', kept.since, kept.met, now);
+  if (isDraft(d) === true && REC.textHeld(d)) return keptClause('L.kept.text', kept.since, kept.met, now);
   return links.linksRead ? keptClause('L.kept.links', kept.since, kept.met, now) : null;
 }
 
@@ -3767,7 +3773,8 @@ const wentStale = (rec) => {
 
 /**
  * The documents that mount afresh this frame (see the head): of those in view
- * whose text has arrived and that no article stands for — the system's apart,
+ * whose text the page holds (`mountable`) and that no article stands for —
+ * the system's apart,
  * a version only where its box shows it and no other version's article
  * stands in its box, a residue document only where it is the walk's focused
  * one — every one at
@@ -4030,8 +4037,8 @@ function aroundOf(d, f, view) {
  * stands in as a landing frames it (`frameAcross`), at the em kept, the line
  * at its height; below another bottom of the one line than it was read under
  * (`Reading.top`), its height kept from the visible view's centre as it
- * stands now. Null where the page holds none of that document's text: a
- * read must bring it first.
+ * stands now. Null where the page holds none of that document's text
+ * (M-REC's `textHeld`): a read must bring it first.
  * @param {{x: number, y: number, scale: number}} view
  * @param {Reading} r what it read
  * @param {number} to the position of the text the page shows of the version its box shows now (`shownOf`) whose line takes the line read's place: where N-GO finds the words read there, else the passage it lands at in their place
@@ -4039,7 +4046,7 @@ function aroundOf(d, f, view) {
  */
 export function keptAt(view, r, to) {
   const addr = read.shown(r.addr), d = REC.has(addr) ? REC.doc(addr) : null;
-  if (!d || d.from < 0) return null;
+  if (!d || !REC.textHeld(d)) return null;
   const f = renderedFold(d), now = placeIn(f, to), s = f.fs / r.fs, k = r.fs / f.fs, framed = r.fit !== fitKey(), lower = read.top() - r.top;
   if (!framed && now.x === r.line.x && now.y === r.line.y && s === 1 && lower === 0) return view;
   const box = docBox(addr);
@@ -6196,8 +6203,8 @@ export function holdsText(addr, x, y) {
  * as `lineStands` reads them) and its column — in the fold its article stands
  * in where one stands, else the one `foldOf` sets, whatever its scale: what
  * P-RENDER outlines an arrival's run on where no part of it stands as text
- * (FP-21), and what `lineBoxes` reads; none where the document's text has
- * not arrived.
+ * (FP-21), and what `lineBoxes` reads; none where the page holds none of the
+ * document's text (M-REC's `textHeld`).
  * @param {string} addr
  * @param {number} pos a position of the text shown (`shownOf`)
  * @param {number} width
@@ -6205,7 +6212,7 @@ export function holdsText(addr, x, y) {
  */
 export function foldBoxes(addr, pos, width) {
   const rec = mounted.get(addr), d = REC.doc(addr);
-  if (!rec && d.from < 0) return [];
+  if (!rec && !REC.textHeld(d)) return [];
   const f = rec ? rec.fold : foldOf(d), blocks = rec ? rec.made.blocks : shownDoc(d).blocks, box = docBox(addr);
   return linesHolding(f, blocks, pos, width).map(({ line: i, column: ci }) => {
     const c = f.columns[ci], l = f.lines[i];

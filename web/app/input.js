@@ -134,7 +134,9 @@
 // `placeAtScreen`; P-REG's TARGET); each LEAP a click makes is made where it fell, where
 // the face of a failure known at the act, or its reaching, stands (N-GO);
 // at the readable threshold and above, a press in a gutter or a margin of a
-// document is on its ground; an account at far is a teleport to its region,
+// document, or on the line an empty document's article stands in its text's
+// place — the page's own sign, no block of the document (`BLOCK`; FP-27) — is
+// on its ground; an account at far is a teleport to its region,
 // on the board the page holds — where it holds none the click is an empty one
 // (FP-35); an empty click — nothing under the point — is the pointer's Esc,
 // one step of Esc's order a click (N-KEYS' `esc`): the LEAP box, a card or
@@ -500,6 +502,9 @@ function endAt(mark, link, key) {
   return LK.shown(art ? art.dataset.addr || '' : '').find((s) => s.link.addr === link && s.key === key);
 }
 
+/** a block of an article's text, which a click selects whole or places the caret in (`clickText`): never the line an empty document's article stands in its text's place, the page's own sign (FP-27), a click on which is on its document's ground */
+const BLOCK = '.sp:not(.empty)';
+
 /**
  * A click on the text layer's text, at the element under it (see the head): a
  * symbol, the ⟡, the scene-offer, a withheld run's key, a withheld run;
@@ -507,8 +512,9 @@ function endAt(mark, link, key) {
  * triple-click or a Shift+click, whose word, line or extension the press's
  * release took (`takeSelection`), or any the page has not taken; in text the
  * person may edit, the caret at the character clicked (K-70); a marked
- * stretch; a block, selected whole, the range that places kept for the press
- * after it (`clickPlaced`); else its document's ground. Each act on a
+ * stretch; a block (`BLOCK`), selected whole, the range that places kept for
+ * the press after it (`clickPlaced`); else its document's ground, an empty
+ * document's line among it. Each act on a
  * document's sign, mark or ground is the act the next key follows
  * (`followPointer`), the scene-offer's a departure. The text layer's own
  * clicks and a held press's release both act through it.
@@ -564,7 +570,7 @@ function clickText(target, at, gesture = false) {
     return true;
   }
   // text the person may edit: the click places the caret at the character clicked, where the platform collapsed its selection (K-70) — a marked stretch takes it as any text does, the card its symbol's (K-7) — and the walk stands on its span, the live caret its mark
-  const own = /** @type {HTMLElement | null} */ (target.closest('.sp'));
+  const own = /** @type {HTMLElement | null} */ (target.closest(BLOCK));
   if (own && LAYER.editable(own.dataset.addr || '')) {
     const c = LAYER.caretFromPlatform();
     if (c && c.addr === own.dataset.addr) { SEL.clear(); LAYER.placeCaret(c.addr, c.pos); void WALK.followCaret(); return true; }
@@ -572,9 +578,9 @@ function clickText(target, at, gesture = false) {
   // text that takes no caret: the walk on the span clicked (K-70) — a marked stretch's, which opens its end's card (K-7), or a block's, selected whole (R11) — a caret in another document left kept first
   const marked = target.closest('.lip');
   if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { oneSelection(); leftCaret(s.near); walkOn(s.near, s.pos); ANATOMY.open(s, m, false); return true; } }
-  const sp = target.closest('.sp');
+  const sp = target.closest(BLOCK);
   if (sp) { const s = /** @type {HTMLElement} */ (sp), addr = s.dataset.addr || '', pos = Number(s.dataset.pos); leftCaret(addr); SEL.select(addr, pos); clickPlaced = LAYER.spanOfSelection(); walkOn(addr, pos); return true; }
-  // none of them: the article's ground — a column's blank room
+  // none of them: the article's ground — a column's blank room, an empty document's line
   if (!took && doc) { oneSelection(); followPointer(doc, at); }
   return took;
 }

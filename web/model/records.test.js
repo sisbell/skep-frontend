@@ -41,7 +41,9 @@
 // form's places — each assigned slot of an account whose home page is a box
 // that holds no box, an assigned slot a read withholds, a covered mailbox
 // among them, holding none — read off the model with no record made, and
-// the acting account's own slots shown by names of their own.
+// the acting account's own slots shown by names of their own; and whether
+// the page holds a record's text — its runs delivered, or its extent answered
+// empty at a box the model knows.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -214,6 +216,20 @@ test('a number the plane\'s map gives no cell is no box the model knows, whateve
   assert.deepEqual([HOME, ORDINARY].map((a) => REC.known().includes(a)), [true, true], 'the home page and an ordinary document: a box each');
   assert.deepEqual([REC.doc(READ).from, REC.place(LISTED)?.doc], [1, LISTED], 'what the reads brought held: the record and the index row stand');
   assert.deepEqual([HOME, '1.0.4.0.3', LISTED, ORDINARY, MEMBER, '1.0.4', '1'].map(REC.numberKind), ['home', 'slot', 'reserved', 'ordinary', 'reserved', null, null], 'the map\'s reading of each number, a member\'s its document\'s');
+});
+
+test('the page holds a record\'s text where its runs were delivered, or where a read answered its extent empty at a box the model knows — the index listing it or its metadata read — no read refusing it; never while its extent is unread, nor where an extent of positions came with none of them (issue #782)', () => {
+  const LISTED = '1.0.4.0.64', MET = '1.0.4.0.65', BARE = '1.0.4.0.66', MEMBER = '1.0.4.0.64.1', HELD = '1.0.4.0.67';
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: LISTED, kind: 'draft', label: null, standing: 'yours_to_read' }], counts: [{ account: '1.0.4', documents: 1 }], state: { arm: 'complete' } }));
+  const held = () => [LISTED, MET, BARE, MEMBER, HELD].map((a) => REC.textHeld(REC.doc(a)));
+  assert.deepEqual(held(), [false, false, false, false, false], 'no extent read: none');
+  for (const a of [LISTED, MET, BARE, MEMBER]) REC.takeSpanSet(a, []);
+  REC.takeMetadata(MET, metaOf(MET));
+  REC.takeSpanSet(HELD, [{ subspace: 1, ordinal: 1, positions: 5 }]);
+  assert.deepEqual(held(), [true, true, false, true, false], 'answered empty: listed, its metadata read, a member of a listed document — no box known, none; an extent of five positions with none of them, none');
+  REC.takeDelivery(HELD, [{ pos: 1, width: 5, kind: 'content', text: 'words', ref: null, origin: null }]);
+  REC.takeRefused(LISTED, 'withheld');
+  assert.deepEqual(held(), [false, true, false, true, true], 'its runs delivered: held; refused: none');
 });
 
 test('an account\'s next document stands one past the greatest ordinary number its index lists, else at the first ordinary number — its home page, its slots and its reserved numbers counted nowhere — and moves at every write to the index: a listing, a feed row, the page\'s own mint, a change of class dropping the drafts\' rows (issue #770)', () => {

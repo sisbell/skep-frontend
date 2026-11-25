@@ -21,7 +21,8 @@
 // holding the version its box shows in the window mark, the head in its own
 // triangle only where the board ended the chain there (FP-22, FP-26); in
 // a draft holding typed words the arrival outlined and the walk's span ringed
-// on the lines the text shown holds them on (FP-21; issue #515); and the one
+// on the lines the text shown holds them on (FP-21; issue #515), and one whose
+// edits took out every byte drawing no bar for its empty line; and the one
 // form at an assigned slot no document stands at (B11-S5): four open corner
 // marks at its cell's first column slot, drawn with its region's boxes at
 // their alpha in its ink as the person's settings ask it, labelled by its
@@ -482,6 +483,27 @@ test('the walk\'s span in a text holding typed words is ringed on the lines the 
     const x = Math.min(...lines.map((r) => r.x)), y = Math.min(...lines.map((r) => r.y));
     assert.deepEqual(RENDER.focusBox(visibleView(0)), { x, y, w: Math.max(...lines.map((r) => r.x + r.w)) - x, h: Math.max(...lines.map((r) => r.y + r.h)) - y }, 'the ring\'s box the bounds of the lines the text shown holds the span on');
   } finally { LAYER.clear(); LAYER.attach(/** @type {any} */ (null), null); REC._reset(); WRITE._reset(); globalThis.document = platform.document; globalThis.window = platform.window; }
+});
+
+test('a draft whose page-local edits took out every byte draws no bar below its mount: the bars stand for the text shown\'s lines, and its empty line is a sign of the page\'s (issue #782; FP-12)', () => {
+  const D = '1.0.1.0.68', text = 'Words the person takes out.', n = byteLength(text);
+  const { ctx } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  CAM.setViewport(1440, 900);
+  REC._reset(); WRITE._reset();
+  try {
+    REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: null, standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }]);
+    /** the frame drawn over its first column at em 5, below its mount: the bars it drew for it */
+    const barred = () => { CAM.set({ ...LAYER.centreOf(D, null), scale: 5 / LAYER.foldOf(REC.doc(D)).fs }); RENDER.draw(); return RENDER.stats.bars.filter(([a]) => a === D).length; };
+    assert.ok(barred() > 0 && !LAYER.isMounted(D), 'its text\'s line drawn as a bar, below its mount');
+    WRITE.addEdit(D, { pos: 1, width: n, text: '' });
+    assert.deepEqual([barred(), LAYER.foldOf(REC.doc(D)).lines.filter((l) => l.kind !== 'head').map((l) => [l.kind, l.pos])], [0, [['text', 1]]], 'its every byte taken out: its fold holds its empty line, and no bar stands for it');
+  } finally { REC._reset(); WRITE._reset(); }
 });
 
 test('the plane draws no box for another person\'s mailbox a read answered `withheld`, nor for a number the map gives no cell however a read answered it — no document\'s label, no press finding a document under its place — where it draws a withheld draft at an ordinary number and the home page; at the mailbox the one form stands instead, labelled by its slot\'s name, a press there going to it and a link ending there ending at a place, while a link ending at the reserved number has none (B11 call 3; the one form\'s part 4; issue #771\'s decision: "No read of one is keyed to the account\'s first cell")', () => {

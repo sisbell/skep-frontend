@@ -10,9 +10,10 @@ B11-S9's reserved number typed in the LEAP box is shot at 1440 px and at
 390 px, into `shots/B11-S9/`: its row's words before Enter, then the face at
 its row and the jump on the row below after it (issue #771's decision). The
 claimant's well-known slots are shot at 1440 px and at 390 px too: its
-mailbox framed at mid on its row, its label holding the name its own mailbox
-is shown by, into `shots/B11-S7/`, and the LEAP box with `mailbox` typed, its
-own row first, into `shots/B11-S9/` (B11-S7, B11-S9, B11-F10). The one form
+mailbox, its article standing, named by its label held below the one line over
+its article, holding the name its own mailbox is shown by, into
+`shots/B11-S7/`, and the LEAP box with `mailbox` typed, its own row first,
+into `shots/B11-S9/` (B11-S7, B11-S9, B11-F10). The one form
 is shot into `shots/B11-S5/` (B11-S5): each region the test board draws
 framed at mid on its slot cells, with its forms' labels set and below their
 drop, at 1440 px and at 390 px; the walk's ring on the claimant's bio's form;
@@ -25,7 +26,7 @@ word; and the zoom's pair, the form's label at mid, then the face in its
 place at reading scale."""
 import json
 
-from . import AGENT_SPACE, BIO, DOC, GHOST, MAILBOX, MAILBOX_SLOT, SECOND_ACCOUNT, WINDOW, Result, frame_row, slot_words
+from . import AGENT_SPACE, BIO, DOC, GHOST, MAILBOX, MAILBOX_SLOT, SECOND_ACCOUNT, WINDOW, Result, hold_mailbox, slot_words
 
 RESERVED = '1.0.1.0.7'  # a reserved number of the claimant's: the map gives it no cell, and the board says nothing of it
 
@@ -58,18 +59,19 @@ def reserved_shots(ctx, r):
 
 
 def slot_name_shots(ctx, r):
-    """B11-S7 and B11-S9 at the claimant's well-known slots (see the head): its mailbox framed at mid on its row, its label
-    holding the name its own mailbox is shown by — the canvas's labels asserting it set — and the LEAP box with `mailbox`
-    typed, the own row first — that row asserted in view — at 1440 px and at 390 px"""
+    """B11-S7 and B11-S9 at the claimant's well-known slots (see the head): its mailbox, its article standing, named by its
+    label held below the one line over its article (`hold_mailbox`), holding the name its own mailbox is shown by — the held
+    label asserting it set and in view — and the LEAP box with `mailbox` typed, the own row first — that row asserted in view —
+    at 1440 px and at 390 px"""
     shots = []
     mine = slot_words(ctx)['L.well-known.your-mailbox']
     for width, height in ((1440, 900), (390, 844)):
         was = ctx.resize(width, height)
-        frame_row(ctx, MAILBOX)
+        held = hold_mailbox(ctx, MAILBOX)
         shots.append(ctx.shot(f'B11-S7/your-mailbox-{width}.png'))
-        label = next((l for l in ctx.js('window.__skep.labels()') if l['kind'] == 'doc' and l['place'] == MAILBOX), None)
-        r.check(bool(label) and mine in [x['text'] for x in label['lines']], f'B11-S7 at {width} px: the claimant\'s mailbox\'s label holds "{mine}", as the caption claims (the canvas set it)',
-                label and [x['text'] for x in label['lines']])
+        r.check(mine in [p['text'] for p in held['parts'] or []], f'B11-S7 at {width} px: the claimant\'s mailbox\'s label held over its article holds "{mine}", as the caption claims (the page set it)',
+                held)
+        claimed(ctx, r, 'B11-S7 at %d px' % width, '#corners .held[data-held="%s"]' % MAILBOX, 'the claimant\'s mailbox\'s held label')
         ctx.js('window.__skep.leap.open()'); ctx.frames(1)
         ctx.js('(() => { const q = document.getElementById("leapq"); q.value = "mailbox"; q.dispatchEvent(new Event("input")); })()')
         ctx.frames(2)
