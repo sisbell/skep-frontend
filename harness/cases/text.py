@@ -74,7 +74,7 @@ W-01 step 7's (`walks`), which runs after `keys` reads LK's visited set."""
 import json
 import re
 
-from . import AGENT_SPACE, BIO, DOC, FAR_LEAP, GHOST, MAILBOX, NO_MATCH, VERSIONED, WINDOW, Result, byline_expected, byline_facts, byline_shown, hold_mailbox, placeholder_sweep, slot_words
+from . import AGENT_SPACE, BIO, DOC, FAR_LEAP, GHOST, GOES, MAILBOX, NO_MATCH, VERSIONED, WINDOW, Result, byline_expected, byline_facts, byline_shown, hold_mailbox, placeholder_sweep, slot_words
 
 TOKEN = re.compile(r'⟨[^⟩]*⟩')
 BLANK = re.compile(r'[\s\-–—·.…]*')  # a value that is no value: dashes, dots and spaces, or nothing
@@ -513,8 +513,10 @@ def run(ctx):
         stands = ctx.js('''((a, sel) => { const S = window.__skep, d = S.model.doc(a), e = document.querySelector(sel);
           return {article: !!e, head: !!(e && e.querySelector('.hd')), lines: S.mountedLines(a), from: d.from, to: d.to, blocks: d.blocks.map((b) => [b.pos, b.kind]), refused: d.refused,
                   camera: S.view.camera(), lod: S.view.lod().name}; })(%s, %s)''' % (json.dumps(doc), json.dumps(article)))
-        r.check(bool(owner) and bool(shown) and got == {'owner': owner + ' · ', 'shows': want['shows'], 'names': want['names']} and not any(s['pending'] for s in shown['slots']),
-                '%s: the byline names its owner, %s, then its slots filled from the owner\'s facts as the board answers them — %s, or the cause\'s words where they name no key — each named by its role and what it shows (FP-34; issue #208)' % (where, owner, slots),
+        token = shown and shown.get('token')
+        r.check(bool(owner) and bool(shown) and got == {'owner': owner + GOES + ' · ', 'shows': want['shows'], 'names': want['names']} and not any(s['pending'] for s in shown['slots'])
+                and bool(token) and token['account'] == owner and token['sign'] == GOES and token['hidden'],
+                '%s: the byline names its owner, %s — an act that goes to its account, `↗` after it joined by a no-break thin space and hidden from its name — then its slots filled from the owner\'s facts as the board answers them — %s, or the cause\'s words where they name no key — each named by what it shows then its role (FP-34; issue #208; the byline\'s act decision, points 1 and 2)' % (where, owner, slots),
                 {'facts': facts, 'want': want, 'shown': shown, 'stands': stands})
         return {'owner': owner, 'facts': facts, 'shows': got and got['shows']}
 
@@ -560,6 +562,19 @@ def run(ctx):
     ctx.leap(DOC, None)
     bylines['guest'] = byline_holds('the first edition on the guest\'s page', '#domlayer article.dtext[data-addr="%s"]' % DOC, DOC, None)
     swept('the guest\'s page at the first edition\'s head')
+    # the guest presses its address: 1.0.1's region at mid, one trail entry (the byline's act decision, point 2)
+    tok = ctx.js('''((a) => { const g = document.querySelector('#domlayer article.dtext[data-addr="' + a + '"] .hd .by .go'); if (!g) return null;
+      const q = g.getBoundingClientRect(); return {account: g.dataset.account, x: q.left + q.width / 2, y: q.top + q.height / 2}; })(%s)''' % json.dumps(DOC))
+    t0 = ctx.js('window.__skep.trail()')
+    if tok:
+        ctx.drv.click(tok['x'], tok['y'])
+        ctx.settle(); ctx.frames(3)
+    t1 = ctx.js('window.__skep.trail()')
+    newest = t1['entries'][t1['cursor']]['addr'] if 0 <= t1['cursor'] < len(t1['entries']) else None
+    pressed = {'token': tok, 'pushed': t1['cursor'] - t0['cursor'], 'newest': newest, 'lod': ctx.js('window.__skep.view.lod().name')}
+    r.check(bool(tok) and tok['account'] == bylines['guest']['owner'] and pressed['pushed'] == 1 and newest == tok['account'] and pressed['lod'] == 'mid',
+            'a guest at the first edition presses its byline\'s address, %s ↗: its account\'s region at mid, one trail entry (the byline\'s act decision, point 2)' % bylines['guest']['owner'], pressed)
+    bylines['guest']['pressed'] = pressed
     ctx.open_page('all')
     ctx.leap(DOC, WINDOW[0])
     reserved_strings(ctx, r)

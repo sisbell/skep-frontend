@@ -52,7 +52,9 @@
 // (`connections`), the boxes' history strips (`strips`), the one form drawn at
 // each assigned slot no box stands at and the forms' places as the model lists
 // them (`forms`, `formPlaces`), the place a press at a point goes to
-// (`placeAt`), the labels the
+// (`placeAt`) and the target the one press test gives it (`pressAt`), a
+// tail's press area (`tailArea`), the arrival's outlined rects
+// (`arrivalRects`), the byline's stop's acts as they stand (`byline`), the labels the
 // canvas set and the parts it left out (`labels`, `labelsLeftOut`); the
 // teleports and the landing — the version
 // each box shows (`go.shownIn`), the arrival, what a landing says and the
@@ -773,6 +775,20 @@ export function install(deps) {
     faceList: (/** @type {string} */ slot, /** @type {'count' | 'social'} */ which) => { SLOTFACE.toggleList(slot, which); CAM.markDirty(); return true; },
     /** the place a press at a screen point goes to as the last frame drew the places (P-RENDER's `placeAtScreen`): its address, whether it is a form's, and whether the point lies in a press area outside every drawn shape; null where none */
     placeAt: (/** @type {number} */ x, /** @type {number} */ y) => RENDER.placeAtScreen(x, y),
+    /** the target a press at a screen point goes to by the one press test (P-RENDER's `pressAt`): its kind — a tail by its site, a mark by its key and target, a place by its address — whether it lies in a press area outside every drawn shape, and, for a document, the runs of the arrival whose outlines hold the point; null where it goes to the ground */
+    pressAt: (/** @type {number} */ x, /** @type {number} */ y) => {
+      const p = RENDER.pressAt(x, y);
+      if (!p) return null;
+      if (p.kind === 'tail') return { kind: 'tail', key: p.tail.key, at: p.tail.at, padded: p.padded };
+      if (p.kind === 'mark') return { kind: 'mark', key: p.mark.key, target: p.mark.target, padded: p.padded };
+      return { kind: p.place.form ? 'form' : 'doc', addr: p.place.addr, padded: p.place.padded, outlined: p.outlined };
+    },
+    /** a tail the last frame drew, by its site: its press area on screen (P-RENDER's `tailArea`), null where its drawn shape alone takes a press; undefined where no such tail stands */
+    tailArea: (/** @type {string} */ key) => { const tl = RENDER.stats.tails.find((x) => x.key === key); return tl ? RENDER.tailArea(tl) : undefined; },
+    /** the arrival's outlined rects as the last frame drew them, each with its run and that run's positions (P-RENDER's `stats.arrival`) */
+    arrivalRects: () => RENDER.stats.arrival.map((q) => ({ ...q })),
+    /** the byline's stop as it stands (T-LAYER's `placeByline`): each act's kind, the account a going act names, its document, its accessible name, its stop and its expanded state, and its box on screen */
+    byline: () => [...document.querySelectorAll('#byline .act')].map((e) => { const a = /** @type {HTMLElement} */ (e), q = a.getBoundingClientRect(); return { act: a.dataset.act, tag: a.tagName.toLowerCase(), account: a.dataset.account || null, addr: a.dataset.addr || null, name: a.getAttribute('aria-label'), tab: a.tabIndex, expanded: a.getAttribute('aria-expanded'), rect: { x: q.left, y: q.top, w: q.width, h: q.height } }; }),
     /** the labels the last frame set, in the order they were set — a connection's count under its two places, `a|b` sorted — the trail's pip numbers last */
     labels: () => RENDER.stats.labels.slice(),
     /** the parts of labels the last frame left out, each with the rule that left it out */

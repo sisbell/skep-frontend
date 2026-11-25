@@ -65,6 +65,7 @@ import { esc } from '../util.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import * as LINE from './line.js';
+import { OPENS, OPENED } from '../text/article.js';
 import { drawChord, trailChord, keyShortcut } from '../nav/keys.js';
 
 const D = '1.0.1.0.67';
@@ -917,14 +918,14 @@ test('the line\'s layout is the least step whose rows hold its parts at their wi
   assert.deepEqual(LINE.layoutOf(keys, whole, 10, 1189), { step: 3, form: 0, rows: [['acts', 'address', 'acting'], ['walk']] }, 'one form: no step 2 to take, further rows, the segment whole');
 });
 
-test('short of room the line gives way in steps, each keeping the ones before it — the acts first and whole, a guest\'s sign-in among them; then the position its strip alone, still marked; then the acting-as segment\'s fields giving way whole in turn — the principal number, a board only read\'s origin and venue, the device label — then its short form, every form short of the whole one act named and titled by the whole form\'s words, the key\'s glyph hidden from the accessibility tree; then further rows broken only between parts, the segment short, each within its row or a part wider than a row alone on its own; then the address folded, its account in the fold mark\'s place, its board\'s field, its document\'s field, its strip and its marker whole (issues #310, #445\'s design decisions)', async () => {
+test('short of room the line gives way in steps, each keeping the ones before it — the acts first and whole, a guest\'s sign-in among them; then the position its strip alone, still marked; then the acting-as segment\'s fields giving way whole in turn — the principal number, a board only read\'s origin and venue, the device label — then its short form, every form short of the whole one act, `▸` leading it, named and titled by the whole form\'s words, the key\'s glyph hidden from the accessibility tree; then further rows broken only between parts, the segment short, each within its row or a part wider than a row alone on its own; then the address folded, its account in the fold mark\'s place, its board\'s field, its document\'s field, its strip and its marker whole (issues #310, #445\'s design decisions)', async () => {
   const was = REC.session(), { host } = clicked();
   over(D, NEAR);
   await WALK.focusTo(D, 15);
   /** @type {Array<[string, Array<[number, number, number]>]>} who the line acts as, and the rows it is laid out on, each with the step and the acting-as segment's form it reaches there */
   const cases = [
-    ['a signed session', [[1300, 0, 0], [1200, 1, 0], [1060, 2, 1], [1000, 2, 2], [800, 2, 3], [600, 3, 3], [280, 4, 3]]],
-    ['a guest', [[900, 0, 0], [800, 1, 0], [700, 2, 1], [600, 2, 2], [500, 3, 2], [280, 4, 2]]],
+    ['a signed session', [[1300, 0, 0], [1200, 1, 0], [1072, 2, 1], [1012, 2, 2], [812, 2, 3], [600, 3, 3], [280, 4, 3]]],
+    ['a guest', [[900, 0, 0], [800, 1, 0], [712, 2, 1], [612, 2, 2], [500, 3, 2], [280, 4, 2]]],
   ];
   try {
     for (const [who, rooms] of cases) {
@@ -949,9 +950,9 @@ test('short of room the line gives way in steps, each keeping the ones before it
         assert.equal(address.includes('class="pos"'), step < 1, `${where}: the position's words ${step < 1 ? 'stand' : 'gone'}`);
         assert.ok(/<button class="slot" data-act="strip"[^>]*><(b class="pos"[^>]*>[^<]*<\/b><)?span class="strip"><span class="strip-mark"/.test(address), `${where}: the strip whole and marked, the strip's act: ${address}`);
         const part = parts.find((p) => keyOf(p) === 'acting') || '';
-        assert.equal(part, form ? `<button class="seg acting" data-act="acting" data-state="${acting.state}" title="${esc(name)}" aria-label="${esc(spoken)}">${acting.forms[form]}</button>` : `<span class="seg acting" data-state="${acting.state}">${acting.forms[0]}</span>`,
-          `${where}: the acting-as segment ${form ? 'compact, its act named by its whole form' : 'whole, no act'}`);
-        assert.equal(plain(part), words[form], `${where}: its words in the form held`);
+        assert.equal(part, form ? `<button class="seg acting" data-act="acting" data-state="${acting.state}" title="${esc(name)}" aria-label="${esc(spoken)}"><span class="sign" aria-hidden="true">${OPENS}</span>${acting.forms[form]}</button>` : `<span class="seg acting" data-state="${acting.state}">${acting.forms[0]}</span>`,
+          `${where}: the acting-as segment ${form ? 'compact, its act named by its whole form, `▸` leading it, hidden from its name' : 'whole, no act, no sign'}`);
+        assert.equal(plain(part), (form ? OPENS : '') + words[form], `${where}: its words in the form held`);
         const glyphs = part.match(/<svg[^>]*>/g) || [];
         assert.deepEqual(glyphs.map((g) => [/class="key( alone)?"/.test(g), g.includes('aria-hidden="true"'), g.includes('class="key alone"')]), who === 'a guest' ? [] : [[true, true, form === 3]],
           `${where}: ${who === 'a guest' ? 'no key\'s glyph' : `the key's glyph drawn, hidden from the accessibility tree${form === 3 ? ', alone' : ', before its words'}`}`);
@@ -1081,14 +1082,15 @@ test('a part arriving between settings stands in its place in the line\'s order 
   } finally { REC.setDaemon(daemon); clicked(); }
 });
 
-test('short of its whole form the acting-as segment is its act: a press — a pointer\'s, or a key\'s after the next act the key itself made — opens its whole form in its place, still the act its focus is kept on by, in its row where that holds it, else beneath the line; a press while it stands opens it again, never folding it; the next act or a pan takes it down (issue #445\'s design decision: "The whole short segment is one act that opens the full form"; FP-26)', async () => {
+test('short of its whole form the acting-as segment is its act, `▸` leading it: a press — a pointer\'s, or a key\'s after the next act the key itself made — opens its whole form in its place, `▾` leading it, still the act its focus is kept on by, in its row where that holds it, else beneath the line; a press while it stands opens it again, never folding it; the next act or a pan takes it down (issue #445\'s design decision: "The whole short segment is one act that opens the full form"; FP-26; the byline\'s act decision, point 1)', async () => {
   const { host, press } = clicked();
   over(D, NEAR);
   await WALK.focusTo(D, 15);
   try {
     const acting = LINE.actingSegment(), name = acting.name ? t(acting.name.id, acting.name.values) : '';
     const spoken = acting.name ? heard(tRuns(acting.name.id, acting.name.values, acting.name.faces)) : '';
-    const act = (/** @type {number} */ form) => `<button class="seg acting" data-act="acting" data-state="2" title="${esc(name)}" aria-label="${esc(spoken)}">${acting.forms[form]}</button>`;
+    // its act's markup: `▸` leading its short form, `▾` leading its whole form its act opened, hidden from its name (the byline's act decision, point 1)
+    const act = (/** @type {number} */ form) => `<button class="seg acting" data-act="acting" data-state="2" title="${esc(name)}" aria-label="${esc(spoken)}"><span class="sign" aria-hidden="true">${form ? OPENS : OPENED}</span>${acting.forms[form]}</button>`;
     /** the acting-as segment as the line renders it: in a row, or beneath the line */
     const seen = () => { const l = laidOut(host.innerHTML); return { row: l.rows.flat().find((p) => keyOf(p) === 'acting') || null, beneath: l.beneath.replace(/<\/div>$/, '') }; };
     LINE.fit({ room: 800, measure: counted });

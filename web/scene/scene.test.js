@@ -53,7 +53,7 @@
 // entry and through a Back that reopens it, the card it was opened from reopened by its close (FP-36),
 // a live caret it was opened at kept by the opening and re-taken by its close (D5 K-63);
 // each pane's article
-// T-LAYER's mount on the inner side of its corner, its byline's facts read
+// T-LAYER's mount on the inner side of its corner — before it in the pane's order — its byline's facts read
 // before the pane is set (FP-12, FP-34), its region named by its corner's
 // first item — its kind — then its address, its corner opening with that
 // kind, said once in the status region where it fills under the focus
@@ -728,7 +728,7 @@ test('a pane\'s cover stands at its article\'s head, level with its address — 
   try {
     REC.takeRefused(X, 'withheld');
     const art = LAYER.sceneArticle(REC.doc(X));
-    assert.ok(art.innerHTML.startsWith(`<div class="hd"><span class="addr id">${X}</span><span class="by">`) && !art.innerHTML.includes('class="st"'), `its head alone, no statement in it: ${art.innerHTML}`);
+    assert.ok(art.innerHTML.startsWith(`<div class="hd"><span class="addr id">${X}</span><span class="by"`) && !art.innerHTML.includes('class="st"'), `its head alone, no statement in it: ${art.innerHTML}`);
     /** the pane: its top 100 px down the viewport, its border 2 px, scrolled 40 px */
     const pane = { querySelector: (/** @type {string} */ s) => (s === 'article.dtext' ? art : null), getBoundingClientRect: () => ({ top: 100 }), clientTop: 2, scrollTop: 40 };
     assert.deepEqual(coverIn(/** @type {any} */ (pane)), { top: 68, y: 77 }, 'level with its address: 130 px down the viewport, 68 px past the pane\'s content top');
@@ -1352,7 +1352,7 @@ test('the scene opened from a card\'s "read side by side", its own close — Esc
 test('each pane holds T-LAYER\'s article of its document, made from the text the scene read, on the inner side of its corner — an edition read at its bare address made as the member its text is', () => onPage(async (p) => {
   await SCENE.open(A, B);
   const [a, b] = [p.paneA.placed, p.paneB.placed];
-  assert.deepEqual([a.map((x) => x.how), b.map((x) => x.how)], [['append'], ['prepend']], 'pane A\'s article after its corner, pane B\'s before it: each corner on its pane\'s outer side');
+  assert.deepEqual([a.map((x) => x.how), b.map((x) => x.how)], [['prepend'], ['prepend']], 'each pane\'s article before its corner in its order, so its byline\'s acts are reached before the corner\'s lines (the byline\'s act decision, point 3), the style standing each corner on its pane\'s outer side');
   assert.ok(p.paneA.innerHTML.includes(`data-corner="${A}"`) && p.paneB.innerHTML.includes(`data-corner="${B}"`), 'each pane\'s corner its own document\'s, named by the address it shows');
   for (const [addr, placed] of /** @type {const} */ ([[A, a[0]], [B, b[0]]])) {
     const d = REC.doc(addr);
@@ -1476,8 +1476,8 @@ async function landed() {
 }
 /** a pane as the scene holds it, by what these tests read of it */
 const paneState = (/** @type {'a' | 'b'} */ side) => { const P = SCENE.panes()?.[side]; return P && { kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks }; };
-/** the article a pane shows: pane A's placed last, pane B's first */
-const shownIn = (/** @type {{placed: Array<{el: unknown}>}} */ pane, /** @type {'a' | 'b'} */ side) => /** @type {any} */ ((side === 'a' ? pane.placed[pane.placed.length - 1] : pane.placed[0]).el);
+/** the article a pane shows: the one placed last, before what else stands in the pane — each pane's article placed first in its order */
+const shownIn = (/** @type {{placed: Array<{el: unknown}>}} */ pane, /** @type {'a' | 'b'} */ _side) => /** @type {any} */ ((pane.placed.find((x) => LAYER.madeOf(/** @type {any} */ (x.el))) || pane.placed[0]).el);
 
 test('an edit row naming a draft pane\'s document reads it again whole and sets it in its place — the article made from the text read now, the other pane untouched (issue #160)', () => onPage(async (p) => {
   await SCENE.open(ED, DR);

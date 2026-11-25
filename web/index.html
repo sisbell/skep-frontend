@@ -19,7 +19,8 @@
   Their order here is the Tab ring's (D5 §4 rule 5): the one line (one
   stop; the LEAP box after it, while open — the line's stop, opened), the
   find's field and its acts, while it stands, the
-  plane's stop, the focused document's corner, a landing's line's acts
+  plane's stop, the focused document's byline's acts (one stop), its
+  corner, a landing's line's acts
   while it stands, the marks of the removals in view, the standing overlay,
   the notice below it, a hint while it stands, and the line again; the scene,
   while it stands, in the place of the plane's stop, its corner and the
@@ -65,7 +66,9 @@
 
 <!-- the mirror (N-WALK's): the plane's one Tab stop is its current item (D5 §4 rule 5); the walk's render takes the tree out of the order while that item stands, so the tree is the stop only where it holds no item, as here before the first render -->
 <div id="mirror" class="panel" role="tree" tabindex="0"></div>
-<!-- the corners (T-LAYER's): after the mirror, so Tab from the plane's stop lands on the focused document's corner (D5 §4 rule 5, K-57); the labels T-LAYER holds below the one line over mounted articles stand here too, out of the order and hidden from assistive technology (issue #169) -->
+<!-- the byline's stop (T-LAYER's; the byline's act decision, point 3): the focused document's byline's acts as controls framed at their drawn tokens, one line of acts — one Tab stop, ← and → along it; after the mirror and before the corners, so Tab from the plane's stop lands on them, then on the corner's lines; empty, and no stop, where no byline of the focused document stands -->
+<div id="byline" role="toolbar"></div>
+<!-- the corners (T-LAYER's): after the byline's stop, so Tab from it lands on the focused document's corner (D5 §4 rule 5, K-57); the labels T-LAYER holds below the one line over mounted articles stand here too, out of the order and hidden from assistive technology (issue #169) -->
 <div id="corners"></div>
 <!-- a slot's face (T-FACE's; B11-S5): the place's own form at reading scale where no document the reader can read stands at an assigned slot past the mailbox — its body set inside the one form's corners, its corner beside its column or at its head; after the corners, so Tab from the plane's stop on the form reaches its corner, then its statement's mark, its plain words and its list; hidden from assistive technology while the walk stands elsewhere -->
 <div id="slotface"></div>

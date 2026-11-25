@@ -79,6 +79,7 @@ import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
 import * as LAYER from './layer.js';
+import { OPENS } from './article.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, fit, panInto } from '../plane/camera.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { LAY_FS, LINE_H } from '../plane/layout.js';
@@ -499,10 +500,10 @@ function nameHTML(/** @type {string} */ slot) {
   return name ? `<span data-string="${esc(name.id)}">${esc(name.text)}</span> — ${state}` : state;
 }
 
-/** the statement's compact mark: its act opens it whole; the ear reads it whole as its description (FP-26) */
+/** the statement's compact mark: its act opens it whole, `▸` before its words saying so (T-ARTICLE's `OPENS`; the byline's act decision, point 1), hidden from its name; the ear reads it whole as its description (FP-26) */
 function compactHTML(/** @type {Face} */ f) {
   const ids = idsOf(f);
-  return `<button type="button" class="fcompact" data-string="L.slot-face.compact" data-whole="1" aria-describedby="${ids.said}" tabindex="-1"><span class="fline">${esc(t('L.slot-face.compact'))}</span></button>`;
+  return `<button type="button" class="fcompact" data-string="L.slot-face.compact" data-whole="1" aria-describedby="${ids.said}" tabindex="-1"><span class="sign" aria-hidden="true">${esc(OPENS)}</span><span class="fline">${esc(t('L.slot-face.compact'))}</span></button>`;
 }
 
 /** a face's elements' ids, by its serial */

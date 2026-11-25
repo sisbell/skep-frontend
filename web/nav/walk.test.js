@@ -69,7 +69,9 @@
 // reading the typed words and saying a hold from the held lines alone
 // and the one form at each assigned slot no box stands at a fixed stop among
 // its account's children in record order, whatever a read answers, a leaf
-// a landing finds listed, named by its label and read off its address alone
+// a landing finds listed, named by its label and read off its address alone;
+// and a document's item reads its byline whole as a description of its own,
+// the walk never stopping on the byline
 // (FP-8, FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33, FP-34, FP-35, FP-36,
 // FP-39).
 import { test, before } from 'node:test';
@@ -807,7 +809,7 @@ test('the item a landing stands on takes its line as its description — aria-de
     querySelector: (/** @type {string} */ sel) => (sel === '#walk-landing' ? words : null),
   };
   /** the elements the description stands on: each one's kind and place */
-  const described = () => items.filter((i) => i.attrs['aria-describedby'] === 'walk-landing').map((i) => { const n = WALK.siblingsNow()[Number(i.attrs['data-i'])]; return [n.kind, n.pos]; });
+  const described = () => items.filter((i) => (i.attrs['aria-describedby'] || '').split(' ').includes('walk-landing')).map((i) => { const n = WALK.siblingsNow()[Number(i.attrs['data-i'])]; return [n.kind, n.pos]; });
   /** @type {import('./walk.js').Described | null} what the landing says, as N-GO answers it */
   let said = { addr: D, pos: 13, words: 'only part of the text you were reading is in version 3', runs: [] };
   try {
@@ -910,7 +912,7 @@ test('a landing that crossed into its document from another says that document\'
     querySelector: (/** @type {string} */ sel) => hidden.get(sel.slice(1)) || null,
   };
   /** each item described: its kind and place, and the words of every description it names, in order */
-  const described = () => items.filter((i) => i.attrs['aria-describedby']).map((i) => { const n = WALK.siblingsNow()[Number(i.attrs['data-i'])]; return [n.kind, n.pos, i.attrs['aria-describedby'].split(' ').filter((id) => !id.startsWith('walk-origin-')).map((id) => hidden.get(id)?.textContent)]; }).filter(([, , w]) => w.length);
+  const described = () => items.filter((i) => i.attrs['aria-describedby']).map((i) => { const n = WALK.siblingsNow()[Number(i.attrs['data-i'])]; return [n.kind, n.pos, i.attrs['aria-describedby'].split(' ').filter((id) => !id.startsWith('walk-origin-') && !id.startsWith('walk-byline-')).map((id) => hidden.get(id)?.textContent)]; }).filter(([, , w]) => w.length);
   const line = 'only part of the text you were reading is in version 3', kind = t('F.kind.draft');
   /** @type {import('./walk.js').Described | null} what the landing says, as N-GO answers it */
   let said = { addr: D, pos: 13, words: line, kind, runs: [] };
@@ -2360,4 +2362,49 @@ test('the re-take finds the one form where its rectangle holds the view\'s centr
     assert.deepEqual(walkAt()?.slice(0, 2), ['account', A], 'in its cell outside its rectangle: the account');
     assert.equal(REC.has(FORM), false, 'no record made');
   } finally { REC.takeIndex(/** @type {any} */ ({ docs: [], counts: [], state: { arm: 'complete' } })); }
+});
+
+test('the mirror\'s document item reads its byline whole — its owner\'s address, its device label whole, its fingerprint\'s cue — as a hidden description of its own, its words set again in place as its owner\'s facts move; and the walk never stops on the byline: in a document it holds its spans alone, as many as before (the byline\'s act decision, point 3; tests 12, 13; #280)', async () => {
+  const platform = globalThis.document, was = REC.session();
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @type {Array<{attrs: Record<string, string>, dataset: {i?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void, removeAttribute: (k: string) => void}>} */
+  let items = [];
+  /** @type {Map<string, {textContent: string}>} the hidden descriptions the last rebuild wrote, by id */
+  const hidden = new Map();
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      items = [...html.matchAll(/<li\b[^>]*>/g)].map((m) => {
+        /** @type {Record<string, string>} */
+        const attrs = Object.fromEntries([...m[0].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+        return { attrs, dataset: { i: attrs['data-i'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; }, removeAttribute: (k) => { delete attrs[k]; } };
+      });
+      hidden.clear();
+      for (const m of html.matchAll(/<div id="([^"]+)" hidden>([^<]*)<\/div>/g)) hidden.set(m[1], { textContent: m[2] });
+    },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
+    querySelector: (/** @type {string} */ sel) => hidden.get(sel.slice(1)) ?? null,
+  };
+  try {
+    REC.setSession(null);
+    REC.takeAccountKey('1.0.1', { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' + '0'.repeat(48) });
+    WALK.attach(/** @type {any} */ (mirror));
+    WALK.readers({});
+    await WALK.focusTo(D, null);
+    const i = WALK.siblingsNow().findIndex((n) => n.kind === 'document' && n.addr === D), item = items.find((x) => x.attrs['data-i'] === String(i));
+    const ids = (item?.attrs['aria-describedby'] || '').split(' '), words = hidden.get('walk-byline-' + i)?.textContent || '';
+    assert.ok(ids.includes('walk-byline-' + i), `the document's item described by its byline: ${JSON.stringify(item && item.attrs)}`);
+    assert.equal(words, esc(heard(LAYER.bylineWords(D))), 'its words the byline\'s, heard');
+    assert.ok(['1.0.1', 'dev-notebook', 'e427 2902 a114 39e5'].every((w) => words.includes(w)), `the owner's address, the label whole and the cue: ${words}`);
+    REC.takeAccountKey('1.0.1', { label: 'agent-runner', fingerprint: 'e4272902a11439e5' + '0'.repeat(48) });
+    WALK.markDescribed();
+    assert.ok((hidden.get('walk-byline-' + i)?.textContent || '').includes('agent-runner'), 'its owner\'s facts moved: its words set again in place');
+    await WALK.focusTo(D, 13);
+    assert.deepEqual(WALK.siblingsNow().map((n) => [n.kind, n.pos]), [['block', 1], ['block', 11], ['block', 27]], 'in the document the walk holds its spans alone: no stop on the byline');
+  } finally {
+    REC.setSession(was);
+    globalThis.document = platform;
+    WALK.readers({});
+  }
 });

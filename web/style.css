@@ -239,11 +239,22 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .hd .addr { font-weight:600; }
 .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:var(--head); display:block; }
 .dtext .hd .pres { color:#b9c1cb; }
+/* THE BYLINE'S ACTS (the byline's act decision, points 1 and 3; FP-44): its rows set at the byline's own line height (P-LAY's
+   `BYLINE_LH`), each at least the least target tall at the reading size; its owner's address and the `↗` after it one unit
+   as tall as its row (`go`), so a press anywhere in its row's leading over it is its act's and none reaches another row's
+   glyphs; no sign spends a variable of its token — no underline, no visited tone, no hover look — and the pointer's shape
+   over an act is the plane's for a target that acts (`#plane.to-doc`); in a reading scene's pane, where its acts are
+   controls, a link and a button drawn as the plane draws the tokens, the focus ring the corners' acts take */
+.dtext .hd .by { line-height:var(--byline-lh); }
+.dtext .hd .by .go { display:inline-block; vertical-align:top; height:1lh; white-space:pre; color:inherit; text-decoration:none; }
+#domlayer .dtext .hd .by .go, .pane .dtext .hd .by .go { cursor:pointer; }
+.dtext .hd button.slot { font:inherit; color:inherit; background:none; border:0; border-radius:0; padding:0; margin:0; line-height:inherit; text-align:left; vertical-align:top; cursor:pointer; }
 /* THE BYLINE'S SLOTS (FP-34; issue #208's design decision: "the slot keeps its place as an empty box of its own width"): a
    box as wide as its slots, each slot a box of its own width (in em, T-ARTICLE's) whatever it shows, set at its line's top
    and one line box tall, so the line is P-LAY's whatever the slots hold; one being read an empty box on a faint ground; a
-   cut label's whole, over what is beside it on its act (T-LAYER's `openLabel`), on the document's ground, its box unmoved;
-   one cause emptying both slots said once in the first, the separator after it unseen */
+   cut label `▸` before what its box holds and its whole, `▾` before it, over what is beside it while its act opens it
+   (T-LAYER's `openLabel`), on the document's ground, its box unmoved; one cause emptying both slots said once in the
+   first, the separator after it unseen */
 .dtext .hd .slots { display:inline-block; white-space:pre; vertical-align:top; }
 .dtext .hd .slot { display:inline-block; position:relative; vertical-align:top; height:1lh; white-space:pre; }
 .dtext .hd .slot.pending { background:rgba(139,143,150,.12); border-radius:2px; }
@@ -316,7 +327,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* the click cues stand where a click acts: APP-INPUT takes the clicks on the plane's text layer — a legible article's,
    the only one the pointer reaches — and its corners, and on nothing a reading scene's pane holds — a pane's blocks
    and symbols are read, never clicked (SC) */
-#domlayer .dtext .sp, #domlayer .dtext .sym, #domlayer .dtext .slot.cut { cursor:pointer; }
+#domlayer .dtext .sp, #domlayer .dtext .sym, #domlayer .dtext .slot.cut, .pane .dtext .slot.cut { cursor:pointer; }
 /* a withheld run's key, which opens the whole wording's card: the plane's act alone (a pane's is read, SC) */
 #domlayer .dtext .withheld .wh-key { cursor:pointer; text-decoration:underline dotted; }
 #domlayer .dtext .sp:hover { background:rgba(127,178,255,.08); }
@@ -331,6 +342,11 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    corner in (APP-INPUT). In the scene each pane's own stands on its outer side, whole or compact, held to the top of the
    pane's scroll, or above its text at its document's head (below), as SC fits the panes. */
 #corners { position:fixed; inset:0; overflow:clip; pointer-events:none; contain:strict; z-index:5; }
+/* THE BYLINE'S STOP on the plane (T-LAYER's; the byline's act decision, point 3): the focused document's byline's acts as
+   controls standing over its drawn tokens, each framed at its token and its sign, drawing nothing but the focus ring the
+   corners' acts take; the pointer passes through them to the article, whose press is the act's (APP-INPUT's) */
+#byline { position:fixed; inset:0; overflow:clip; pointer-events:none; contain:strict; z-index:5; }
+#byline .act { position:absolute; top:0; left:0; display:block; margin:0; padding:0; border:0; border-radius:2px; background:transparent; color:transparent; font-size:1px; line-height:1; white-space:nowrap; overflow:hidden; pointer-events:none; text-decoration:none; will-change:transform; }
 .corner { font-size:var(--corner-px); line-height:1.4; color:#8b8f96; user-select:none; -webkit-user-select:none; }
 #corners .corner { position:absolute; top:0; left:0; width:var(--corner-w); padding:4px var(--corner-pad); pointer-events:auto; background:var(--bg); border-radius:3px; will-change:transform; }
 #corners .corner.compact { width:var(--corner-compact-w); }
@@ -416,7 +432,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .face .face-act { display:inline-block; margin-right:.6em; text-decoration:underline dotted; }
 .corner .face .face-act.inert { color:#8b8f96; text-decoration:none; }
 .corner .face > .said { margin-top:.3em; }
-.corner button.face.compact { text-align:left; text-decoration:underline dotted; }
+.corner button.face.compact { text-align:left; }
 /* the moved scene's held version's line in the kept word's and the chip's place (B3-S2): on a line of its own, its words
    whole in either form, wrapped and never cut */
 .corner .held { display:block; margin-top:.3em; color:#cfd6df; white-space:normal; }
@@ -508,7 +524,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #slotface .flist { position:static; }
 #slotface button { font:inherit; color:inherit; background:none; border:0; padding:0; margin:0; text-align:left; cursor:pointer; pointer-events:auto; }
 #slotface .fact[aria-disabled="true"] { cursor:default; color:var(--dim); }
-#slotface .fcompact { text-decoration:underline dotted; color:var(--dim); }
+#slotface .fcompact { color:var(--dim); }
+#slotface .fcompact .fline { display:inline; }
 #slotface .fitem { display:block; width:100%; }
 #slotface .fitem.more { color:var(--dim); text-decoration:underline dotted; }
 #slotface .facecorner { position:absolute; top:0; left:0; pointer-events:auto; font-family:var(--face-client); font-size:var(--corner-px); line-height:24px; will-change:transform; }
@@ -679,6 +696,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 }
 .pane .corner { position:sticky; top:0; flex:0 0 var(--corner-w); }
 #sceneA > .corner { margin-left:auto; }
+/* pane A's corner stands before its text, though it follows its article in the order, which reaches the byline's acts before the
+   corner's lines (the byline's act decision, point 3); an editor pane's corner's foot stays after its text */
+#sceneA > .corner:not(.foot) { order:-1; }
 /* a pane's corner compact (FP-26): its compact width, its usual states glyphs whose act opens it whole where it stands —
    whole wide over what stands beside it, on the scene's ground, its room the compact one, so nothing beside it moves — a
    click on it opened closing it */

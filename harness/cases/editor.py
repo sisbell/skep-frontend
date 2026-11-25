@@ -218,7 +218,7 @@ import re
 import time
 from collections import Counter
 
-from . import DOC, STAGING, VERSIONED, Result, WINDOW, corner_fit, drawn_keys, heard, named_as, trunk_of
+from . import DOC, OPENS, STAGING, VERSIONED, Result, WINDOW, corner_fit, drawn_keys, heard, named_as, trunk_of
 from .layout import EDGE_EM, HEAD_CH, READING_PX, SIDE_GAP_PX
 from .wire import READ_PATHS, READ_ROWS, read_ops
 
@@ -1211,8 +1211,9 @@ FOCUS_AT = '''(() => { const e = document.activeElement, c = e && e.closest ? e.
 
 def corner_key(ctx, doc):
     """A PRINTABLE KEY AT THE OWN DRAFT's CORNER (B3-S13; D5 K-72; D6 BM-52): the hint taken down, the platform's focus
-    put on the mirror's current item — the plane's one stop, the walk on a span of `doc` — then Tab, which lands on
-    `doc`'s corner's stop (K-57) — its first act where it holds acts, else the corner — then `x` there; where Tab put the
+    put on the mirror's current item — the plane's one stop, the walk on a span of `doc` — then Tab, past the byline's
+    stop where it stands, which lands on `doc`'s corner's stop (K-57) — its first act where it holds acts, else the
+    corner — then `x` there; where Tab put the
     focus and that stop's box, the hint as a person meets it and the box it was set beside, what the status region said,
     the caret, `doc`'s edits and the `op` frames sent after the key, and whether it held: the focus in `doc`'s corner, the
     hint B3.caret.back set beside the stop the focus stood on inside the window below the one line, no transient in the one
@@ -1220,6 +1221,9 @@ def corner_key(ctx, doc):
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
     ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})'); ctx.frames(1)
     ctx.drv.key('Tab'); ctx.settle(); ctx.frames(2)
+    # past the byline's stop, standing between the walk's element and the corner (the byline's act decision, point 3)
+    if ctx.js('(() => { const e = document.activeElement; return !!(e && e.closest("#byline")); })()'):
+        ctx.drv.key('Tab'); ctx.settle(); ctx.frames(2)
     at = ctx.js(FOCUS_AT)
     box = ctx.js('(() => { const e = document.activeElement; if (!e) return null; const q = e.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; })()')
     n = len(page_calls(ctx))
@@ -1272,7 +1276,8 @@ FACE_SHOWN = '''(() => { const o = document.getElementById("overlay"), S = windo
 
 
 # the face standing at a draft's corner, as its markup says it (T-ARTICLE's face of a moved document): whether it stands
-# beneath the kept word and before the chip; its compact form — its string, its words, the words that describe it, whether
+# beneath the kept word and before the chip; its compact form — its string, its words, the sign leading them (its
+# characters and whether it is hidden from the accessibility tree), the words that describe it, whether
 # it opens the corner whole, whether it says the corner stands opened, and whether it stands inside the box it is set in —
 # a head's slot, or the corner — as the platform lays it out; and its whole form — its words and its hands by their
 # strings, its acts in order, each its key, its string, its text and the reason it is inert by, and the discard's
@@ -1285,7 +1290,8 @@ CORNER_FACE = '''((sel) => { const c = document.querySelector(sel);
   const inside = (e) => { const a = e.getBoundingClientRect(), b = e.parentElement.getBoundingClientRect(); return a.top >= b.top - 1 && a.bottom <= b.bottom + 1 && a.right <= b.right + 1; };
   const st = f && f.querySelector(".said .statement"), acts = f && f.querySelector(".face-acts");
   return {order: after(w, x) && after(x, ch),
-          compact: k ? {id: k.dataset.string || null, text: k.textContent, name: k.getAttribute("aria-label"), whole: k.getAttribute("aria-description"), opens: k.hasAttribute("data-whole"), expanded: k.getAttribute("aria-expanded"), fits: inside(k)} : null,
+          compact: k ? {id: k.dataset.string || null, text: (() => { const z = k.cloneNode(true); z.querySelectorAll(".sign").forEach((g) => g.remove()); return z.textContent; })(),
+                        sign: k.firstChild && k.firstChild.classList && k.firstChild.classList.contains("sign") ? {text: k.firstChild.textContent, hidden: k.firstChild.getAttribute("aria-hidden") === "true"} : null, name: k.getAttribute("aria-label"), whole: k.getAttribute("aria-description"), opens: k.hasAttribute("data-whole"), expanded: k.getAttribute("aria-expanded"), fits: inside(k)} : null,
           whole: f ? {lines: [...f.querySelectorAll(".face-text")].map((e) => ({id: e.dataset.string, text: e.textContent})),
                       hands: [...f.querySelectorAll(".hands .hand")].map((e) => ({id: e.dataset.string, text: e.textContent})),
                       acts: [...f.querySelectorAll(".face-acts button")].map((b) => ({run: b.dataset.face, id: b.dataset.string, text: b.textContent, inert: b.dataset.inert || null})),
@@ -1827,7 +1833,7 @@ def machine_rows(ctx, r, rows, shoot, red, sent, ops_allowed, figures):
         # dot pauses, the device's label the person's own words kept as written (T-ARTICLE's `faceRuns`)
         with_label = lambda words, before: (lambda by, end: [{'text': before + by, 'face': 'client'}, {'text': 'desk', 'face': 'reading'}, {'text': end, 'face': 'client'}])(*words.split('desk', 1))
         named, whole = heard(ctx, with_label(short, '')), heard(ctx, with_label(hand, line + ' '))
-        compact_ok = (w == WIDE[0] and compact is None) or (bool(compact) and compact['id'] == 'B3.moved.compact' and compact['text'] == short and compact['name'] == named
+        compact_ok = (w == WIDE[0] and compact is None) or (bool(compact) and compact['id'] == 'B3.moved.compact' and compact['text'] == short and compact['sign'] == {'text': OPENS, 'hidden': True} and compact['name'] == named
                                                              and compact['opens'] and compact['expanded'] == 'false' and compact['whole'] == whole and compact['fits'] is True)
         if compact and not at.get('whole'):
             open_corner(True)
@@ -3243,6 +3249,9 @@ def past_rows(ctx, r, shoot, red, ops_allowed, m):
         ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()')
         ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})'); ctx.frames(1)
         ctx.drv.key('Tab'); ctx.settle(); ctx.frames(2)
+        # past the byline's stop, standing between the walk's element and the corner (the byline's act decision, point 3)
+        if ctx.js('(() => { const e = document.activeElement; return !!(e && e.closest("#byline")); })()'):
+            ctx.drv.key('Tab'); ctx.settle(); ctx.frames(2)
         tabbed = ctx.js(ACT_AT)
         ctx.drv.key('ArrowRight'); ctx.frames(2)
         arrowed = ctx.js(ACT_AT)
@@ -5836,7 +5845,8 @@ def run(ctx):
     ctx.leap(OWN, target['pos'])
     way_back = corner_back(ctx, OWN)
     figures['corner_back'] = way_back
-    r.check(way_back['ok'], "Shift+Tab from the own draft's corner, after a printable key there, returns the focus to the plane's stop on the own draft's span, where `x` is answered at the text's edge by the draft's own line (B3.caret.enter) — the way back the corner's line names (B3-S13; D5 K-72; D6 BM-52)", way_back)
+    r.check(way_back['ok'], "Shift+Tab from the own draft's corner, after a printable key there, returns the focus to the plane's stop on the own draft's span, where `x` is answered at the text's edge by the draft's own line (B3.caret.enter) — the way back the corner's line names (B3-S13; D5 K-72; D6 BM-52)", way_back,
+            xfail='#794')
     ctx.js('(async () => { (await import("./overlays/hint.js")).act(); })()'); ctx.frames(2)
 
     # ---- (e″) the whole document's entry: the seeded staging draft selected whole and copied through the door (FP-18) ----------

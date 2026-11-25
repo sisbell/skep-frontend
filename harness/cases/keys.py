@@ -4457,7 +4457,7 @@ def forms_walked(ctx, r):
     between = ctx.js('window.__skep.placeAt(%s, %s)' % (cb[0] + (cl[0] - cb[0]) * 0.6, cb[1]))
     r.check(lod == 'far~mid' and bool(b) and b['w'] < 24 and bool(below) and below['place'] == {'addr': BIO, 'form': True, 'padded': True} and below['pushed'] == 1 and below['newest'] == BIO
             and (between or {}).get('addr') == LINK_PAGE,
-            'at far~mid a click 8 px below the bio\'s form, outside its rectangle and inside its press area, a LEAP to its slot; a point between two forms nearer the second goes to that one (the owner\'s minimum press area, 24 px; the nearest centre)',
+            'at far~mid a click 8 px below the bio\'s form, outside its rectangle and inside its press area, a LEAP to its slot; a point between two forms nearer the second\'s drawn shape goes to that one (the owner\'s minimum press area, 24 px; the nearest drawn shape — FP-44)',
             {'lod': lod, 'bio': b, 'below': below, 'between': between})
     m = ctx.js('window.__skep.fold(%s)' % json.dumps(MAILBOX))['outline']
     cam, vp = ctx.camera(), ctx.js('window.__skep.view.viewport()')
@@ -4554,6 +4554,124 @@ def slot_face_keys(ctx, r):
     r.check(h2.get('id') == 'F.swallow', 'a printable key at the second account\'s bio\'s face: the plane\'s line (K-9)', h2)
     chord(ctx, 'Escape')
     r.figures['slot_face_keys'] = figures
+
+
+def byline_acts(ctx, r):
+    """THE BYLINE'S ACTS by keys and by press (the byline's act decision, points 2 and 3) — reads alone: at the first edition's
+    landing the walk's element holds the focus, Tab reaches the byline's stop — its address a link to its account, named by the
+    address as drawn — before the corner's first line, and Shift+Tab back; Enter there frames 1.0.1's region at mid with one
+    trail entry, and Back returns to the passage left; at the agent space's home document a press on its token goes to the
+    account the token shows, its own region; its figures"""
+    figures = {}
+    active = lambda: ctx.js('(() => { const a = document.activeElement; if (!a || a === document.body) return null; return {tag: a.tagName.toLowerCase(), act: a.dataset ? a.dataset.act || null : null, byline: !!a.closest("#byline"), corner: !!a.closest("#corners"), walk: !!a.closest("#mirror")}; })()')
+    ctx.leap(DOC, None)
+    ctx.frames(3)
+    start, acts = active(), ctx.js('window.__skep.byline()')
+    ring = []
+    for mods in ((), (), ('Shift',)):
+        chord(ctx, 'Tab', mods=mods, code='Tab')
+        ring.append(active())
+    figures['stop'] = {'start': start, 'acts': acts, 'ring': ring}
+    go = acts[0] if acts else {}
+    r.check(bool(start) and start['walk'] and go.get('act') == 'go' and go.get('tag') == 'a' and go.get('account') == '1.0.1' and str(go.get('name') or '').startswith('1.0.1')
+            and not re.search(r'author|written by', str(go.get('name') or ''), re.I) and go.get('rect', {}).get('h', 0) >= 24 and go.get('rect', {}).get('w', 0) >= 24
+            and (ring[0] or {}).get('byline') and (ring[0] or {}).get('act') == 'go' and (ring[1] or {}).get('corner') and (ring[2] or {}).get('byline'),
+            'from the walk\'s element Tab reaches the byline\'s stop — its address a link to 1.0.1, named by the address as drawn, framed at its token, at least 24 px each way — before the corner\'s first line, and Shift+Tab comes back to it (the byline\'s act decision, point 3)', figures['stop'])
+    t0 = trail(ctx)
+    ctx.drv.key('Enter', code='Enter'); ctx.settle(); ctx.frames(3)
+    t1 = trail(ctx)
+    newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+    at = {'pushed': t1['cursor'] - t0['cursor'], 'newest': newest and newest['addr'], 'lod': ctx.js('window.__skep.view.lod().name'), 'line': (ctx.js('window.__skep.line()') or {}).get('address')}
+    ctx.js('window.__skep.go.back()'); ctx.settle(); ctx.frames(3)
+    t2 = trail(ctx)
+    back = {'cursor': t2['cursor'], 'addr': t2['entries'][t2['cursor']]['addr'] if 0 <= t2['cursor'] < len(t2['entries']) else None}
+    figures['enter'] = {'at': at, 'back': back}
+    r.check(at['pushed'] == 1 and at['newest'] == '1.0.1' and at['lod'] == 'mid' and back['cursor'] == t0['cursor'] and back['addr'] == (t0['entries'][t0['cursor']]['addr'] if 0 <= t0['cursor'] < len(t0['entries']) else None),
+            'Enter on the address frames 1.0.1\'s region at mid with one trail entry, and Back returns to the passage left (the byline\'s act decision, point 2; test 6)', figures['enter'])
+    # the agent space's home document: its token's account, as the board's metadata names it and as the page draws it
+    agent = AGENT_SPACE + '.0.1'
+    ctx.leap(agent, None)
+    ctx.frames(3)
+    owner = ctx.daemon_op({'op': 'doc_metadata', 'doc': agent}).get('owner')
+    tok = ctx.js('''((a) => { const g = document.querySelector('#domlayer article.dtext[data-addr="' + a + '"] .hd .by .go'); if (!g) return null;
+      const q = g.getBoundingClientRect(); return {account: g.dataset.account, text: g.textContent, rect: {x: q.left, y: q.top, w: q.width, h: q.height}}; })(%s)''' % json.dumps(agent))
+    figures['agent'] = {'owner': owner, 'token': tok}
+    if r.check(bool(tok), 'the agent space\'s home document stands on the plane with its byline (since #782 an empty document mounts as held text)', figures['agent']):
+        t0 = trail(ctx)
+        ctx.drv.click(tok['rect']['x'] + tok['rect']['w'] / 2, tok['rect']['y'] + tok['rect']['h'] / 2)
+        ctx.settle(); ctx.frames(3)
+        t1 = trail(ctx)
+        newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+        figures['agent']['pressed'] = {'pushed': t1['cursor'] - t0['cursor'], 'newest': newest and newest['addr']}
+        r.check(tok['account'] == (owner or AGENT_SPACE) and figures['agent']['pressed']['pushed'] == 1 and figures['agent']['pressed']['newest'] == tok['account'],
+                'at the agent space\'s home document a press on its token goes to the account the token shows — %s, as its metadata names the owner — its own region with one trail entry (the byline\'s act decision, point 2; test 8)' % tok['account'], figures['agent'])
+    # a reading scene's pane: Tab from pane A reaches its byline's stop; Enter there LEAPs to the account's region out of the
+    # scene, and Back reopens the scene as it was left (point 3, "In a reading scene's pane"; test 16)
+    ctx.leap(DOC, WINDOW[0])
+    open_scene(ctx)
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.scene.isOpen() && !window.__skep.scene.updating() || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    ctx.frames(2)
+    pair = ctx.js('window.__skep.scene.pair()')
+    ctx.js('document.getElementById("sceneA").focus({preventScroll: true})')
+    ctx.frames(1)
+    chord(ctx, 'Tab', code='Tab')
+    on = ctx.js('(() => { const e = document.activeElement; return e && e.closest("#sceneA .dtext .by") ? {tag: e.tagName.toLowerCase(), account: e.dataset.account || null, name: e.getAttribute("aria-label")} : null; })()')
+    t0 = trail(ctx)
+    ctx.drv.key('Enter', code='Enter'); ctx.settle(); ctx.frames(3)
+    t1 = trail(ctx)
+    newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+    left = {'pushed': t1['cursor'] - t0['cursor'], 'newest': newest and newest['addr'], 'scene': ctx.js('window.__skep.scene.isOpen()'), 'lod': ctx.js('window.__skep.view.lod().name')}
+    ctx.js('window.__skep.go.back()'); ctx.settle()
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.scene.isOpen() && !window.__skep.scene.updating() || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    ctx.frames(2)
+    again = {'scene': ctx.js('window.__skep.scene.isOpen()'), 'pair': ctx.js('window.__skep.scene.pair()'), 'cursor': trail(ctx)['cursor']}
+    figures['pane'] = {'stop': on, 'pair': pair, 'left': left, 'back': again}
+    r.check(bool(on) and on['tag'] == 'a' and on['account'] == '1.0.1' and left['pushed'] == 1 and left['newest'] == '1.0.1' and not left['scene'] and left['lod'] == 'mid'
+            and again['scene'] and again['pair'] == pair and again['cursor'] == t0['cursor'],
+            'in a reading scene\'s pane Tab from pane A reaches its byline\'s address; Enter there LEAPs to 1.0.1\'s region at mid out of the scene, one trail entry, and Back reopens the scene as it was left (the byline\'s act decision, point 3; test 16)', figures['pane'])
+    if ctx.js('window.__skep.scene.isOpen()'):
+        ctx.js('window.__skep.scene.close()'); ctx.settle(); ctx.frames(2)
+    ctx.leap(DOC, WINDOW[0])
+    r.figures['byline_acts'] = figures
+
+
+def arrival_press(ctx, r):
+    """A PRESS IN THE ARRIVAL'S OWN DOCUMENT below its reading scale (#780's design decision; FP-21, FP-25) — reads alone: an
+    arrival in two runs of a passage the door names by its bytes, at the first edition; zoomed out below its reading scale, a
+    press inside the second run's outline lands there — one trail entry, the landing's current piece the one pressed — the
+    arrival's outlines standing; its figures"""
+    blocks = [b for b in ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))['blocks'] if b['kind'] == 'para' and len(b['text'].strip()) >= 12 and b['pos'] < WINDOW[0] - 200]
+    if not r.check(len(blocks) >= 2, 'the first edition holds two paragraphs of twelve characters or more before its window run (what the next check stands on)', [b['pos'] for b in blocks]):
+        return
+    p1, p2 = blocks[0], blocks[1]
+    ids = ctx.js('window.__skep.model.identity(%s, %d, %d)' % (json.dumps(DOC), p1['pos'], p2['pos'] + 8 - p1['pos']))
+    if not r.check(bool(ids) and len(ids) == 1, 'the passage from the first paragraph into the second is one stretch of the edition\'s bytes', ids):
+        return
+    runs = [{'pos': p1['pos'], 'width': 8}, {'pos': p2['pos'], 'width': 8}]
+    ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), p1['pos'], json.dumps({'runs': runs, 'passage': ids[0]})))
+    ctx.settle(); ctx.frames(3)
+    before = {'landing': ctx.js('(() => { const l = window.__skep.go.landing(); return l && {pos: l.pos, current: l.current, pieces: l.pieces ? l.pieces.runs.length : 0}; })()'), 'arrival': ctx.js('window.__skep.go.arrival()')}
+    for _ in range(4):
+        chord(ctx, '-', mods=('Meta',))
+    reading = ctx.js('(async (a) => (await import("./text/layer.js")).atReadingScale(a))(%s)' % json.dumps(DOC))
+    rects = [q for q in ctx.js('window.__skep.arrivalRects()') if q['span'] and q['span']['pos'] == p2['pos'] and q['y'] > 40 and q['y'] + q['h'] < ctx.js('innerHeight')]
+    out = {'before': before, 'reading': reading, 'rects': rects}
+    if r.check(before['landing'] and before['landing']['pieces'] == 2 and before['landing']['current'] == 0 and not reading and bool(rects),
+               'an arrival in two runs, landed at piece 1; zoomed out below the edition\'s reading scale, its second run outlined in view', out):
+        q = rects[0]
+        x, y = q['x'] + q['w'] / 2, q['y'] + q['h'] / 2
+        out['press'] = ctx.js('window.__skep.pressAt(%s, %s)' % (x, y))
+        t0 = trail(ctx)
+        ctx.drv.click(x, y)
+        ctx.settle(); ctx.frames(3)
+        t1 = trail(ctx)
+        out['after'] = {'pushed': t1['cursor'] - t0['cursor'], 'landing': ctx.js('(() => { const l = window.__skep.go.landing(); return l && {pos: l.pos, current: l.current}; })()'),
+                        'arrival': ctx.js('window.__skep.go.arrival()'), 'outlined': len(ctx.js('window.__skep.arrivalRects()'))}
+        a = out['after']
+        r.check((out['press'] or {}).get('kind') == 'doc' and a['pushed'] == 1 and a['landing'] == {'pos': p2['pos'], 'current': 1} and bool(a['arrival']) and (a['arrival'] or {}).get('runs') == (before['arrival'] or {}).get('runs') and a['outlined'] > 0,
+                'a press inside the second run\'s outline below reading scale is the document\'s: it lands there with one trail entry, the landing\'s current piece the one pressed, the arrival standing whole, both runs outlined (#780; FP-21, FP-25)', out)
+    ctx.js('window.__skep.go.endArrival()')
+    r.figures['arrival_press'] = out
 
 
 def run(ctx):
@@ -5460,5 +5578,7 @@ def run(ctx):
     slot_names_typed(ctx, r)
     forms_walked(ctx, r)
     slot_face_keys(ctx, r)
+    byline_acts(ctx, r)
+    arrival_press(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

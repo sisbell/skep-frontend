@@ -110,7 +110,8 @@ def tails_home(ctx, r):
     """THE TAIL at HOME (issue #132's design decision): the case's own reading of the first edition's links — each passage link
     joining it to a document `places` does not list and the model holds no text, metadata or withheld box of, drawn at either of
     the two (LK's `draws`), each once — beside the tails the canvas drew at its box; then the tail pressed at its stroke as a
-    person presses it, and the overlay it shows; its figures"""
+    person presses it, and the overlay it shows; its press area at least the least target each way (#780; FP-44), a press one
+    pixel past it going elsewhere and one on its own box at the stroke's root the box's; its figures"""
     v = ctx.js('''(async (doc, ghost) => {
       const A = await import('./model/address.js');
       const S = window.__skep, places = new Set(S.model.places().filter((p) => !p.system).map((p) => p.doc));
@@ -141,6 +142,20 @@ def tails_home(ctx, r):
     want = str(len(tail['links'])) if len(tail['links']) > 1 else tail['far'][0]
     left = [o['reason'] for o in ctx.js('window.__skep.labelsLeftOut()') if o['kind'] == 'tail' and o['place'] == tail['key']]
     r.check((tail['label'][:1] == [want]) != bool(left), 'the tail carries its count at its end — the numeral of its links — or the pass names the rule that left it out', {'label': tail['label'], 'want': want, 'left_out': left})
+    # THE ONE PRESS TEST (#780's design decision; FP-44): the tail's press area — its stroke and its label's lines as one rectangle,
+    # grown to the least target from where it leaves and evenly about its stroke — a press on its own box at the stroke's root
+    # the box's, one on its stroke the tail's, and one pixel past its area another target's or the ground's
+    area = ctx.js('window.__skep.tailArea(%s)' % json.dumps(tail['key']))
+    fx, fy = tail['from']['x'], tail['from']['y']
+    press = lambda x, y: ctx.js('window.__skep.pressAt(%s, %s)' % (x, y))
+    hits = {'root': press(fx - 2, fy), 'stroke': press((fx + tail['to']['x']) / 2, fy), 'past': press(area['x'] + area['w'] + 1, fy) if area else None,
+            'below': press(fx + 4, area['y'] + area['h'] + 1) if area else None}
+    r.check(bool(area) and area['w'] >= 24 and area['h'] >= 24 and abs(area['x'] - fx) < 0.01 and abs(area['y'] + area['h'] / 2 - fy) < 0.01,
+            'the tail\'s press area: at least 24 px each way, from where it leaves its box — none of it back over the box — and evenly above and below its stroke (#780; FP-44)', {'area': area, 'from': tail['from'], 'to': tail['to'], 'label': tail['rects']})
+    r.check((hits['root'] or {}).get('kind') == 'doc' and str((hits['root'] or {}).get('addr', '')).startswith(DOC) and (hits['stroke'] or {}).get('kind') == 'tail'
+            and (hits['past'] or {}).get('kind') != 'tail' and (hits['below'] or {}).get('kind') != 'tail',
+            'a press on its own box at the stroke\'s root is the box\'s, one on its stroke the tail\'s, and one pixel past its area to the right or below another target\'s or the ground\'s (#780; FP-44)', hits)
+    tail_area = {'w': area and round(area['w'], 2), 'h': area and round(area['h'], 2), 'hits': hits}
     # pressed as a person presses it, at its stroke's middle: its links listed, a row for each naming its far document
     ctx.drv.mouse((tail['from']['x'] + tail['to']['x']) / 2, tail['from']['y'])
     ctx.js('new Promise(res => { const t0 = performance.now(); const step = () => { const o = window.__skep.overlay(); if ((o && o.id && (o.id === "tail" || o.id.startsWith("anatomy:"))) || performance.now() - t0 > 10000) res(true); else setTimeout(step, 30); }; step(); })')
@@ -151,7 +166,7 @@ def tails_home(ctx, r):
     r.check((ov['id'] == 'anatomy:' + tail['links'][0]) if one else (ov['id'] == 'tail' and len(rows) == len(tail['links']) and all(any(f in row for row in rows) for f in tail['far'])),
             'pressed as a person presses it, the tail lists its links — a row for each, naming its far document — or opens its one link\'s card', {'overlay': ov['id'], 'rows': rows[:8], 'far': tail['far']})
     ctx.esc()
-    return {'links': len(tail['links']), 'label': tail['label'], 'left_out': left, 'pressed': ov['id'], 'rows': len(rows)}
+    return {'links': len(tail['links']), 'label': tail['label'], 'left_out': left, 'pressed': ov['id'], 'rows': len(rows), 'area': tail_area}
 
 
 def mark_acts(ctx, r, mark, band, newest):

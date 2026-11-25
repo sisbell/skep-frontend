@@ -1540,6 +1540,11 @@ export const STRINGS = {
   'L.slot.unread': { text: 'not read', cls: 'DRAFT', kind: 'K28', source: '', screen: 'the byline; the corner\'s kind slot; B1-S5: the home row', lane: true },
   'L.slot.store-unread': { text: 'key store not read', cls: 'DRAFT', kind: 'K17', source: '', screen: 'the one line', lane: true },
   'L.slot.key-untold': { text: 'key not named', cls: 'DRAFT', kind: 'K17', source: '', screen: 'the one line', lane: true },
+  'L.byline': { text: 'byline', cls: 'DRAFT', kind: 'K24', source: '', screen: 'B11-S10: the name of a document\'s byline\'s one stop of acts — its controls on the plane, its line in a reading scene\'s pane (the byline\'s act decision, point 3)', lane: true },
+  'L.byline.address': { text: '⟨address⟩ — this account\'s documents', cls: 'DRAFT', kind: 'K28', source: '', screen: 'B11-S10: the accessible name of a byline\'s owner token, a link to its account\'s region at mid — its address as drawn, then where it goes (the byline\'s act decision, point 2\'s DRAFT, its gap drafted)', lane: true },
+  'L.byline.address.own': { text: '⟨address⟩ — your documents', cls: 'DRAFT', kind: 'K28', source: '', screen: 'B11-S10: the accessible name of the owner token on the reader\'s own byline, a link to their own region (point 2\'s DRAFT, its gap drafted)', lane: true },
+  'L.byline.slot': { text: '⟨shows⟩, ⟨role⟩', cls: 'DRAFT', kind: 'K28', source: '', screen: 'B11-S10: the accessible name of a byline\'s slot — its device label whole, a cut one\'s button among them, or its fingerprint\'s cue — what it shows first, then its role word (point 2)', lane: true },
+  'L.byline.fingerprint': { text: 'key fingerprint', cls: 'DRAFT', kind: 'K24', source: '', screen: 'B11-S10: the fingerprint cue\'s role word in a byline slot\'s accessible name (point 2\'s DRAFT "⟨cue⟩, ⟨key fingerprint⟩", its gap drafted)', lane: true },
   // the formatting forms (B3-S13): `3.23.4`'s name, beside the strip's names of the rest (`formName`), and the heading
   // form's in a list of the forms the sets draw, whatever its levels (B1-S4's); the words forms named together take — a
   // form that is off, another hand's group led by the hand, the reader's own hand (`formsNamed`, `formsAt`); and a form's

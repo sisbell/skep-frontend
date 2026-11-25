@@ -21,14 +21,18 @@
 // opening alone, then dismisses the card; a press on a placeholder starts no selection; a wheel
 // series under way as a jump's camera left is dropped whole, and a later
 // wheel, a pinch or the camera key's drag takes the camera over; a wheel over
-// the overlay or the notice below it is theirs, the camera staying; a press on
-// an outlined run below reading scale is a step to it; a withheld run's one
+// the overlay or the notice below it is theirs, the camera staying; a press in
+// the arrival's own document below reading scale lands at the text under it,
+// at the piece whose outline holds it, the arrival standing, and one in
+// another document ends it; a withheld run's one
 // symbol opens its ends' card or list, never C-39's face; a byline's cut
 // label opens and closes on its clicks, selecting nothing; where no board is
 // held a click at far scale is an empty one, and where one is held it goes to
 // the account whose cell holds it, in a continuation too; a
 // continuation's mark is two targets, its newest label going to that member
-// and the rest opening its list, the pointer's shape over each its own; a
+// and the rest opening its list, the pointer's shape over each its own, read
+// from the one press test's answer, a mark standing as one target pressed in
+// its area and over a tail's start inside it; a
 // click placing the caret in a draft the person may edit stands the walk on
 // its span, the live caret its mark and no ring drawn, so a slot chord acts
 // there and the next key types at it wherever the walk stood, a caret it
@@ -76,7 +80,10 @@
 // standing and a click in one ending its own; and a click, in its rectangle
 // or its press area, and Enter at its stop each a LEAP to the one form's slot,
 // with no look under the pointer over a form or a document; and a click on an
-// empty document's line on its ground, selecting nothing (FP-9, FP-10,
+// empty document's line on its ground, selecting nothing; and a byline's
+// owner token going to the account it shows, its stop making its acts and a
+// focus on it panning its row clear, and a pane's byline's address its own
+// act, no press on the pane's text (FP-9, FP-10,
 // FP-12, FP-20, FP-21, FP-24, FP-25, FP-30, FP-34, FP-35, FP-36, FP-40).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -100,10 +107,10 @@ import * as HINT from '../overlays/hint.js';
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
 import * as LINE from '../line/line.js';
-import { lodOf } from '../plane/lod.js';
+import { lodOf, markScale } from '../plane/lod.js';
 import { articleHTML, entitlementArm, edgeStatementHTML, placeholderOf, originRunsOf, sourceStatementHTML } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
-import { accountCell, boardCell, docBox, numberAtCell, DOC_W } from '../plane/projection.js';
+import { accountCell, boardCell, docBox, numberAtCell, continuationCell, DOC_W } from '../plane/projection.js';
 import { outlineRects, LINE_H } from '../plane/layout.js';
 import { t, tHTML, tRuns, addressedHTML, heard, opening } from '../strings.js';
 import { esc, byteLength } from '../util.js';
@@ -240,7 +247,7 @@ test('a click on a transcluded run\'s key in its column\'s edge — heading its 
   }
 });
 
-test('a press on an outlined run of an arrival in several runs, below its document\'s reading scale, is a step to it — the landing standing there, the camera bound for its reading view — never a teleport to the document: no trail entry, the arrival standing (issue #158)', async () => {
+test('a press in the arrival\'s own document below its reading scale lands at the text under it with a trail entry, the arrival standing whole: inside a piece\'s outline at that piece, found from the bytes the outline marks, and beside it at the position the fold holds under the point, the current piece kept; Mod+G\'s step adds nothing to Back, and a press in another document below its reading scale ends the arrival (#780\'s design decision; FP-21, FP-25; issue #158)', async () => {
   const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
   /** @type {Map<string, (e: unknown) => void>} the plane's listeners, by event */
   const plane = new Map();
@@ -248,10 +255,16 @@ test('a press on an outlined run of an arrival in several runs, below its docume
   globalThis.HTMLElement = /** @type {any} */ (class {});
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  /** the camera stepped to the end of any flight a press began */
+  const settle = () => { if (CAM.flying()) CAM.step(Infinity); };
+  /** a press and its release at a screen point, through the plane's own listeners */
+  const press = (/** @type {{clientX: number, clientY: number}} */ at) => { plane.get('pointerdown')?.({ ...at, ctrlKey: false, metaKey: false, pointerId: 1 }); plane.get('pointerup')?.({ ...at }); };
+  /** is the camera bound for a view, within a millionth */
+  const boundFor = (/** @type {{x: number, y: number, scale: number}} */ want) => { const v = CAM.destination(); return Math.abs(v.x - want.x) < 1e-6 && Math.abs(v.y - want.y) < 1e-6 && Math.abs(v.scale - want.scale) < 1e-9; };
   try {
     // the first edition's run at 23, fifteen positions, carried into the draft 1.0.1.0.65, which holds its first seven at 12 and its last eight at 30
     const D = '1.0.1.0.3', O = '1.0.1.0.65';
-    const text = 'Tumbler.\n\nAs it says: the window run.', source = 'A source.\n\nthe window run, and then more words here.';
+    const text = 'Tumbler.\n\nAs it says: the window run.', source = 'A source.\n\nthe window run, and then more words here.' + '\n\nAnother line of the draft, far below the carried words.'.repeat(30);
     const carried = { addr: D, pos: 23, width: 15 };
     const fake = FAKE.create({
       [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(O) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + byteLength(source) }] } },
@@ -274,25 +287,51 @@ test('a press on an outlined run of an arrival in several runs, below its docume
     INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), classList: { add() {}, remove() {} } }, layer: listens(null), corners: listens(null) }));
     CAM.setViewport(1440, 900);
     const leap = GO.leapTo(O, { how: 'leap', carry: carried });
-    for (let i = 0; i < 300 && !GO.landing(); i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
+    for (let i = 0; i < 300 && !GO.landing(); i++) { await new Promise((r) => setTimeout(r, 0)); settle(); }
     await leap;
-    assert.deepEqual([GO.arrivalMark()?.runs, GO.landing()?.current], [[{ pos: 12, width: 7 }, { pos: 30, width: 8 }], 0], 'landed at piece 1, both runs outlined');
+    const runs = [{ pos: 12, width: 7 }, { pos: 30, width: 8 }];
+    assert.deepEqual([GO.arrivalMark()?.runs, GO.landing()?.current], [runs, 0], 'landed at piece 1, both runs outlined');
     // zoomed out below the draft's reading scale, the canvas having outlined its second run here as its last frame drew it
     CAM.set({ ...LAYER.centreOf(O, 30), scale: 3 / LAYER.foldOf(REC.doc(O)).fs });
     assert.equal(LAYER.atReadingScale(O), false, 'below its reading scale');
-    RENDER.stats.arrival = [{ x: 700, y: 448, w: 40, h: 4, run: 1 }];
-    const entries = TRAIL.all().length, at = { clientX: 715, clientY: 450 };
-    plane.get('pointerdown')?.({ ...at, ctrlKey: false, metaKey: false, pointerId: 1 });
-    plane.get('pointerup')?.({ ...at });
-    assert.deepEqual([GO.landing()?.current, GO.landing()?.pos, TRAIL.all().length], [1, 30, entries], 'a step to the run pressed: the landing there, no trail entry');
-    const v = CAM.destination(), want = GO.viewFor(O, 30);
-    assert.ok(Math.abs(v.x - want.x) < 1e-6 && Math.abs(v.y - want.y) < 1e-6 && Math.abs(v.scale - want.scale) < 1e-9, 'the camera bound for its reading view');
-    assert.equal(GO.arrivalMark()?.addr, O, 'the arrival standing');
+    RENDER.stats.arrival = [{ x: 700, y: 448, w: 40, h: 4, run: 1, span: { pos: 30, width: 8 } }];
+    const entries = TRAIL.all().length, inside = { clientX: 715, clientY: 450 };
+    assert.deepEqual(RENDER.pressAt(inside.clientX, inside.clientY), { kind: 'place', place: { addr: O, form: false, padded: false }, outlined: [{ pos: 30, width: 8 }] }, 'the press is the document\'s, naming the run whose outline holds it');
+    press(inside);
+    await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([GO.landing()?.current, GO.landing()?.pos, TRAIL.all().length], [1, 30, entries + 1], 'inside the second piece\'s outline: the landing at that piece, one trail entry taken');
+    assert.ok(boundFor(GO.viewFor(O, 30)), 'the camera bound for the piece\'s reading view');
+    assert.deepEqual([GO.arrivalMark()?.addr, GO.arrivalMark()?.runs], [O, runs], 'the arrival standing whole, both runs outlined');
+    settle();
+    // zoomed out again: a press beside the outlines, on the draft's lines far below the carried words
+    CAM.set({ ...LAYER.centreOf(O, 30), scale: 3 / LAYER.foldOf(REC.doc(O)).fs });
+    RENDER.stats.arrival = [{ x: 700, y: 448, w: 40, h: 4, run: 1, span: { pos: 30, width: 8 } }];
+    const beside = { clientX: 720, clientY: 470 }, under = /** @type {number} */ (LAYER.posAt(O, CAM.wx(beside.clientX), CAM.wy(beside.clientY)));
+    assert.ok(under != null && under > 38, `the fold holds a position under the point, past the carried words: ${under}`);
+    assert.deepEqual(RENDER.pressAt(beside.clientX, beside.clientY), { kind: 'place', place: { addr: O, form: false, padded: false }, outlined: [] }, 'beside the outlines: the document\'s, naming no run');
+    press(beside);
+    await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([GO.landing()?.current, GO.landing()?.pos, TRAIL.all().length], [1, 30, entries + 2], 'beside the outlines: another trail entry, the current piece kept');
+    assert.ok(boundFor(GO.viewFor(O, under)), 'the camera bound for the text under the point');
+    assert.deepEqual([GO.arrivalMark()?.addr, GO.arrivalMark()?.runs], [O, runs], 'the arrival standing whole still');
+    settle();
+    // the keys' steps among the pieces add nothing to Back (issue #158)
+    assert.ok(GO.step(1, true), 'Mod+G steps');
+    settle();
+    assert.deepEqual([GO.landing()?.current, TRAIL.all().length], [0, entries + 2], 'the next piece, wrapping, and no trail entry');
+    // a press in another document below its reading scale ends the arrival, as a LEAP there does
+    CAM.set({ ...LAYER.centreOf(D, 1), scale: 3 / LAYER.foldOf(REC.doc(D)).fs });
+    RENDER.stats.arrival = [];
+    assert.equal(LAYER.atReadingScale(D), false, 'the first edition below its reading scale');
+    assert.equal(RENDER.docAtScreen(720, 450), D, 'the press falls on the first edition');
+    press({ clientX: 720, clientY: 450 });
+    await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([GO.arrivalMark(), GO.landing(), TRAIL.all().length], [null, null, entries + 3], 'another document: a trail entry, the arrival ended');
     assert.deepEqual(fake.unanswered, []);
   } finally {
     RENDER.stats.arrival = [];
     GO.endArrival();
-    if (CAM.flying()) CAM.step(Infinity);
+    settle();
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });
@@ -896,14 +935,16 @@ test('a wheel over the overlay, the notice below it, or the deletion face\'s lay
   }
 });
 
-test('a click on a byline\'s cut label opens it whole and a click again closes it, selecting nothing — the label\'s act alone (FP-34; issue #208: "A label too long for the box is cut and shown whole on its act")', () => {
+test('a click on a byline\'s cut label opens it whole and a click again closes it, selecting nothing — the label\'s act alone — and it stands in an overlay\'s life: a press anywhere else, Esc and a navigation act close it (FP-34; issue #208: "A label too long for the box is cut and shown whole on its act"; the byline\'s act decision, point 1)', () => {
   const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
   /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
   const layer = new Map();
+  /** @type {Map<string, (e: unknown) => void>} the window's listeners, by event */
+  const win = new Map();
   const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
   globalThis.HTMLElement = /** @type {any} */ (class {});
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
-  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  globalThis.window = /** @type {any} */ ({ ...listens(win), getSelection: () => null });
   try {
     // another account's document, its owner's genesis entry labelled longer than the label's box
     const D = '1.0.2.0.64', OWNER = '1.0.2', text = 'Tumbler.\n\n';
@@ -917,16 +958,86 @@ test('a click on a byline\'s cut label opens it whole and a click again closes i
     assert.ok(tag.includes('data-cut="1"'), `the label cut in its box: ${tag}`);
     const article = { dataset: { addr: D } };
     const label = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag) });
-    Object.assign(label, { closest: (/** @type {string} */ sel) => (sel === '.slot[data-cut]' ? label : sel === 'article' ? article : null) });
+    Object.assign(label, { closest: (/** @type {string} */ sel) => (sel === '.slot[data-cut]' || sel.includes('.slot.cut') ? label : sel === 'article' ? article : null), matches: (/** @type {string} */ sel) => sel.includes('.slot.cut') });
     INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
-    const click = /** @type {(e: unknown) => void} */ (layer.get('click'));
+    const click = /** @type {(e: unknown) => void} */ (layer.get('click')), down = /** @type {(e: unknown) => void} */ (win.get('pointerdown'));
     let stopped = 0;
-    const act = () => click({ target: label, clientX: 0, clientY: 0, stopPropagation() { stopped++; } });
+    const act = () => { down({ target: label, clientX: 0, clientY: 0 }); click({ target: label, clientX: 0, clientY: 0, stopPropagation() { stopped++; } }); };
     act();
     assert.deepEqual([LAYER.labelOpened(D), SEL.selected(), stopped], [true, null, 1], 'a click opens it whole, selecting nothing, the click its own');
     act();
     assert.deepEqual([LAYER.labelOpened(D), SEL.selected()], [false, null], 'a click again closes it');
+    act();
+    down({ target: { closest: () => null }, clientX: 5, clientY: 5 });
+    assert.equal(LAYER.labelOpened(D), false, 'a press anywhere else closes it');
+    act();
+    KEYS.esc();
+    assert.equal(LAYER.labelOpened(D), false, 'Esc closes it');
+    act();
+    GO.endArrival();
+    void GO.toAccount(OWNER);
+    assert.equal(LAYER.labelOpened(D), false, 'a navigation act — a return among them — closes it');
+    if (CAM.flying()) CAM.step(Infinity);
   } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a press on a byline\'s owner token — its address and the sign after it, one unit as tall as its row — goes to its account\'s region at mid: one trail entry, the camera bound for the region, and Back returns to the passage left; it goes to whatever account the token shows at the press — the address\'s own before its metadata is read, the metadata\'s owner after — and at a delegate\'s document to the delegate\'s own region (the byline\'s act decision, point 2; tests 6, 8, 9)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
+  const layer = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  /** the camera stepped to the end of any flight */
+  const settle = () => { if (CAM.flying()) CAM.step(Infinity); };
+  try {
+    REC.setSession(null);
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
+    const click = /** @type {(e: unknown) => void} */ (layer.get('click'));
+    /** a document's byline's owner token as the plane's article holds it, and a press on it through the text layer */
+    const tokenOf = (/** @type {string} */ addr) => {
+      const d = REC.doc(addr), tag = (/<span class="go"[^>]*>/.exec(articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d))) || [''])[0];
+      const el = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag) }), article = { dataset: { addr } };
+      Object.assign(el, { closest: (/** @type {string} */ sel) => (sel === '.go[data-account]' ? el : sel === 'article' ? article : null) });
+      return el;
+    };
+    const press = (/** @type {HTMLElement} */ el) => click({ target: el, clientX: 0, clientY: 0, stopPropagation() {} });
+    const region = (/** @type {string} */ acct) => CAM.viewForCell(accountCell(acct), 0.85);
+    const at = (/** @type {{x: number, y: number, scale: number}} */ v) => { const d = CAM.destination(); return Math.abs(d.x - v.x) < 1e-6 && Math.abs(d.y - v.y) < 1e-6 && Math.abs(d.scale - v.scale) < 1e-9; };
+    const text = 'Tumbler.\n\n';
+    for (const addr of ['1.0.2.0.65', '1.0.2.1.0.5', '1.0.3.0.66']) {
+      REC.takeSpanSet(addr, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
+      REC.takeDelivery(addr, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
+    }
+    // the passage being read: a landing at another's document, its entry the place Back returns to
+    void GO.leapTo('1.0.2.0.65', { pos: 1 });
+    settle();
+    const entries = TRAIL.all().length, left = TRAIL.current();
+    const token = tokenOf('1.0.2.0.65');
+    assert.equal(token.dataset.account, '1.0.2', 'the token names its account');
+    press(token);
+    settle();
+    assert.deepEqual([TRAIL.all().length, TRAIL.current()?.addr], [entries + 1, '1.0.2'], 'one trail entry, at the account');
+    assert.ok(at(region('1.0.2')), 'the camera bound for its region at mid');
+    void GO.back(); settle();
+    assert.equal(TRAIL.current(), left, 'Back returns to the passage left');
+    // a delegate's document: its own account's region, never its top-level account's
+    press(tokenOf('1.0.2.1.0.5')); settle();
+    assert.deepEqual([TRAIL.current()?.addr, at(region('1.0.2.1'))], ['1.0.2.1', true], 'a delegate\'s document: the delegate\'s own region, never its top-level account\'s');
+    // before its metadata is read the token shows the address's own account; after, the metadata's owner
+    const before = tokenOf('1.0.3.0.66');
+    REC.takeMetadata('1.0.3.0.66', { doc: '1.0.3.0.66', published: true, owner: '1.0.4', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+    const after = tokenOf('1.0.3.0.66');
+    assert.deepEqual([before.dataset.account, after.dataset.account], ['1.0.3', '1.0.4'], 'the token shows the address\'s account, then the metadata\'s owner');
+    press(before); settle();
+    assert.equal(TRAIL.current()?.addr, '1.0.3', 'pressed as it showed the address\'s account: that account\'s region');
+    press(after); settle();
+    assert.equal(TRAIL.current()?.addr, '1.0.4', 'pressed as it shows the owner: the owner\'s region');
+  } finally {
+    settle();
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });
@@ -1057,6 +1168,61 @@ test('a click on a continuation\'s mark acts by the target it falls on: its newe
   } finally {
     HOST.dismiss();
     RENDER.stats.residueMarks = [];
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('the pointer\'s shape is the one press test\'s answer (#780\'s design decision: "`aim` sets the cursor from it"): in the press area of a continuation\'s mark standing as one target, off its drawn edge, the shape that opens a list, and a click there opens it; on the mark where a tail leaving it starts, the mark\'s shape, and a click there opens the mark\'s list, not the tail\'s links', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the plane's listeners, by event */
+  const plane = new Map();
+  /** @type {Set<string>} the plane's classes */
+  const classes = new Set();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 60 }, (_, i) => ({ doc: `1.0.1.0.${numberAtCell(i + 1)}`, kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 60 }], state: { arm: 'complete' } }));
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), classList: { add: (/** @type {string} */ c) => classes.add(c), remove: (/** @type {string} */ c) => classes.delete(c) } }, layer: listens(null), corners: listens(null) }));
+    const { ctx } = recorder();
+    RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+    CAM.setViewport(1440, 900);
+    // the first continuation's mark at the scale that draws it with its members, narrower than the least target, one target
+    const c = continuationCell('1.0.1', 1);
+    CAM.set({ x: c.x + c.w / 2, y: c.y + c.h / 2, scale: markScale(1, 0) }); RENDER.draw();
+    const m = /** @type {import('../plane/render.js').ResidueMark} */ (RENDER.stats.residueMarks.find((x) => x.key === '1.0.1:1'));
+    assert.ok(m && m.newestTarget === null && m.rect.w < 24, `one target, narrower than the least: ${JSON.stringify(m && m.rect)}`);
+    const click = (/** @type {{clientX: number, clientY: number}} */ at) => { plane.get('pointerdown')?.({ ...at, ctrlKey: false, metaKey: false, pointerId: 1 }); plane.get('pointerup')?.({ ...at }); };
+    const off = { clientX: m.rect.x - 0.5, clientY: m.rect.y + m.rect.h / 2 };
+    plane.get('pointermove')?.(off);
+    assert.deepEqual([...classes], ['to-list'], 'off its drawn edge, in its area: the shape that opens a list');
+    TRAIL._reset();
+    click(off);
+    for (let i = 0; i < 200 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([HOST.currentState()?.id, TRAIL.all().length], ['mark:1.0.1:1', 0], 'a click there: the mark\'s list');
+    HOST.dismiss();
+    // a tail leaving the mark's right edge at its middle, as the last frame drew it: where its stroke's old band lay inside the mark, the mark's
+    const from = { x: m.rect.x + m.rect.w, y: m.rect.y + m.rect.h / 2 };
+    RENDER.stats.tails = [/** @type {import('../plane/render.js').DrawnTail} */ ({
+      key: 'tail 1.0.1:1', form: 'box', at: '1.0.1:1', docs: m.members, links: ['1.0.9.0.1.0.2.1'], far: ['1.0.9.0.1'], from, to: { x: from.x + 10, y: from.y }, world: { x: CAM.wx(from.x), y: CAM.wy(from.y) },
+      line: null, pos: null, hue: '#9aa5b4', alpha: 1, weight: 1, dashed: false, label: [], rects: [], stroke: { x: from.x, y: from.y - 0.8, w: 10, h: 1.6 },
+    })];
+    const band = { clientX: from.x - 3, clientY: from.y };
+    plane.get('pointermove')?.(band);
+    assert.deepEqual([...classes], ['to-list'], 'on the mark where the tail starts: the mark\'s shape');
+    click(band);
+    for (let i = 0; i < 200 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
+    assert.equal(HOST.currentState()?.id, 'mark:1.0.1:1', 'a click there: the mark\'s list, never the tail\'s links');
+  } finally {
+    HOST.dismiss();
+    RENDER.stats.residueMarks = []; RENDER.stats.tails = [];
     REC._reset(); WRITE._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
@@ -1526,6 +1692,83 @@ test('a focus landing on an act of a row a corner at its document\'s head holds 
   } finally {
     LAYER.clear(); LAYER.readers({}); CAM._reset();
     REC._reset(); WRITE._reset(); LK._reset();
+    dom.uninstall();
+  }
+});
+
+test('the byline\'s stop makes its tokens\' acts and brings its row clear: a focus landing on its act while the byline\'s row stands under the one line pans the camera down alone by the least that brings the row to the line\'s foot, and once clear moves nothing; a click on its cut label — the platform\'s from Enter or Space at it — opens the label whole, and again closes it; one on its address link goes to its account\'s region, one trail entry (the byline\'s act decision, point 3; tests 11, 14; #703 widened; FP-37)', () => {
+  const dom = page(), D = '1.0.6.0.71', OWNER = '1.0.6';
+  const text = Array.from({ length: 40 }, (_, i) => Array.from({ length: 30 }, (_, j) => 'abcdefghij'.slice(0, 2 + ((j * 7 + i) % 8))).join(' ')).join('\n\n'), n = byteLength(text);
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  dom.install();
+  try {
+    REC._reset(); WRITE._reset(); LK._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession(null);
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+    REC.takeAccountKey(OWNER, { label: 'Shane’s MacBook Pro (work, 2024)', fingerprint: 'ab'.repeat(32) });
+    CAM._reset(); CAM.setViewport(1440, 900);
+    const layer = dom.element('div'), byline = dom.element('div');
+    layer.clientWidth = 1440; layer.clientHeight = 900;
+    LAYER.attach(/** @type {any} */ (layer), null, { byline: /** @type {any} */ (byline) });
+    LAYER.readers({ selection: () => null, focus: () => null, top: () => 40, handOff: () => {}, navigated: () => null });
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(null), corners: listens(null), byline }));
+    // the byline's row 20 px down the viewport, under the one line's foot at 40
+    const at = LAYER.centreOf(D, null), f = LAYER.foldOf(REC.doc(D)), scale = 12 / f.fs, c = f.columns[0], row = f.lines.filter((x) => x.kind === 'head')[1];
+    const rowY = docBox(D).y + c.y + (row.top - c.top) * f.fs;
+    CAM.set({ x: at.x, y: rowY + (450 - 20) / scale, scale });
+    LAYER.frame((a) => a === D);
+    const go = /** @type {any} */ (byline.querySelector('[data-act="go"]')), label = /** @type {any} */ (byline.querySelector('[data-act="label"]'));
+    assert.ok(go && label && go.dataset.account === OWNER, `its acts stand: ${byline.innerHTML}`);
+    const under = CAM.view();
+    byline.fire('focusin', { target: go });
+    const moved = CAM.view();
+    assert.ok(Math.abs(CAM.sy(rowY) - 40) < 1 && moved.x === under.x && moved.scale === under.scale && moved.y < under.y, `a focus on its act: the camera down alone until the row stands at the line's foot — the row at ${CAM.sy(rowY)} px`);
+    LAYER.frame((a) => a === D);
+    byline.fire('focusin', { target: go });
+    assert.deepEqual(CAM.view(), moved, 'once clear, a focus there moves nothing');
+    const click = (/** @type {unknown} */ target) => byline.fire('click', { target, detail: 0, clientX: 0, clientY: 0, preventDefault() {} });
+    click(label);
+    assert.equal(LAYER.labelOpened(D), true, 'its cut label\'s act opens it whole');
+    click(label);
+    assert.equal(LAYER.labelOpened(D), false, 'and again closes it');
+    const entries = TRAIL.all().length;
+    click(go);
+    if (CAM.flying()) CAM.step(Infinity);
+    assert.deepEqual([TRAIL.all().length, TRAIL.current()?.addr], [entries + 1, OWNER], 'its address\'s act: one trail entry, at its account');
+    assert.ok(Math.abs(CAM.destination().scale - CAM.viewForCell(accountCell(OWNER), 0.85).scale) < 1e-9, 'framed at its region at mid');
+  } finally {
+    if (CAM.flying()) CAM.step(Infinity);
+    LAYER.clear(); LAYER.readers({}); CAM._reset();
+    REC._reset(); WRITE._reset(); LK._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    dom.uninstall();
+  }
+});
+
+test('a press on a reading scene\'s pane\'s byline\'s address is the act\'s alone — no press on the pane\'s text, no take of its selection — and its click, a pointer\'s or the platform\'s from Enter at the link, goes to its account\'s region with one trail entry, before the pane\'s own act on its text (the byline\'s act decision, point 3; test 16)', () => {
+  const dom = page(), D = '1.0.6.0.72', OWNER = '1.0.6';
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  dom.install();
+  try {
+    REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession(null);
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(null), corners: listens(null) }));
+    // pane A's article, its byline's toolbar holding the address's link, as a reading scene's pane draws it
+    const pane = dom.element('div');
+    pane.innerHTML = `<div class="pane" id="sceneA"><article class="dtext" data-addr="${D}"><div class="hd"><span class="addr">${D}</span><span class="by" role="toolbar"><a class="go" href="#" data-account="${OWNER}" tabindex="0">${OWNER}</a></span></div><div class="run"><span class="sp">Words.</span></div></article></div>`;
+    dom.document.body.appendChild(pane);
+    const go = /** @type {any} */ (pane.querySelector('.by .go')), words = /** @type {any} */ (pane.querySelector('.run .sp'));
+    dom.fire('window', 'pointerdown', { target: go, clientX: 5, clientY: 5, shiftKey: false });
+    assert.equal(SEL.pressingPane(), false, 'a press on the byline\'s act is no press on the pane\'s text');
+    const entries = TRAIL.all().length;
+    let stopped = 0, kept = 0;
+    dom.fire('window', 'click', { target: go, detail: 1, clientX: 5, clientY: 5, preventDefault() { kept++; }, stopPropagation() { stopped++; } });
+    if (CAM.flying()) CAM.step(Infinity);
+    assert.deepEqual([TRAIL.all().length, TRAIL.current()?.addr, stopped, kept], [entries + 1, OWNER, 1, 1], 'its click: one trail entry at its account, the click its own and the link followed nowhere');
+    dom.fire('window', 'pointerup', { clientX: 5, clientY: 5 });
+    dom.fire('window', 'click', { target: words, detail: 1, clientX: 9, clientY: 9, preventDefault() { kept++; }, stopPropagation() { stopped++; } });
+    assert.deepEqual([TRAIL.all().length, stopped], [entries + 1, 1], 'a click on the pane\'s words is no byline act');
+  } finally {
+    if (CAM.flying()) CAM.step(Infinity);
+    SEL.pressPane(null);
     dom.uninstall();
   }
 });

@@ -50,7 +50,8 @@
 // stands inert; the history act's line where no state opens, the lane's
 // own head before the one read cause, each notice it raises marked whole; and
 // the slot's face's words, the lane's own DRAFTs naming B11-S5 or B11-S4, the
-// sources' DRAFTs among them verbatim.
+// sources' DRAFTs among them verbatim; and the byline's acts' words, DRAFTs
+// naming B11-S10.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -1392,4 +1393,16 @@ test('the well-known slots\' names are the lanes\' own, the wording queue\'s DRA
     assert.ok(lacking().some((x) => x.id === id), `${id}: listed for the report`);
   }
   assert.deepEqual(Object.keys(STRINGS).filter((id) => id.startsWith('L.well-known.')).sort(), Object.keys(want).sort(), 'no other: slot 5\'s name is a gap (O12)');
+});
+
+test('the byline\'s acts\' words are the lane\'s own as B11-S10 and the byline\'s act decision need them, each DRAFT naming B11-S10, listed for the report — the decision\'s DRAFTs verbatim, their gaps drafted: the owner token "⟨address⟩ — this account\'s documents", the reader\'s own "⟨address⟩ — your documents", a slot what it shows then its role word, the cue\'s role word "key fingerprint"; filled, none leaves a token, none names an author, and the address leads its name (the byline\'s act decision, point 2)', () => {
+  const ids = ['L.byline', 'L.byline.address', 'L.byline.address.own', 'L.byline.slot', 'L.byline.fingerprint'];
+  for (const id of ids) {
+    const e = STRINGS[id];
+    assert.ok(e && e.cls === 'DRAFT' && e.lane === true && e.source === '' && /B11-S10/.test(e.screen || '') && e.kind in KINDS, `${id}: DRAFT, the lane's own, naming B11-S10, its kind KINDS holds`);
+  }
+  assert.deepEqual(ids.map((id) => STRINGS[id].text), ['byline', '⟨address⟩ — this account\'s documents', '⟨address⟩ — your documents', '⟨shows⟩, ⟨role⟩', 'key fingerprint'], 'the words');
+  const filled = [t('L.byline.address', { address: '1.0.2' }), t('L.byline.address.own', { address: '1.0.1' }), t('L.byline.slot', { shows: 'dev-board', role: t('L.slot.device-label') })];
+  assert.deepEqual(filled, ['1.0.2 — this account\'s documents', '1.0.1 — your documents', 'dev-board, device label'], 'filled: the token as drawn first');
+  assert.ok(filled.every((w) => !/⟨|⟩/.test(w) && !/author|written by/i.test(w)), 'no token left, no author named');
 });

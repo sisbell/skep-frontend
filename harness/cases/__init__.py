@@ -120,6 +120,11 @@ BEAMED = edition(32)         # a citer of FAR_LEAP whose citations reach four ed
 # (i)), so an edition's drawn links are its citations alone on either page
 AGENT_SPACE = '1.0.1.1'      # the claimant's delegated agent space
 SECOND_ACCOUNT = '1.0.2'     # the seed's keyless second account
+# the sign after a byline's owner token, whose act goes to its account's region: a no-break thin space, then ↗ (T-ARTICLE's GOES)
+GOES = '\u202f\u2197'
+# the signs leading a compact form whose act opens it whole, and its whole form while it stands open: ▸ or ▾, then a no-break
+# thin space (T-ARTICLE's OPENS, OPENED)
+OPENS, OPENED = '\u25b8\u202f', '\u25be\u202f'
 # the claimant's well-known slots (B11-F10): its mailbox, a draft of its own made with the account, empty on this board, its
 # outline one row; its bio and its link page, at which nothing is created on this board
 MAILBOX = '1.0.1.0.%d' % MAILBOX_SLOT
@@ -442,10 +447,10 @@ def byline_facts(ctx, account):
 def byline_expected(ctx, facts, own):
     """what a byline's slots show and are named, from an account's facts (`byline_facts`) as the page's strings say them:
     the device label's slot — its label, or the words for a label not given — and, on a byline not the reader's own, the
-    fingerprint cue's; where a cause names none, its words in the first slot and the second empty, each slot named by its
-    role and the cause's words"""
+    fingerprint cue's; where a cause names none, its words in the first slot and the second empty, each slot named by what it
+    shows then its role word (the byline's act decision, point 2)"""
     t = lambda sid, values=None: ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(values or {})))
-    named = lambda role, shows: t('L.slot.named', {'role': t('L.slot.device-label' if role == 'label' else 'L.slot.fingerprint'), 'shows': shows})
+    named = lambda role, shows: t('L.byline.slot', {'role': t('L.slot.device-label' if role == 'label' else 'L.byline.fingerprint'), 'shows': shows})
     if 'cause' in facts:
         words = t(CAUSE_WORDS[facts['cause']], {'owner': facts.get('owner', '')})
         shows = [words] if own else [words, '']
@@ -456,12 +461,15 @@ def byline_expected(ctx, facts, own):
 
 
 # a byline as the page shows it in an article's head (`%s` the article's selector): its owner's words and each slot — the words
-# its box shows, its own text apart from the whole a cut label carries for its act, the whole, and its accessible name
+# its box shows, its own text apart from the whole a cut label carries for its act and the sign before it, the whole, and its
+# accessible name — and its owner token: the account its act goes to, its sign, hidden from the name, and its control's kind
 BYLINE_SHOWN = '''((sel) => { const by = document.querySelector(sel + ' .hd .by'); if (!by) return null;
-  const own = (e) => { const c = e.cloneNode(true); c.querySelectorAll('.whole').forEach((w) => w.remove()); return c.textContent; };
-  // its owner: the words before its slots' box — the owner's address, in its own element, and the separator after it
+  const own = (e) => { const c = e.cloneNode(true); c.querySelectorAll('.whole, .sign').forEach((w) => w.remove()); return c.textContent; };
+  // its owner: the words before its slots' box — the owner's address and the sign after it, one unit, and the separator after it
   const before = [...by.childNodes].filter((n) => !(n.nodeType === 1 && n.classList.contains('slots')));
+  const go = by.querySelector('.go'), sign = go && go.querySelector('.sign');
   return {owner: before.length ? before.map((n) => n.textContent).join('') : null,
+          token: go && {account: go.dataset.account, tag: go.tagName.toLowerCase(), sign: sign && sign.textContent, hidden: !!sign && sign.getAttribute('aria-hidden') === 'true', name: go.getAttribute('aria-label')},
           slots: [...by.querySelectorAll('.slot')].map((s) => ({role: s.dataset.slot, shows: own(s), whole: (s.querySelector('.whole') || {}).textContent || null,
                                                                name: s.getAttribute('aria-label'), pending: s.classList.contains('pending')}))}; })(%s)'''
 

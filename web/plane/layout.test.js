@@ -37,7 +37,7 @@ import * as LAY from './layout.js';
 import {
   layoutOf, heightOf, wrap, breakBetween, cssMeasures, lineBox, columnsOf, fold, estimate, estimatedSpan, slot, outline, outlineRects, boundsOf, firstRow, padded,
   bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, leadOf, standardFs, stepAt, stepFor, gapOf, edgeOf, fitFor, columnW, advanceOf, setAdvance, endsColumn,
-  MEASURE, BORDER, LINE_H, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, EDGE, EDGE_GAP, STANDARD_GRID, STANDARD_FS, ADVANCE_WEIGHTS, HEAD_CPL,
+  MEASURE, BORDER, LINE_H, BYLINE_LH, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, EDGE, EDGE_GAP, STANDARD_GRID, STANDARD_FS, ADVANCE_WEIGHTS, HEAD_CPL,
 } from './layout.js';
 import { DOC_W, DOC_H } from './projection.js';
 
@@ -631,7 +631,7 @@ test('a passage held across two versions\' folds by the pair of positions its mo
   assert.ok(close(h.k, a.fs / b.fs), 'the scale\'s factor the sizes\' ratio');
 });
 
-test('the measurements the CSS reads are P-LAY\'s, one source: the fold\'s measure as a count the style multiplies by the advance, a bare count of em', () => {
+test('the measurements the CSS reads are P-LAY\'s, one source: the fold\'s measure as a count the style multiplies by the advance, a bare count of em, and the byline\'s line height, bare (FP-44)', () => {
   const v = cssMeasures();
   assert.equal(v['--indent'], MEASURE.indent + 'em');
   assert.equal(v['--head'], MEASURE.head + 'em');
@@ -640,7 +640,8 @@ test('the measurements the CSS reads are P-LAY\'s, one source: the fold\'s measu
   assert.equal(v['--gutter'], GUTTER + 'em');
   assert.deepEqual([v['--edge'], v['--edge-gap'], v['--line-box'], v['--face-gap']], [EDGE + 'em', EDGE_GAP + 'em', LINE_H + 'em', MEASURE.faceGap + 'em'], 'the edge, its gap, a body line box and the room above a withheld face\'s arm');
   assert.ok(!('--face' in v) && !('--derived' in v), 'a withheld face\'s words and a record\'s keys at the size of the text around them: no size of their own');
-  assert.equal(Object.keys(v).length, Object.keys(MEASURE).length + Object.keys(BORDER).length + 7, 'every measure, every border and the fold\'s seven — the measure, the advance, the line height, the gutter, the edge, its gap and the line box — each a custom property');
+  assert.equal(v['--byline-lh'], String(BYLINE_LH), 'the byline\'s line height, bare');
+  assert.equal(Object.keys(v).length, Object.keys(MEASURE).length + Object.keys(BORDER).length + 8, 'every measure, every border, the fold\'s seven — the measure, the advance, the line height, the gutter, the edge, its gap and the line box — and the byline\'s line height, each a custom property');
   assert.ok(Number.isInteger(LINE_H * LAY_FS * 64), 'a line box on the 1/64 px grid at the layout size');
   assert.equal(heightOf({ lines: [], blocks: new Map() }), 0);
   assert.equal(columnsOf([]).length, 0);
@@ -654,5 +655,5 @@ test('a document\'s first line stands in its fold at its first block\'s first li
   assert.ok(close(l.x - c.x, MEASURE.indent * f.fs), 'a typed line opening the document: past its indent');
   const e = estimate(600, ROOM), le = leadOf(e), p = placeOf(e, 1);
   assert.deepEqual(le, { column: 0, x: e.columns[0].x + MEASURE.indent * e.fs, y: p.y, h: p.h }, 'its text unread: its first position\'s estimated line past the head, on the indent');
-  assert.ok(close(le.y - e.columns[0].y, LINE_H * e.fs + lineBox(MEASURE.head) * e.fs), 'below the head\'s two lines, its address and its byline');
+  assert.ok(close(le.y - e.columns[0].y, LINE_H * e.fs + lineBox(MEASURE.head, BYLINE_LH) * e.fs), 'below the head\'s two lines, its address and its byline at the byline\'s own line height');
 });

@@ -23,7 +23,10 @@
 // article's one unitless line height, `LINE_H`, which each element applies to
 // its own em — the article's chrome is held inside it); the room below a
 // block its own (`Row.after`) — a typed line's, the whole line boxes of the
-// empty lines typed after it — adjoining margins collapsing to the larger.
+// empty lines typed after it — adjoining margins collapsing to the larger;
+// the byline's rows set at a line height of their own (`Row.lh`,
+// `BYLINE_LH`), so each stands the least target P-REG gives tall at the
+// reading size wherever it holds an act (FP-44).
 // Each line carries where a column may break before it, by its row's keep
 // (`Row.keep`), where in the document's bytes it starts, and where its ink
 // begins and ends. No sign of the page's sets a line: a block's others' count
@@ -109,7 +112,7 @@
 // grid; the advance 0.438886 em where the face as rendered has not been
 // measured — Charter Regular's, by its own advances; the corner beside its
 // column while the measure there keeps 40 characters.
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-26, FP-31.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-26, FP-31, FP-44.
 
 import { DOC_W, DOC_H } from './projection.js';
 import { byteLength } from '../util.js';
@@ -143,6 +146,7 @@ import { byteLength } from '../util.js';
  * @property {Keep} keep where a column may break at it
  * @property {boolean} [pre] a typed line of the document, its white space kept as the style's `pre-wrap` keeps it; absent, its white space collapses
  * @property {number} [indent] the room before its first line's first character, in the body's em: a typed line's indent where it opens a typed line; absent, none
+ * @property {number} [lh] its line height, a ratio of its size: the byline's `BYLINE_LH`; absent, `LINE_H`
  */
 
 /**
@@ -263,20 +267,31 @@ export const GRID = 64;
 
 /**
  * The height of a line box whose strut is set at `size`, in the body's em:
- * `LINE_H` of that size, as the engine lays it out at LAY_FS — the font size
- * taken onto the 1/64 px grid, rounded, then the line height on it, floored.
+ * `LINE_H` of that size — or the line height a row sets of its own (`Row.lh`)
+ * — as the engine lays it out at LAY_FS: the font size taken onto the 1/64 px
+ * grid, rounded, then the line height on it, floored.
  * The rule is Chrome's, measured on the gate's machine (Chrome 155, Charter:
  * 0.8 em a line box of 18.546875 px, 0.72 em 16.6875); the layout case holds
  * it to the line boxes the mounted article stands on, and the shipping
  * engine's are the owner's to look at (FP-19).
  * `lineBox(1)` is `LINE_H`.
  * @param {number} size
+ * @param {number} [lh] the line height, a ratio of `size`: `LINE_H` where none is given
  * @returns {number}
  */
-export function lineBox(size) {
+export function lineBox(size, lh = LINE_H) {
   const font = Math.round(size * LAY_FS * GRID) / GRID;
-  return Math.floor(font * LINE_H * GRID + 1e-7) / GRID / LAY_FS;
+  return Math.floor(font * lh * GRID + 1e-7) / GRID / LAY_FS;
 }
+
+/**
+ * The byline's line height, a ratio of its own size (MEASURE.head): the
+ * byline's rows set at it wherever the byline holds an act (FP-44), each line
+ * box (`lineBox`) 22.640625 px at LAY_FS — over 24 px at the reading size,
+ * 1.0625 of a 16 px root (P-CAM's READING_REM), so wrapped rows stand at least
+ * P-REG's TARGET.min apart there. The style reads it (`cssMeasures`).
+ */
+export const BYLINE_LH = 1.77;
 
 /**
  * The article's sizes and the room its chrome takes, each in the em of the
@@ -351,6 +366,7 @@ export function cssMeasures() {
     '--border-box': px(BORDER.box), '--border-same': px(BORDER.same),
     '--measure': String(MEASURE_CPL), '--char-w': String(CHAR_W), '--line-h': String(LINE_H),
     '--gutter': em(GUTTER), '--edge': em(EDGE), '--edge-gap': em(EDGE_GAP), '--line-box': em(LINE_H),
+    '--byline-lh': String(BYLINE_LH),
   };
 }
 
@@ -581,7 +597,7 @@ function tabStop(x, size) {
  */
 export function wrap(row, cpl) {
   const cap = cpl + 1e-6;
-  const lh = lineBox(row.size), pre = !!row.pre;
+  const lh = lineBox(row.size, row.lh), pre = !!row.pre;
   /** @type {Wrapped[]} */
   const out = [];
   // the line being filled: where its content reaches, where its ink begins (-1 before any), its largest size, whether it
@@ -787,7 +803,7 @@ export function fold(lines, room, opts = {}) {
 }
 
 /** the head's lines every article opens with: its address and its byline, in the body's em */
-const HEAD_H = lineBox(1) + lineBox(MEASURE.head);
+const HEAD_H = lineBox(1) + lineBox(MEASURE.head, BYLINE_LH);
 
 /**
  * A document whose text has not arrived, folded: its head's lines and a body

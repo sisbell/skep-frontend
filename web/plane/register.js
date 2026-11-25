@@ -149,10 +149,12 @@ export const RING = Object.freeze({ gap: 3, width: 2.5 });
 
 /**
  * A target on the plane a pointer presses, at the least `min` px each way
- * (WCAG 2.2 SC 2.5.8): a continuation's mark is two targets — its newest
- * member's label, and the rest of the mark — only where it holds two of this
- * size; the one form, and a box drawn smaller than this either way, is
- * pressed in an area grown to it about its rectangle's centre (P-RENDER's)
+ * (WCAG 2.2 SC 2.5.8; FP-44): a continuation's mark is two targets — its
+ * newest member's label, and the rest of the mark — only where it holds two
+ * of this size, its newest label's band this tall at the least; every target
+ * drawn smaller than this either way — the one form, a box, a mark standing
+ * as one target, a tail — is pressed in an area grown to it each way
+ * (P-RENDER's `pressAt`)
  */
 export const TARGET = Object.freeze({ min: 24 });
 

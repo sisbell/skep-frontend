@@ -198,7 +198,8 @@ its ground, its bottom in view, the labels of the documents below the line
 set as ever; its outline risen wholly under the line, none. THE TYPE (the typography review's findings 10 and
 17; issue #16's design decision; issue #17's design decision: "The page sets the bytes exactly as typed"): every
 element of the first edition that sets text in its lines spaces them at LINE_RATIO of its own size, a sign in a
-column's edge apart; the head's lines stand on P-LAY's line box for their size, as the engine lays it out (the
+column's edge apart, and the byline at P-LAY's BYLINE_LH, the rows its acts stand on (FP-44); the head's lines
+stand on P-LAY's line box for their size and their spacing, as the engine lays it out (the
 rounding `lineBox` models, held here to the engine); no element of its article is a heading — every typed line a
 `p` at the body's size and weight, those its bytes open with "#" among them — each keeping its white space
 (`pre-wrap`), standing on a one-em indent where it opens a typed line — the first position, or the byte before it a
@@ -479,7 +480,7 @@ import json
 import math
 import re
 
-from . import AGENT_SPACE, BEAMED, BIO, DOC, FAR_LEAP, FIRST_ORDINARY, GHOST, LAST_NAMED_SLOT, LINK_PAGE, MAILBOX, MAILBOX_SLOT, SECOND_ACCOUNT, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, edition, first_grid, heard, hold_mailbox, is_slot, slot_words
+from . import AGENT_SPACE, BEAMED, BIO, DOC, FAR_LEAP, FIRST_ORDINARY, GHOST, LAST_NAMED_SLOT, LINK_PAGE, MAILBOX, MAILBOX_SLOT, OPENED, OPENS, SECOND_ACCOUNT, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, Result, account_of, corner_fit, edition, first_grid, heard, hold_mailbox, is_slot, slot_words
 
 LEVELS_EM = [9, 12, 18, 30]
 # the room about the viewport the text layer stands a document's lines in (issue #122: a document stands by line) — the
@@ -1325,7 +1326,7 @@ def type_view(ctx):
       const sized = [...art.querySelectorAll('.hd > *, .run > *, .rec .derived, .withheld .arm, .withheld .clause')].map((e) => {
         const cs = getComputedStyle(e); return {el: name(e), pos: e.dataset.pos || null, font: parseFloat(cs.fontSize), line: parseFloat(cs.lineHeight)}; });
       const boxes = [...art.querySelectorAll('.hd .by, .hd .pres')].map((e) => {
-        const font = parseFloat(getComputedStyle(e).fontSize); return {el: name(e), pos: e.dataset.pos || null, height: e.getBoundingClientRect().height / s, line_box: L.lineBox(font / L.LAY_FS) * L.LAY_FS}; });
+        const font = parseFloat(getComputedStyle(e).fontSize); return {el: name(e), pos: e.dataset.pos || null, height: e.getBoundingClientRect().height / s, line_box: L.lineBox(font / L.LAY_FS, e.matches('.by') ? L.BYLINE_LH : undefined) * L.LAY_FS}; });
       const headings = [...art.querySelectorAll('h1, h2, h3, h4, h5, h6')].map(name);
       const typed = [...art.querySelectorAll('.run > p.sp')].filter((e) => !e.matches('.empty')).map((e) => { const cs = getComputedStyle(e), pos = Number(e.dataset.pos);
         return {pos, char: Number(e.dataset.char || 0), el: name(e), tag: e.tagName.toLowerCase(), white: cs.whiteSpace, collapse: cs.whiteSpaceCollapse || null, wrap: cs.textWrapMode || null,
@@ -1337,7 +1338,7 @@ def type_view(ctx):
       const para = art.querySelector('.run > p.sp.blk-para:not(:empty)'), addr = art.querySelector('.hd .addr');
       // the address's advance a character, in em of its own size: its run's width over its characters
       const ident = addr && addr.textContent ? addr.getBoundingClientRect().width / s / [...addr.textContent].length / parseFloat(getComputedStyle(addr).fontSize) : null;
-      return {sized, boxes, headings, typed, steps, body: parseFloat(getComputedStyle(art).fontSize), line_box: L.lineBox(1) * L.LAY_FS, faces: {reading: family('.run > p.sp'), client: family('.hd .by'), ident: family('.hd .addr')},
+      return {sized, boxes, headings, typed, steps, body: parseFloat(getComputedStyle(art).fontSize), line_box: L.lineBox(1) * L.LAY_FS, byline_lh: L.BYLINE_LH, faces: {reading: family('.run > p.sp'), client: family('.hd .by'), ident: family('.hd .addr')},
               loaded: %s.map((f) => [f, document.fonts.check(f)]), set: [...document.fonts].map((f) => ({family: f.family.replace(/^["']|["']$/g, ''), style: f.style, weight: f.weight, status: f.status})),
               advance: para ? %s(para, s) / L.LAY_FS : null, ident_advance: ident, page_advance: L.CHAR_W};
     })()''' % (json.dumps(DOC), art, json.dumps(DOC), json.dumps(DOC), json.dumps(SHIPPED_FACES), ADVANCE_JS))
@@ -1391,15 +1392,16 @@ def type_holds(ctx, r):
     r.check(v is not None, 'the type: the first edition is mounted at em 12')
     if v is None:
         return None
-    off = [x for x in v['sized'] if not x['font'] or abs(x['line'] / x['font'] - LINE_RATIO) > LINE_RATIO_TOL]
-    r.check(bool(v['sized']) and not off, f'the type: every element of the first edition that sets text spaces its lines at {LINE_RATIO} of its own size, {LINE_RATIO_TOL} either way — the head\'s lines, the blocks, a record\'s keys, a withheld run\'s face, the offer; a sign in a column\'s edge stands on its block\'s first line instead, which the stand-in holds',
+    ratio = lambda x: v['byline_lh'] if x['el'].startswith('span.by') else LINE_RATIO
+    off = [x for x in v['sized'] if not x['font'] or abs(x['line'] / x['font'] - ratio(x)) > LINE_RATIO_TOL]
+    r.check(bool(v['sized']) and not off, f'the type: every element of the first edition that sets text spaces its lines at {LINE_RATIO} of its own size, {LINE_RATIO_TOL} either way — the head\'s lines, the blocks, a record\'s keys, a withheld run\'s face, the offer — the byline at P-LAY\'s BYLINE_LH, {v["byline_lh"]}, the rows its acts stand on (FP-44); a sign in a column\'s edge stands on its block\'s first line instead, which the stand-in holds',
             [dict(x, ratio=round(x['line'] / x['font'], 3) if x['font'] else None) for x in off[:8]])
     unlike = []
     for b in v['boxes']:
         n = round(b['height'] / b['line_box'])
         if n < 1 or abs(b['height'] - n * b['line_box']) > LINE_BOX_TOL_PX:
             unlike.append(b)
-    r.check(bool(v['boxes']) and not unlike, f'the type: the head\'s lines stand on P-LAY\'s line box for their size, as the engine lays it out ({LINE_BOX_TOL_PX:.4f} px at the layout size)', unlike[:6])
+    r.check(bool(v['boxes']) and not unlike, f'the type: the head\'s lines stand on P-LAY\'s line box for their size and their spacing — the byline\'s at BYLINE_LH — as the engine lays it out ({LINE_BOX_TOL_PX:.4f} px at the layout size)', unlike[:6])
     lines = v['typed']
     marked = [x for x in lines if x['text'].startswith('#') and x['char'] == 0]
     unlike_body = [x for x in lines if x['tag'] != 'p' or abs(x['font'] - v['body']) > 1e-6 or x['weight'] != '400']
@@ -3120,11 +3122,18 @@ def carried_holds(ctx, r):
     r.check(held is not None and held != doc['blocks'][0]['pos'] and not (sel and sel['addr'] in (VERSIONED, member)), 'the edition viewed with its first blocks risen past the one line, nothing selected in it: the first span in view is a later paragraph', {'first_in_view': held, 'selection': sel})
     ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
     ctx.frames(1)
+    # Tab past the byline's stop, whose focus pans its row clear (the byline's act decision, point 3): the camera put back
+    # where the case set it, so the first span in view stands as read above
+    risen = ctx.camera()
+    ctx.drv.key('Tab')
+    ctx.frames(2)
+    by = ctx.js('(() => { const e = document.activeElement; return !!(e && e.closest("#byline")); })()')
+    ctx.set_view(risen['x'], risen['y'], risen['scale'])
     ctx.drv.key('Tab')
     ctx.frames(2)
     on = ctx.js('''(() => { const e = document.activeElement, c = e && e.closest ? e.closest('#corners [data-corner]') : null;
       return c ? {corner: c.dataset.corner || null, act: e !== c && e.tagName === 'BUTTON' ? e.className.split(' ')[0] : null} : null; })()''')
-    r.check(on == {'corner': VERSIONED, 'act': 'version'}, 'Tab from the plane\'s stop reaches the edition\'s corner on its version statement, the corner\'s stop (K-57)', on)
+    r.check(by and on == {'corner': VERSIONED, 'act': 'version'}, 'Tab from the plane\'s stop, past the byline\'s stop, reaches the edition\'s corner on its version statement, the corner\'s stop (K-57; the byline\'s act decision, point 3)', {'byline': by, 'corner': on})
     ctx.drv.key('Enter')
     wait_for(ctx, 'document.querySelector(%s) !== null' % json.dumps('#overlay [data-run="read%d"]' % doc['members']))
     at = click_on(ctx, '#overlay [data-run="read%d"]' % doc['members'])
@@ -3842,12 +3851,16 @@ LINE_PARTS_JS = '''(() => { const line = document.getElementById('line'), q = (e
           layout: window.__skep.line().layout, actsFirst: !!first && first.classList.contains('acts') && first.parentElement === line.firstElementChild}; })()'''
 
 # the one line's acting-as segment as a person meets it (`line_rows_hold`): its element, its act and its accessible label,
-# its words and the lines its fields stand on, whether it stands inside the window, how far its words run past its box,
-# whether the platform's focus stands on it, the layout's form for it, and its key's glyphs — each hidden from the
-# accessibility tree or not, and the words it holds
+# its words — the sign leading it apart — and the lines its fields stand on, whether it stands inside the window, how far
+# its words run past its box, whether the platform's focus stands on it, the layout's form for it, its key's glyphs — each
+# hidden from the accessibility tree or not, and the words it holds — and the sign leading it: its characters, whether it
+# is hidden from the accessibility tree, whether it stands first
 LINE_ACTING_JS = '''(() => { const a = document.querySelector('#line .seg.acting'); if (!a) return null; const b = a.getBoundingClientRect();
   const lines = new Set([...a.querySelectorAll('.field')].map((f) => Math.round(f.getBoundingClientRect().top))).size;
-  return {tag: a.tagName.toLowerCase(), act: a.dataset.act || null, label: a.getAttribute('aria-label'), text: a.textContent, lines,
+  const k = a.cloneNode(true); k.querySelectorAll('.sign').forEach((s) => s.remove());
+  const sign = a.querySelector(':scope > .sign');
+  return {tag: a.tagName.toLowerCase(), act: a.dataset.act || null, label: a.getAttribute('aria-label'), text: k.textContent, lines,
+          sign: sign ? {text: sign.textContent, hidden: sign.getAttribute('aria-hidden') === 'true', first: a.firstChild === sign} : null,
           inside: b.width > 0 && b.left >= -0.5 && b.right <= window.innerWidth + 0.5, over: a.scrollWidth - a.clientWidth, focused: document.activeElement === a,
           form: (window.__skep.line().layout || {}).form, glyphs: [...a.querySelectorAll('svg')].map((g) => ({hidden: g.getAttribute('aria-hidden') === 'true', text: g.textContent}))}; })()'''
 
@@ -3930,12 +3943,13 @@ def line_rows_hold(ctx, r):
                     {'layout': lay, 'missing': missing, 'cut': v['cut'], 'fields': {k: x and {'inside': x['inside'], 'text': x['text'][:40]} for k, x in f.items()}, 'line': v['line']})
             r.check(not v['past'], f'a {w} px window: every segment of the one line inside the window (issues #310, #445)', {'past': v['past'], 'vw': v['vw']})
             act, ax = ctx.js(LINE_ACTING_JS), acting_ax(ctx)
-            named = bool(act) and bool(whole) and act['tag'] == 'button' and act['act'] == 'acting' and act['label'] == spoken and act['text'] != whole and act['inside'] and act['over'] <= 1
+            named = bool(act) and bool(whole) and act['tag'] == 'button' and act['act'] == 'acting' and act['label'] == spoken and act['text'] != whole and act['inside'] and act['over'] <= 1 \
+                and act['sign'] == {'text': OPENS, 'hidden': True, 'first': True}
             hidden = bool(act) and all(g['hidden'] and not g['text'].strip() for g in act['glyphs'])
             if ax is None:
                 r.note(f'a {w} px window: Accessibility.getFullAXTree did not answer; the acting-as segment\'s act read from the DOM alone')
             r.check(named and hidden and (ax is None or (ax['role'] == 'button' and ax['name'] == spoken and not ax['glyph_shown'])),
-                    f'a {w} px window: the acting-as segment compact — "{(act or {}).get("text", "")}" — its act a button the AX tree names by the words it shows whole, rendered for the ear, its key\'s glyph hidden and standing for nothing there (issue #445: "Assistive technology reads the whole form, never the glyph"; style S22)',
+                    f'a {w} px window: the acting-as segment compact — "{(act or {}).get("text", "")}", `▸` leading it, hidden from its name — its act a button the AX tree names by the words it shows whole, rendered for the ear, its key\'s glyph hidden and standing for nothing there (issue #445: "Assistive technology reads the whole form, never the glyph"; style S22; the byline\'s act decision, point 1, test 4)',
                     {'act': act, 'ax': ax, 'whole': whole, 'heard': spoken})
             ctx.js("(() => { const b = document.querySelector('#line [data-act=acting]'); if (b) b.focus({preventScroll: true}); })()")
             ctx.drv.key('Enter')
@@ -3944,8 +3958,9 @@ def line_rows_hold(ctx, r):
             ctx.js('window.__skep.lineAct()')
             ctx.js('document.activeElement && document.activeElement.blur && document.activeElement.blur()')
             ctx.frames(2)
-            r.check(bool(unfolded) and unfolded['text'] == whole and unfolded['act'] == 'acting' and unfolded['inside'] and unfolded['over'] <= 1 and unfolded['focused'],
-                    f'a {w} px window: Enter at the act opens the acting-as segment\'s whole form inside the window, uncut, the focus kept on the act (issue #445: "The whole short segment is one act that opens the full form")',
+            r.check(bool(unfolded) and unfolded['text'] == whole and unfolded['act'] == 'acting' and unfolded['inside'] and unfolded['over'] <= 1 and unfolded['focused']
+                    and unfolded['sign'] == {'text': OPENED, 'hidden': True, 'first': True},
+                    f'a {w} px window: Enter at the act opens the acting-as segment\'s whole form inside the window, uncut, `▾` leading it, the focus kept on the act (issue #445: "The whole short segment is one act that opens the full form"; the byline\'s act decision, point 1, test 4)',
                     {'opened': unfolded, 'whole': whole})
             ctx.js("document.querySelector('#line button.slot[data-act=strip]') && document.querySelector('#line button.slot[data-act=strip]').click()")
             ctx.frames(2)
@@ -5160,7 +5175,8 @@ def head_rows_pass(ctx, r):
     word "not yet kept"; page state alone, nothing written — its corner at its head holding its held rows, the face's two
     lines among them, and the chip's act on a row past them; the camera moved alone until that row has passed wholly under
     the held rows: no head's row computes hidden, that row clipped, the held rows held below the one line, what the head
-    covers their foot; Tab from the walk's item reaching each row's line of acts, one stop a line in the rows' order, and →
+    covers their foot; Tab from the walk's item, past the byline's stop (the camera put back where its focus panned it),
+    reaching each row's line of acts, one stop a line in the rows' order, and →
     and ← walking a line's acts; the Tab onto the passed row's act moving the camera down alone by the least pan, the act
     inside the view below what the head covers; the camera's em then lowered to HEAD_ZOOM_EM, the head wrapping deeper than
     the band above its column, every row held with the first, none hidden or clipped — unmeasured where it wraps no deeper
@@ -5204,9 +5220,15 @@ def head_rows_pass(ctx, r):
                 and v1.get('clear') is not None and abs(v1['clear'] - (v1['y'] + H)) <= 1,
                 f'the camera moved alone until the row past the held ones has passed wholly under them: no head\'s row computes hidden, that row clipped at their foot, the held rows held {HOLD_GAP_PX} px below the one line, what the head covers their foot',
                 {'passed': p1, 'hidden': v1.get('hidden'), 'corner_y': v1.get('y'), 'hold': hold, 'clear': v1.get('clear'), 'held_px': H})
-        # Tab from the walk's item through the corner: each row's line of acts one stop, in the rows' order
+        # Tab from the walk's item through the corner: the byline's stop first, whose focus pans its row clear (the byline's
+        # act decision, point 3) — the camera put back where it was risen — then each row's line of acts one stop, in the rows' order
         ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
         ctx.frames(1)
+        risen = ctx.camera()
+        ctx.drv.key('Tab')
+        ctx.frames(3)
+        by = ctx.js('(() => { const e = document.activeElement; return !!(e && e.closest("#byline")); })()')
+        ctx.set_view(risen['x'], risen['y'], risen['scale'])
         lines = [x['k'] for x in rows0 if x['acts']]
         steps, cam_before, at_passed = [], ctx.camera(), None
         for _ in range(len(lines) + 1):
@@ -5219,9 +5241,9 @@ def head_rows_pass(ctx, r):
             if f['k'] == passed['k'] and at_passed is None:
                 at_passed = {'before': cam_before, 'after': ctx.camera(), 'corner': rows_at(W)}
             cam_before = ctx.camera()
-        r.check([s['k'] for s in steps] == lines,
-                f'Tab from the walk\'s item reaches each row\'s line of acts, one stop a line in the rows\' order — the passed row\'s among them',
-                {'reached': steps, 'lines': lines})
+        r.check(by and [s['k'] for s in steps] == lines,
+                f'Tab from the walk\'s item, past the byline\'s stop, reaches each row\'s line of acts, one stop a line in the rows\' order — the passed row\'s among them (the byline\'s act decision, point 3)',
+                {'byline': by, 'reached': steps, 'lines': lines})
         moved = None
         if at_passed:
             b, a, v2 = at_passed['before'], at_passed['after'], at_passed['corner'] or {}
@@ -5446,8 +5468,9 @@ def corner_tabbed(ctx, r):
     """A CORNER TABBED TO OUT OF VIEW (issue #436's design decision: "When focus lands in the corner, the camera pans it
     into view"; FP-20): in a window REFIT_PX wide the first edition LEAPt to a passage, the camera then moved alone so its
     corner stands left of the view while the view's centre stays over the column it stands beside; Tab from the walk's
-    item lands on the corner's stop, its version statement, the edition's line's first act, and the camera moves across
-    alone by the least pan, the corner's left edge at the view's; its figures"""
+    item, past the byline's stop (the camera put back where its focus panned it), lands on the corner's stop, its version
+    statement, the edition's line's first act, and the camera moves across alone by the least pan, the corner's left edge
+    at the view's; its figures"""
     was = ctx.resize(REFIT_PX, 900)
     try:
         ctx.settle()
@@ -5467,14 +5490,20 @@ def corner_tabbed(ctx, r):
                 {'placed': placed, 'corner': before})
         ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
         ctx.frames(1)
+        # past the byline's stop, whose focus pans its row clear (the byline's act decision, point 3): the camera put back
+        ctx.drv.key('Tab')
+        ctx.frames(3)
+        by = ctx.js('(() => { const e = document.activeElement; return !!(e && e.closest("#byline")); })()')
+        ctx.set_view(cam0['x'], cam0['y'], cam0['scale'])
+        ctx.frames(3)
         ctx.drv.key('Tab')
         ctx.frames(3)
         after, cam1 = ctx.js(CORNER_AT % json.dumps(DOC)), ctx.camera()
         across = (cam0['x'] - cam1['x']) * cam1['scale']
         r.check(bool(after) and after['focus'] and after['act'] == 'version' and abs(after['x']) <= 1 and after['x'] + after['w'] <= REFIT_PX + 0.5 and after['y'] >= after['line'] - 0.5 and after['y'] + after['h'] <= 900.5
-                and bool(before) and abs(across + before['x']) <= 1 and abs(cam1['y'] - cam0['y']) < 1e-9 and abs(cam1['scale'] - cam0['scale']) < 1e-12,
-                'Tab from the walk\'s item lands on the corner\'s stop, its version statement, and the camera moves across alone by the least pan, the corner inside the view below the one line, its left edge at the view\'s',
-                {'before': before, 'after': after, 'across_px': across, 'camera': [cam0, cam1]})
+                and bool(before) and abs(across + before['x']) <= 1 and abs(cam1['y'] - cam0['y']) < 1e-9 and abs(cam1['scale'] - cam0['scale']) < 1e-12 and by,
+                'Tab from the walk\'s item, past the byline\'s stop, lands on the corner\'s stop, its version statement, and the camera moves across alone by the least pan, the corner inside the view below the one line, its left edge at the view\'s (the byline\'s act decision, point 3)',
+                {'byline': by, 'before': before, 'after': after, 'across_px': across, 'camera': [cam0, cam1]})
     finally:
         ctx.resize(*was)
     ctx.settle()
@@ -5636,7 +5665,8 @@ def slot_face_site(ctx, r):
     name, its state, then its address; at zero no corner item; and the landing again with its four-set held at the act, the
     count's place hollow — beside the column on its left where a document's corner stands, its right edge CORNER_GAP_PX short
     of the column's text, in view and level with the head's first row, at 1440; on a row of its own beneath the head's first
-    row at 390 — every row of the face where it stood once the read answers.
+    row at 390 — every row of the face where it stood once the read answers; its statement's compact mark at that later opening
+    on its one row, `▸` leading its words on their line.
     Its figures: at each face on the board, what its four-set answered and what its read kept"""
     bio2 = SECOND_ACCOUNT + '.0.%d' % (MAILBOX_SLOT + 1)
     want = ctx.js('import("./strings.js").then(({t, STRINGS}) => STRINGS["L.slot-face.unwritten"] ? t("L.well-known.bio") + " — " + t("L.slot-face.unwritten") : "⟨L.slot-face.unwritten⟩")')
@@ -5686,7 +5716,16 @@ def slot_face_site(ctx, r):
         after = [(x['cls'], x['rect']) for x in (face(bio2) or {}).get('rows', [])]
         moved = [(c, a, b) for (c, a), (_, b) in zip(before, after) if abs(a['y'] - b['y']) > 0.5]
         r.check(len(before) == len(after) and not moved, '%d: the read answered, nothing moves (FP-34)' % w, {'moved': moved, 'before': len(before), 'after': len(after)})
-        figures[str(w)] = {'head': row, 'corner': corner, 'read': (face(bio2) or {}).get('read')}
+        # its statement's compact mark at this later opening (the byline's act decision, point 1, test 3): `▸` leading its words on
+        # their line, the mark no taller than the row it stands on
+        mark = ctx.js('''(() => { const b = document.querySelector('#slotface .fcompact'); if (!b) return null; const s = b.querySelector('.sign'), l = b.querySelector('.fline'), row = b.closest('.frow');
+          const q = (e) => { if (!e) return null; const x = e.getBoundingClientRect(); return {x: x.left, y: x.top, w: x.width, h: x.height}; };
+          return {mark: q(b), sign: q(s), words: q(l), row: q(row), sign_text: s ? s.textContent : null, hidden: !!s && s.getAttribute('aria-hidden') === 'true'}; })()''')
+        r.check(bool(mark) and bool(mark['sign']) and bool(mark['words']) and bool(mark['row']) and mark['sign_text'] == OPENS and mark['hidden']
+                and abs((mark['sign']['y'] + mark['sign']['h'] / 2) - (mark['words']['y'] + mark['words']['h'] / 2)) <= 2 and mark['sign']['x'] + mark['sign']['w'] <= mark['words']['x'] + 0.5
+                and mark['mark']['h'] <= mark['row']['h'] + 0.5,
+                '%d: at a later opening the statement\'s compact mark stands on its one row, `▸` leading its words on their line, hidden from its name, the mark no taller than its row (the byline\'s act decision, point 1, test 3)' % w, mark)
+        figures[str(w)] = {'head': row, 'corner': corner, 'read': (face(bio2) or {}).get('read'), 'compact_mark': mark}
         ctx.resize(*was)
     for slot in ('1.0.1.0.%d' % (MAILBOX_SLOT + 1), bio2, AGENT_SPACE + '.0.%d' % (MAILBOX_SLOT + 1)):
         ctx.leap(slot)
@@ -5694,6 +5733,83 @@ def slot_face_site(ctx, r):
         f = face(slot)
         figures.setdefault('reads', {})[slot] = f and f['read']
     return figures
+
+
+# the byline of an article (`%s` its selector) as the page sets it: its owner token's box (its act, its address and its sign), the
+# slots' box, a cut label's, each byline sign's box — `↗`, `▸`, `·` — beside the row it stands on, the head's address row, the first
+# text line, what a press at points of those two finds, and its ink against its ground (`ground`: a colour)
+BYLINE_MEASURE = '''((sel, ground) => {
+  const art = document.querySelector(sel); if (!art) return null;
+  const by = art.querySelector('.hd .by'), go = by && by.querySelector('.go'), slots = by && by.querySelector('.slots'), addr = art.querySelector('.hd .addr');
+  if (!by || !go) return null;
+  const box = (e) => { if (!e) return null; const q = e.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; };
+  const signs = [];
+  const walker = document.createTreeWalker(by, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (n.parentElement && n.parentElement.closest('.whole')) continue;
+    [...n.textContent].forEach((c, i) => { if (c === '↗' || c === '▸' || c === '·') { const g = document.createRange(); g.setStart(n, i); g.setEnd(n, i + 1); const q = g.getBoundingClientRect(); signs.push({c, x: q.left, y: q.top, w: q.width, h: q.height}); } });
+  }
+  const rows = [box(go), box(slots)].filter(Boolean);
+  const first = art.querySelector('.run > .sp:not(.empty)'), line = first && first.getClientRects()[0];
+  const hits = [];
+  const probe = (x, y) => { const e = document.elementFromPoint(x, y); hits.push({x, y, act: !!(e && e.closest && e.closest('.by .go, .by .slot.cut')), on: e ? e.tagName.toLowerCase() + '.' + (e.className || '') : null}); };
+  const a = box(addr); if (a) for (const f of [0.1, 0.5, 0.9]) probe(a.x + a.w * f, a.y + a.h / 2);
+  if (line) for (const f of [0.1, 0.5]) probe(line.left + line.width * f, line.top + line.height / 2);
+  const rgb = (s) => { const k = document.createElement('i'); k.style.color = s; document.body.appendChild(k); const c = getComputedStyle(k).color; k.remove(); return (c.match(/[\\d.]+/g) || []).slice(0, 3).map(Number); };
+  const lum = (c) => { const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return Math.round((x + 0.05) / (y + 0.05) * 100) / 100; };
+  const sign = by.querySelector('.sign'), ink = rgb(getComputedStyle(by).color), signInk = sign ? rgb(getComputedStyle(sign).color) : ink, under = rgb(ground);
+  return {by: box(by), go: box(go), slots: box(slots), addr: a, line: line && {x: line.left, y: line.top, w: line.width, h: line.height}, signs, hits,
+          ink: getComputedStyle(by).color, ground, words: ratio(ink, under), signs_ratio: ratio(signInk, under), sign_size: sign ? getComputedStyle(sign).fontSize : null, word_size: getComputedStyle(by).fontSize};
+})(%s, %s)'''
+
+
+def byline_rows_hold(ctx, r):
+    """THE BYLINE'S ROWS, ITS ACTS' AREAS AND ITS INK (the byline's act decision, points 1 and 3; FP-44) — at the first edition's
+    landing, the arrival's size, at 1440 and at 390 px: its owner token — its address with `↗` after it, its act — a box at least
+    24 × 24 px inside its row, each row holding an act at least 24 px tall and wrapped rows at least 24 px apart; no row led by
+    `↗`, `▸` or `·`; no press on a glyph of the head's address row or of the first text line finding a byline act; its words at
+    least 4.5:1 and its signs at least 3:1 against the article's ground — the plane's box's, and a reading scene's pane's; its
+    figures"""
+    out = {}
+    ground = ctx.js('(async () => (await import("./plane/register.js")).COL.doc)()')
+    was = ctx.js('[window.innerWidth, window.innerHeight]')
+    try:
+        for w, h in ((1440, 900), (390, 844)):
+            ctx.resize(w, h)
+            ctx.leap(DOC, None)
+            ctx.frames(3)
+            m = ctx.js(BYLINE_MEASURE % (json.dumps('#domlayer article.dtext[data-addr="%s"]' % DOC), json.dumps(ground)))
+            em = ctx.js('(() => { const a = document.querySelector(%s); return a ? parseFloat(getComputedStyle(a).fontSize) * (a.getBoundingClientRect().width / a.offsetWidth || 1) : null; })()' % json.dumps('#domlayer article.dtext[data-addr="%s"]' % DOC))
+            out[str(w)] = {'em': em, 'measure': m}
+            if not r.check(bool(m), 'at %d px the first edition\'s byline stands at its landing' % w, out[str(w)]):
+                continue
+            go, slots = m['go'], m['slots']
+            rows_apart = abs((slots or go)['y'] - go['y'])
+            r.check(go['w'] >= 24 and go['h'] >= 24 and (rows_apart < 1 or rows_apart >= 24) and (slots is None or slots['h'] >= 24),
+                    'at %d px, the arrival\'s size: the byline\'s address with its sign, its act, pressed in a box at least 24 × 24 px within its row, each row holding an act at least 24 px tall, wrapped rows at least 24 px apart (FP-44)' % w, {'go': go, 'slots': slots, 'apart': rows_apart, 'em': em})
+            led = [s for s in m['signs'] if s['x'] <= m['by']['x'] + 0.5]
+            r.check(not led and any(s['c'] == '↗' for s in m['signs']), 'at %d px no byline row is led by `↗`, `▸` or `·` (the byline\'s act decision, test 1)' % w, {'signs': m['signs'], 'by': m['by']})
+            r.check(bool(m['hits']) and not any(x['act'] for x in m['hits']), 'at %d px no press on a glyph of the head\'s address row or the first text line finds a byline act (FP-44)' % w, m['hits'])
+            r.check(m['words'] >= 4.5 and m['signs_ratio'] >= 3 and m['sign_size'] == m['word_size'], 'at %d px the byline\'s words at least 4.5:1 and its signs at least 3:1 against the box\'s ground, the signs in the line\'s own size and ink (WCAG 1.4.3, 1.4.11)' % w,
+                    {'words': m['words'], 'signs': m['signs_ratio'], 'ink': m['ink'], 'ground': ground, 'sizes': [m['sign_size'], m['word_size']]})
+        ctx.resize(1440, 900)
+        ctx.leap(DOC, WINDOW[0])
+        ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(FAR_LEAP)))
+        ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.scene.isOpen() && !window.__skep.scene.updating() || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+        ctx.settle(); ctx.frames(2)
+        pane_ground = ctx.js('(() => { let e = document.querySelector("#sceneA"); while (e) { const c = getComputedStyle(e).backgroundColor; if (c && !/rgba\\(0, 0, 0, 0\\)|transparent/.test(c)) return c; e = e.parentElement; } return getComputedStyle(document.body).backgroundColor; })()')
+        p = ctx.js(BYLINE_MEASURE % (json.dumps('#sceneA article.dtext'), json.dumps(pane_ground)))
+        out['pane'] = p
+        if r.check(bool(p), 'pane A\'s byline stands in a reading scene', p):
+            r.check(p['words'] >= 4.5 and p['signs_ratio'] >= 3 and p['go']['h'] >= 24, 'in a reading scene\'s pane the byline\'s words at least 4.5:1 and its signs at least 3:1 against the pane\'s ground, its act\'s row at least 24 px tall (FP-44; WCAG 1.4.3, 1.4.11)',
+                    {'words': p['words'], 'signs': p['signs_ratio'], 'ground': pane_ground, 'go': p['go']})
+        ctx.js('window.__skep.scene.close()')
+        ctx.frames(2)
+    finally:
+        ctx.resize(*was)
+        ctx.leap(DOC, WINDOW[0])
+    return out
 
 
 def run(ctx):
@@ -6087,5 +6203,6 @@ def run(ctx):
     r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)
     r.figures['scene_return'] = scene_return_holds(ctx, r)
     r.figures['scene_pane_return'] = scene_pane_return_holds(ctx, r)
+    r.figures['byline'] = byline_rows_hold(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

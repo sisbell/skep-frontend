@@ -48,8 +48,8 @@
 // none, ends the page's selection too, its outlines and its row with it —
 // a click on a document's ground (a column's blank room, a gutter, a margin),
 // on a link's symbol or the stretch it marks, on the ⟡, on a byline's cut
-// label, on a withheld run's key or gap, on a tail, on an outlined run, on a
-// continuation's mark's list, a press the frame held whose text it found no
+// label, on a withheld run's key or gap, on a tail, on a continuation's
+// mark's list, a press the frame held whose text it found no
 // point in, and a drag that ends with nothing selected (`oneSelection`), each
 // before its act opens what it opens. An act that makes a selection decides
 // it itself; a departure leaves its place with the selection kept in its
@@ -114,24 +114,26 @@
 // the focus (D5 §4 rule 4), and the ring follows the act that moved the walk,
 // whatever made it (N-WALK's).
 // A click acts on what is under the pointer, keyed on legibility. On the
-// plane (`clickPlane`): a tail — a link whose far document the plane draws
-// nowhere — lists its links or opens the card of its one (O-ANATOMY's
-// `fromTail`), at any scale, before any place under it acts; an outlined run
-// of an arrival in several runs, below its document's reading scale, is a
-// step to it (N-GO's `stepTo`; FP-21); a continuation's mark is two targets
-// (P-RENDER's `residueAtScreen`): the band its newest member's label stands
-// in, a teleport to that member — the version its box shows — and the rest
-// of the mark, which opens its members' list (O-MARK-LIST), the pointer's
-// shape over each its own while it hovers there (`aim`), and nothing else
-// taking a look under the pointer, a box or a form alike; below the readable
-// threshold a document is a place wherever the pointer falls, bars or mounted text
-// alike — a teleport to the version its box shows, which P-RENDER's hit
-// test answers (FP-22); the one form at an assigned slot is a place at every
-// scale it is drawn, a teleport to the slot's address (B11-S5's press); a
-// form, and a box drawn smaller than the least target, is pressed in an area
-// grown to that target about its rectangle, the nearer centre winning where
-// two areas meet and a drawn shape always its own place's (P-RENDER's
-// `placeAtScreen`; P-REG's TARGET); each LEAP a click makes is made where it fell, where
+// plane (`clickPlane`) it goes where the one press test sends it (P-RENDER's
+// `pressAt`; FP-44): to the target drawn under it, the topmost where shapes
+// meet, else to the target whose press area holds it and whose drawn shape
+// is nearest, else to the ground — a target drawn smaller than the least
+// target either way pressed in an area grown to that target (P-REG's
+// TARGET), each target keeping its act. A tail — a link whose far document
+// the plane draws nowhere — lists its links or opens the card of its one
+// (O-ANATOMY's `fromTail`); a continuation's mark is two targets: the band
+// its newest member's label stands in, a teleport to that member — the
+// version its box shows — and the rest of the mark, which opens its members'
+// list (O-MARK-LIST), the pointer's shape over each its own while it hovers
+// there, read from the same answer (`aim`), and nothing else taking a look
+// under the pointer, a tail, a box or a form alike; below the readable
+// threshold a document is a place wherever the pointer falls, bars or mounted
+// text alike — a teleport to the version its box shows (FP-22) — an outlined
+// run no target of its own: in the arrival's own document the click lands at
+// the text under it with a trail entry, at the piece whose outline holds it,
+// the arrival standing whole (N-GO's `landIn`; FP-21); the one form at an
+// assigned slot is a place at every scale it is drawn, a teleport to the
+// slot's address (B11-S5's press); each LEAP a click makes is made where it fell, where
 // the face of a failure known at the act, or its reaching, stands (N-GO);
 // at the readable threshold and above, a press in a gutter or a margin of a
 // document, or on the line an empty document's article stands in its text's
@@ -152,8 +154,15 @@
 // the one symbol a withheld run's ends merge into opens its one end's card
 // or lists its several (O-ANATOMY's `fromSymbol`; FP-30), a target of its
 // own beside the run; the presence indicator's ⟡ asks to see the links; a
-// byline's cut label opens whole, and the act again closes it (T-LAYER's
-// `openLabel`; FP-34); the scene-offer opens the scene, a step on
+// byline's owner token — its address and the sign after it, a unit as tall as
+// its row, so a press in its row's leading over it is its — goes to its
+// account's region at mid, the account the token shows at the press, a LEAP
+// and a trail entry (N-GO's `toAccount`; the byline's act decision, point 2);
+// its cut label opens whole, and the act again closes it, as the reader's next
+// press anywhere else does (T-LAYER's `openLabel`, `closeLabel`; FP-34); the
+// byline's stop's controls make the same acts at their click, a key's among
+// them, a focus landing on them bringing the byline's row clear by the least
+// pan (T-LAYER's `bylinePan`); the scene-offer opens the scene, a step on
 // the trail (N-GO's `toScene`); a withheld run's key in its gap opens the
 // run's whole wording's card (O-FACES's `withheldRun`), as Enter at the run
 // does (D5 K-7); the rest of a withheld run's gap conjures C-39's face naming the
@@ -294,7 +303,7 @@ function dropped(t) {
 
 /**
  * Wire the pointer and the wheel.
- * @param {{plane: HTMLCanvasElement, layer: HTMLElement, corners: HTMLElement}} els
+ * @param {{plane: HTMLCanvasElement, layer: HTMLElement, corners: HTMLElement, byline?: HTMLElement | null}} els
  */
 export function attach(els) {
   /** @type {{px: number, py: number, moved: number, cameraKey: boolean} | null} */
@@ -308,7 +317,11 @@ export function attach(els) {
   // (N-KEYS' `pointed`); one on a reading scene's pane's text holds every take of the selection until its release (O-SELECTION's `pressPane`)
   window.addEventListener('pointerdown', (e) => {
     WALK.hidePanel(); KEYS.pointed();
-    panePress = LAYER.inPaneText(e.target) ? { x: e.clientX, y: e.clientY, clicks: 1, shift: e.shiftKey } : null;
+    // a byline's cut label opened whole closes at the reader's next act: a press anywhere but on a cut label, whose own click opens or closes it (T-LAYER's `closeLabel`)
+    const on = /** @type {HTMLElement | null} */ (e.target), act = on && typeof on.closest === 'function' ? on.closest('.by .go, .slot.cut, #byline [data-act]') : null;
+    if (!(act && act.matches('.slot.cut, #byline [data-act="label"]'))) LAYER.closeLabel();
+    // a press on a pane's byline's act is the act's alone: no take of the pane's selection
+    panePress = LAYER.inPaneText(e.target) && !act ? { x: e.clientX, y: e.clientY, clicks: 1, shift: e.shiftKey } : null;
     SEL.pressPane(panePress ? /** @type {Node} */ (e.target) : null);
   }, true);
   // a press on a pane's text: its click count and Shift as its mouse event carries them
@@ -416,6 +429,37 @@ export function attach(els) {
     const label = /** @type {HTMLElement | null} */ (holder ? null : target.closest('[data-held]'));
     if (label && label.dataset.held) followPointer(label.dataset.held, at);
   });
+  // a reading scene's pane's byline's acts (the byline's act decision, point 3): a click on its address — a pointer's, or the platform's from
+  // Enter at the link — a LEAP to its account's region out of the scene, whose entry stays behind it (N-GO's `toAccount`); one on its cut
+  // label opens it whole in the pane, and the act again closes it (T-LAYER's `openPaneLabel`) — before the pane's own act on its text
+  window.addEventListener('click', (e) => {
+    const t = /** @type {HTMLElement | null} */ (e.target), a = t && typeof t.closest === 'function' ? /** @type {HTMLElement | null} */ (t.closest('.pane .by .go[data-account], .pane .by button.slot.cut')) : null;
+    if (!a) return;
+    e.preventDefault(); e.stopPropagation();
+    acted();
+    if (a.dataset.account) void GO.toAccount(a.dataset.account, FOCUS.byKey(e)); else LAYER.openPaneLabel(a);
+  }, true);
+  // the byline's stop (T-LAYER's `placeByline`): an act's click — the platform's from a key at it, or an assistive technology's — its act,
+  // as the same press on its token makes it (`clickText`): the address a LEAP to its account's region, a cut label opened whole or closed
+  // again; and a focus landing on it brings its byline's row clear of the one line and of its head's held rows by the least pan, no flight
+  // running (#703's first move; FP-37)
+  const byline = els.byline;
+  if (byline && typeof byline.addEventListener === 'function') {
+    byline.addEventListener('click', (e) => {
+      const act = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-act]'));
+      if (!act) return;
+      e.preventDefault();
+      acted();
+      if (act.dataset.act === 'go') { if (act.dataset.account) void GO.toAccount(act.dataset.account, FOCUS.byKey(e)); }
+      else if (act.dataset.act === 'label' && act.dataset.addr) LAYER.openLabel(act.dataset.addr);
+    });
+    byline.addEventListener('focusin', (e) => {
+      const act = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-addr]'));
+      if (!act || CAM.flying()) return;
+      const d = LAYER.bylinePan(act.dataset.addr || '');
+      if (d && (Math.abs(d.dx) >= 0.5 || Math.abs(d.dy) >= 0.5)) { CAM.panBy(d.dx, d.dy); CAM.markDirty(); }
+    });
+  }
   // a focus landing in a corner the view does not show whole brings it in by the least pan, no flight running (FP-20): an act
   // on a row of a head past its held rows, or in the form opened beneath them, by that row's own place or the act's box,
   // below the held rows (T-LAYER's `headRowOf`); anything else in a corner by the corner's box, below the one line
@@ -452,16 +496,19 @@ function scheduleRetake() { clearTimeout(retakeT); retakeT = window.setTimeout((
 function acted() { LINE.act(); HINT.act(); }
 
 /**
- * The pointer's shape over the plane where no drag stands (see the head):
- * `to-doc` over a continuation's mark's newest label, which goes to that
- * member, `to-list` over the rest of the mark, which opens its list, neither
- * anywhere else — the plane's own classes, which the style reads.
+ * The pointer's shape over the plane where no drag stands (see the head),
+ * read from the one press test's answer (P-RENDER's `pressAt`): `to-doc`
+ * where a press goes to a continuation's mark's newest label, which goes to
+ * that member, `to-list` where it goes to the rest of the mark or its press
+ * area, which opens its list, neither anywhere else — the plane's own
+ * classes, which the style reads.
  * @param {{classList: {add: (c: string) => void, remove: (c: string) => void}}} plane
  * @param {number} px
  * @param {number} py
  */
 function aim(plane, px, py) {
-  const hit = RENDER.residueAtScreen(px, py), at = hit ? (hit.target === 'newest' ? 'to-doc' : 'to-list') : null;
+  const hit = Number.isFinite(px) && Number.isFinite(py) ? RENDER.pressAt(px, py) : null;
+  const at = hit && hit.kind === 'mark' ? (hit.mark.target === 'newest' ? 'to-doc' : 'to-list') : null;
   for (const c of ['to-doc', 'to-list']) { if (c === at) plane.classList.add(c); else plane.classList.remove(c); }
 }
 
@@ -546,7 +593,10 @@ function clickText(target, at, gesture = false) {
   }
   const offer = target.closest('.offer');
   if (offer) { const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) void GO.toScene(a, b); return true; }
-  // a byline's cut label opens whole on its act, and closes on it again (FP-34)
+  // a byline's owner token: a LEAP to its account's region at mid, the account the token shows at the press (the byline's act decision, point 2)
+  const owner = /** @type {HTMLElement | null} */ (target.closest('.go[data-account]'));
+  if (owner) { if (owner.dataset.account) void GO.toAccount(owner.dataset.account, false); return true; }
+  // a byline's cut label opens whole on its act, and closes on it again (FP-34; point 1)
   const label = target.closest('.slot[data-cut]');
   if (label) { if (doc) { oneSelection(); followPointer(doc, at); LAYER.openLabel(doc); } return true; }
   // a withheld run's key opens its whole wording's card, as Enter at the run does (D5 K-7)
@@ -705,15 +755,15 @@ const worldOf = (/** @type {number} */ px, /** @type {number} */ py) => ({ x: CA
 
 /**
  * The document whose text a press at a screen point is on, at the readable
- * em and above: a document standing whole there — no continuation's mark
- * holding it — at that em, the point in one of its columns, where its text
- * stands or will; null anywhere else, a gutter among them.
+ * em and above: the document the one press test gives it to (P-RENDER's
+ * `pressAt`) — never a tail or a continuation's mark drawn over it — at that
+ * em, the point in one of its columns, where its text stands or will; null
+ * anywhere else, a gutter among them.
  * @param {number} px
  * @param {number} py
  * @returns {string | null}
  */
 function textAt(px, py) {
-  if (RENDER.residueAtScreen(px, py)) return null;
   const doc = RENDER.docAtScreen(px, py);
   if (!doc || !LAYER.atReadingScale(doc)) return null;
   return LAYER.holdsText(doc, CAM.wx(px), CAM.wy(py)) ? doc : null;
@@ -807,13 +857,14 @@ function takeSelection(dragged, anew = false) {
   else void WALK.followCaret();
 }
 
-/** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes — a document's outline, the one form's rectangle at an assigned slot, or the press area of a form or a box drawn smaller than the least target (P-RENDER's `placeAtScreen`), a form at every scale it is drawn, holding no text; a document's ground at its reading scale is the act the next key follows; an account at far goes to its region, where a board is held; else the click is the pointer's Esc, one step of its order (N-KEYS' `esc`) */
+/** a click on the plane, by the one press test's answer (P-RENDER's `pressAt`): a tail lists its links; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes — the one form at every scale it is drawn, holding no text; a document below its reading scale, in the arrival's own document a landing at the text under the click, the arrival standing (N-GO's `landIn`); a document's ground at its reading scale is the act the next key follows; with no target, an account at far goes to its region, where a board is held; else the click is the pointer's Esc, one step of its order (N-KEYS' `esc`) */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   acted();
   /** the point of the plane the click fell on: where a teleport it makes is made, and what the stop nearest it is read from */
   const world = worldOf(px, py), site = { world };
-  const tail = RENDER.tailAtScreen(px, py);
-  if (tail) {
+  const hit = RENDER.pressAt(px, py);
+  if (hit && hit.kind === 'tail') {
+    const tail = hit.tail;
     oneSelection();
     // a tail from a passage's line, or from a document's box — never a mark's, which is no document's
     if (tail.form === 'line' && tail.pos != null) followPointer(tail.at, tail.pos);
@@ -821,22 +872,27 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
     ANATOMY.fromTail(tail, false);
     return;
   }
-  // an outlined run stands only where its document is drawn whole, never inside a continuation's mark
-  const piece = RENDER.arrivalAtScreen(px, py);
-  if (piece && !LAYER.atReadingScale(piece.addr) && GO.stepTo(piece.run, false)) { oneSelection(); return; }
-  const lod = lodOf(CAM.cam.scale);
-  const residue = RENDER.residueAtScreen(px, py);
-  if (residue) { if (residue.target === 'newest') GO.leapTo(GO.shownIn(residue.newest), { how: 'click', site }); else { oneSelection(); void MARKLIST.open(residue.key, false); } return; }
-  const place = RENDER.placeAtScreen(px, py);
-  if (place && place.form) { GO.leapTo(place.addr, { how: 'click', site }); return; }
-  const doc = place ? place.addr : null;
-  if (doc) {
-    if (!LAYER.atReadingScale(doc)) { GO.leapTo(doc, { how: 'click', site }); return; }
+  if (hit && hit.kind === 'mark') {
+    const m = hit.mark;
+    if (m.target === 'newest') GO.leapTo(GO.shownIn(m.newest), { how: 'click', site }); else { oneSelection(); void MARKLIST.open(m.key, false); }
+    return;
+  }
+  if (hit && hit.kind === 'place') {
+    const place = hit.place;
+    if (place.form) { GO.leapTo(place.addr, { how: 'click', site }); return; }
+    const doc = place.addr;
+    if (!LAYER.atReadingScale(doc)) {
+      // the arrival's own document: a landing at the text under the click, at the piece whose outline holds it, the arrival standing (FP-21)
+      if (GO.arrivalIn(doc)) void GO.landIn(doc, world, hit.outlined, site);
+      else GO.leapTo(doc, { how: 'click', site });
+      return;
+    }
     // at reading scale a press on its text is held for the text (`afterFrame`); one in a gutter or a margin is on its ground
     oneSelection();
     followPointer(doc, world);
     return;
   }
+  const lod = lodOf(CAM.cam.scale);
   if ((lod.name === 'far' || lod.name === 'far~mid') && REC.board()) {
     const acct = accountAt(world.x, world.y, '1');
     if (acct) { GO.toAccount(acct); return; }

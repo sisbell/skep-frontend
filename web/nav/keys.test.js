@@ -182,7 +182,10 @@
 // names, the draft's own line, K-9's Space line, the corner's way back and
 // the copy line's acts among them (style S21, K16). A paste event read by both
 // its flavors as it is dispatched: the same words placed, a source read first
-// holding the keys, and a paste told raising its face.
+// holding the keys, and a paste told raising its face. The byline's stop is one
+// line of acts: the arrows, Home and End move along it, Enter and Space at an
+// act are the platform's own, Esc closes its opened label and then gives the
+// focus to the walk's element, and a key replayed at a landing acts on none.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as KEYS from './keys.js';
@@ -3563,4 +3566,52 @@ test('where the board already does not answer, the undo chord at a step whose te
     await KEYS.dispatch(keyOf('z', MOD), PLANE);
     assert.deepEqual([HOST.currentState()?.id, said.at(-1), reads(), WRITE.undoOf(D).length, shown()], ['face:not-undone', heard(sentence('B1.range_not_present')), 2, 1, TEXT.slice(13)], 'another refusal: its own words, the step next, nothing changed');
   } finally { REC.setDaemon(null); MACHINE.takeOut(); PORT.boot(null); host.restore(); LAYER.dropCaret(); WRITE.clearEdits(D); WRITE.setStacks(D, [], []); KEYS._reset(); }
+}));
+
+test('the byline\'s stop is one line of acts: → and ← move the focus along its acts, staying at its ends, Home and End to its first and its last, each a key the page takes; Enter at its link and at its button, and Space at its button, are the platform\'s own; Space at its link is taken, acting nothing; Esc closes the label its act opened, the focus staying on its act, then gives the focus to the walk\'s element; a key replayed at a landing reaches none of its acts; the table binds them at the byline (the byline\'s act decision, point 3; tests 11, 17; #557, #585)', () => onPlane(async () => {
+  const doc = /** @type {any} */ (globalThis.document);
+  /** @type {string[]} the acts the platform's click made */
+  const clicked = [];
+  /** an act of the stop: its element, its kind, the bar it stands in */
+  const act = (/** @type {string} */ tag, /** @type {string} */ kind) => {
+    const a = /** @type {any} */ ({ tagName: tag, dataset: { act: kind, addr: D }, focus() { doc.activeElement = a; }, click() { clicked.push(kind); }, closest: (/** @type {string} */ s) => (s.includes('#byline') || s.includes('toolbar') ? bar : null) });
+    return a;
+  };
+  const go = act('A', 'go'), label = act('BUTTON', 'label');
+  const bar = /** @type {any} */ ({ closest: (/** @type {string} */ s) => (s === '.pane' ? null : bar), querySelectorAll: (/** @type {string} */ s) => (s === 'a, button' ? [go, label] : []) });
+  const press = async (/** @type {unknown} */ target, /** @type {string} */ key, /** @type {object} */ more = {}) => {
+    let prevented = false;
+    const took = await KEYS.dispatch({ ...keyOf(key), target, preventDefault() { prevented = true; } }, { where: 'byline', byKey: true, ...more });
+    return { took, prevented };
+  };
+  go.focus();
+  assert.deepEqual([(await press(go, 'ArrowRight')).took, doc.activeElement === label], [true, true], '→: the next act');
+  assert.deepEqual([(await press(label, 'ArrowRight')).took, doc.activeElement === label], [true, true], '→ at the last: taken, the focus staying');
+  assert.deepEqual([(await press(label, 'ArrowLeft')).took, doc.activeElement === go], [true, true], '←: the act before');
+  assert.deepEqual([(await press(go, 'End')).took, doc.activeElement === label], [true, true], 'End: the last');
+  assert.deepEqual([(await press(label, 'Home')).took, doc.activeElement === go], [true, true], 'Home: the first');
+  const trail = TRAIL.all().length;
+  assert.deepEqual([(await press(go, 'Enter')).took, (await press(label, 'Enter')).took, (await press(label, ' ')).took], [false, false, false], 'Enter at the link and the button, Space at the button: the platform\'s own, its click the act');
+  assert.deepEqual(await press(go, ' '), { took: true, prevented: true }, 'Space at the link: taken, acting nothing');
+  assert.deepEqual([TRAIL.all().length, clicked], [trail, []], 'no act made by the page itself');
+  // a key held while a jump was in the air, made at its landing: no act of the stop's
+  assert.deepEqual([(await press(go, 'Enter', { landed: true })).took, (await press(label, ' ', { landed: true })).took, clicked], [false, false, []], 'a key replayed at a landing reaches none of its acts');
+  // Esc: the label its act opened closed, the focus on its act; then the focus to the walk's element — the mirror's item, as the
+  // walk's mirror stands it (placed last: the mirror it attaches stays the walk's)
+  /** @type {any[]} */
+  const items = [];
+  const itemAt = (/** @type {string} */ id) => { const it = /** @type {any} */ ({ id, focus() { doc.activeElement = it; } }); items.push(it); return it; };
+  WALK.attach(/** @type {any} */ ({
+    innerHTML: '', tabIndex: 0, style: {}, setAttribute() {}, contains: (/** @type {unknown} */ x) => items.includes(x),
+    classList: { toggle() {} }, querySelector: (/** @type {string} */ sel) => (sel.startsWith('#walk-') ? itemAt(sel.slice(1)) : null),
+  }));
+  await WALK.focusTo(D, null);
+  LAYER.openLabel(D);
+  label.focus();
+  assert.deepEqual([(await press(label, 'Escape')).took, LAYER.labelOpened(D), doc.activeElement === label], [true, false, true], 'Esc: the label closed, the focus staying on its act');
+  await press(label, 'Escape');
+  assert.ok(items.includes(doc.activeElement), 'Esc again: the focus gone to the walk\'s element, the mirror\'s item');
+  for (const [chord, act] of [['Tab', 'byline.stop'], ['→', 'byline.next'], ['←', 'byline.previous'], ['Home', 'byline.first'], ['End', 'byline.last'], ['Enter', 'byline.act'], ['Esc', 'byline.close']]) {
+    assert.ok(KEYS.TABLE.some((r) => r.chord === chord && r.act === act && r.surface === 'byline'), `the table binds ${chord} at the byline`);
+  }
 }));

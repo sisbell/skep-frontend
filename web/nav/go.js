@@ -154,12 +154,17 @@
 // mirror says all four; a face told by the landing's description is never
 // said by the status region too.
 // The step (FP-21): where the passage stands in several runs, Mod+G and
-// Mod+Shift+G (N-KEYS), the line's "next piece" and "previous piece" and a
-// press on an outlined run (APP-INPUT) take the landing to the next run in
-// the passage's order, or the one before it, wrapping (BM-HELD's `stepFrom`):
-// the camera to the view that reads it at the reading size, the walk on its
-// span with the platform's focus there, its label the line's, and no trail
-// move and no act counted (`step`, `stepTo`).
+// Mod+Shift+G (N-KEYS) and the line's "next piece" and "previous piece" take
+// the landing to the next run in the passage's order, or the one before it,
+// wrapping (BM-HELD's `stepFrom`): the camera to the view that reads it at
+// the reading size, the walk on its span with the platform's focus there, its
+// label the line's, and no trail move and no act counted (`step`, `stepTo`).
+// A press in the arrival's own document below its reading scale
+// (APP-INPUT's) is no step: a LEAP to the text under it, its trail entry
+// taken at the act, the arrival standing whole — at the piece of the
+// landing's passage whose outline the press lies inside, found from the bytes
+// that outline marks, the landing standing there; elsewhere the current piece
+// kept (`landIn`).
 // The find's moves (N-FIND; FP-21, FP-25): an in-document find's move to a
 // match outlines that match alone as the arrival and flies the camera to it
 // at the reading size, the walk on its span (`toMatch`); its first move is a
@@ -186,8 +191,10 @@
 // The arrival's life (FP-21, FP-25): the arrival — its outline, its labels,
 // its line and its offers, the light, the link lit — stands until the camera
 // leaves the place for another landing, as a jump flies, a cursor move leaves
-// or a version move lands in place, or until Esc ends it once nothing nearer
-// stands (`endArrival`); an act that never leaves keeps it whole, a follow
+// or a version move lands in place — a press in its own document below
+// reading scale apart, which keeps it standing whole (`landIn`) — or until
+// Esc ends it once nothing nearer stands (`endArrival`); an act that never
+// leaves keeps it whole, a follow
 // known to fail at the act lighting its own link; a camera move makes no act
 // here. A cursor move reads the arrival the entry it reaches keeps again
 // from the text it reaches (`keptAgain`): its outline on every stretch that
@@ -1195,7 +1202,8 @@ let made = 0;
  * back and a jump in the air abandoned, never landed (FP-25), and the act
  * counted. Every navigation act begins with
  * it, so no chrome asked at the place an act leaves opens while the act
- * reads; the arrival stands until the act's camera leaves the place
+ * reads, and a byline's cut label standing opened closed (T-LAYER's
+ * `closeLabel`); the arrival stands until the act's camera leaves the place
  * (`dismissChrome`), so an act that never leaves keeps it (see the head); a
  * camera move calls nothing here (§3.2). A version move leaves no place
  * (FP-36): a card still reading reads on beside it, and only a reading
@@ -1211,6 +1219,8 @@ function nextAct(ends = true) {
   giveUp();
   if (air) endAir(air.act, false);
   SLOTFACE.acted();
+  // a byline's cut label opened whole closes at the next act, a return among them (T-LAYER's `closeLabel`)
+  LAYER.closeLabel();
   return ++made;
 }
 
@@ -1226,14 +1236,16 @@ function putOut() { arrival = null; light = null; lit = []; landed = null; retry
  * read, which every return finds again (`words`) — and the surfaces standing
  * as the act was made (`nextAct`), kept in that place's trail entry by value
  * for a return to it (N-TRAIL's `keep`), then put out with the links lit and
- * its offers, and what a return still owed the place dropped. The entry left
- * keeps nothing where nothing stood.
+ * its offers — save at a press in the arrival's own document, which keeps it
+ * standing whole (`landIn`) — and what a return still owed the place
+ * dropped. The entry left keeps nothing where nothing stood.
+ * @param {boolean} [standing] the act is a press in the arrival's own document: the arrival stands
  */
-function leaveHere() {
+function leaveHere(standing = false) {
   const mark = words ? null : markHeld(), stands = words ? null : landed, surfaces = surfacesLeft;
   if (here) TRAIL.keep(here, mark || stands || surfaces ? { arrival: mark, landed: stands, current: currentByte(mark), surfaces } : null);
   surfacesLeft = null; owed = null;
-  putOut();
+  if (!standing) putOut();
 }
 
 /**
@@ -1513,8 +1525,7 @@ export function step(dir, byKey = false) {
 
 /**
  * A step to one run of the landing's passage (see the head) — the next or
- * the previous one, or an outlined run pressed below reading scale
- * (APP-INPUT): the landing standing there, its line the run's label, the
+ * the previous one: the landing standing there, its line the run's label, the
  * camera flown to the view that reads it at the reading size, its column
  * framed, by its aim (`toward`), and the walk on the span holding it, the
  * platform's focus there and the span aimed at, the ring drawn there whatever
@@ -1533,6 +1544,53 @@ export function stepTo(i, byKey = false) {
   void CAM.fly(toward(l.addr, r.pos).aim, 420);
   CAM.markDirty();
   return true;
+}
+
+/** does the arrival stand in a document (see the head; FP-21): its mark — a landing's, or a one-step move's light — in the box the address names */
+export function arrivalIn(/** @type {string} */ addr) { const m = markHeld(); return !!m && boxOf(m.addr) === boxOf(addr); }
+
+/**
+ * A press in the arrival's own document below its reading scale (see the
+ * head; APP-INPUT's; FP-21, FP-25): a LEAP to the text under it, its trail
+ * entry taken at the act and the camera leaving at once, the arrival standing
+ * whole — its outlines, its labels, its line and its lit link. Where the
+ * press lies inside an outline of a run of the landing's passage in several
+ * (P-RENDER's `pressAt`), it lands at that piece: the landing's own run, in
+ * the landing's own document, holding the bytes that outline marks — the
+ * current piece where it is among several such, else the first in the
+ * passage's order — the landing standing there (`standAt`); elsewhere at the
+ * position the document's fold holds under the point (T-LAYER's `posAt`),
+ * the current piece kept.
+ * @param {string} addr the document pressed: the version its box shows
+ * @param {{x: number, y: number}} at the world point pressed
+ * @param {Array<{pos: number, width: number}>} outlined the runs whose outlines hold the point, by their positions in the text shown
+ * @param {Site | null} site where the act was made
+ * @returns {Promise<import('../model/records.js').Doc | null>} as `leapTo`
+ */
+export function landIn(addr, at, outlined, site) {
+  const l = landed, pieces = l && l.pieces && boxOf(l.addr) === boxOf(addr) ? l.pieces : null;
+  const meets = (/** @type {{pos: number, width: number}} */ a, /** @type {{pos: number, width: number}} */ b) => a.pos < b.pos + b.width && b.pos < a.pos + a.width;
+  /** the landing's runs holding the bytes an outline under the point marks, in the passage's order */
+  const under = pieces ? pieces.order.filter((i) => outlined.some((o) => meets(o, pieces.runs[i]))) : [];
+  const piece = !under.length ? null : l && under.includes(l.current) ? l.current : under[0];
+  const pos = piece != null && pieces ? pieces.runs[piece].pos : LAYER.posAt(addr, at.x, at.y);
+  return leapTo(addr, { pos, how: 'click', site, standing: { piece } });
+}
+
+/**
+ * Where a press in the arrival's own document lands at a piece of the
+ * landing's passage (`landIn`), the landing standing at that run — its line
+ * the run's label — and the arrival's position with it; nothing of the
+ * arrival moves where it lands elsewhere (FP-21).
+ * @param {string} addr the document landed in
+ * @param {number | null} piece the run landed at, an index into the landing's runs (`Landing.pieces`); null where it landed at none
+ */
+function standAt(addr, piece) {
+  const l = landed, r = piece != null && l && l.pieces && boxOf(l.addr) === boxOf(addr) ? l.pieces.runs[piece] : null;
+  if (piece == null || !l || !r) return;
+  landed = { ...l, pos: r.pos, current: piece };
+  if (arrival && arrival.addr === l.addr) arrival = { ...arrival, pos: r.pos };
+  CAM.markDirty();
 }
 
 /**
@@ -1595,9 +1653,10 @@ const matched = (/** @type {string} */ addr, /** @type {Run} */ run) => /** @typ
  * moment and selection standing beside it.
  * @param {Entry | null} to the entry the act moves to; null where it takes none
  * @param {boolean} [beside] the act is a version move: the reader's surfaces stand
+ * @param {boolean} [standing] the act is a press in the arrival's own document: the arrival stands (`landIn`)
  */
-function dismissChrome(to, beside = false) {
-  leaveHere(); here = to;
+function dismissChrome(to, beside = false, standing = false) {
+  leaveHere(standing); here = to;
   if (beside) HOST.takeDownFaces();
   else { HOST.leave(); SEL.clear(); }
   SCENE.close();
@@ -2656,7 +2715,7 @@ function sayFollowed(act, s, entry, placed, pos) {
  * in the air its reads only mark; where an act was made while it read, it
  * goes on nowhere and faces nothing: its read fills its entry alone.
  * @param {string} addr a document address
- * @param {{pos?: number | null, runs?: Run[] | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, passage?: ISpan | null, carry?: Carry | null, source?: boolean, site?: Site | null, push?: boolean, ms?: number, byKey?: boolean, row?: ((a: Reserved) => void) | null}} [opts] `runs` every run of the span landed on, `pos` the first position of one of them, where the landing names a span; `passage` the passage those runs hold, by identity, which labels them (the door's); `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `source` the LEAP is follow's to the source of the words `carry` carries (O-SELECTION's), landing as a follow does at a source withheld from the reader; `site` where the act was made — a run's bytes, a card's span, a point of the plane — where the face of a failure known at the act stands, and a reaching face, null (the LEAP box) at the viewport's corner; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act; `row` the LEAP box's row the act was made at, which says the act's answer at a reserved number itself (N-LEAP's; `atReserved`)
+ * @param {{pos?: number | null, runs?: Run[] | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, passage?: ISpan | null, carry?: Carry | null, source?: boolean, site?: Site | null, push?: boolean, ms?: number, byKey?: boolean, row?: ((a: Reserved) => void) | null, standing?: {piece: number | null} | null}} [opts] `runs` every run of the span landed on, `pos` the first position of one of them, where the landing names a span; `passage` the passage those runs hold, by identity, which labels them (the door's); `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `source` the LEAP is follow's to the source of the words `carry` carries (O-SELECTION's), landing as a follow does at a source withheld from the reader; `site` where the act was made — a run's bytes, a card's span, a point of the plane — where the face of a failure known at the act stands, and a reaching face, null (the LEAP box) at the viewport's corner; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act; `row` the LEAP box's row the act was made at, which says the act's answer at a reserved number itself (N-LEAP's; `atReserved`); `standing` the LEAP is a press in the arrival's own document below its reading scale, the arrival standing whole and the landing at `piece`, its run, where it names one (`landIn`, `standAt`)
  * @returns {Promise<import('../model/records.js').Doc | null>} the document landed in; null where it never left, faced in the place of a landing, an act made while it read took its place, the reader took the camera over, or its flight was cut short before it landed
  */
 export async function leapTo(addr, opts = {}) {
@@ -2665,7 +2724,7 @@ export async function leapTo(addr, opts = {}) {
   if (!hasCell(addr)) return atReserved(act, addr, { site: opts.site ?? null, link: opts.link ?? null, source: !!opts.source, row: opts.row ?? null });
   let pos = opts.pos ?? null, runs = pos != null && opts.runs ? inTextOrder(opts.runs) : null;
   const link = opts.link ?? null, site = opts.site ?? null, ms = opts.ms ?? (opts.how === 'click' ? 420 : 620);
-  const c = opts.carry ?? null, passage = runs ? opts.passage ?? null : null;
+  const c = opts.carry ?? null, passage = runs ? opts.passage ?? null : null, standing = opts.standing ?? null;
   let d = REC.doc(addr);
   let unread = d.extent == null || d.from < 0;
   const fails = known(addr, unread || !!c, null, !!opts.source);
@@ -2694,15 +2753,18 @@ export async function leapTo(addr, opts = {}) {
     met = read.refused; d = REC.doc(addr); unread = false;
     if (entry) TRAIL.leaveFrom(entry, leavingNow());
   }
-  dismissChrome(entry);
+  dismissChrome(entry, false, !!standing);
   const at0 = toward(addr, pos);
   if (!unread && !c) {
-    // nothing to read: the landing as the act is made
+    // nothing to read: the landing as the act is made — a press in the arrival's own document keeping the arrival whole
     if (entry) TRAIL.settle(entry, { ...seen(at0.view, addr, pos), pos, width: widthAt(runs, pos), notice: null });
     pinTo(addr);
-    if (link || named) arrival = withBytes({ addr, pos: pos ?? 1, runs, link }, passage ? [passage] : []);
-    lit = link ? [link] : [];
-    if (named && pos != null) sayNamed(addr, pos, named);
+    if (standing) standAt(addr, standing.piece);
+    else {
+      if (link || named) arrival = withBytes({ addr, pos: pos ?? 1, runs, link }, passage ? [passage] : []);
+      lit = link ? [link] : [];
+      if (named && pos != null) sayNamed(addr, pos, named);
+    }
     const ok = await leave(act, entry, at0, opts.byKey, ms);
     endAir(act, ok);
     return ok ? d : null;
@@ -2713,7 +2775,7 @@ export async function leapTo(addr, opts = {}) {
   // nothing created at a slot past the mailbox: the face its place's own form, no notice (B11-S5)
   if (d.refused === 'unregistered' && REC.faceSlot(addr)) return landFace(act, entry, addr, link, first, opts.byKey, ms);
   if (d.refused === 'unregistered') {
-    if (failed(act, entry, { face: 'unregistered', addr, refusal: null, site: siteAt(addr, pos) }, opts.byKey)) lit = link ? [link] : [];
+    if (failed(act, entry, { face: 'unregistered', addr, refusal: null, site: siteAt(addr, pos) }, opts.byKey) && !standing) lit = link ? [link] : [];
     return null;
   }
   // a follow's source the board withholds from the reader: landed at its own withheld words, as a follow's far end is
@@ -2730,10 +2792,13 @@ export async function leapTo(addr, opts = {}) {
   if (act !== made) return null;
   FACES.endReading();
   pinTo(addr);
-  if (link || named || (placed && placed.runs)) arrival = withBytes({ addr, pos: pos ?? 1, runs, link }, c ? carried : passage ? [passage] : []);
-  lit = link ? [link] : [];
-  if (c && placed) sayCarried(act, c, carried, d, placed, entry, link);
-  else if (named && pos != null) sayNamed(addr, pos, named);
+  if (standing) standAt(addr, standing.piece);
+  else {
+    if (link || named || (placed && placed.runs)) arrival = withBytes({ addr, pos: pos ?? 1, runs, link }, c ? carried : passage ? [passage] : []);
+    lit = link ? [link] : [];
+    if (c && placed) sayCarried(act, c, carried, d, placed, entry, link);
+    else if (named && pos != null) sayNamed(addr, pos, named);
+  }
   if (takenAt === act) { if (notice) showFound(notice); return null; }
   const flight = goOn(act, first, at, opts.byKey, ms);
   if (notice) showFound(notice, true);

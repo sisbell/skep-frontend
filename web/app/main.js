@@ -350,6 +350,7 @@ function whereIs(/** @type {EventTarget | null} */ target) {
   if (t.closest('#scenebar, #scenestop, #scenestrokes, #scenepast')) return /** @type {const} */ ('scene-acts');
   if (t.closest('#scene')) return /** @type {const} */ ('scene');
   if (t.closest('#corners')) return /** @type {const} */ ('corner');
+  if (t.closest('#byline')) return /** @type {const} */ ('byline');
   // a slot's face (T-FACE's): its corner a corner's, its other acts the face's own
   if (t.closest('#slotface')) return t.closest('[data-corner]') ? /** @type {const} */ ('corner') : /** @type {const} */ ('face');
   return /** @type {const} */ ('plane');
@@ -379,7 +380,7 @@ async function boot() {
   // the shipped faces, asked first so they load beside the board's reads: the first layout waits for them
   const faces = facesLoaded();
   const plane = /** @type {HTMLCanvasElement} */ (el('plane'));
-  RENDER.attach(plane); LAYER.attach(el('domlayer'), el('corners'), { measure: true }); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
+  RENDER.attach(plane); LAYER.attach(el('domlayer'), el('corners'), { measure: true, byline: el('byline') }); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
   SLOTFACE.attach(el('slotface'));
   SLOTFACE.readers({ top: () => LINE.bottom(), focused: (a) => { const f = WALK.current(); return !!f && f.addr === a; }, leap: (a, byKey) => { void GO.leapTo(a, { how: 'leap', byKey }); }, handOff: () => WALK.focusItem() });
   HOST.attach(el('overlay'), el('notice'));
@@ -399,7 +400,7 @@ async function boot() {
   HOST.readers({ pane: SCENE.siteOf });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsPlace, owner: LAYER.originOwner, shown: GO.shownIn, text: (a) => (REC.has(a) ? LAYER.shownOf(a) : null), first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords(), enter: () => { LINE.act(); HINT.act(); return KEYS.activate(); }, selection: () => SEL.selected('plane') });
-  INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
+  INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners'), byline: el('byline') });
   window.addEventListener('resize', () => { resize(); LINE.fit(); }); resize();
   const motion = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   if (motion) { CAM.setReducedMotion(motion.matches); motion.addEventListener('change', (e) => CAM.setReducedMotion(e.matches)); }

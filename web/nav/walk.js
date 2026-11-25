@@ -401,6 +401,8 @@ const HELD = 'walk-held';
 const SELECTED = 'walk-selected', PARTLY = 'walk-partly';
 /** the id of the hidden description of a link item's far end the board will say nothing of, item i's (see the head) */
 const farId = (/** @type {number} */ i) => 'walk-far-' + i;
+/** the id of the hidden description of a document item reading its byline whole, item i's (see the head) */
+const bylineId = (/** @type {number} */ i) => 'walk-byline-' + i;
 /** the id of the hidden description of a form whose slot's face stands, by the slot's address (see the head) */
 const faceId = (/** @type {string} */ slot) => 'walk-face-' + slot.replace(/\./g, '-');
 /** the id of the hidden description of a withheld origin, which every run of it the mirror holds names (see the head) */
@@ -947,6 +949,7 @@ export function render() {
     if (holdsRuns(n, said)) pieces += `<div id="${pieceId(i)}" hidden>${esc(spoken(otherRuns(n, said)))}</div>`;
     const far = farWhole(n);
     if (far) pieces += `<div id="${farId(i)}" hidden>${esc(spoken(far))}</div>`;
+    if (n.kind === 'document') pieces += `<div id="${bylineId(i)}" hidden>${esc(heard(LAYER.bylineWords(n.addr)))}</div>`;
     const o = originWords(n);
     if (o && !origins.has(o.origin)) { origins.add(o.origin); pieces += `<div id="${originId(o.origin)}" hidden>${esc(spoken(o.words))}</div>`; }
   }
@@ -1202,6 +1205,7 @@ function describedBy(n, i, at) {
   if (isHeld(n)) ids.push(HELD);
   if (otherRuns(n, at)) ids.push(pieceId(i));
   if (farWhole(n)) ids.push(farId(i));
+  if (n.kind === 'document') ids.push(bylineId(i));
   if (faceWords(n)) ids.push(faceId(n.addr));
   const o = originWords(n);
   if (o) ids.push(originId(o.origin));
@@ -1229,9 +1233,11 @@ export function markDescribed() {
   if (el && el.textContent !== words) el.textContent = words;
   if (kel && kel.textContent !== kind) kel.textContent = kind;
   for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')])) {
-    const i = Number(li.dataset.i), n = siblings[i], piece = q(pieceId(i)), far = q(farId(i));
+    const i = Number(li.dataset.i), n = siblings[i], piece = q(pieceId(i)), far = q(farId(i)), bylineEl = q(bylineId(i));
     if (n && piece) { const w = spoken(otherRuns(n, said)); if (piece.textContent !== w) piece.textContent = w; }
     if (n && far) { const w = spoken(farWhole(n)); if (far.textContent !== w) far.textContent = w; }
+    // a document's byline: its words set as its owner's facts stand now
+    if (n && bylineEl && n.kind === 'document') { const w = heard(LAYER.bylineWords(n.addr)); if (bylineEl.textContent !== w) bylineEl.textContent = w; }
     // an origin's description: written where it came to stand since the rebuild — a withheld one's clause decided, C-33's kind read — its words set as they stand
     const o = n ? originWords(n) : null;
     let held = o ? q(originId(o.origin)) : null;
@@ -1247,7 +1253,7 @@ export function markDescribed() {
     }
     if (fw && face && face.textContent !== spoken(fw)) face.textContent = spoken(fw);
     const by = n ? describedBy(n, i, said) : null;
-    const named = by ? by.split(' ').filter((x) => (x !== pieceId(i) || piece) && (x !== farId(i) || far) && (!o || x !== originId(o.origin) || held) && (!n || x !== faceId(n.addr) || face)).join(' ') || null : null;
+    const named = by ? by.split(' ').filter((x) => (x !== pieceId(i) || piece) && (x !== farId(i) || far) && (x !== bylineId(i) || bylineEl) && (!o || x !== originId(o.origin) || held) && (!n || x !== faceId(n.addr) || face)).join(' ') || null : null;
     if (named && li.getAttribute('aria-describedby') !== named) li.setAttribute('aria-describedby', named);
     else if (!named && li.getAttribute('aria-describedby') != null) li.removeAttribute('aria-describedby');
   }

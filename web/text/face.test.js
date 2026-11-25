@@ -4,7 +4,8 @@
 // head carrying the label; its corner's site beside the column and at one
 // column, and its hold; its read — one four-set at a landing, each found link
 // read once, kept by its stored end and folded by rule (i) — in every state;
-// its list on ask, its statement whole once and compact after, its budget;
+// its list on ask, its statement whole once and compact after, its compact
+// mark led by `▸`, its budget;
 // the owner's own unwritten slot; and the one form's accessible statement.
 import { test, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,6 +31,7 @@ import { LINE_H, LAY_FS } from '../plane/layout.js';
 import { HOLD, CORNER } from '../plane/register.js';
 import { unitSpan } from '../model/address.js';
 import { t, sentence } from '../strings.js';
+import { OPENS } from './article.js';
 
 // the board: the acting account 1.0.1 and another, 1.0.2, each its home page listed, so the one form stands at each one's slots
 const ME = '1.0.1', THEM = '1.0.2', ORIGIN = 'http://127.0.0.1:8644';
@@ -201,7 +203,7 @@ test('rule (i), LK\'s one test: the social types stand as the social mark alone 
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('zero: no corner item, no element of the face carrying `aria-expanded` or `aria-controls`, the statement whole with its list clause naming the board, the ear reading it whole; a second landing in the session shows it compact, the ear still reading it whole, no list act (the slot\'s face decision, point 2, test 1; P69; P41)', async () => {
+test('zero: no corner item, no element of the face carrying `aria-expanded` or `aria-controls`, the statement whole with its list clause naming the board, the ear reading it whole; a second landing in the session shows it compact, its mark led by `▸`, the ear still reading it whole, no list act (the slot\'s face decision, point 2, test 1; P69; P41; the byline\'s act decision, point 1, test 3)', async () => {
   void PUMP.readLinksEndingAt(PAGE);
   atFace(PAGE);
   await settle();
@@ -213,6 +215,8 @@ test('zero: no corner item, no element of the face carrying `aria-expanded` or `
   SLOTFACE.landed(PAGE); SLOTFACE.frame();
   const g = /** @type {NonNullable<ReturnType<typeof SLOTFACE.faceOf>>} */ (SLOTFACE.faceOf(PAGE));
   assert.ok(!g.whole && !text(PAGE).includes(zero) && text(PAGE).includes(t('L.slot-face.compact')), 'a second opening: compact');
+  const mark = g.body.querySelector('.fcompact');
+  assert.ok(mark && mark.innerHTML.startsWith(`<span class="sign" aria-hidden="true">${OPENS}</span>`), `its compact mark led by \`▸\`, hidden from its name, its act opening it whole (the byline's act decision, point 1, test 3): ${mark && mark.innerHTML}`);
   assert.ok(SLOTFACE.heardWords(PAGE).includes(zero) && g.body.innerHTML.includes('aria-describedby'), 'the ear reads it whole still, as the compact mark\'s description');
   assert.ok(!(g.corner.innerHTML + g.body.innerHTML).includes('aria-controls'), 'no list act');
 });

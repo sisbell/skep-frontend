@@ -180,7 +180,7 @@ import re
 import time
 from collections import Counter
 
-from . import CLAUSE_READING, DOC, FAR_LEAP, RUNS_IN, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, WITHHELD, Result, heard, item_words, unit_span
+from . import CLAUSE_READING, DOC, FAR_LEAP, OPENS, RUNS_IN, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, WITHHELD, Result, heard, item_words, unit_span
 from .keys import copied, member_of, placed_at, placed_at_box, placed_under, rebuilt_away, scene_set, stands_at
 from .layout import LINE_ACTING_JS, LINE_PARTS_JS, LINE_ROWS_PX
 
@@ -704,8 +704,9 @@ def run(ctx):
             if w == LINE_ROWS_PX[-1]:
                 act = ctx.js(LINE_ACTING_JS)
                 spoken = heard(ctx, whole or '')
-                r.check(bool(act) and act['tag'] == 'button' and act['act'] == 'acting' and act['text'] == t(ctx, 'L.guest-line.short') and act['label'] == spoken and act['inside'],
-                        f'(b) a {w} px window: the guest line compact — the board\'s origin and its venue given way, "{t(ctx, "L.guest-line.short")}" — one act labelled by the guest line as the wide window shows it, rendered for the ear (issue #445: "A board you only read: its class word"; style S22)',
+                r.check(bool(act) and act['tag'] == 'button' and act['act'] == 'acting' and act['text'] == t(ctx, 'L.guest-line.short') and act['label'] == spoken and act['inside']
+                        and act['sign'] == {'text': OPENS, 'hidden': True, 'first': True},
+                        f'(b) a {w} px window: the guest line compact — the board\'s origin and its venue given way, "{t(ctx, "L.guest-line.short")}", `▸` leading it, hidden from its name — one act labelled by the guest line as the wide window shows it, rendered for the ear (issue #445: "A board you only read: its class word"; style S22; the byline\'s act decision, point 1, test 4)',
                         {'act': act, 'whole': whole, 'heard': spoken})
             rows[w] = lay
     finally:

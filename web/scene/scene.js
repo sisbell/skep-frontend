@@ -2614,8 +2614,9 @@ const ownerFacts = (/** @type {Pane} */ P) => REC.accountKey(REC.ownerAccount(P.
  * A pane's article made from what the pane is set with — T-LAYER's mount
  * (`sceneArticle`), where its words are read handed in (`whereIn`; FP-27) —
  * and put in its place: the one it shows replaced, else
- * placed — pane A's after its corner, pane B's before it, so each corner
- * stands on its pane's outer side — its origins' statements to be
+ * placed before its corner in the pane's order, so its byline's acts are the
+ * pane's stops before the corner's lines (the byline's act decision, point
+ * 3), the style standing each corner on its pane's outer side — its origins' statements to be
  * placed (`markKept`), and the owner's byline facts its byline was made with kept
  * beside it (`Pane.facts`); where they are not read, a read of them made
  * (`readFacts`; FP-34), whose take sets the pane again (`dropped`).
@@ -2625,7 +2626,7 @@ const ownerFacts = (/** @type {Pane} */ P) => REC.accountKey(REC.ownerAccount(P.
 function swap(E, P) {
   const el = LAYER.sceneArticle(P.d, { names: P.names, shows: P.shows, view: P.view, where: whereIn(P) }), pane = paneEl(E, P.side);
   if (P.el && pane.contains(P.el)) P.el.replaceWith(el);
-  else if (P.side === 'a') pane.append(el); else pane.prepend(el);
+  else pane.prepend(el);
   P.el = el; P.signs = null;
   P.facts = ownerFacts(P);
   const owner = REC.ownerAccount(P.d);

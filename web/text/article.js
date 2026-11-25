@@ -15,18 +15,28 @@
 // words take the run's size. Where a fit is judged — what a gap holds, where
 // a label is cut — the words are measured in their faces as the view
 // measures them (`measure`), never counted. The byline (`bylineOf`;
-// foundations §2.1; FP-34): its owner's address, then its slots, each a box
+// foundations §2.1; FP-34): its owner's address, an act that goes to its
+// account's region, `↗` after it joined by a no-break thin space (`GOES`), the
+// token and its sign one unit as tall as its row; then its slots, each a box
 // of its own width whatever it shows — the device label's, LABEL_CH figures
 // of the client's face, and on a byline not the reader's own the fingerprint
 // cue's, the cue's own width in the identifier's — filled from the owner's
 // facts as the page holds them (the view's `keyOf`): the device-flagged
-// genesis entry's label, cut to its box on a word's end (`cutTo`) and whole
-// on its act, in its title and in its accessible name, and its fingerprint's
-// cue; an empty box while they are read; else the cause's words, said once
-// where one cause empties both slots; each slot named by its role and what it
-// shows, rendered for the ear (ST's `heard`; style S22), a label and a
-// fingerprint kept as written; the plan's line the same whatever they show,
-// so nothing beside them moves. A block's
+// genesis entry's label, and where its box does not hold it cut on a word's
+// end with room left for `▸` before it, never an ellipsis (`cutTo`, `OPENS`),
+// an act that opens it whole over what is beside it, `▾` before it while it
+// stands so; and its fingerprint's cue; an empty box while they are read;
+// else the cause's words, said once where one cause empties both slots; each
+// slot named by what it shows then its role, rendered for the ear (ST's
+// `heard`; style S22), a label and a fingerprint kept as written; the plan's
+// line the same whatever they show, so nothing beside them moves, and its
+// rows set at the byline's own line height (P-LAY's `BYLINE_LH`; FP-44). Every
+// sign is drawn from the first frame and hidden from the accessible name. On
+// the plane the article's byline holds no control — the plane's article is
+// hidden from assistive technology — and in a reading scene's pane its acts
+// are its controls, one line of acts: the address a link, a cut label a
+// button saying whether it stands opened, each named by its token as drawn
+// first. A block's
 // marks: the selection (a byte span: every block it touches is marked, the
 // platform's highlight showing the bytes themselves) and the focus (a
 // block), each by `blockMarks`, the one rule T-LAYER marks a standing
@@ -275,7 +285,7 @@
 // face wide, the fingerprint cue's the cue's own CUE_CH characters of the
 // identifier's.
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-24,
-// FP-26, FP-30, FP-31, FP-33, FP-34, FP-41.
+// FP-26, FP-30, FP-31, FP-33, FP-34, FP-41, FP-44.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint, numeral } from '../util.js';
 import { t, tHTML, tRuns, plural, counted, bracketed, withheldLine, endingOf, addressedHTML, sentence, sentences, asSentence, asSentenceRuns, asRuns, runsText, joinRuns, fields, heard, runningHTML, FIELD } from '../strings.js';
@@ -283,7 +293,7 @@ import { below } from '../overlays/statement.js';
 import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType, isAddress } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
-import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm, breakBetween, isSpace, gapOf, layoutOf, heightOf, wrap } from '../plane/layout.js';
+import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, BYLINE_LH, borderEm, breakBetween, isSpace, gapOf, layoutOf, heightOf, wrap } from '../plane/layout.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -416,12 +426,13 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {string} shows the words its box shows: its value — a label cut to its box — or the cause's; none while it is read, or where a slot beside it says its cause (`Byline.once`)
  * @property {string} whole its value whole where `shows` cuts it, else `shows` — the cause's words where it says why
  * @property {string} cause the string id of the cause's words; '' where it shows its value or is read
- * @property {string} told what its accessible name says it shows, after its role (`L.slot.named`): its value whole, the cause's words, or that it is being read
+ * @property {string} told what its accessible name says it shows, before its role word (`slotName`): its value whole, the cause's words, or that it is being read
  */
 
 /**
  * @typedef {Object} Byline — the head's byline (`bylineOf`)
- * @property {string} owner the owner's address
+ * @property {string} owner the owner's address: the account its act goes to (see the head)
+ * @property {boolean} own it is the reader's own byline: the reader's account owns the document
  * @property {Slot[]} slots the device label's slot, then — on a byline not the reader's own — the fingerprint cue's
  * @property {boolean} once one cause empties both slots: it is said once, in the first
  * @property {number} em its slots' box: each slot's and the separators between them, in em of the byline's size, whatever they show
@@ -432,7 +443,11 @@ export const LABEL_CH = 24;
 /** the fingerprint cue's slot, in characters of the identifier's face: the cue's own (`fingerprintCue`), every one of them one width */
 export const CUE_CH = fingerprintCue('0'.repeat(64)).length;
 /** the separator between a byline's owner and its slots, and between its slots */
-const BY_SEP = ' · ';
+export const BY_SEP = ' · ';
+/** the sign after a token whose act goes to the place it names (the byline's act decision, point 1): `↗`, joined to it by a no-break thin space */
+export const GOES = '\u202F↗';
+/** the sign before a token whose act opens it where it stands (point 1), joined to it by a no-break thin space: `▸`, and `▾` while what it opened stands */
+export const OPENS = '▸\u202F', OPENED = '▾\u202F';
 /** the class an address stands in, in the identifier's face (P-REG's FACE) */
 const ID = 'id';
 
@@ -445,18 +460,21 @@ const CAUSE_WORDS = /** @type {const} */ ({
 /**
  * A label cut to a slot's box (FP-26, FP-34), by its width as set: the label
  * whole where the box holds it; else the longest run of it the box holds with
- * an ellipsis after it, ending at a word's end — before a space, or after a
+ * the mark after it, ending at a word's end — before a space, or after a
  * hyphen, an underscore or a period; where its first word alone overruns the
- * box, as many of its characters as the box holds with the ellipsis.
+ * box, as many of its characters as the box holds with the mark. The mark is
+ * an ellipsis where none is named; a byline's label takes none, its cut said
+ * by the sign before it (`bylineOf`, `OPENS`).
  * @param {string} label
  * @param {number} room the box's width, in em
  * @param {(s: string) => number} wide a string's width as it is set, in em
+ * @param {string} [mark] what follows a cut run
  * @returns {string}
  */
-export function cutTo(label, room, wide) {
+export function cutTo(label, room, wide, mark = '…') {
   if (wide(label) <= room + 1e-9) return label;
   const chars = [...label];
-  const at = (/** @type {number} */ n) => chars.slice(0, n).join('').trimEnd() + '…';
+  const at = (/** @type {number} */ n) => chars.slice(0, n).join('').trimEnd() + mark;
   /** the longest of `ends` whose start with the ellipsis the box holds; 0 where none */
   const longest = (/** @type {number[]} */ ends) => { let best = 0; for (const n of ends) if (wide(at(n)) <= room + 1e-9) best = Math.max(best, n); return best; };
   const words = [];
@@ -467,7 +485,8 @@ export function cutTo(label, room, wide) {
 /**
  * The byline (see the head; FP-34): the owner's address and its slots — the device label's, and the fingerprint cue's
  * where the byline is not the reader's own (foundations §2.1) — each read from the
- * owner's facts as the view holds them (`keyOf`): its value — the label cut to its box (`cutTo`), `L.slot.unlabelled`
+ * owner's facts as the view holds them (`keyOf`): its value — the label cut to its box on a word's end, room left
+ * there for the sign before it and no mark after it (`cutTo`, `OPENS`), `L.slot.unlabelled`
  * where the genesis entry carries none, the fingerprint's cue (`fingerprintCue`); an empty box while they are read; else the
  * cause's words (`CAUSE_WORDS`), a withheld read naming its owner, said once where it empties both slots. Each slot's
  * accessible name gives its role and what it shows — that it is being read, while it is (`told`). Each box's width is
@@ -490,33 +509,65 @@ export function bylineOf(owner, v) {
     }
     if (role === 'fingerprint') { const cue = fingerprintCue(facts.fingerprint); return { role, em, state: 'value', shows: cue, whole: cue, cause: '', told: cue }; }
     if (facts.label === null) { const words = t('L.slot.unlabelled'); return { role, em, state: 'cause', shows: words, whole: words, cause: 'L.slot.unlabelled', told: words }; }
-    return { role, em, state: 'value', shows: cutTo(facts.label, em, (x) => v.measure(x, 'client')), whole: facts.label, cause: '', told: facts.label };
+    const wide = (/** @type {string} */ x) => v.measure(x, 'client');
+    const shows = wide(facts.label) <= em + 1e-9 ? facts.label : cutTo(facts.label, em - wide(OPENS), wide, '');
+    return { role, em, state: 'value', shows, whole: facts.label, cause: '', told: facts.label };
   };
   const own = !!v.reader.account && v.reader.account === owner;
   const slots = own ? [slot('label')] : [slot('label'), slot('fingerprint')];
   const once = slots.length === 2 && facts !== undefined && 'cause' in facts;
   if (once) slots[1] = { ...slots[1], shows: '' };
   const em = slots.reduce((n, x) => n + x.em, 0) + v.measure(BY_SEP, 'client') * (slots.length - 1);
-  return { owner, slots, once, em };
+  return { owner, own, slots, once, em };
 }
 
 /**
- * A byline as HTML (`bylineOf`): its owner, in the identifier's face, then its slots in a box of their own width, each a
- * box of its own — a pending one empty, a cut label carrying its whole, which its act shows over what is beside it (on
- * the plane: T-LAYER's `openLabel`), and its title, the cue in the identifier's face — each named by its role and what
- * it shows, rendered for the ear (ST's `heard`), a label the person's words and a fingerprint kept as written; the
- * separator between them unseen where one cause empties both.
+ * A byline's owner token's accessible name's words (the byline's act
+ * decision, point 2): its address as drawn, kept as written, then where its
+ * act goes — the reader's own documents, or the account's — which each site
+ * renders for the ear (ST's `heard`; #626).
  * @param {Byline} by
  */
-function bylineHTML(by) {
+export const addressName = (by) => tRuns(by.own ? 'L.byline.address.own' : 'L.byline.address', { address: by.owner }, { address: 'ident' });
+
+/**
+ * A byline slot's accessible name's words (point 2): what it shows — its
+ * value whole, the cause's words, or that it is being read — then its role
+ * word, a label the person's words and a fingerprint kept as written, which
+ * each site renders for the ear.
+ * @param {Slot} s
+ */
+export const slotName = (s) => tRuns('L.byline.slot', { shows: s.told, role: t(s.role === 'label' ? 'L.slot.device-label' : 'L.byline.fingerprint') }, s.cause ? {} : { shows: s.role === 'label' ? 'reading' : 'ident' });
+
+/**
+ * A byline as HTML (`bylineOf`; see the head): its owner's address in the
+ * identifier's face with `↗` after it, the two one unit (`go`) carrying the
+ * account its act goes to; then its slots in a box of their own width, each a
+ * box of its own — a pending one empty, a cut label `▸` before what its box
+ * holds and its whole beneath, `▾` before it, which its act shows over what is
+ * beside it (T-LAYER's `openLabel`), the cue in the identifier's face — the
+ * separator between them unseen where one cause empties both. Each sign is
+ * hidden from the accessible name. On the plane no part of it is a control;
+ * in a reading scene's pane its acts are, one line of acts whose stop is its
+ * address: the address a link, a cut label a button saying it stands closed,
+ * each named by its token as drawn first (`addressName`, `slotName`).
+ * @param {Byline} by
+ * @param {boolean} scene the reading scene's pane's variant
+ */
+function bylineHTML(by, scene) {
+  const account = `data-account="${esc(by.owner)}"`;
+  const token = `<span class="${ID}">${esc(by.owner)}</span><span class="sign" aria-hidden="true">${esc(GOES)}</span>`;
+  const owner = scene ? `<a class="go" href="#" ${account} aria-label="${esc(heard(addressName(by)))}" tabindex="0">${token}</a>` : `<span class="go" ${account}>${token}</span>`;
   const slots = by.slots.map((s) => {
     const cut = s.state === 'value' && s.shows !== s.whole;
     const cls = ['slot', s.state === 'pending' ? 'pending' : '', cut ? 'cut' : '', s.role === 'fingerprint' && s.state === 'value' ? ID : ''].filter(Boolean).join(' ');
-    const named = tRuns('L.slot.named', { role: t(s.role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows: s.told }, s.cause ? {} : { shows: s.role === 'label' ? 'reading' : 'ident' });
-    const attrs = `data-slot="${s.role}"${s.cause ? ` data-string="${s.cause}"` : ''}${cut ? ` data-cut="1" title="${esc(s.whole)}"` : ''} role="img" aria-label="${esc(heard(named))}" style="width:${s.em}em"`;
-    return `<span class="${cls}" ${attrs}>${esc(s.shows)}${cut ? `<span class="whole">${esc(s.whole)}</span>` : ''}</span>`;
+    const attrs = `data-slot="${s.role}"${s.cause ? ` data-string="${s.cause}"` : ''}${cut ? ' data-cut="1"' : ''} aria-label="${esc(heard(slotName(s)))}" style="width:${s.em}em"`;
+    if (!cut) return `<span class="${cls}" ${attrs} role="img">${esc(s.shows)}</span>`;
+    const inner = `<span class="sign" aria-hidden="true">${esc(OPENS)}</span>${esc(s.shows)}<span class="whole"><span class="sign" aria-hidden="true">${esc(OPENED)}</span>${esc(s.whole)}</span>`;
+    return scene ? `<button type="button" class="${cls}" ${attrs} aria-expanded="false" tabindex="-1">${inner}</button>` : `<span class="${cls}" ${attrs} role="img">${inner}</span>`;
   }).join(`<span class="slot-sep">${esc(BY_SEP)}</span>`);
-  return `<span class="by"><span class="${ID}">${esc(by.owner)}</span>${esc(BY_SEP)}<span class="slots${by.once ? ' once' : ''}" style="width:${by.em}em">${slots}</span></span>`;
+  const group = scene ? ` role="toolbar" aria-label="${esc(heard(t('L.byline')))}"` : '';
+  return `<span class="by"${group}>${owner}${esc(BY_SEP)}<span class="slots${by.once ? ' once' : ''}" style="width:${by.em}em">${slots}</span></span>`;
 }
 
 /**
@@ -1553,7 +1604,9 @@ export const faceRow = (f) => fields(f.line.text, ...f.hands.map((h) => h.text))
 /**
  * A corner's face as markup (see the head; B3-S2; P67): compact, its compact
  * form — else its words whole — an act opening the corner whole (T-LAYER's
- * `openCorner`; FP-26), keyed on the face (`data-face`), saying whether the
+ * `openCorner`; FP-26), `▸` before its words, `▾` while the corner stands
+ * opened (`OPENS`; the byline's act decision, point 1), keyed on the face
+ * (`data-face`), saying whether the
  * corner stands opened (`ArticleView.opened`), named by the words it draws
  * and described by its whole words where its compact form says fewer, each
  * rendered for the ear (ST's `heard`), a device's label kept as written
@@ -1579,7 +1632,7 @@ function faceHTML(f, v, compact) {
     const named = ` aria-label="${esc(heard(f.compact ? f.compact.runs || f.compact.text : faceRuns(f)))}"`;
     const whole = f.compact ? ` aria-description="${esc(heard(faceRuns(f)))}"` : '';
     return v.acts === false ? `<span class="face compact" data-string="${esc(form.id)}">${esc(words)}</span>`
-      : actHTML('face compact', ` data-face="whole" data-whole data-string="${esc(form.id)}" aria-expanded="${!!v.opened}"${named}${whole}`, esc(words));
+      : actHTML('face compact', ` data-face="whole" data-whole data-string="${esc(form.id)}" aria-expanded="${!!v.opened}"${named}${whole}`, `<span class="sign" aria-hidden="true">${esc(v.opened ? OPENED : OPENS)}</span>${esc(words)}`);
   }
   const hands = f.hands.length ? `<span class="hands"${f.again ? ' data-again="1"' : ''}>${f.again ? '<span class="again" data-slot="again"></span>' : ''}${f.hands.map((h) => `<span class="hand" data-string="${esc(h.id)}">${esc(asSentence(h))}</span>`).join(' ')}</span>` : '';
   const acts = f.acts.map((a) => actHTML(`face-act${a.inert ? ' inert' : ''}`, ` data-face="${esc(a.key)}" data-string="${esc(a.id)}"${a.inert ? ` aria-disabled="true" data-inert="${esc(a.inert.id)}" title="${esc(a.inert.text)}"` : ''}${describedBy(a)}`, esc(a.label))).join('');
@@ -1996,7 +2049,8 @@ function filledEm(id, vals, faces, measure) {
  * @property {string} cls its class
  * @property {string} html its markup
  * @property {string} words its words as a person reads them
- * @property {number} em its width in em of the corner's size, as the view measures its words (`Measure`): its slot's, where it has one of fixed width — the kind's, a kept word's — and a kept line's on two rows its widest row's (`keptLineEm`)
+ * @property {string} [lead] the sign drawn before its words, hidden from its name: a compact face's that acts, `▸`, `▾` while the corner stands opened (`faceHTML`)
+ * @property {number} em its width in em of the corner's size, as the view measures its words (`Measure`), its sign before them: its slot's, where it has one of fixed width — the kind's, a kept word's — and a kept line's on two rows its widest row's (`keptLineEm`)
  * @property {boolean} yields it may fold into the corner's count where a row cannot hold it: the offered read alone; every other item never yields (foundations §3.1)
  * @property {boolean} holds it holds at the top of a reading scene's pane where the corner stands at its document's head, whole (SC's; FP-26): which state the corner names — the kind, the version statement, the state, a draft's kept word — the face, which never yields, a past state's line and a substitution of its state, its links' word, and its clauses saying it is not its minute's last and that the state its holder asked is being read, the held version's line; the chip, the words saying a past state is how the draft stands now and those saying it holds none of the passage held or part, the offered read, the lacking line and the whole-document count scroll with the text
  * @property {Title} [title] the title a past state's corner's or the held version's first item is (`cornerTitle`), which its holder lays out on the lines its width gives it (`titleHTML`)
@@ -2109,8 +2163,8 @@ export function cornerItems(d, v, compact = false, statement = true) {
   /** @type {CornerItem[]} */
   const out = stateItems(d, v).map((i) => {
     if (i.face) {
-      const said = compact && i.face.compact ? i.face.compact.text : faceWords(i.face);
-      return { cls: i.cls, html: faceHTML(i.face, v, compact), words: said, em: v.measure(said, 'client'), yields: false, holds: true };
+      const said = compact && i.face.compact ? i.face.compact.text : faceWords(i.face), lead = compact && v.acts !== false ? (v.opened ? OPENED : OPENS) : '';
+      return { cls: i.cls, html: faceHTML(i.face, v, compact), words: said, ...(lead ? { lead } : {}), em: v.measure(lead + said, 'client'), yields: false, holds: true };
     }
     if (i.title) {
       const sub = i.title.substituted, said = fields(runsText(titleRuns(i.title)), sub && sub.text);
@@ -2477,7 +2531,7 @@ const emptyWords = (v) => (v.slotPage && !v.slotPage.own ? v.slotPage.words : t(
 export function articleHTML(d, v, ownerAccount) {
   const w = walk(d, v, ownerAccount);
   const hd = w.head;
-  let h = `<div class="hd"><span class="addr ${ID}">${esc(hd.addr)}</span>${bylineHTML(hd.byline)}`;
+  let h = `<div class="hd"><span class="addr ${ID}">${esc(hd.addr)}</span>${bylineHTML(hd.byline, !!v.scene)}`;
   if (hd.presence) h += `<span class="pres"><span class="sym reveal" data-reveal="${esc(d.addr)}"${control(v.scene)}>⟡</span> ${esc(hd.presence)}</span>`;
   h += `</div>`;
   if (!w.parts) return h;
@@ -2544,24 +2598,24 @@ const runSymbol = (k, n) => {
 /** an inline-block's width in characters of the body's face, as P-LAY's `wrap` sets it */
 const boxWidth = (/** @type {Piece} */ p) => (p.lead + p.trail) / CHAR_W + [...p.text].length * p.size;
 /**
- * A byline's pieces (`bylineHTML`): its owner and the separator, then its slots' box, one inline-block as wide as every
- * slot and separator in it — no characters, for it sets its width alone — so its line is the same whatever the slots show,
- * read or not (FP-34).
+ * A byline's pieces (`bylineHTML`): its owner with the sign after it — one unit, joined by a no-break thin space — and
+ * the separator, then its slots' box, one inline-block as wide as every slot and separator in it — no characters, for it
+ * sets its width alone — so its line is the same whatever the slots show, read or not (FP-34).
  * @param {Byline} by
  * @param {number} k the head's size, in the body's em
  * @returns {Piece[]}
  */
-const bylinePieces = (by, k) => [piece(by.owner + BY_SEP, k), { text: '', size: k, lead: by.em * k, trail: 0, box: true, own: false }];
+const bylinePieces = (by, k) => [piece(by.owner + GOES + BY_SEP, k), { text: '', size: k, lead: by.em * k, trail: 0, box: true, own: false }];
 /**
  * A row of the plan.
  * @param {Row['kind']} kind
  * @param {number | null} pos the block it opens
  * @param {number} size the size its box is set at, in the body's em
  * @param {Piece[]} pieces
- * @param {{after?: number, before?: number, width?: number, keep?: Keep, pre?: boolean, indent?: number}} [o] its margins in the body's em, a withheld run's width, where a column may break at it (P-LAY's `Keep`; none inside it where none is said), whether it is a typed line, its white space kept, and its first line's indent in the body's em
+ * @param {{after?: number, before?: number, width?: number, keep?: Keep, pre?: boolean, indent?: number, lh?: number}} [o] its margins in the body's em, a withheld run's width, where a column may break at it (P-LAY's `Keep`; none inside it where none is said), whether it is a typed line, its white space kept, its first line's indent in the body's em, and its line height where it is not the article's (P-LAY's `Row.lh`)
  * @returns {Row}
  */
-const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0, keep: o.keep ?? 'whole', pre: o.pre ?? false, indent: o.indent ?? 0 });
+const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0, keep: o.keep ?? 'whole', pre: o.pre ?? false, indent: o.indent ?? 0, ...(o.lh ? { lh: o.lh } : {}) });
 
 /**
  * A typed line's inline pieces at its size, as `segHTML` sets them: each
@@ -2597,7 +2651,7 @@ export function articlePlan(d, v, ownerAccount) {
   const H = MEASURE.head;
   const joined = /** @type {const} */ ({ keep: 'joined' });
   /** @type {Row[]} */
-  const rows = [row('head', null, 1, [piece(w.head.addr, 1)]), row('head', null, H, bylinePieces(w.head.byline, H), joined)];
+  const rows = [row('head', null, 1, [piece(w.head.addr, 1)]), row('head', null, H, bylinePieces(w.head.byline, H), { ...joined, lh: BYLINE_LH })];
   if (w.head.presence) rows.push(row('head', null, H, [symbol(H), piece(' ' + w.head.presence, H)], joined));
   if (!w.parts) return rows;
   for (const p of w.parts) {

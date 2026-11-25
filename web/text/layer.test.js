@@ -114,7 +114,10 @@
 // off its address with no record made; and a document of no content — its
 // extent answered empty, or its every byte taken out by the person's edits —
 // standing as text, its head and its empty line, a created, empty slot page's
-// words and corner by reader (FP-8,
+// words and corner by reader; and the byline's stop for the focused document
+// at its reading scale — its address a link, a cut label a button, one Tab
+// stop framed at its tokens, none where no such document is focused — its row
+// brought clear of the one line by the least pan (FP-8,
 // FP-10, FP-12, FP-20, FP-22, FP-23, FP-24, FP-26, FP-27, FP-30, FP-31, FP-33,
 // FP-34, FP-36, FP-37, FP-38, FP-39).
 import { test, beforeEach } from 'node:test';
@@ -134,7 +137,7 @@ import { CORNER, ADDRESS, COL, HOLD, MARGIN, cornerWidth } from '../plane/regist
 import { holdTop, holdStack, lineHeight, runsOf, plain } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, cellNumberOf, numberAtCell, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
-import { CLAUSE_READING, articleHTML, faceRuns, cornerTitle, titleHTML, titleRuns, keptWord } from './article.js';
+import { CLAUSE_READING, OPENS, bylineOf, addressName, slotName, articleHTML, faceRuns, cornerTitle, titleHTML, titleRuns, keptWord } from './article.js';
 import * as FACES from '../overlays/faces.js';
 import { farSays } from '../beams/held.js';
 import { pastSigns } from '../beams/beams.js';
@@ -1633,7 +1636,7 @@ test('a standing article\'s symbols are marked heavier in place where every link
   }, 1440, 900, answers);
 });
 
-test('an owner\'s byline facts arriving set a standing article again, its byline filled, and move no line — the fold it stands in as it stood; its cut label marked open in place on its act, closed again on the act again, nothing rebuilt (FP-34; issue #208)', () => {
+test('an owner\'s byline facts arriving set a standing article again, its byline filled — a cut label `▸` before what its box holds, no ellipsis — and move no line, the fold it stands in as it stood; its cut label marked open in place on its act, nothing rebuilt, and in an overlay\'s life: closed again on the act again, by the reader\'s next act, and never kept open across a remount or a board change (FP-34; issue #208; the byline\'s act decision, point 1)', () => {
   /** @type {boolean[]} the `open` mark the cut label was given, in order */
   const opened = [];
   const label = { classList: { toggle: (/** @type {string} */ c, /** @type {boolean} */ on) => { if (c === 'open') opened.push(on); } } };
@@ -1651,7 +1654,7 @@ test('an owner\'s byline facts arriving set a standing article again, its byline
     const fold = LAYER.foldOf(REC.doc(D)), el = standing();
     REC.takeAccountKey('1.0.1', { label: 'Shane’s MacBook Pro (work, 2024)', fingerprint: 'ab'.repeat(32) });
     LAYER.frame();
-    assert.ok(standing() !== el && html().includes(`>${esc('Shane’s MacBook Pro…')}<span class="whole">`) && html().includes('>abab abab abab abab</span>') && !html().includes('slot pending'), `set again, its byline filled: ${html().slice(0, 600)}`);
+    assert.ok(standing() !== el && html().includes(`<span class="sign" aria-hidden="true">${esc(OPENS)}</span>${esc('Shane’s MacBook Pro')}<span class="whole">`) && html().includes('>abab abab abab abab</span>') && !html().includes('slot pending') && !html().includes('…'), `set again, its byline filled, the cut label signed and no ellipsis: ${html().slice(0, 900)}`);
     assert.equal(LAYER.foldOf(REC.doc(D)), fold, 'the fold it stands in as it stood: what the slots show sets no line');
     const filled = standing();
     LAYER.openLabel(D);
@@ -1661,6 +1664,23 @@ test('an owner\'s byline facts arriving set a standing article again, its byline
     LAYER.frame();
     assert.deepEqual([LAYER.labelOpened(D), opened.at(-1)], [false, false], 'the act again closes it');
     assert.equal(standing(), filled, 'each mark made in place, the article standing on its element');
+    LAYER.openLabel(D);
+    LAYER.frame();
+    assert.deepEqual([LAYER.closeLabel(), LAYER.closeLabel(), LAYER.labelOpened(D)], [true, false, false], 'the reader\'s next act closes it, once');
+    LAYER.frame();
+    assert.equal(opened.at(-1), false, 'its mark taken off in place');
+    // taken down below the mount band and mounted again: closed
+    LAYER.openLabel(D);
+    LAYER.frame();
+    CAM.set({ x: at.x, y: at.y, scale: 3 / LAYER.foldOf(REC.doc(D)).fs });
+    LAYER.frame();
+    assert.equal(LAYER.isMounted(D), false, 'taken down');
+    CAM.set({ x: at.x, y: at.y, scale: 12 / LAYER.foldOf(REC.doc(D)).fs });
+    LAYER.frame();
+    assert.deepEqual([LAYER.isMounted(D), LAYER.labelOpened(D)], [true, false], 'mounted again: the label closed, never kept across a remount');
+    LAYER.openLabel(D);
+    LAYER.clear();
+    assert.equal(LAYER.labelOpened(D), false, 'a board change closes it');
   }, 1440, 900, new Map([['.slot.cut', [label]]]));
 });
 
@@ -3522,3 +3542,70 @@ test('a created, empty slot page stands as text at reading scale, read by reader
   assert.ok(articleOn(SLOT)?.includes(esc(t('B1.empty_subspace'))) && !articleOn(SLOT)?.includes(esc(theirs)), `its owner: "nothing here yet" — ${articleOn(SLOT)}`);
   assert.ok(items(SLOT).includes(esc(t('F.corner.no-versions'))), `and the corner's whole line — ${items(SLOT)}`);
 }));
+
+test('the byline\'s stop stands for the focused document whose article stands at its reading scale: its owner\'s address a link to its account, named by the address as drawn then where it goes, a cut label a button saying whether it stands opened, named by the label whole then its role word — one Tab stop, its first act — each framed each frame at its drawn token and sign; none, and no stop, where no such document is focused; and where its head stands above the one line, the least pan brings its row clear below it (the byline\'s act decision, point 3; tests 11, 13, 14)', () => {
+  const pg = page();
+  pg.install();
+  const byline = pg.element('div'), layerEl = pg.element('div');
+  try {
+    REC.setSession(null);
+    deliver();
+    REC.takeAccountKey('1.0.1', { label: 'Shane’s MacBook Pro (work, 2024)', fingerprint: 'ab'.repeat(32) });
+    LAYER.attach(/** @type {any} */ (Object.assign(layerEl, { clientWidth: 1440, clientHeight: 900 })), /** @type {any} */ (null), { byline: /** @type {any} */ (byline) });
+    LAYER.readers({ selection: () => null, focus: () => null, top: () => 40, handOff: () => {}, navigated: () => null });
+    CAM.setViewport(1440, 900);
+    const at = LAYER.centreOf(D, null), f = LAYER.foldOf(REC.doc(D));
+    CAM.set({ x: at.x, y: at.y, scale: 12 / f.fs });
+    LAYER.frame((addr) => addr === D);
+    const acts = /** @type {any[]} */ ([...byline.querySelectorAll('.act')]);
+    const by = bylineOf('1.0.1', LAYER.viewFor(REC.doc(D)));
+    assert.equal(byline.getAttribute('aria-label'), heard(t('L.byline')), 'the stop named as the byline');
+    assert.deepEqual(acts.map((a) => [a.tagName.toLowerCase(), a.dataset.act, a.getAttribute('aria-label'), a.tabIndex]), [
+      ['a', 'go', heard(addressName(by)), 0],
+      ['button', 'label', heard(slotName(by.slots[0])), -1],
+    ], 'its address a link, then its cut label a button; the first its one stop');
+    assert.equal(acts[0].dataset.account, '1.0.1', 'the link goes to the account its token shows');
+    assert.ok(heard(addressName(by)).startsWith('1.0.1') && !/author|written by/i.test(heard(addressName(by))), `named by its address as drawn first, no author: ${heard(addressName(by))}`);
+    assert.equal(acts[1].getAttribute('aria-expanded'), 'false', 'the label standing closed');
+    const box = (/** @type {any} */ a) => { const m = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(a.style.transform); return m && { x: Number(m[1]), y: Number(m[2]), w: parseFloat(a.style.width), h: parseFloat(a.style.height) }; };
+    const g = /** @type {{x: number, y: number, w: number, h: number}} */ (box(acts[0])), l = /** @type {{x: number, y: number, w: number, h: number}} */ (box(acts[1]));
+    const c = f.columns[0], head = f.lines.filter((x) => x.kind === 'head'), row = head[1], dbox = docBox(D);
+    assert.ok(g && l && Math.abs(g.x - Math.round(CAM.sx(dbox.x + c.x))) <= 1 && Math.abs(g.y - Math.round(CAM.sy(dbox.y + c.y + (row.top - c.top) * f.fs))) <= 1 && l.x > g.x + g.w, `framed at its tokens on the byline's row: ${JSON.stringify({ g, l })}`);
+    LAYER.openLabel(D);
+    LAYER.frame((addr) => addr === D);
+    assert.equal(/** @type {any} */ ([...byline.querySelectorAll('.act')])[1].getAttribute('aria-expanded'), 'true', 'its act opened it: the button says so');
+    LAYER.closeLabel();
+    LAYER.frame(() => false);
+    assert.deepEqual([byline.querySelectorAll('.act').length, byline.innerHTML], [0, ''], 'no document focused: no act, and no stop');
+    // the head above the one line: the least pan brings the byline's row below it
+    const rowY = dbox.y + c.y + (row.top - c.top) * f.fs, scale = 12 / f.fs;
+    CAM.set({ x: at.x, y: rowY + (450 - 20) / scale, scale });
+    LAYER.frame((addr) => addr === D);
+    const d = LAYER.bylinePan(D);
+    const top = CAM.sy(dbox.y + c.y + (row.top - c.top) * f.fs);
+    assert.ok(top < 40 && d && d.dy > 0 && Math.abs(top + d.dy - 40) < 1, `its row ${top} px down, under the line at 40: panned down by ${JSON.stringify(d)} to stand at the line's foot`);
+  } finally { LAYER.clear(); readers(null); pg.uninstall(); }
+});
+
+test('a reading scene\'s pane\'s cut label opens whole in place on its act and closes on it again — one at a time with the plane\'s, in the same life: the reader\'s next act or Esc closes it, once — and a pane set again, its article made anew, holds none opened, so the next Esc closes nothing of it and goes on (the byline\'s act decision, points 1 and 3)', () => {
+  const pg = page();
+  pg.install();
+  try {
+    const pane = pg.element('div');
+    pg.document.body.appendChild(pane);
+    /** the pane's article's cut label's button, as a reading scene's pane sets it (T-ARTICLE's) */
+    const label = () => { pane.innerHTML = '<button type="button" class="slot cut" aria-expanded="false" tabindex="-1">Shane’s MacBook Pro</button>'; return /** @type {any} */ (pane.querySelector('button')); };
+    const a = label();
+    LAYER.openPaneLabel(a);
+    assert.deepEqual([a.classList.contains('open'), a.getAttribute('aria-expanded')], [true, 'true'], 'its act opens it whole in place, the button saying so');
+    LAYER.openPaneLabel(a);
+    assert.deepEqual([a.classList.contains('open'), a.getAttribute('aria-expanded')], [false, 'false'], 'the act again closes it');
+    LAYER.openLabel(D);
+    LAYER.openPaneLabel(a);
+    assert.deepEqual([LAYER.labelOpened(D), a.classList.contains('open')], [false, true], 'one at a time: the plane\'s closed as the pane\'s opens');
+    assert.deepEqual([LAYER.closeLabel(), a.classList.contains('open'), LAYER.closeLabel()], [true, false, false], 'Esc or the next act closes it, once');
+    LAYER.openPaneLabel(a);
+    const b = label();
+    assert.deepEqual([b.classList.contains('open'), LAYER.closeLabel()], [false, false], 'a pane set again holds none opened, and the next Esc closes nothing of it');
+  } finally { LAYER.closeLabel(); pg.uninstall(); }
+});

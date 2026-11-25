@@ -78,7 +78,7 @@
 // whole, or the count of several, then the words LK's `tailFaced` gives them
 // cut on a word to the room — one far end's words, and the state several
 // share where the board will say nothing of each one's document; a press on
-// it lists its links (`tailAtScreen`).
+// it lists its links (`pressAt`).
 // The labels — every string the canvas sets but the trail's pip numbers —
 // are handed to P-LABEL's one pass once every place's shapes are drawn
 // (`drawLabels`), each set only where its place holds it whole inside the
@@ -115,8 +115,8 @@
 // and place among the mark's members set on the mark while it stands, in the
 // count's place; and the arrival mark, every run of the span
 // landed on, or of the passage a one-step move along the trail lights,
-// outlined in view or not (FP-21; `drawArrival`), a press on an outlined run
-// naming it (`arrivalAtScreen`).
+// outlined in view or not (FP-21; `drawArrival`), each rect named with the run
+// it outlines and that run's positions in the text shown.
 // Bars mean only too small to read (FP-12): no document at reading size is
 // ever drawn as bars — the canvas draws them below P-LOD's readable
 // threshold, and at or above it every document is real text, T-LAYER
@@ -131,17 +131,27 @@
 // whose article stands in another fold — a stale one a press holds — the
 // whole of it. The app's loop runs T-LAYER's frame before `draw`, so what
 // stands is settled when a document's label and bars are drawn or yielded.
-// `stats` names what the frame drew, for the gate; the hit tests
-// (`placeAtScreen` and `docAtScreen`, `residueAtScreen`, `tailAtScreen`,
-// `arrivalAtScreen`) read the draw's own rule, as the last frame drew it — a
-// mark's two targets among it. A press's place (`placeAtScreen`): a place
-// whose drawn shape holds the point — a document's outline, the one form's
-// rectangle — else, where boxes are drawn, of the forms and the boxes drawn
-// smaller than P-REG's TARGET.min either way, each pressed in an area grown
-// about its rectangle's centre to that target each way (WCAG 2.2 SC 2.5.8),
-// the nearest centre winning where areas meet; the drawing never moves for
-// it. The system account's rows are never drawn (the record §1.8).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-25, FP-26, FP-35, FP-42.
+// `stats` names what the frame drew, for the gate. The one press test
+// (`pressAt`; FP-44) reads the draw's own rule, as the last frame drew it,
+// over every target it drew — a tail's stroke and its label's lines, a
+// continuation's mark with its two targets, a box standing whole by its
+// outline, the one form's rectangle: a point inside a target's drawn shape
+// goes to it, the topmost by the frame's order of drawing where two shapes
+// meet, so no area takes a press from another target's ink; outside every
+// drawn shape, the target whose press area holds the point and whose drawn
+// shape lies nearest it, by the distance to the nearest of its rects; else
+// none, the ground's. A target drawn smaller than P-REG's TARGET.min either
+// way is pressed in an area grown to it each way (WCAG 2.2 SC 2.5.8): a tail's
+// stroke and label as one rectangle, from where it leaves and evenly about its
+// stroke (`tailArea`), a mark standing as one target, the one form and a box
+// about its drawn rectangle's centre; a mark holding two targets, and a box
+// that size each way, are pressed on their drawn shape alone. Below its
+// reading scale an outlined run is no target: a press there is its
+// document's, the test naming the runs whose outlines hold the point. The
+// drawing never moves for it. `placeAtScreen`, `docAtScreen` and
+// `residueAtScreen` read its answer. The system account's rows are never
+// drawn (the record §1.8).
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-25, FP-26, FP-35, FP-42, FP-44.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -229,6 +239,7 @@ import { numeral } from '../util.js';
  * @property {boolean} dashed every one of its links another's, dashed as a beam is
  * @property {string[]} label the lines the label pass set at its end — its far end named, or its count, then the words its far ends share where they share any (LK's `tailFaced`); none where it left the label out (`stats.labelsLeftOut` names why)
  * @property {Rect[]} rects those lines' rects
+ * @property {Rect} stroke its stroke as drawn, on screen: from `from` to `to`, as tall as its line's width (`TAIL_W` at its weight)
  */
 
 /**
@@ -294,7 +305,7 @@ export const stats = {
   arrival: /** @type {ArrivalRect[]} */ ([]),
 };
 
-/** @typedef {Rect & {run: number}} ArrivalRect a rect the arrival mark outlined, and the run it outlines: an index into the arrival's `runs`; -1 for the block a mark naming the document whole stands on */
+/** @typedef {Rect & {run: number, span: {pos: number, width: number} | null}} ArrivalRect a rect the arrival mark outlined, and the run it outlines: an index into the arrival's `runs`, and that run's positions in the text the page shows; -1 and none for the block a mark naming the document whole stands on */
 
 /**
  * @typedef {Object} LaidOut — a document's fold and the bars the canvas draws for it, column by column
@@ -871,6 +882,9 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
 /** a screen coordinate to a hundredth of a px: one line's tails, left at one point, are one site */
 const hundredth = (/** @type {number} */ v) => Math.round(v * 100) / 100;
 
+/** a tail's stroke's width, in px, at its links' own weight: its line as `drawTails` strokes it, and its drawn shape a press reads (`pressAt`) */
+const TAIL_W = 1.6;
+
 /**
  * @typedef {Object} Site — a tail laid out before it is drawn: where it leaves, and the far ends it holds, each link once with its mark
  * @property {string} at
@@ -948,10 +962,12 @@ function tailsOf(docsDrawn, placeOf, alpha, pass, seen) {
     const parts = [one ? { text: one.far, px: LABEL_MIN_PX, ink: COL.text, fit: 'one', face: 'ident' } : { text: numeral(site.ends.length), px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }, { text: words, px: LABEL_MIN_PX, ink: COL.greek, fit: 'cut' }];
     const x = to.x + TAIL.gap, y = site.from.y - lh / 2, h = (words ? 2 : 1) * lh;
     pass.labels.push({ kind: 'tail', place: key, within: { x, y, w: roomRight({ x, y }, h, pass.shapes, seen, key), h }, x, y, align: 'left', alpha, plate: COL.bg, parts, hold: null });
+    const w = TAIL_W * mark.weight;
     return {
       key, form: site.line ? 'line' : 'box', at: site.at, docs: site.docs, links: site.ends.map((e) => e.link.addr), far: site.ends.map((e) => e.far),
       from: site.from, to, world: { x: wx(site.from.x), y: wy(site.from.y) }, line: site.line, pos: site.pos,
       hue: mark.hue, alpha: alpha * mark.value, weight: mark.weight, dashed: mark.linker === 'others', label: [], rects: [],
+      stroke: { x: site.from.x, y: site.from.y - w / 2, w: to.x - site.from.x, h: w },
     };
   });
 }
@@ -1038,7 +1054,7 @@ function drawStubs() {
 function drawTails() {
   const c = ctx; if (!c) return;
   for (const tl of stats.tails) {
-    c.globalAlpha = tl.alpha; c.strokeStyle = tl.hue; c.lineWidth = 1.6 * tl.weight;
+    c.globalAlpha = tl.alpha; c.strokeStyle = tl.hue; c.lineWidth = TAIL_W * tl.weight;
     c.setLineDash(tl.dashed ? [3, 2] : []);
     c.beginPath(); c.moveTo(tl.from.x, tl.from.y); c.lineTo(tl.to.x, tl.to.y); c.stroke();
   }
@@ -1217,16 +1233,19 @@ function drawArrival() {
   const unstood = (/** @type {number} */ pos, /** @type {number} */ width) => (folds ? foldExtents(a.addr, pos, width) : []);
   /** @type {ArrivalRect[]} */
   const out = [];
-  const take = (/** @type {Rect[]} */ rs, /** @type {number} */ run) => { for (const r of rs) if (r.w > 0 && r.h > 0) out.push({ x: r.x, y: r.y, w: r.w, h: r.h, run }); };
-  if (a.runs) a.runs.forEach((r, i) => take([...(LAYER.standingRects(a.addr, r.pos, r.width) || []), ...unstood(r.pos, r.width)], i));
+  const take = (/** @type {Rect[]} */ rs, /** @type {number} */ run, /** @type {{pos: number, width: number} | null} */ span) => { for (const r of rs) if (r.w > 0 && r.h > 0) out.push({ x: r.x, y: r.y, w: r.w, h: r.h, run, span }); };
+  if (a.runs) a.runs.forEach((r, i) => take([...(LAYER.standingRects(a.addr, r.pos, r.width) || []), ...unstood(r.pos, r.width)], i, { pos: r.pos, width: r.width }));
   else {
     const b = REC.blockIn(LAYER.shownOf(a.addr).blocks, a.pos);
-    if (b) take(LAYER.spanRects(a.addr, b.pos) || unstood(b.pos, b.width), -1);
+    if (b) take(LAYER.spanRects(a.addr, b.pos) || unstood(b.pos, b.width), -1, null);
   }
-  ctx.strokeStyle = HUE.you; ctx.lineWidth = 2; ctx.setLineDash([]);
-  for (const r of out) ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
+  ctx.strokeStyle = HUE.you; ctx.lineWidth = OUTLINE.width; ctx.setLineDash([]);
+  for (const r of out) ctx.strokeRect(r.x - OUTLINE.gap, r.y - OUTLINE.gap, r.w + 2 * OUTLINE.gap, r.h + 2 * OUTLINE.gap);
   stats.arrival = out;
 }
+
+/** the arrival's outline (`drawArrival`): stroked `gap` px outside each rect it outlines, `width` px wide — its ink reaching `gap` + half `width` px past the rect, where a press is inside it (`pressAt`) */
+const OUTLINE = Object.freeze({ gap: 2, width: 2 });
 
 /**
  * Draw the frame: a function of model and view state (FP-8) — the places,
@@ -1258,116 +1277,179 @@ export function draw() {
 }
 
 /**
- * The tail under a screen point, as the last frame drew it: on its stroke, 5
- * px either side, or on a line of its label; null where none is (a hit test;
- * draws nothing).
- * @param {number} px
- * @param {number} py
- * @returns {DrawnTail | null}
- */
-export function tailAtScreen(px, py) {
-  const holds = (/** @type {Rect} */ r, /** @type {number} */ pad) => px >= r.x - pad && px <= r.x + r.w + pad && py >= r.y - pad && py <= r.y + r.h + pad;
-  return stats.tails.find((tl) => holds({ x: tl.from.x, y: tl.from.y, w: tl.to.x - tl.from.x, h: 0 }, 5) || tl.rects.some((r) => holds(r, 0))) || null;
-}
-
-/**
- * The run of the arrival under a screen point, on its outline as the last
- * frame drew it, 3 px either way (a hit test; draws nothing): APP-INPUT's step
- * to it, below its document's reading scale (FP-21); null where no outlined
- * run holds the point.
- * @param {number} px
- * @param {number} py
- * @returns {{addr: string, run: number} | null}
- */
-export function arrivalAtScreen(px, py) {
-  const a = GO.arrivalMark();
-  const r = a ? stats.arrival.find((q) => q.run >= 0 && px >= q.x - 3 && px <= q.x + q.w + 3 && py >= q.y - 3 && py <= q.y + q.h + 3) : null;
-  return a && r ? { addr: a.addr, run: r.run } : null;
-}
-
-/**
- * @typedef {Object} PlaceHit — the place a press under a screen point goes to (`placeAtScreen`)
+ * @typedef {Object} PlaceHit — the place a press under a screen point goes to (`pressAt`)
  * @property {string} addr a document — the version its box shows — or the slot a form stands at
  * @property {boolean} form it is the one form's place, where no document stands
  * @property {boolean} padded the point lies outside every drawn shape, in the press area grown about the place's drawn rectangle (P-REG's TARGET)
  */
 
 /**
- * The place a press under a screen point goes to, as the last frame drew the
- * places (a hit test; draws nothing; see the head): a place whose drawn shape
- * holds the point — a document's outline, of the boxes the plane draws
- * (`drawable`), each the version its box shows (N-GO's `shownIn`), the
- * outline that version's, one a continuation's mark holds being the mark's;
- * the one form's rectangle (M-REC's `forms`) wherever the frame draws boxes —
- * else, where the frame draws boxes, of the forms and of the boxes whose
- * drawn outline is smaller than P-REG's TARGET.min either way, each pressed
- * in an area grown about its drawn rectangle's centre to TARGET.min each way,
- * the one of those holding the point whose drawn rectangle's centre is
- * nearest it. A box at least TARGET.min each way is pressed on its outline
- * alone, and no area reaches into a shape another place has drawn, for the
- * drawn shapes are read first. Null where none holds the point.
- * @param {number} px
- * @param {number} py
- * @returns {PlaceHit | null}
+ * @typedef {Object} MarkHit — a continuation's mark a press under a screen point goes to, and which of its two targets holds it (see the head)
+ * @property {string} account
+ * @property {number} k
+ * @property {string} key its name (P-PROJ's `markKey`): the walk's stop for it, the list's
+ * @property {string} newest its newest member, the highest-numbered
+ * @property {'newest' | 'list'} target `newest` on the band its newest label stands in, which goes to that member; `list` anywhere else on it or in its press area, which opens its members' list
  */
-export function placeAtScreen(px, py) {
-  const { held } = residueDepth(cam.scale), boxes = lodOf(cam.scale).name !== 'far';
-  const wxp = wx(px), wyp = wy(py);
-  const inside = (/** @type {{x: number, y: number, w: number, h: number}} */ b, /** @type {number} */ x, /** @type {number} */ y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
-  const docs = drawable().filter((d) => !withinContinuation(d.addr, held)), forms = boxes ? REC.forms() : [];
-  for (const d of docs) {
-    const b = docBox(d.addr);
-    if (inside(b, wxp, wyp) && outlineRects(LAYER.foldOf(d)).some((r) => inside(r, wxp - b.x, wyp - b.y))) return { addr: d.addr, form: false, padded: false };
-  }
-  for (const addr of forms) if (inside(LAYER.shapeOf(addr), wxp, wyp)) return { addr, form: true, padded: false };
-  if (!boxes) return null;
-  // the press areas: no further from a place's box than half the least target, so a box whose box lies further is no candidate
-  const reach = TARGET.min / 2 / cam.scale, near = (/** @type {string} */ addr) => { const b = docBox(addr); return wxp >= b.x - reach && wxp <= b.x + b.w + reach && wyp >= b.y - reach && wyp <= b.y + b.h + reach; };
-  /** @type {PlaceHit | null} */
-  let best = null;
-  let bd = Infinity;
-  /** a place's drawn rectangle, in world units: a candidate where its press area holds the point, the nearest centre kept */
-  const take = (/** @type {string} */ addr, /** @type {boolean} */ form, /** @type {Rect} */ r) => {
-    const w = r.w * cam.scale, h = r.h * cam.scale;
-    if (!form && w >= TARGET.min && h >= TARGET.min) return;
-    const cx = sx(r.x + r.w / 2), cy = sy(r.y + r.h / 2), aw = Math.max(w, TARGET.min) / 2, ah = Math.max(h, TARGET.min) / 2;
-    if (Math.abs(px - cx) > aw || Math.abs(py - cy) > ah) return;
-    const dd = (px - cx) ** 2 + (py - cy) ** 2;
-    if (dd < bd) { bd = dd; best = { addr, form, padded: true }; }
-  };
-  for (const d of docs) if (near(d.addr)) { const b = docBox(d.addr), s = boundsOf(LAYER.foldOf(d)); take(d.addr, false, { x: b.x + s.x, y: b.y + s.y, w: s.w, h: s.h }); }
-  for (const addr of forms) if (near(addr)) take(addr, true, LAYER.shapeOf(addr));
-  return best;
+
+/** @typedef {{pos: number, width: number}} Run a run of a document's text, by its positions in the text the page shows */
+
+/**
+ * @typedef {{kind: 'tail', tail: DrawnTail, padded: boolean}
+ *   | {kind: 'mark', mark: MarkHit, padded: boolean}
+ *   | {kind: 'place', place: PlaceHit, outlined: Run[]}} Press the target a press under a screen point goes to (`pressAt`): a tail, a continuation's mark — which of its two targets — or a place, a document or the one form; for a document, the runs of the arrival standing in it whose outlines the point lies inside (`drawArrival`), none where it lies in none
+ */
+
+/**
+ * @typedef {Object} Target — one target a press may go to, as the last frame drew it (`targetsNear`)
+ * @property {Array<{rect: Rect, layer: number}>} ink its drawn shape on screen, each rect with its place in the frame's order of drawing (`LAYER_OF`)
+ * @property {Rect | null} area where it is drawn smaller than TARGET.min either way, the area a press anywhere in it goes to it in; null where its drawn shape alone takes a press
+ * @property {(padded: boolean) => Press} press the press it takes, inside its drawn shape or in its area
+ */
+
+/**
+ * The frame's order of drawing, ground up, by which the topmost of two drawn
+ * shapes meeting is told (`draw`): a continuation's mark, then the boxes
+ * standing whole beside it, then the one form, all in `drawDocs`; then the
+ * labels' pass, a tail's label among them; then the tails' strokes, over the
+ * places and their labels (`drawTails`).
+ */
+const LAYER_OF = Object.freeze({ mark: 1, box: 2, form: 3, tailLabel: 4, tailStroke: 5 });
+
+/** does a rect hold a screen point, its edges among it */
+const holds = (/** @type {Rect} */ r, /** @type {number} */ x, /** @type {number} */ y) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+/** how far a screen point lies from a rect: 0 inside it */
+const distance = (/** @type {Rect} */ r, /** @type {number} */ x, /** @type {number} */ y) => Math.hypot(Math.max(r.x - x, 0, x - (r.x + r.w)), Math.max(r.y - y, 0, y - (r.y + r.h)));
+/** a rect grown about its centre to TARGET.min each way where it is smaller (FP-44); null where it is that size each way, its drawn shape alone taking a press */
+const grown = (/** @type {Rect} */ r) => {
+  if (r.w >= TARGET.min && r.h >= TARGET.min) return null;
+  const w = Math.max(r.w, TARGET.min), h = Math.max(r.h, TARGET.min);
+  return { x: r.x + r.w / 2 - w / 2, y: r.y + r.h / 2 - h / 2, w, h };
+};
+/** the rect holding every rect of a list */
+const union = (/** @type {Rect[]} */ rs) => {
+  const x = Math.min(...rs.map((r) => r.x)), y = Math.min(...rs.map((r) => r.y));
+  return { x, y, w: Math.max(...rs.map((r) => r.x + r.w)) - x, h: Math.max(...rs.map((r) => r.y + r.h)) - y };
+};
+
+/**
+ * A tail's press area (FP-44; see the head): its stroke and its label's lines
+ * as one rectangle, grown to TARGET.min each way where it is smaller — away
+ * from the edge it leaves, rightward from where it leaves, and evenly above
+ * and below its stroke, its middle level with the stroke; null where that
+ * rectangle is the target's size each way, its drawn shape alone taking a
+ * press. A tail whose label the pass left out grows its stroke alone.
+ * @param {DrawnTail} tl
+ * @returns {Rect | null}
+ */
+export function tailArea(tl) {
+  const u = union([tl.stroke, ...tl.rects]);
+  if (u.w >= TARGET.min && u.h >= TARGET.min) return null;
+  const half = Math.max(TARGET.min / 2, tl.from.y - u.y, u.y + u.h - tl.from.y);
+  return { x: tl.from.x, y: tl.from.y - half, w: Math.max(u.x + u.w - tl.from.x, TARGET.min), h: 2 * half };
 }
 
-/** the document under a screen point a press goes to (`placeAtScreen`): its outline, or a small box's press area; null where none, or where the press goes to the one form's place, which holds no document (a hit test; draws nothing) */
+/**
+ * The targets a press under a screen point may go to, as the last frame drew
+ * them (see the head): its tails — the stroke and each line of its label —
+ * and its continuation's marks at the depth it draws the stronger
+ * (`stats`); and where it draws boxes, the documents standing whole whose
+ * box lies within half the least target of the point, each the version its
+ * box shows, by its outline (P-LAY's `outlineRects`) — one a continuation's
+ * mark holds being the mark's — and the one form at each assigned slot it
+ * drew (`stats.forms`). Each with its press area where it is drawn smaller
+ * than TARGET.min either way: a tail's grown from where it leaves (`tailArea`),
+ * a mark's standing as one target, a form's and a box's about its drawn
+ * rectangle's centre (`grown`); a mark holding two targets, and a box at least
+ * the target each way, taking a press on its drawn shape alone.
+ * @param {number} px
+ * @param {number} py
+ * @returns {Target[]}
+ */
+function targetsNear(px, py) {
+  /** @type {Target[]} */
+  const out = [];
+  for (const tl of stats.tails) {
+    out.push({ ink: [{ rect: tl.stroke, layer: LAYER_OF.tailStroke }, ...tl.rects.map((rect) => ({ rect, layer: LAYER_OF.tailLabel }))], area: tailArea(tl), press: (padded) => ({ kind: 'tail', tail: tl, padded }) });
+  }
+  const { held } = residueDepth(cam.scale);
+  for (const m of stats.residueMarks) {
+    if (m.k !== held) continue;
+    const band = m.newestTarget;
+    out.push({
+      ink: [{ rect: m.rect, layer: LAYER_OF.mark }], area: band ? null : grown(m.rect),
+      press: (padded) => ({ kind: 'mark', mark: { account: m.account, k: m.k, key: m.key, newest: m.newest, target: !padded && band && holds(band, px, py) ? 'newest' : 'list' }, padded }),
+    });
+  }
+  if (lodOf(cam.scale).name === 'far') return out;
+  const reach = TARGET.min / 2;
+  /** @type {string | null | undefined} the document the arrival stands in, read once a box lies near the point and the frame outlined a run */
+  let arriving;
+  const arrivalIn = () => { if (arriving === undefined) { const a = GO.arrivalMark(); arriving = a ? documentOf(a.addr) || a.addr : null; } return arriving; };
+  for (const d of drawable()) {
+    if (withinContinuation(d.addr, held)) continue;
+    const box = docBox(d.addr), at = { x: sx(box.x), y: sy(box.y), w: box.w * cam.scale, h: box.h * cam.scale };
+    if (px < at.x - reach || px > at.x + at.w + reach || py < at.y - reach || py > at.y + at.h + reach) continue;
+    const f = LAYER.foldOf(d), s = boundsOf(f);
+    const ink = outlineRects(f).map((r) => ({ rect: { x: sx(box.x + r.x), y: sy(box.y + r.y), w: r.w * cam.scale, h: r.h * cam.scale }, layer: LAYER_OF.box }));
+    // the arrival's outlines the point lies inside, where the arrival stands in this document: what its press lands at (N-GO's `landIn`)
+    const outlined = stats.arrival.length && arrivalIn() === (documentOf(d.addr) || d.addr) ? stats.arrival.filter((q) => q.span && holds({ x: q.x - OUTLINE.gap - OUTLINE.width / 2, y: q.y - OUTLINE.gap - OUTLINE.width / 2, w: q.w + 2 * OUTLINE.gap + OUTLINE.width, h: q.h + 2 * OUTLINE.gap + OUTLINE.width }, px, py)).map((q) => /** @type {Run} */ (q.span)) : [];
+    out.push({ ink, area: grown({ x: sx(box.x + s.x), y: sy(box.y + s.y), w: s.w * cam.scale, h: s.h * cam.scale }), press: (padded) => ({ kind: 'place', place: { addr: d.addr, form: false, padded }, outlined }) });
+  }
+  for (const fm of stats.forms) {
+    const r = fm.rect, w = Math.max(r.w, TARGET.min), h = Math.max(r.h, TARGET.min);
+    out.push({ ink: [{ rect: r, layer: LAYER_OF.form }], area: { x: r.x + r.w / 2 - w / 2, y: r.y + r.h / 2 - h / 2, w, h }, press: (padded) => ({ kind: 'place', place: { addr: fm.addr, form: true, padded }, outlined: [] }) });
+  }
+  return out;
+}
+
+/**
+ * The one press test (see the head; FP-44): the target a press under a screen
+ * point goes to, as the last frame drew the targets (`targetsNear`) — a hit
+ * test, drawing nothing. A point inside a target's drawn shape goes to that
+ * target, the topmost where two shapes meet, by the frame's order of drawing
+ * (`LAYER_OF`), the later drawn of one order; so no press area takes a press
+ * from another target's ink. A point outside every drawn shape goes to the
+ * target whose press area holds it and whose drawn shape is nearest it, by
+ * the distance to the nearest of its shape's rects; null where no area holds
+ * it — the ground (APP-INPUT's). What APP-INPUT's click acts on and its
+ * pointer's shape is read from.
+ * @param {number} px
+ * @param {number} py
+ * @returns {Press | null}
+ */
+export function pressAt(px, py) {
+  const targets = targetsNear(px, py);
+  /** @type {Target | null} the target whose drawn shape holding the point is the topmost */
+  let top = null;
+  let tl = -1;
+  for (const t of targets) for (const { rect, layer } of t.ink) if (layer >= tl && holds(rect, px, py)) { top = t; tl = layer; }
+  if (top) return top.press(false);
+  /** @type {Target | null} */
+  let best = null;
+  let bd = Infinity;
+  for (const t of targets) {
+    if (!t.area || !holds(t.area, px, py)) continue;
+    const d = Math.min(...t.ink.map((x) => distance(x.rect, px, py)));
+    if (d < bd) { bd = d; best = t; }
+  }
+  return best ? best.press(true) : null;
+}
+
+/** the place a press under a screen point goes to (`pressAt`): a document — the version its box shows — or the one form's slot; null where it goes to a tail, a mark or the ground (a hit test; draws nothing) */
+export function placeAtScreen(/** @type {number} */ px, /** @type {number} */ py) {
+  const p = pressAt(px, py);
+  return p && p.kind === 'place' ? p.place : null;
+}
+
+/** the document a press under a screen point goes to (`pressAt`); null where it goes to the one form's place, which holds no document, a tail, a mark or the ground (a hit test; draws nothing) */
 export function docAtScreen(/** @type {number} */ px, /** @type {number} */ py) {
   const p = placeAtScreen(px, py);
   return p && !p.form ? p.addr : null;
 }
 
-/**
- * @typedef {Object} MarkHit — a continuation's mark under a screen point, and which of its two targets holds it (see the head)
- * @property {string} account
- * @property {number} k
- * @property {string} key its name (P-PROJ's `markKey`): the walk's stop for it, the list's
- * @property {string} newest its newest member, the highest-numbered
- * @property {'newest' | 'list'} target `newest` on the band its newest label stands in, which goes to that member; `list` anywhere else on it, which opens its members' list
- */
-
-/**
- * The continuation's mark under a screen point, as the last frame drew it
- * the stronger (a hit test; draws nothing) — the far scale draws clusters,
- * and no mark — and the target the point falls on: its newest label's band,
- * where the frame set that label, else the rest of the mark (see the head);
- * null where no mark holds the point.
- * @param {number} px
- * @param {number} py
- * @returns {MarkHit | null}
- */
-export function residueAtScreen(px, py) {
-  const { held } = residueDepth(cam.scale);
-  const holds = (/** @type {Rect | null} */ r) => !!r && px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
-  const m = stats.residueMarks.find((x) => x.k === held && holds(x.rect));
-  return m ? { account: m.account, k: m.k, key: m.key, newest: m.newest, target: holds(m.newestTarget) ? 'newest' : 'list' } : null;
+/** the continuation's mark a press under a screen point goes to (`pressAt`), and which of its targets; null where it goes to anything else (a hit test; draws nothing) */
+export function residueAtScreen(/** @type {number} */ px, /** @type {number} */ py) {
+  const p = pressAt(px, py);
+  return p && p.kind === 'mark' ? p.mark : null;
 }

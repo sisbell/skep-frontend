@@ -63,17 +63,21 @@
 // its face's width, cut on a word's end by its width as set and whole on
 // their act; every name and description a corner or a byline sets heard by
 // S22's table, a label the person's words and a draft's name kept as
-// written; and the first-line rule, the client's words in a first line's
-// place bracketed (FP-12, FP-21, FP-22, FP-23, FP-24, FP-26, FP-30, FP-31,
+// written; the byline's owner token a unit of its address and its `↗`, as
+// tall as its row, a link in a pane, its cut label led by `▸` and no
+// ellipsis, and the style drawing its signs in the line's own ink, no dotted
+// underline on a compact face; and the first-line rule, the client's words in
+// a first line's place bracketed (FP-12, FP-21, FP-22, FP-23, FP-24, FP-26, FP-30, FP-31,
 // FP-33, FP-34, FP-38).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerLeadRuns, cornerWords, cornerTitle, titleRuns, titleHTML, keptHTML, keptStatement, statementHTML, faceWords, faceRuns, faceRow, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, pastClauses, notLastWords, inFlightWords, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { GOES, OPENS, OPENED, articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, edgeSignsFor, edgeStatementHTML, edgeKeyHTML, sourceStatementHTML, originRunsOf, textIn, sourcesIn, cornerHTML, cornerItems, cornerLead, cornerLeadRuns, cornerWords, cornerTitle, titleRuns, titleHTML, keptHTML, keptStatement, statementHTML, faceWords, faceRuns, faceRow, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, pastClauses, notLastWords, inFlightWords, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { below, spoken } from '../overlays/statement.js';
 import { keptStatement as keptSaying } from './article.js';
-import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
-import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
+import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, LAY_FS, BYLINE_LH, lineBox, layoutOf } from '../plane/layout.js';
+import { HUE, NEUTRAL_HUE, VISITED_ALPHA, TARGET } from '../plane/register.js';
+import { READING_REM } from '../plane/camera.js';
 import { mergedMark } from '../links/links.js';
 import { t, tHTML, tRuns, bracketed, CLIENT_CLOSE, sentence, sentences, asSentence, fields, heard, runsText, runningHTML, FIELD } from '../strings.js';
 import { esc, byteLength } from '../util.js';
@@ -806,7 +810,7 @@ test('a moved draft\'s corner carries its face beneath the kept word it explains
   assert.ok(whole.includes('class="part exit"'), 'the discard\'s statement ends on what to do instead, after its half line');
   assert.ok(!whole.includes('data-slot="again"'), 'no slot for a send made again where none was');
   const compact = cornerHTML(draft, draftView({ kept, face: MOVED }), true);
-  const act = `<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved.compact" aria-expanded="false" aria-label="${esc('changed while this text was held, not placed, by desk')}" aria-description="${esc(heard(faceWords(MOVED)))}" tabindex="-1">${esc(t('B3.moved.compact', { hand: 'desk' }))}</button>`;
+  const act = `<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved.compact" aria-expanded="false" aria-label="${esc('changed while this text was held, not placed, by desk')}" aria-description="${esc(heard(faceWords(MOVED)))}" tabindex="-1"><span class="sign" aria-hidden="true">${OPENS}</span>${esc(t('B3.moved.compact', { hand: 'desk' }))}</button>`;
   assert.ok(compact.includes(keptLine + act + '<button type="button" class="chip glyph"'), `compact: its compact form between the kept word and the chip's glyph, an act opening the corner whole — ${compact}`);
   assert.ok(!compact.includes('class="face-act'), 'compact: its acts one act away');
   assert.equal(faceWords(MOVED), 'The document changed while this text was held — it is not placed; put it where it goes, or discard it. By desk.', 'its words whole: its sentence, then its hand a sentence of its own');
@@ -816,6 +820,16 @@ test('a moved draft\'s corner carries its face beneath the kept word it explains
   assert.ok(words.includes(movedWhole()), 'the words a head opens beneath its rows: the face whole with its acts, which no row holds');
   const again = { ...MOVED, again: true };
   assert.ok(cornerHTML(draft, draftView({ kept, face: again })).includes(movedWhole(again)), 'its hands named again: the slot owed its words standing, empty');
+});
+
+test('a corner\'s compact face that acts holds the width of the sign leading it: its item\'s width counts `▸`, and `▾` while the corner stands opened — its words, which the ear reads, the face\'s alone — so the box it is set in holds what it draws; no sign and no room for one where no act is asked (the byline\'s act decision, point 1; FP-34)', () => {
+  const draft = doc({ kind: 'draft', meta: null }), kept = /** @type {const} */ ({ word: 'not yet kept', reason: null }), words = t('B3.moved.compact', { hand: 'desk' });
+  for (const [opened, sign] of /** @type {Array<[boolean, string]>} */ ([[false, OPENS], [true, OPENED]])) {
+    const v = draftView({ kept, face: MOVED, opened }), item = cornerItems(draft, v, true).find((i) => i.cls === 'face');
+    assert.deepEqual([item?.words, item?.lead, item?.em], [words, sign, advances(sign + words)], `${opened ? 'opened' : 'closed'}: its words, its sign, and its width with the sign`);
+  }
+  const plain = cornerItems(draft, draftView({ kept, face: MOVED, acts: false }), true).find((i) => i.cls === 'face');
+  assert.deepEqual([plain?.words, plain?.lead, plain?.em], [words, undefined, advances(words)], 'no act asked: its words alone');
 });
 
 test('a corner\'s act is described as a screen reader hears it: an inert act\'s reason heard by S22\'s table, the draft\'s name in it kept as written where the reason carries it as stretches, its title drawn as written (style S22; issue #626)', () => {
@@ -846,16 +860,16 @@ test('a moved face\'s compact act is named by the words it draws and described b
 test('a moved face whose hands are not one device\'s has no compact wording: where the corner stands compact its words stand whole as the act, its sentence and its hands, described by nothing more (issue #598; FP-26)', () => {
   const draft = doc({ kind: 'draft', meta: null }), f = { ...MOVED, compact: null, hands: [{ id: 'B3.hand.unread', text: t('B3.hand.unread') }] };
   const c = cornerHTML(draft, draftView({ kept: { word: 'not yet kept', reason: null }, face: f }), true);
-  assert.ok(c.includes(`<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved" aria-expanded="false" aria-label="${esc(heard(sentences(sentence('B3.moved'), sentence('B3.hand.unread'))))}" tabindex="-1">${esc(sentences(sentence('B3.moved'), sentence('B3.hand.unread')))}</button>`), `its words whole as the act, named by them as heard, each a sentence — ${c}`);
+  assert.ok(c.includes(`<button type="button" class="face compact" data-face="whole" data-whole data-string="B3.moved" aria-expanded="false" aria-label="${esc(heard(sentences(sentence('B3.moved'), sentence('B3.hand.unread'))))}" tabindex="-1"><span class="sign" aria-hidden="true">${OPENS}</span>${esc(sentences(sentence('B3.moved'), sentence('B3.hand.unread')))}</button>`), `its words whole as the act, \`▸\` leading them, named by them as heard, each a sentence — ${c}`);
   assert.equal(cornerItems(draft, draftView({ face: f }), true).find((i) => i.cls === 'face')?.words, faceWords(f), 'its words the face\'s whole');
 });
 
-test('the moved face is one of the corner\'s items that never yield, its words and its width its form\'s — compact its compact form, whole its sentence and its hand — and the ARIA mirror voices it whole after the kept word and before the chip, its hand a field of its row (issue #598; foundations §3.1; R94; style S2)', () => {
+test('the moved face is one of the corner\'s items that never yield, its words and its width its form\'s — compact its compact form, its width with the `▸` leading it, whole its sentence and its hand — and the ARIA mirror voices it whole after the kept word and before the chip, its hand a field of its row (issue #598; foundations §3.1; R94; style S2)', () => {
   const draft = doc({ kind: 'draft', meta: null }), v = draftView({ kept: { word: 'not yet kept', reason: null }, face: MOVED });
   const at = (/** @type {boolean} */ compact) => { const items = cornerItems(draft, v, compact); return [items.map((i) => i.cls), items.find((i) => i.cls === 'face')]; };
   const [order, compact] = at(true), [, whole] = at(false);
   assert.deepEqual(order, ['kind', 'kept', 'face', 'chip'], 'its kind, its kept word, the face, then its chip');
-  assert.deepEqual(compact && [compact.words, compact.em, compact.yields], [t('B3.moved.compact', { hand: 'desk' }), advances(t('B3.moved.compact', { hand: 'desk' })), false], 'compact: its compact form, never yielding');
+  assert.deepEqual(compact && [compact.words, compact.lead, compact.em, compact.yields], [t('B3.moved.compact', { hand: 'desk' }), OPENS, advances(OPENS + t('B3.moved.compact', { hand: 'desk' })), false], 'compact: its compact form, its width with the `▸` leading it, never yielding');
   assert.deepEqual(whole && [whole.words, whole.em, whole.yields], [faceWords(MOVED), advances(faceWords(MOVED)), false], 'whole: its words whole, never yielding');
   assert.equal(faceRow(MOVED), fields(t('B3.moved'), t('B3.hand.device', { 'device label': 'desk' })), 'the face as a row: its line, then its hand, a field');
   assert.equal(cornerWords(draft, v), [t('B3.not-yet-kept'), faceRow(MOVED), t('C-28.flag-on')].join(', '), 'the mirror\'s words: the kept word, the face whole as a row, the chip');
@@ -926,10 +940,13 @@ test('a record atom renders as the record it is; a typed line its bytes open wit
 /** a link marked at a span of the first edition, as LK hands it in, its end's key the span's */
 const shown = (/** @type {number} */ pos, /** @type {number} */ width) => /** @type {any} */ ({ link: { addr: 'L' + pos, type: null }, end: 'from', key: `${pos}+${width}`, pos, width, runs: [{ pos, width }], mark: { hue: '#7fb2ff', linker: 'you', form: [], value: 1, own: true }, linker: 'you', far: '1.0.1.0.4', farEnd: null, farWhole: true });
 
-test('the plan\'s head is the article\'s: two lines — its address and its byline — a third where links touch the document', () => {
+test('the plan\'s head is the article\'s: two lines — its address and its byline, its owner\'s sign one unit with it and its rows set at its own line height, each at least the least target tall at the reading size — a third where links touch the document (FP-44; the byline\'s act decision, points 1 and 3)', () => {
   const d = doc({ blocks: [{ pos: 1, width: 20, kind: 'para', text: 'abcdefghijklmnopqrst', origin: null }] });
   const bare = articlePlan(d, view(), '1.0.1').filter((r) => r.kind === 'head');
-  assert.deepEqual(bare.map((r) => r.pieces.map((p) => p.text).join('')), ['1.0.1.0.3', '1.0.1 · '], 'the byline: its owner, then the box its slots take, no characters of its own');
+  assert.deepEqual(bare.map((r) => r.pieces.map((p) => p.text).join('')), ['1.0.1.0.3', '1.0.1' + GOES + ' · '], 'the byline: its owner with the sign after it, then the box its slots take, no characters of its own');
+  assert.deepEqual([bare[0].lh, bare[1].lh], [undefined, BYLINE_LH], 'the byline\'s row at its own line height, the address\'s at the article\'s');
+  const rows = layoutOf(articlePlan(d, view(), '1.0.1')).lines.filter((l) => l.kind === 'head');
+  assert.ok(rows[1].h * LAY_FS * READING_REM >= TARGET.min && lineBox(MEASURE.head, BYLINE_LH) === rows[1].h, `the byline\'s line box at the reading size at least the least target tall: ${rows[1].h * LAY_FS * READING_REM} px`);
   assert.deepEqual([bare[1].pieces[1].box, bare[1].pieces[1].lead], [true, LABEL_CH * advances('0') * MEASURE.head], 'the slots one inline-block, which no line breaks inside, as wide as the one slot the reader\'s own byline takes, measured in its face, whatever it shows (FP-34)');
   assert.deepEqual(bare.map((r) => r.pieces[0].size), [1, MEASURE.head], 'the address at the body\'s size, the byline at the head\'s');
   const marked = articlePlan(d, view({ marks: [shown(5, 4)] }), '1.0.1').filter((r) => r.kind === 'head');
@@ -1011,8 +1028,8 @@ test('a document\'s state is said once, at its corner: in every version state �
   ];
   for (const [what, d, v, state] of states) {
     const head = (/^<div class="hd">(.*?)<\/div>/.exec(articleHTML(d, v, '1.0.1')) || [])[1] ?? '';
-    assert.ok(head.startsWith(`<span class="addr id">${d.addr}</span><span class="by">`) && !head.includes('class="st"') && !/published|version/.test(head), `${what}: the head its address, then its byline, no state — ${head}`);
-    assert.deepEqual(articlePlan(d, v, '1.0.1').filter((r) => r.kind === 'head').map((r) => r.pieces.map((p) => p.text).join('')), [d.addr, '1.0.1 · '], `${what}: the plan's head its address and its byline alone`);
+    assert.ok(head.startsWith(`<span class="addr id">${d.addr}</span><span class="by"`) && !head.includes('class="st"') && !/published|version/.test(head), `${what}: the head its address, then its byline, no state — ${head}`);
+    assert.deepEqual(articlePlan(d, v, '1.0.1').filter((r) => r.kind === 'head').map((r) => r.pieces.map((p) => p.text).join('')), [d.addr, '1.0.1' + GOES + ' · '], `${what}: the plan's head its address and its byline alone`);
     const corner = cornerHTML(d, v), at = state.map((words) => corner.indexOf(esc(words)));
     assert.ok(corner.startsWith(kindSlot('published')) && at.every((i, k) => i > 0 && (k === 0 || i > at[k - 1])), `${what}: the corner names its kind, then ${JSON.stringify(state)} in that order — ${corner}`);
     assert.deepEqual([cornerLead(d, v), cornerWords(d, v)], [t('F.published'), state.join(', ')], `${what}: the mirror's words the corner's, its kind leading, then its state whole`);
@@ -1028,8 +1045,8 @@ test('a document a read refused states nothing in its head either, on the plane 
   for (const [what, d, words, html] of refusals) for (const scene of [false, true]) {
     const where = `${what}, ${scene ? 'in a pane' : 'on the plane'}`, v = view({ scene, members: 2, read: 3, lacks: 1 });
     const article = articleHTML(d, v, '1.0.1');
-    assert.ok(article.startsWith(`<div class="hd"><span class="addr id">${d.addr}</span><span class="by">`) && article.endsWith('</div>') && !article.includes('class="st"') && !article.includes(html), `${where}: its head alone, its address then its byline, no state — ${article}`);
-    assert.deepEqual(articlePlan(d, v, '1.0.1').map((r) => r.pieces.map((p) => p.text).join('')), [d.addr, '1.0.1 · '], `${where}: the plan its address and its byline alone`);
+    assert.ok(article.startsWith(`<div class="hd"><span class="addr id">${d.addr}</span><span class="by"`) && article.endsWith('</div>') && !article.includes('class="st"') && !article.includes(html), `${where}: its head alone, its address then its byline, no state — ${article}`);
+    assert.deepEqual(articlePlan(d, v, '1.0.1').map((r) => r.pieces.map((p) => p.text).join('')), [d.addr, '1.0.1' + GOES + ' · '], `${where}: the plan its address and its byline alone`);
     assert.deepEqual([cornerHTML(d, v), cornerHTML(d, v, true)], [`<span class="st">${html}</span>`, `<span class="st">${html}</span>`], `${where}: its corner its state alone, whole in either form — never a kind, "published", a version or a version's act`);
     assert.deepEqual([cornerLead(d, v), cornerWords(d, v)], [words, ''], `${where}: the mirror's words the corner's, its own words leading where no kind can be read, nothing after them`);
   }
@@ -1189,7 +1206,7 @@ test('the plan and the HTML decide the same blocks, in the same order', () => {
   assert.equal(articlePlan(doc({ refused: 'withheld' }), view(), '1.0.1').length, 2, 'a refused document is its head alone: its address and its byline');
 });
 
-test('the scene-mode variant, a pane\'s article: no scene-offer and no row for one, and no mark a control — on the plane the offer, the symbols and the presence ⟡ are', () => {
+test('the scene-mode variant, a pane\'s article: no scene-offer and no row for one, and no mark a control but the byline\'s acts, one line of acts whose stop is its address — on the plane the offer, the symbols and the presence ⟡ are, and the byline holds none (the byline\'s act decision, point 3)', () => {
   const d = doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: 'abcdefghijkl', origin: null }], origins: [{ pos: 5, width: 4, doc: '1.0.1.0.1003' }] });
   const links = { marks: [shown(9, 2)], symbols: [shown(9, 2)] };
   const plane = view(links), pane = view({ ...links, scene: true });
@@ -1198,38 +1215,42 @@ test('the scene-mode variant, a pane\'s article: no scene-offer and no row for o
   assert.ok(!inPane.includes('class="offer"') && !articlePlan(d, pane, '1.0.1').some((r) => r.kind === 'chrome'), 'in a pane: no offer, and no row for one');
   assert.ok(/<span class="sym [^"]*" data-link="L9"[^>]* role="button" tabindex="-1"/.test(onPlane) && /data-reveal="[^"]*" role="button" tabindex="-1"/.test(onPlane), 'on the plane: the link\'s symbol and the presence ⟡ are buttons a click acts on');
   assert.ok(symsIn(inPane).length === 1 && inPane.includes('data-reveal="1.0.1.0.3"'), 'in a pane: the link\'s symbol and the presence ⟡ stand');
-  assert.ok(!/ role="(?!img")[^"]*"| tabindex=/.test(inPane), 'and nothing in the pane\'s article is a control or a stop: a byline\'s slots are named by their words alone');
+  const by = (/** @type {string} */ html) => (/<span class="by"[^>]*>.*?<\/span><\/span><\/span>/.exec(html) || [''])[0];
+  assert.ok(!/ role="(?!img")[^"]*"| tabindex=/.test(inPane.replace(by(inPane), '')), 'and nothing else in the pane\'s article is a control or a stop: a byline\'s slots are named by their words alone');
+  assert.ok(/^<span class="by" role="toolbar" aria-label="[^"]+"><a class="go" href="#" data-account="1\.0\.1" aria-label="[^"]+" tabindex="0">/.test(by(inPane)), `in a pane: the byline a line of acts, its stop its address, a link: ${by(inPane)}`);
+  assert.ok(!/ role="(?!img")[^"]*"| tabindex=|<a |<button/.test(by(onPlane)), `on the plane the byline holds no control: ${by(onPlane)}`);
 });
 
 // ---- the byline (FP-34) -----------------------------------------------------------------------------------------------
 
-/** a byline's slots as the HTML sets them: its owner, in the identifier's face, then each slot's role, its classes, its width in em, the words it shows, its whole, its cause's string and its name */
+/** a byline's slots as the plane's HTML sets them: its owner, in the identifier's face, the account its act goes to and the sign after it, then each slot's role, its classes, its width in em, the words it shows, its whole, the signs before them, whether it is cut, its cause's string and its name */
 const slotsIn = (/** @type {string} */ html) => {
-  const box = /<span class="by"><span class="id">([^<]*)<\/span>([^<]*)<span class="(slots[^"]*)" style="width:([\d.]+)em">(.*?)<\/span><\/span><(?:span class="pres"|\/div)/.exec(html);
+  const box = /<span class="by"><span class="go" data-account="([^"]*)"><span class="id">([^<]*)<\/span><span class="sign" aria-hidden="true">([^<]*)<\/span><\/span>([^<]*)<span class="(slots[^"]*)" style="width:([\d.]+)em">(.*?)<\/span><\/span><(?:span class="pres"|\/div)/.exec(html);
   if (!box) return null;
-  const slots = [...box[5].matchAll(/<span class="(slot[^"]*)" data-slot="(\w+)"((?: data-string="[^"]*")?)((?: data-cut="1" title="[^"]*")?) role="img" aria-label="([^"]*)" style="width:([\d.]+)em">([^<]*)(?:<span class="whole">([^<]*)<\/span>)?<\/span>/g)].map((m) => ({
-    cls: m[1], role: m[2], cause: (/data-string="([^"]*)"/.exec(m[3]) || [])[1] ?? null, title: (/title="([^"]*)"/.exec(m[4]) || [])[1] ?? null, name: m[5], em: Number(m[6]), shows: m[7], whole: m[8] ?? null,
+  const slots = [...box[7].matchAll(/<span class="(slot[^"]*)" data-slot="(\w+)"((?: data-string="[^"]*")?)((?: data-cut="1")?) aria-label="([^"]*)" style="width:([\d.]+)em" role="img">(?:<span class="sign" aria-hidden="true">([^<]*)<\/span>)?([^<]*)(?:<span class="whole"><span class="sign" aria-hidden="true">([^<]*)<\/span>([^<]*)<\/span>)?<\/span>/g)].map((m) => ({
+    cls: m[1], role: m[2], cause: (/data-string="([^"]*)"/.exec(m[3]) || [])[1] ?? null, cut: !!m[4], name: m[5], em: Number(m[6]), opens: m[7] ?? null, shows: m[8], opened: m[9] ?? null, whole: m[10] ?? null,
   }));
-  return { owner: box[1] + box[2], cls: box[3], em: Number(box[4]), slots };
+  return { owner: box[2], account: box[1], sign: box[3], sep: box[4], cls: box[5], em: Number(box[6]), slots };
 };
-/** a slot's accessible name, in the strings table's words */
-const named = (/** @type {'label' | 'fingerprint'} */ role, /** @type {string} */ shows, kept = true) => esc(heard(tRuns('L.slot.named', { role: t(role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows }, kept ? { shows: role === 'label' ? 'reading' : 'ident' } : {})));
+/** a byline slot's accessible name, in the strings table's words: what it shows, then its role word (the byline's act decision, point 2) */
+const named = (/** @type {'label' | 'fingerprint'} */ role, /** @type {string} */ shows, kept = true) => esc(heard(tRuns('L.byline.slot', { shows, role: t(role === 'label' ? 'L.slot.device-label' : 'L.byline.fingerprint') }, kept ? { shows: role === 'label' ? 'reading' : 'ident' } : {})));
 /** the byline row of an article's plan: its pieces' text */
 const bylineRow = (/** @type {import('../model/records.js').Doc} */ d, /** @type {import('./article.js').ArticleView} */ v) => JSON.stringify(articlePlan(d, v, d.account || '').filter((r) => r.kind === 'head')[1]);
 /** the device label's box and the fingerprint cue's, in em, as the view's measure sets their faces: LABEL_CH figures, and the cue's own characters */
 const LABEL_EM = LABEL_CH * advances('0'), CUE_EM = advances('0000 0000 0000 0000');
 
-test('a byline names its owner, in the identifier\'s face, then its slots: on another\'s, the device label and the fingerprint cue the owner\'s genesis entry holds, the cue in the identifier\'s face; on the reader\'s own, the label alone — each a box of its own width as its face is measured, named by its role and what it shows (FP-34; issue #208; issue #16)', () => {
+test('a byline names its owner, in the identifier\'s face, `↗` after it — the account its act goes to — then its slots: on another\'s, the device label and the fingerprint cue the owner\'s genesis entry holds, the cue in the identifier\'s face; on the reader\'s own, the label alone — each a box of its own width as its face is measured, named by what it shows then its role (FP-34; issue #208; issue #16; the byline\'s act decision, points 1 and 2)', () => {
   const OTHER = '1.0.2', d = doc({ addr: '1.0.2.0.5', account: OTHER, meta: null });
   const facts = /** @type {import('../model/records.js').AccountFacts} */ ({ label: 'agent-runner', fingerprint: '9a0c33f1b2d4e6a8' + '1'.repeat(48) });
   const other = slotsIn(articleHTML(d, view({ keyOf: (a) => (a === OTHER ? facts : undefined) }), OTHER));
   assert.equal(CUE_CH, 19);
   assert.deepEqual(other, {
-    owner: OTHER + ' · ', cls: 'slots', em: LABEL_EM + CUE_EM + advances(' · '), slots: [
-      { cls: 'slot', role: 'label', cause: null, title: null, name: named('label', 'agent-runner'), em: LABEL_EM, shows: 'agent-runner', whole: null },
-      { cls: 'slot id', role: 'fingerprint', cause: null, title: null, name: named('fingerprint', '9a0c 33f1 b2d4 e6a8'), em: CUE_EM, shows: '9a0c 33f1 b2d4 e6a8', whole: null },
+    owner: OTHER, account: OTHER, sign: GOES, sep: ' · ', cls: 'slots', em: LABEL_EM + CUE_EM + advances(' · '), slots: [
+      { cls: 'slot', role: 'label', cause: null, cut: false, name: named('label', 'agent-runner'), em: LABEL_EM, opens: null, shows: 'agent-runner', opened: null, whole: null },
+      { cls: 'slot id', role: 'fingerprint', cause: null, cut: false, name: named('fingerprint', '9a0c 33f1 b2d4 e6a8'), em: CUE_EM, opens: null, shows: '9a0c 33f1 b2d4 e6a8', opened: null, whole: null },
     ],
-  }, 'another\'s byline: the label and the cue, each in its box');
+  }, 'another\'s byline: its owner and the sign its act goes by, joined by a no-break thin space and hidden from its name, then the label and the cue, each in its box, neither an act nor signed');
+  assert.equal(GOES, String.fromCharCode(0x202f) + '↗', 'the sign: ↗ after a no-break thin space');
   const own = slotsIn(articleHTML(doc(), view(), '1.0.1'));
   assert.deepEqual(own && [own.em, own.slots.map((s) => [s.role, s.shows, s.name])], [LABEL_EM, [['label', 'dev-notebook', named('label', 'dev-notebook')]]], 'the reader\'s own byline: its label alone, no cue (foundations §2.1)');
   const guest = slotsIn(articleHTML(doc(), view({ reader: KEYLESS }), '1.0.1'));
@@ -1273,7 +1294,7 @@ test('a byline never shows a placeholder: while its facts are read its boxes sta
   assert.equal(rows.size, 1, 'the plan\'s byline line the same in every state: what the slots show moves nothing beside them');
 });
 
-test('a device label its box does not hold is cut on a word\'s end with an ellipsis, by its width as its face sets it and never its count, carries itself whole for its act and its title, and is named whole (FP-26; FP-34; issue #208: "A label too long for the box is cut and shown whole on its act"; issue #16)', () => {
+test('a device label its box does not hold is cut on a word\'s end by its width as its face sets it and never its count — on the byline with no ellipsis, room left in its box for the `▸` before it that says its act opens it — carries itself whole for its act, `▾` before it, and is named whole (FP-26; FP-34; issue #208: "A label too long for the box is cut and shown whole on its act"; issue #16; the byline\'s act decision, point 1)', () => {
   assert.equal(cutTo('dev-notebook', LABEL_EM, advances), 'dev-notebook', 'a label the box holds: whole');
   assert.equal(cutTo('Shane’s MacBook Pro (work, 2024)', LABEL_EM, advances), 'Shane’s MacBook Pro…', 'cut before a space');
   assert.equal(cutTo('build-agent-ci-runner-internal', LABEL_EM, advances), 'build-agent-ci-runner-…', 'cut after a hyphen, where a line may break');
@@ -1281,9 +1302,43 @@ test('a device label its box does not hold is cut on a word\'s end with an ellip
   for (const label of ['Shane’s MacBook Pro (work, 2024)', 'build-agent-ci-runner-internal', 'abcdefghijklmnopqrstuvwxyz0123']) assert.ok(advances(cutTo(label, LABEL_EM, advances)) <= LABEL_EM + 1e-9, `${label}: within the box`);
   const wide = (/** @type {string} */ x) => [...x].reduce((n, c) => n + (c === 'W' ? 2 : 1) * CHAR_W, 0);
   assert.deepEqual([cutTo('WWWW WWWW WWWW WWWW', LABEL_EM, advances), cutTo('WWWW WWWW WWWW WWWW', LABEL_EM, wide)], ['WWWW WWWW WWWW WWWW', 'WWWW WWWW…'], 'nineteen characters of a face whose letters set two advances wide: cut by their width, where a count would keep them whole');
+  assert.equal(cutTo('Shane’s MacBook Pro (work, 2024)', LABEL_EM, advances, ''), 'Shane’s MacBook Pro', 'with no mark named: the run alone, at a word\'s end');
   const long = 'Shane’s MacBook Pro (work, 2024)';
-  const by = slotsIn(articleHTML(doc({ addr: '1.0.2.0.5', account: '1.0.2', meta: null }), view({ reader: KEYLESS, keyOf: () => ({ label: long, fingerprint: 'ab'.repeat(32) }) }), '1.0.2'));
-  assert.deepEqual(by && { cls: by.slots[0].cls, shows: by.slots[0].shows, whole: by.slots[0].whole, title: by.slots[0].title, name: by.slots[0].name }, { cls: 'slot cut', shows: esc('Shane’s MacBook Pro…'), whole: esc(long), title: esc(long), name: named('label', long) }, 'cut in its box, whole beside it for its act, in its title and in its name');
+  const html = articleHTML(doc({ addr: '1.0.2.0.5', account: '1.0.2', meta: null }), view({ reader: KEYLESS, keyOf: () => ({ label: long, fingerprint: 'ab'.repeat(32) }) }), '1.0.2');
+  const by = slotsIn(html), s = by && by.slots[0];
+  assert.deepEqual(s && { cls: s.cls, cut: s.cut, opens: s.opens, shows: s.shows, opened: s.opened, whole: s.whole, name: s.name }, { cls: 'slot cut', cut: true, opens: OPENS, shows: esc('Shane’s MacBook Pro'), opened: OPENED, whole: esc(long), name: named('label', long) }, 'cut in its box, `▸` before it, whole beside it for its act with `▾` before it, and named whole');
+  assert.ok(s && advances(OPENS + s.shows) <= LABEL_EM + 1e-9, 'the sign and the cut run within the slot\'s box');
+  assert.ok(!(/<span class="by">.*?<\/span><\/span><\/span>/.exec(html) || [''])[0].includes('…'), 'no ellipsis anywhere in the byline: the cut said by its sign');
+  assert.ok(!/ title=/.test(html), 'and no title on it');
+});
+
+test('a byline\'s owner token is an act that goes, `↗` after its address joined by a no-break thin space and hidden from its name, drawn from the first frame whatever its facts show, the plan\'s line the same: on the plane no control, its article hidden from assistive technology; in a reading scene\'s pane a link named by its address as drawn then where it goes — "your documents" on the reader\'s own — never an author; a whole device label and a fingerprint\'s cue carry no act, no sign and no stop; and no byline carries a name, a bio, or a bio\'s act (the byline\'s act decision, points 1 and 2; tests 1, 10)', () => {
+  const OTHER = '1.0.2', d = doc({ addr: '1.0.2.0.5', account: OTHER, meta: null });
+  const facts = /** @type {import('../model/records.js').AccountFacts} */ ({ label: 'agent-runner', fingerprint: '9a0c33f1b2d4e6a8' + '1'.repeat(48) });
+  const token = `<span class="go" data-account="${OTHER}"><span class="id">${OTHER}</span><span class="sign" aria-hidden="true">${GOES}</span></span>`;
+  /** the byline's markup in an article */
+  const by = (/** @type {string} */ html) => (/<span class="by"[^>]*>.*?<\/span><\/span><\/span>(?=<\/div>|<span class="pres")/.exec(html) || [''])[0];
+  const rows = new Set();
+  for (const [state, keyOf] of /** @type {Array<[string, (a: string) => any]>} */ ([['its facts being read', () => undefined], ['its facts read', (a) => (a === OTHER ? facts : undefined)]])) {
+    const v = view({ reader: KEYLESS, keyOf }), plane = by(articleHTML(d, v, OTHER));
+    assert.ok(plane.startsWith(`<span class="by">${token} · `), `${state}: the token and its sign from the first frame — ${plane}`);
+    assert.ok(!/<a |<button| tabindex=| role="(?!img")/.test(plane), `${state}: on the plane no control in the byline`);
+    rows.add(JSON.stringify(articlePlan(d, v, OTHER).filter((r) => r.kind === 'head')[1]));
+  }
+  assert.equal(rows.size, 1, 'the plan\'s byline line the same whether its facts are read or not');
+  const pane = by(articleHTML(d, view({ reader: KEYLESS, scene: true, keyOf: (a) => (a === OTHER ? facts : undefined) }), OTHER));
+  const name = heard(tRuns('L.byline.address', { address: OTHER }, { address: 'ident' }));
+  assert.ok(pane.includes(`<a class="go" href="#" data-account="${OTHER}" aria-label="${esc(name)}" tabindex="0"><span class="id">${OTHER}</span><span class="sign" aria-hidden="true">${GOES}</span></a>`), `in a pane: a link, the line's stop, named by its address then where it goes — ${pane}`);
+  assert.ok(name.startsWith(OTHER) && !/author|written by/i.test(name), `its name begins with the address as drawn, no author: ${name}`);
+  const own = by(articleHTML(doc(), view({ scene: true }), '1.0.1'));
+  assert.ok(own.includes(`aria-label="${esc(heard(tRuns('L.byline.address.own', { address: '1.0.1' }, { address: 'ident' })))}"`), `the reader's own byline: their own documents — ${own}`);
+  for (const html of [pane, own]) {
+    const slots = (/<span class="slots[^"]*"[^>]*>(.*)<\/span><\/span>$/.exec(html) || ['', ''])[1];
+    assert.ok(!/<button|<a |tabindex=|aria-expanded|class="sign"/.test(slots), `a whole label and the cue: no act, no sign, no stop — ${slots}`);
+  }
+  for (const html of [pane, own, by(articleHTML(d, view({ reader: KEYLESS }), OTHER))]) {
+    assert.ok(!html.includes(t('L.well-known.bio')) && !/’s bio|'s bio|this is/.test(html) && !/\.0\.3\b/.test(html), `no name, no bio and no bio's act on a byline — ${html}`);
+  }
 });
 
 test('each withheld run carries its own origin\'s key and its origin\'s owner, whoever owns the document windowing it; the placeholder its card and its statement are made from names that owner (R56; B1-S7)', () => {
@@ -1331,7 +1386,7 @@ test('an item this client cannot show is a gap of its positions, each one advanc
 
 test('every address the article sets stands in the identifier\'s face, inside a sentence as well: the head\'s address, the byline\'s owner, another\'s home record (issue #16)', () => {
   const head = articleHTML(doc({ blocks: [{ pos: 1, width: 8, kind: 'para', text: 'Tumbler.', origin: null }] }), view(), '1.0.1');
-  assert.ok(head.startsWith(`<div class="hd"><span class="addr id">1.0.1.0.3</span>`) && head.includes(`<span class="by">${idOf('1.0.1')} · `), 'the head\'s address and the byline\'s owner');
+  assert.ok(head.startsWith(`<div class="hd"><span class="addr id">1.0.1.0.3</span>`) && head.includes(`<span class="by"><span class="go" data-account="1.0.1">${idOf('1.0.1')}<span class="sign" aria-hidden="true">${GOES}</span></span> · `), 'the head\'s address and the byline\'s owner');
   assert.ok(head.includes('<p class="sp blk-para indent" data-addr="1.0.1.0.3" data-pos="1" data-width="8">Tumbler.</p>'), 'the document\'s own words carry no face of the client\'s');
   const enroll = { pos: 1, width: 1, kind: /** @type {const} */ ('atom'), text: JSON.stringify({ type: 'skep-enroll', keys: [{ label: 'dev-notebook', anchor: false }] }), origin: null };
   const other = articleHTML(doc({ addr: '1.0.2.0.1', account: '1.0.2', blocks: [enroll] }), view(), '1.0.2');
@@ -1554,3 +1609,19 @@ test('#532, #529: at a hold while the board is not answering the kept statement 
   assert.deepEqual(keptSaying({ word: 'kept', reason: null }, { silent: true }), { id: 'B3.save.kept', text: sentence('B3.save.kept') }, '"kept" is "kept", whatever the board');
 });
 
+
+test('the style draws the acts\' signs and areas as the byline\'s act decision gives them: no dotted underline on a corner\'s compact face or the slot face\'s compact statement, which lead with `▸`, the statement\'s words inline beside it on its one row; the byline\'s signs in its line\'s own ink, no rule setting their colour, size or face apart; the owner token one unit exactly its row\'s line box tall, no padding or margin growing it over another row (the byline\'s act decision, point 1, tests 3 and 5; point 3; FP-44)', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const css = await readFile(new URL('../style.css', import.meta.url), 'utf8');
+  /** each rule's declarations, by its selector list as written */
+  const rules = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
+  const of = (/** @type {RegExp} */ sel) => rules.filter((r) => sel.test(r.sel));
+  for (const [what, sel] of /** @type {Array<[string, RegExp]>} */ ([['a corner\'s compact face', /button\.face\.compact/], ['the slot face\'s compact statement', /\.fcompact/]])) {
+    assert.ok(of(sel).length > 0 && of(sel).every((r) => !/underline/.test(r.body)), `${what}: no underline — ${JSON.stringify(of(sel))}`);
+  }
+  assert.ok(of(/\.fcompact \.fline/).some((r) => /display:\s*inline\b/.test(r.body)), 'the slot face\'s compact statement\'s words inline beside its sign, on its one row');
+  assert.deepEqual(of(/\.sign\b/).filter((r) => /color|font|opacity|background/.test(r.body)), [], 'no rule sets a sign\'s ink, face, size or ground apart from its line\'s');
+  const go = of(/\.by \.go\b/).map((r) => r.body).join(';');
+  assert.ok(/height:\s*1lh/.test(go) && /vertical-align:\s*top/.test(go) && !/padding|margin/.test(go), `the owner token one unit its row's line box tall, nothing growing it: ${go}`);
+  assert.ok(of(/\.dtext \.hd \.by$/).some((r) => /line-height:\s*var\(--byline-lh\)/.test(r.body)), 'the byline\'s rows at the byline\'s own line height (P-LAY\'s BYLINE_LH)');
+});

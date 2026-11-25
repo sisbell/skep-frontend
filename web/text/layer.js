@@ -8,8 +8,9 @@
 // the columns' edges and the run each origin's statement stands beside
 // (`signed`, `anchors`), the margin's marks standing and the first held mark
 // in view (`margins`, `heldFirst`), the lines each reading scene's pane's
-// article set, read for its margin (`paneGrids`), which corners and cut
-// labels a reader's act opened whole, each document's fold and its lines as
+// article set, read for its margin (`paneGrids`), which corners a reader's
+// act opened whole and the one cut label it opened whole, the byline's stop
+// as last written, each document's fold and its lines as
 // the platform set them, the passage being read while its document is set
 // again (`hold`), what each reading scene's pane's article was made from and
 // where its words were read (`panes`), whether a press
@@ -197,7 +198,17 @@
 // key, and its lines are kept by the article with its slots read, their
 // boxes empty (`layoutKey`), so the facts' arrival — which makes every
 // document its owner owns again (M-REC's revision) — sets no line; a cut
-// label opens whole on its act, marked in place (`openLabel`, `markLabel`).
+// label opens whole on its act, marked in place, one at a time and in an
+// overlay's life: closed by Esc, by the act at it again, by the reader's next
+// act or a return, by its article taken down and by a board change
+// (`openLabel`, `closeLabel`, `markLabel`). The byline's stop (the byline's
+// act decision, point 3): the focused document's byline's acts, where its
+// article stands at reading scale, stand as controls in their own element
+// after the walk's and before the corners — the article being hidden from
+// assistive technology — one line of acts, each framed each frame at its
+// drawn token and its sign (`placeByline`, `bylineBoxes`), and the least pan
+// that brings its row clear of the one line and of its head's held rows read
+// for the focus landing on it (`bylinePan`; #703's first move; FP-37).
 // A span wholly inside a withheld run stands at the run's own boxes — its
 // gap's, one for each part of it standing — never at an offset inside the
 // gap (`spanRects`; FP-30, FP-21). The lit block is the focus ring's
@@ -633,7 +644,7 @@
 // (`frameStats`).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-14, FP-20, FP-21, FP-22, FP-23,
 // FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36,
-// FP-37, FP-38, FP-39, FP-40, FP-41.
+// FP-37, FP-38, FP-39, FP-40, FP-41, FP-43, FP-44.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -648,14 +659,14 @@ import { docBox, intersects, clearLeftOf, hasCell, assignedSlotOf, MAILBOX_SLOT,
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W, GRID } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX, ELLIPSIS } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, titleHTML, stepsHTML, stepEm, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
+import { bylineOf, addressName, slotName, GOES, BY_SEP, articleHTML, articlePlan, cornerHTML, cornerItems, cornerLead, cornerWords, titleHTML, stepsHTML, stepEm, kindWord, keptHTML, statementHTML, keptWord, keptStatement, faceWords, faceRuns, blockMarks, symbolLit, editionClause, copyText, copyParts, firstLineOf, statedChain, placeholderOf, gapHolds, edgeStatementHTML, edgeSignsFor, edgeKeyHTML, edgeCountHTML, originRunsOf, textIn, sourceStatementHTML } from './article.js';
 import { farShort, whyOf } from '../beams/held.js';
 import { applyEdits, sourceRuns, fromBase, boundaries, wordStop, stretchIn } from '../model/derive.js';
 import { iRuns } from '../model/frames.js';
 import { homeOf, documentOf, memberOf, versionAddress, accountOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, touches, elementIn, CHROME } from './span.js';
 import { esc, byteLength, numeral } from '../util.js';
-import { t, plural, facedHTML, lastRead, runsText, joinRuns, sentence, CLIENT_CLOSE } from '../strings.js';
+import { t, plural, facedHTML, lastRead, runsText, joinRuns, sentence, heard, CLIENT_CLOSE } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -1005,8 +1016,10 @@ let heldFirst = null;
 const anchors = new Map();
 /** @type {Set<string>} the documents whose corner a reader's act opened whole (`openCorner`), until it is closed or leaves */
 const openWhole = new Set();
-/** @type {Set<string>} the documents whose byline's cut label a reader's act opened whole (`openLabel`), until the act again closes it */
-const openLabels = new Set();
+/** @type {string | null} the document whose byline's cut label a reader's act opened whole (`openLabel`), one at a time, in an overlay's life; null where none stands opened */
+let labelOpen = null;
+/** @type {HTMLElement | null} the byline's stop's element: the focused document's byline's acts as controls (`placeByline`) */
+let bylineLayer = null;
 /** @type {Map<string, HeldLabel>} the labels held over mounted articles, by document */
 const helds = new Map();
 /** the measure the layer's style holds (`setMeasure`): what the columns of the articles it lays out are set at; 0 before it holds one */
@@ -1073,7 +1086,7 @@ const mountable = (/** @type {Doc} */ d) => REC.textHeld(d) && !d.system && hasC
 /**
  * @param {HTMLElement} el the text layer's element
  * @param {HTMLElement | null} cornersEl the corner layer's
- * @param {{measure?: boolean}} [opts] `measure` the platform sets the articles: their lines measured as rendered and their parts cut from them (the page; the node tests run without)
+ * @param {{measure?: boolean, byline?: HTMLElement | null}} [opts] `measure` the platform sets the articles: their lines measured as rendered and their parts cut from them (the page; the node tests run without); `byline` the byline's stop's element (`placeByline`), named as the page attaches it
  */
 export function attach(el, cornersEl, opts = {}) {
   layer = el; cornerLayer = cornersEl; engine = !!opts.measure; styled = 0;
@@ -1081,6 +1094,15 @@ export function attach(el, cornersEl, opts = {}) {
   if (cornersEl && typeof cornersEl.addEventListener === 'function') {
     cornersEl.addEventListener('focusin', (ev) => rove(ev.target, ev.target));
     cornersEl.addEventListener('focusout', (ev) => rove(ev.target, ev.relatedTarget));
+  }
+  bylineLayer = opts.byline ?? null; bylineHTMLNow = '';
+  // the byline's stop likewise (`standByline`)
+  if (bylineLayer) {
+    bylineLayer.setAttribute('aria-label', heard(t('L.byline')));
+    if (typeof bylineLayer.addEventListener === 'function') {
+      bylineLayer.addEventListener('focusin', (ev) => standByline(/** @type {Element | null} */ (ev.target)));
+      bylineLayer.addEventListener('focusout', (ev) => standByline(/** @type {Element | null} */ (ev.relatedTarget)));
+    }
   }
 }
 
@@ -1097,7 +1119,7 @@ function rove(/** @type {EventTarget | null} */ target, /** @type {EventTarget |
  * the focused document's corner under it.
  * @param {boolean} on chrome covers the plane (true) or has left it (false)
  */
-export function cover(on) { if (cornerLayer) FOCUS.cover(cornerLayer, on); }
+export function cover(on) { if (cornerLayer) FOCUS.cover(cornerLayer, on); if (bylineLayer) FOCUS.cover(bylineLayer, on); }
 /** the owners hand their readers in once; a reader left out reads as the default does (`noReaders`) */
 export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReaders(), ...r }; }
 /** the block the `lit` mark stands on (D3): the walk's focused block while the ring is drawn — the plane holds the focus and the walk stands where an act put it (N-FOCUS's `ringShown`) — else none; never in a scene's pane */
@@ -1940,7 +1962,7 @@ const clauseWidth = (/** @type {{text: string}} */ k) => measureRun(k.text, ADDR
 const nameWidth = (/** @type {Doc} */ d) => measureRun(d.addr, ADDRESS.px, ADDRESS.weight, 'ident');
 
 /** a corner's items as a head's rows read them (`headLayout`): each one's width at the interface's size, as its corner's view measures it (`cornerView`), its words, whether it yields, and whether it holds at a reading scene's pane's top */
-const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => ({ w: i.em * CORNER.px, yields: i.yields, words: i.words, holds: i.holds }));
+const headItems = (/** @type {import('./article.js').CornerItem[]} */ items) => items.map((i) => ({ w: i.em * CORNER.px, yields: i.yields, words: (i.lead || '') + i.words, holds: i.holds }));
 
 /**
  * The depth a document's head takes above each row of its columns, in the
@@ -3467,6 +3489,8 @@ export function formLabel(addr) {
 /** take a mounted article down; where the platform's selection stands in it, it is kept (`kept`) for the frame that puts it back */
 function unmount(/** @type {string} */ addr) {
   const rec = mounted.get(addr); if (!rec) return;
+  // a byline's cut label opened in it closes with it: no remount keeps it open (`openLabel`)
+  if (labelOpen === addr) labelOpen = null;
   const held = selectionIn(rec.el);
   if (held) kept = held;
   rec.el.remove(); mounted.delete(addr);
@@ -3705,20 +3729,57 @@ export function keptRunsKey() {
 }
 
 /**
- * A byline's cut label opened whole on its act (FP-34), or closed again by
- * the act again: the document's article marks its
- * cut label `open` in place (`markLabel`), and the style sets the whole label
- * over what is beside it, its box unmoved. APP-INPUT takes the act at the
- * label on the plane; in a reading scene's pane nothing acts (SC), its title
- * and its accessible name carrying the label whole.
+ * A byline's cut label opened whole on its act (FP-34; the byline's act
+ * decision, point 1), or closed again by the act at it again: the document's
+ * article marks its cut label `open` in place (`markLabel`) — `▾` before its
+ * whole — and the style sets the whole label over what is beside it, its box
+ * unmoved. One stands at a time, in an overlay's life: Esc closes it, and so
+ * does the reader's next act (`closeLabel`), its article taken down
+ * (`unmount`) and a board change (`clear`). APP-INPUT takes the act at the
+ * label on the plane, and at the byline's stop (`placeByline`); a reading
+ * scene's pane's label opens in the pane (SC's).
  * @param {string} addr
  */
 export function openLabel(addr) {
-  if (openLabels.has(addr)) openLabels.delete(addr); else openLabels.add(addr);
+  labelOpen = labelOpen === addr ? null : addr;
   markDirty();
 }
 /** is a document's byline's cut label opened whole (`openLabel`)? */
-export const labelOpened = (/** @type {string} */ addr) => openLabels.has(addr);
+export const labelOpened = (/** @type {string} */ addr) => labelOpen === addr;
+/**
+ * The cut label standing opened whole closed (`openLabel`, `openPaneLabel`):
+ * by Esc, the reader's next act or a return (APP-INPUT's, N-KEYS', N-GO's).
+ * A pane's label whose article was made anew since stands opened no more.
+ * @returns {boolean} one stood opened on the page
+ */
+export function closeLabel() {
+  const pane = paneLabel;
+  paneLabel = null;
+  if (pane) markPaneLabel(pane, false);
+  if (labelOpen === null) return !!pane && pane.isConnected;
+  labelOpen = null;
+  markDirty();
+  return true;
+}
+
+/**
+ * A reading scene's pane's byline's cut label opened whole in the pane on its
+ * act (the byline's act decision, point 3), or closed again by the act again:
+ * the label's button marked `open` in place, saying it stands expanded, the
+ * style setting its whole over what is beside it; one at a time, the plane's
+ * closed first, and in the same life as the plane's (`closeLabel`), a pane
+ * set again making its article anew, closed.
+ * @param {HTMLElement} label the cut label's button in the pane's article (T-ARTICLE's)
+ */
+export function openPaneLabel(label) {
+  const on = paneLabel !== label;
+  closeLabel();
+  if (on) { paneLabel = label; markPaneLabel(label, true); }
+}
+/** a pane's cut label marked open or closed in place (`openPaneLabel`) */
+function markPaneLabel(/** @type {HTMLElement} */ label, /** @type {boolean} */ on) { label.classList.toggle('open', on); label.setAttribute('aria-expanded', String(on)); }
+/** @type {HTMLElement | null} the reading scene's pane's cut label a reader's act opened whole (`openPaneLabel`); null where none stands opened */
+let paneLabel = null;
 
 /**
  * Mark a standing article's cut label open where its act opened it, and
@@ -3728,10 +3789,136 @@ export const labelOpened = (/** @type {string} */ addr) => openLabels.has(addr);
  * @param {Mounted} rec
  */
 function markLabel(rec) {
-  const on = openLabels.has(rec.d.addr);
+  const on = labelOpen === rec.d.addr;
   if (on === rec.labelFor) return;
   rec.labelFor = on;
   for (const el of /** @type {HTMLElement[]} */ ([...rec.el.querySelectorAll('.slot.cut')])) el.classList.toggle('open', on);
+}
+
+/** the key a control of the byline's stop bears (`placeByline`): its act's, which a rebuild puts the focus back on (N-FOCUS's `keep`) */
+const bylineAct = (/** @type {Element} */ el) => (/** @type {HTMLElement} */ (el)).dataset?.act || null;
+
+/**
+ * The byline of a mounted document (T-ARTICLE's `bylineOf`) as its article
+ * draws it now: its owner the account its article names (M-REC's
+ * `ownerAccount`), else its own.
+ * @param {Mounted} rec
+ */
+const bylineOfRec = (rec) => bylineOf(REC.ownerAccount(rec.d) || rec.d.account || '', viewFor(rec.d));
+
+/**
+ * The boxes on screen of a mounted document's byline's acts, as it stands
+ * now: its address with its sign, and a cut label's slot — where the platform
+ * set its head and its part stands, those elements' own boxes; else as its
+ * fold sets the byline's first row, its address at the column's left and its
+ * label past the address, its sign and the separator, each as wide as
+ * P-LAY's advance counts it at the byline's size (T-ARTICLE's `bylinePieces`)
+ * — where APP-INPUT's pan reads it while the head stands out of view.
+ * @param {Mounted} rec
+ * @param {import('./article.js').Byline} by
+ * @returns {{go: Rect, label: Rect | null}}
+ */
+function bylineBoxes(rec, by) {
+  const box = (/** @type {Element | null} */ el) => { if (!el) return null; const q = el.getBoundingClientRect(); return { x: q.left, y: q.top, w: q.width, h: q.height }; };
+  const go = engine ? box(rec.el.querySelector('.hd .by .go')) : null, cut = engine ? box(rec.el.querySelector('.hd .by .slot.cut')) : null;
+  if (go) return { go, label: cut };
+  const f = rec.fold, c = f.columns[0], heads = f.lines.filter((l) => l.kind === 'head'), l = heads[1] || heads[0], at = docBox(rec.d.addr);
+  const k = MEASURE.head * CHAR_W * f.fs * cam.scale, y = sy(at.y + c.y + (l ? (l.top - c.top) * f.fs : 0)), h = (l ? l.h : LINE_H) * f.fs * cam.scale, x = sx(at.x + c.x);
+  const goW = [...(by.owner + GOES)].length * k, sepW = [...BY_SEP].length * k;
+  const s = by.slots.find((x) => x.role === 'label');
+  return { go: { x, y, w: goW, h }, label: s && s.state === 'value' && s.shows !== s.whole ? { x: x + goW + sepW, y, w: s.em * MEASURE.head * f.fs * cam.scale, h } : null };
+}
+
+/**
+ * The byline's stop on the plane (see the head; the byline's act decision,
+ * point 3): the focused document's byline's acts, where its article stands
+ * at its reading scale — as its corner stands — as controls in their own
+ * element after the walk's and before the corners, out of the article,
+ * which is hidden from assistive technology: its address a link to its
+ * account's region, named by the address as drawn then where it goes, and a
+ * cut label a button saying whether it stands opened, named by the label
+ * whole then its role word (T-ARTICLE's `addressName`, `slotName`) — one line
+ * of acts, a toolbar whose one Tab stop is the act the focus stands on, else
+ * its first; each framed at its drawn token and its sign each frame
+ * (`bylineBoxes`), drawing nothing but the focus ring, the pointer passing
+ * through to the article. Written again where what they stand for changed, a
+ * focus on one put back on the act bearing its key (N-FOCUS's `keep`); none,
+ * and no stop, where no such byline stands, a focus on one handed to the
+ * walk's element (the reader `handOff`).
+ * @param {(addr: string) => boolean} focused
+ */
+function placeByline(focused) {
+  const el = bylineLayer;
+  if (!el) return;
+  /** @type {Mounted | null} */
+  let rec = null;
+  for (const r of mounted.values()) if (focused(r.d.addr) && readsAt(r.fs)) { rec = r; break; }
+  const by = rec ? bylineOfRec(rec) : null;
+  const cut = by ? by.slots.find((s) => s.role === 'label' && s.state === 'value' && s.shows !== s.whole) || null : null;
+  const addr = rec ? rec.d.addr : '';
+  const html = !by ? '' : `<a class="act go" href="#" data-act="go" data-account="${esc(by.owner)}" data-addr="${esc(addr)}" aria-label="${esc(heard(addressName(by)))}"></a>` +
+    (cut ? `<button type="button" class="act" data-act="label" data-addr="${esc(addr)}" aria-expanded="${labelOpen === addr}" aria-label="${esc(heard(slotName(cut)))}"></button>` : '');
+  if (html !== bylineHTMLNow) {
+    const held = el.contains(focusedNow());
+    FOCUS.keep(el, bylineAct, () => { el.innerHTML = html; standByline(); });
+    bylineHTMLNow = html;
+    if (!html && held) read.handOff();
+  }
+  if (!rec || !by) return;
+  const boxes = bylineBoxes(rec, by), acts = allIn(el, '.act');
+  acts.forEach((a, i) => {
+    const r = i === 0 ? boxes.go : boxes.label;
+    if (!r) return;
+    a.style.transform = `translate(${Math.round(r.x)}px, ${Math.round(r.y)}px)`;
+    a.style.width = Math.round(r.w) + 'px'; a.style.height = Math.round(r.h) + 'px';
+  });
+}
+/** the byline's stop's markup as last written (`placeByline`): '' where none stands */
+let bylineHTMLNow = '';
+
+/** the byline's stop's acts stood (`placeByline`; #585's line of acts): its one Tab stop the act the focus stands on, else its first, every other act out of the order */
+function standByline(/** @type {Element | null} */ at = focusedNow()) {
+  if (!bylineLayer) return;
+  const acts = allIn(bylineLayer, '.act'), stop = acts.find((a) => a === at) || acts[0];
+  for (const a of acts) a.tabIndex = a === stop ? 0 : -1;
+}
+
+/**
+ * A document's byline as the ARIA mirror's document item reads it whole (the
+ * byline's act decision, point 3; FP-26): its owner's address, kept as
+ * written, then each slot by its name — its device label whole, its
+ * fingerprint's cue — or the cause that empties both, once; by its owner's
+ * facts as the page holds them (T-ARTICLE's `bylineOf`, `slotName`), its
+ * parts joined by the byline's separator, which the ear hears as a pause.
+ * @param {string} addr
+ * @returns {import('../strings.js').Run[]}
+ */
+export function bylineWords(addr) {
+  const d = REC.doc(addr), by = bylineOf(REC.ownerAccount(d) || d.account || '', viewFor(d));
+  return joinRuns(BY_SEP, [[{ text: by.owner, face: /** @type {const} */ ('ident') }], ...(by.once ? by.slots.slice(0, 1) : by.slots).map(slotName)]);
+}
+
+/**
+ * The acts of the byline's stop in their order (`placeByline`): what ← and →,
+ * Home and End walk there (N-KEYS').
+ * @returns {HTMLElement[]}
+ */
+export const bylineActs = () => (bylineLayer ? allIn(bylineLayer, '.act') : []);
+
+/**
+ * The least pan that brings a document's byline's row clear of the one line
+ * and of the rows its head's corner holds (#703's first move; FP-37), read and
+ * not made (`panFor` over what its head covers now, `coverAt`): what
+ * APP-INPUT moves the camera by as a focus lands on the byline's stop. None
+ * where its article does not stand.
+ * @param {string} addr
+ * @returns {{dx: number, dy: number} | null}
+ */
+export function bylinePan(addr) {
+  const rec = mounted.get(addr);
+  if (!rec) return null;
+  const by = bylineOfRec(rec), b = bylineBoxes(rec, by), row = b.label ? { x: b.go.x, y: Math.min(b.go.y, b.label.y), w: b.label.x + b.label.w - b.go.x, h: Math.max(b.go.y + b.go.h, b.label.y + b.label.h) - Math.min(b.go.y, b.label.y) } : b.go;
+  return panFor(row, coverAt(addr, { x: cam.x, y: cam.y, scale: cam.scale }), null);
 }
 
 /**
@@ -4132,6 +4319,7 @@ export function frame(focused = () => false) {
   const focus = litFocus(), lit = LK.lit();
   for (const rec of mounted.values()) { markBlocks(rec, span, focus); markLit(rec, lit); markLabel(rec); if (!pressed || fresh.includes(rec.d.addr)) markLegible(rec); }
   placeCorners(focused);
+  placeByline(focused);
   placeHeld();
   if (span && !pressed && (fresh.includes(span.addr) || (owed && sameSpan(owed, span)))) placeAgain(span);
   if (owed && !sameSpan(owed, span)) owed = null;
@@ -7205,7 +7393,8 @@ export function clear() {
   heldFirst = null;
   anchors.clear();
   openWhole.clear();
-  openLabels.clear();
+  labelOpen = null;
+  if (bylineLayer && bylineHTMLNow) { lost = bylineLayer.contains(focusedNow()) || lost; bylineLayer.innerHTML = ''; bylineHTMLNow = ''; }
   if (lost) read.handOff();
 }
 

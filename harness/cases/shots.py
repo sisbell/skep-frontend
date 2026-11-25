@@ -23,7 +23,11 @@ slot's face decision): the second account's bio at zero, its first opening
 in the session and a later one, at 1440 px and at 390 px; its read held at
 the landing, the count's place hollow; the claimant's own bio, its plain
 word; and the zoom's pair, the form's label at mid, then the face in its
-place at reading scale."""
+place at reading scale. B11-S10's byline as v1 draws it is shot into
+`shots/B11-S10-byline/` (the byline's act decision; #780): the reader's own
+and another account's at 1440 px and at 390 px, the byline's stop focused, a
+tail at HOME with its press area outlined by the shot alone, and an arrival in
+two runs below reading scale before and after a press on a piece."""
 import json
 
 from . import AGENT_SPACE, BIO, DOC, GHOST, MAILBOX, MAILBOX_SLOT, SECOND_ACCOUNT, WINDOW, Result, hold_mailbox, slot_words
@@ -185,6 +189,61 @@ def face_shots(ctx, r):
     return shots
 
 
+def byline_shots(ctx, r):
+    """B11-S10's byline as v1 draws it (the byline's act decision; #780), into `shots/B11-S10-byline/`: the reader's own byline at
+    the first edition and another account's at its home, at 1440 px and at 390 px — the address with `↗`, the label, the cue on
+    another's; the byline's stop focused, its ring around the token and its sign; a tail at HOME with its press area outlined by
+    the shot alone; and an arrival in two runs below its document's reading scale, before and after a press on a piece — its
+    outlines standing. Each claim in view"""
+    shots = []
+    other = SECOND_ACCOUNT + '.0.1'
+    for width, height in ((1440, 900), (390, 844)):
+        was = ctx.resize(width, height)
+        for name, addr in (('own', DOC), ('another', other)):
+            ctx.leap(addr, None); ctx.frames(3)
+            sel = '#domlayer article.dtext[data-addr="%s"] .hd .by .go' % addr
+            shots.append(ctx.shot(f'B11-S10-byline/{name}-{width}.png'))
+            claimed(ctx, r, 'B11-S10 at %d px, %s byline' % (width, name), sel, 'the address with its sign, its act')
+        ctx.resize(*was)
+    # the byline's stop focused: its ring around the token and its sign, never corner Ls
+    ctx.leap(DOC, None); ctx.frames(3)
+    ctx.drv.key('Tab', code='Tab'); ctx.frames(3)
+    focused = ctx.js('(() => { const a = document.activeElement; return !!a && !!a.closest("#byline"); })()')
+    r.check(focused, 'B11-S10: Tab from the walk\'s element puts the focus on the byline\'s stop', focused)
+    shots.append(ctx.shot('B11-S10-byline/stop-focused-1440.png'))
+    claimed(ctx, r, 'B11-S10, the stop focused', '#byline .act[data-act="go"]', 'the byline\'s address act, its ring drawn')
+    ctx.drv.key('Escape'); ctx.frames(2)
+    # a tail at HOME, its press area outlined by the shot alone (#780; FP-44)
+    ctx.js('window.__skep.go.home()'); ctx.settle(); ctx.frames(3)
+    tail = next((t for t in ctx.js('window.__skep.tails()') if t['at'] == DOC and t['form'] == 'box'), None)
+    area = ctx.js('window.__skep.tailArea(%s)' % json.dumps(tail['key'])) if tail else None
+    if r.check(bool(area), 'B11-S10: HOME draws the first edition\'s tail, its press area read', area):
+        ctx.js('''((a) => { const e = document.createElement('div'); e.id = 'gate-tail-area'; e.style.cssText = 'position:fixed;z-index:50;pointer-events:none;outline:1px dashed #ffb454;left:' + a.x + 'px;top:' + a.y + 'px;width:' + a.w + 'px;height:' + a.h + 'px'; document.body.appendChild(e); })(%s)''' % json.dumps(area))
+        shots.append(ctx.shot('B11-S10-byline/tail-area-1440.png'))
+        ctx.js('(() => { const e = document.getElementById("gate-tail-area"); if (e) e.remove(); })()')
+    # an arrival in two runs, below its document's reading scale, before and after a press on its second piece
+    blocks = [b for b in ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))['blocks'] if b['kind'] == 'para' and len(b['text'].strip()) >= 12 and b['pos'] < WINDOW[0] - 200]
+    if len(blocks) >= 2:
+        p1, p2 = blocks[0], blocks[1]
+        ids = ctx.js('window.__skep.model.identity(%s, %d, %d)' % (json.dumps(DOC), p1['pos'], p2['pos'] + 8 - p1['pos']))
+        if ids and len(ids) == 1:
+            ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), p1['pos'], json.dumps({'runs': [{'pos': p1['pos'], 'width': 8}, {'pos': p2['pos'], 'width': 8}], 'passage': ids[0]})))
+            ctx.settle(); ctx.frames(3)
+            for _ in range(4):
+                ctx.drv.key('-', mods=('Meta',)); ctx.settle(); ctx.frames(2)
+            rects = [q for q in ctx.js('window.__skep.arrivalRects()') if q['span'] and q['span']['pos'] == p2['pos'] and q['y'] > 40]
+            shots.append(ctx.shot('B11-S10-byline/arrival-before-1440.png'))
+            r.check(len(ctx.js('window.__skep.arrivalRects()')) >= 2 and bool(rects), 'B11-S10: below reading scale the arrival\'s two runs outlined, the second in view', rects[:2])
+            if rects:
+                q = rects[0]
+                ctx.drv.click(q['x'] + q['w'] / 2, q['y'] + q['h'] / 2); ctx.settle(); ctx.frames(3)
+                shots.append(ctx.shot('B11-S10-byline/arrival-after-1440.png'))
+                r.check(len(ctx.js('window.__skep.arrivalRects()')) >= 1 and bool(ctx.js('window.__skep.go.arrival()')), 'B11-S10: after the press on its second piece the arrival stands, outlined', ctx.js('window.__skep.go.landing()') and ctx.js('window.__skep.go.landing()')['current'])
+            ctx.js('window.__skep.go.endArrival()')
+    ctx.leap(DOC, WINDOW[0])
+    return shots
+
+
 def run(ctx):
     r = Result()
     thresholds = ctx.js('window.__skep.thresholds')
@@ -266,5 +325,6 @@ def run(ctx):
     r.figures['b11_slot_names'] = slot_name_shots(ctx, r)
     r.figures['b11_one_form'] = form_shots(ctx, r)
     r.figures['b11_slot_face'] = face_shots(ctx, r)
+    r.figures['b11_byline'] = byline_shots(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

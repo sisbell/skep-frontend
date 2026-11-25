@@ -247,6 +247,40 @@ def slot_face_heard(ctx, r):
     r.figures['slot_face_heard'] = {'item': at['item'], 'own': own['item'], 'stops': stops}
 
 
+def byline_tree(ctx, r):
+    """THE BYLINE IN THE ACCESSIBILITY TREE (the byline's act decision, point 3; test 13) — reads alone: no Tab stop stands inside a
+    subtree hidden from assistive technology, the plane's articles among them; at the first edition the byline's stop holds its
+    acts as controls — its address a link named by the address as drawn, then where it goes, never an author — and the
+    mirror's document item reads the byline whole, its owner's address, its label and its cue or cause; its figures"""
+    out = {}
+    ctx.leap(DOC, None)
+    ctx.frames(3)
+    out['hidden_stops'] = ctx.js('''(() => [...document.querySelectorAll('[aria-hidden="true"]')].flatMap((h) => [...h.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')]
+      .filter((e) => e.tabIndex >= 0 && !e.disabled && e.getAttribute('tabindex') !== '-1').map((e) => e.tagName.toLowerCase() + '.' + e.className + ' in ' + (h.id || h.className))))()''')
+    r.check(out['hidden_stops'] == [], 'no Tab stop stands inside a subtree hidden from assistive technology — the plane\'s articles, their bylines among them (the byline\'s act decision, test 13)', out['hidden_stops'][:8])
+    acts = ctx.js('window.__skep.byline()')
+    ax = ctx.drv.ax_tree()
+    links = [] if 'error' in ax else [((n.get('name') or {}).get('value') or '') for n in ax.get('nodes', []) if not n.get('ignored') and (n.get('role') or {}).get('value') == 'link']
+    out['acts'], out['ax_links'] = acts, [x for x in links if x.startswith('1.0.1')][:4]
+    go = acts[0] if acts else {}
+    r.check(bool(go) and go.get('act') == 'go' and go.get('tag') == 'a' and str(go.get('name') or '').startswith('1.0.1') and not re.search(r'author|written by', str(go.get('name') or ''), re.I)
+            and (('error' in ax) or go.get('name') in links),
+            'the byline\'s stop holds its acts as controls: its address a link, named in the accessibility tree by the address as drawn, then where it goes — never an author (the byline\'s act decision, point 2; test 10)', out)
+    # the mirror's document item: the walk out from a span of the landing's to the first edition whole
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.walk.key("out")')
+    ctx.settle(); ctx.frames(2)
+    item = ctx.js('''(() => { const m = document.getElementById('mirror'), li = m && m.querySelector('li[aria-selected="true"]'); if (!li) return null;
+      const ids = (li.getAttribute('aria-describedby') || '').split(' ').filter((x) => x.startsWith('walk-byline-'));
+      return {level: li.getAttribute('aria-level'), ids, words: ids.map((id) => (document.getElementById(id) || {}).textContent || '')}; })()''')
+    owner = ctx.daemon_op({'op': 'doc_metadata', 'doc': DOC}).get('owner')
+    out['item'] = item
+    r.check(bool(item) and item['level'] == '3' and len(item['ids']) == 1 and str(owner) in item['words'][0] and len(item['words'][0]) > len(str(owner)),
+            'the mirror\'s document item reads the byline whole, as a description of its own: the owner\'s address, its label and its cue or cause (the byline\'s act decision, point 3; FP-26)', item)
+    ctx.leap(DOC, WINDOW[0])
+    return out
+
+
 def run(ctx):
     r = Result()
     # rule 21: at launch the platform's focus rests on the walk's element, the ring out — observed on a fresh page (reads alone)
@@ -578,10 +612,12 @@ def run(ctx):
     ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
     ctx.frames(1)
     press('Tab')
+    by = ctx.js('(() => { const e = document.activeElement; return e && e.closest("#byline") ? {act: e.dataset.act || null, addr: e.dataset.addr || null} : null; })()')
+    press('Tab')
     f, line = at(), line_of(DOC)
-    r.check(f['corner'] == DOC and f['act'] == 'version' and bool(line) and line['tab'] is None and bool(line['acts']) and line['acts'][0] == ['version', '0']
+    r.check(bool(by) and by['act'] == 'go' and by['addr'] == DOC and f['corner'] == DOC and f['act'] == 'version' and bool(line) and line['tab'] is None and bool(line['acts']) and line['acts'][0] == ['version', '0']
             and line['role'] == ('toolbar' if len(line['lines']) == 1 else 'group') and all(l[0] == '0' and all(t == '-1' for t in l[1:]) for l in line['lines']),
-            'Tab from the plane\'s stop (the mirror\'s current item) reaches the focused document\'s corner on its first act, its version statement: each line of its acts a toolbar of its own whose one stop is its first act — the corner itself where its acts stand on one line, else a group of its lines — its container no stop (K-57; issue #585)', dict(f, line=line))
+            'Tab from the plane\'s stop (the mirror\'s current item) reaches the focused document\'s byline\'s stop on its address act, then its corner on its first act, its version statement: each line of its acts a toolbar of its own whose one stop is its first act — the corner itself where its acts stand on one line, else a group of its lines — its container no stop (K-57; issue #585; the byline\'s act decision, point 3)', dict(f, line=line, byline=by))
     others = ctx.js('''[...document.querySelectorAll("#corners [data-corner]")].filter((e) => e.dataset.corner !== %s).map((e) => ({addr: e.dataset.corner, hidden: e.getAttribute("aria-hidden"), tab: e.getAttribute("tabindex"),
       stops: [...e.querySelectorAll("button")].filter((b) => b.getAttribute("tabindex") !== "-1").length}))''' % json.dumps(DOC))
     r.check(all(o['hidden'] == 'true' and o['tab'] is None and o['stops'] == 0 for o in others), 'every other corner on the plane is out of the Tab order — its container and every act of it — and hidden from AT', others)
@@ -628,12 +664,15 @@ def run(ctx):
         f = at()
         r.check(f['overlay'] is None and f['corner'] == DOC and f['act'] == 'version', 'Esc closes the list %s opened and the focus returns to the version statement it was opened from' % name, f)
     press('Tab', mods=('Shift',))
+    by = ctx.js('(() => { const e = document.activeElement; return e && e.closest("#byline") ? e.dataset.act || null : null; })()')
+    press('Tab', mods=('Shift',))
     f = at()
-    r.check(f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Shift+Tab from the corner\'s version statement goes back to the plane\'s stop, the mirror\'s current item', f)
+    r.check(by == 'go' and f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Shift+Tab from the corner\'s version statement goes back to the byline\'s stop, and again to the plane\'s stop, the mirror\'s current item (the byline\'s act decision, point 3)', dict(f, byline=by))
     # the document zoomed below reading scale: its corner leaves the plane, and the focus it held goes to the walk
     press('Tab')
+    press('Tab')
     f = at()
-    r.check(f['corner'] == DOC and f['act'] == 'version', 'Tab reaches the corner\'s version statement again', f)
+    r.check(f['corner'] == DOC and f['act'] == 'version', 'Tab, past the byline\'s stop, reaches the corner\'s version statement again', f)
     unit = ctx.js('window.__skep.scaleFor(%s, "em", 1)' % json.dumps(DOC))
     readable = ctx.js('window.__skep.constants.LOD_TXT_LO')
     zooms = 0
@@ -762,12 +801,15 @@ def run(ctx):
         return ctx.js('''(() => { const e = document.activeElement;
           if (!e || e === document.body) return 'the body';
           if (e.closest('#mirror')) return e.id === 'walk-' + window.__skep.mirror.index() ? 'the item' : 'the mirror: ' + (e.id || e.tagName.toLowerCase());
+          if (e.closest('#byline')) return 'the byline';
           if (e.closest('#corners')) return 'the corner: ' + ((e.closest('[data-corner]') || {dataset: {}}).dataset.corner || '');
           if (e.closest('#overlay')) return 'the overlay: ' + (e.dataset.x ? 'x' : e.dataset.run || e.tagName.toLowerCase());
           if (e.closest('#line')) return 'the line';
           if (e.id === 'sceneA' || e.id === 'sceneB') return 'pane ' + e.id.slice(-1);
           const pc = e.closest('#sceneA > .corner, #sceneB > .corner');
           if (pc) return 'pane ' + pc.parentElement.id.slice(-1) + "'s corner";
+          const pb = e.closest('#sceneA .dtext .by, #sceneB .dtext .by');
+          if (pb) return 'pane ' + pb.closest('#sceneA, #sceneB').id.slice(-1) + "'s byline";
           if (e.closest('#scenebar')) return 'the scene: ' + (e.dataset.relevel ? 're-level' : e.dataset.x ? 'x' : e.tagName.toLowerCase());
           if (e.closest('#scenestrokes')) return 'the scene: stroke';
           if (e.closest('#scene')) return 'the scene: ' + (e.className || e.tagName.toLowerCase());
@@ -783,11 +825,11 @@ def run(ctx):
     # the corner's stops: one for each line of its acts (issue #585)
     lines = len((line_of(DOC) or {}).get('lines') or []) or 1
     ring = []
-    for _ in range(2 + lines):
+    for _ in range(3 + lines):
         press('Tab')
         ring.append(stop())
-    r.check(line_stop is not None and ring[:1 + lines] == ['the item'] + ['the corner: ' + DOC] * lines and ring[1 + lines].startswith('the overlay: ') and ring[1 + lines] != 'the overlay: x',
-            'a standing card comes after the plane and its corner, and its FIRST stop is its first act, never the dismiss (rule 13): Tab reaches the item, the corner — a stop for each line of its acts — then the card\'s first act', {'from': line_stop, 'ring': ring, 'corner_lines': lines})
+    r.check(line_stop is not None and ring[:2 + lines] == ['the item', 'the byline'] + ['the corner: ' + DOC] * lines and ring[2 + lines].startswith('the overlay: ') and ring[2 + lines] != 'the overlay: x',
+            'a standing card comes after the plane, its byline and its corner, and its FIRST stop is its first act, never the dismiss (rule 13): Tab reaches the item, the byline\'s stop, the corner — a stop for each line of its acts — then the card\'s first act (the byline\'s act decision, point 3)', {'from': line_stop, 'ring': ring, 'corner_lines': lines})
     press('Tab', mods=('Shift',))
     back = stop()
     r.check(back == 'the corner: ' + DOC, 'Shift+Tab from the card\'s first stop goes back to the corner', {'got': back})
@@ -818,20 +860,30 @@ def run(ctx):
         by_ax = {n['nodeId']: n for n in nodes}
         by_dom = {n['backendDOMNodeId']: n for n in nodes if 'backendDOMNodeId' in n}
         widgets = {'button', 'link', 'switch', 'checkbox', 'menuitem', 'tab', 'option', 'textbox', 'combobox'}
-        inside, controls = 0, []
+        inside, controls, bylines = 0, [], {}
         for pane in ('#sceneA article.dtext', '#sceneB article.dtext'):
-            todo = list((by_dom.get(backend(pane)) or {}).get('childIds', []))
+            # its byline's acts are the one toolbar a pane's article holds (the byline's act decision, point 3): read apart
+            bar = backend(pane + ' .hd .by')
+            todo = [(c, False) for c in (by_dom.get(backend(pane)) or {}).get('childIds', [])]
             while todo:
-                n = by_ax.get(todo.pop())
+                i, in_bar = todo.pop()
+                n = by_ax.get(i)
                 if n is None:
                     continue
                 inside += 1
-                todo.extend(n.get('childIds', []))
+                in_bar = in_bar or (bar is not None and n.get('backendDOMNodeId') == bar)
+                todo.extend((c, in_bar) for c in n.get('childIds', []))
                 role = (n.get('role') or {}).get('value')
                 focusable = any(p['name'] == 'focusable' and (p.get('value') or {}).get('value') for p in n.get('properties', []))
                 if not n.get('ignored') and (role in widgets or focusable):
-                    controls.append({'pane': pane, 'role': role, 'focusable': focusable, 'name': ((n.get('name') or {}).get('value') or '')[:40]})
-        r.check(inside > 0 and not controls, 'the AX tree: nothing inside a scene\'s pane\'s article is a control or a stop — its marks are read, never pressed (SC)', {'nodes_inside': inside, 'controls': controls[:6]})
+                    (bylines.setdefault(pane, []) if in_bar else controls).append({'pane': pane, 'role': role, 'focusable': focusable, 'name': ((n.get('name') or {}).get('value') or '')[:40]})
+            if bar is not None:
+                bylines.setdefault(pane, [])
+        stops = ctx.js('''['#sceneA', '#sceneB'].map((p) => [...document.querySelectorAll(p + ' article.dtext .hd .by [tabindex="0"]')].map((e) => e.tagName.toLowerCase() + '.' + e.className))''')
+        r.check(inside > 0 and not controls and len(bylines) == 2 and all(any(c['role'] == 'link' and c['name'].startswith('1.0.') for c in cs) for cs in bylines.values())
+                and all(len(s) == 1 and s[0].startswith('a.go') for s in stops),
+                'the AX tree: nothing inside a scene\'s pane\'s article is a control or a stop but its byline\'s acts — one toolbar, its one stop the address\'s link, named by the address as drawn — its marks are read, never pressed (SC; the byline\'s act decision, point 3)',
+                {'nodes_inside': inside, 'controls': controls[:6], 'bylines': bylines, 'stops': stops})
         corners = []
         for side in ('A', 'B'):
             sel = '#scene%s > .corner' % side
@@ -862,14 +914,14 @@ def run(ctx):
     # the strokes between the bands in view: each its own stop, top to bottom, after pane A's corner (issue #331)
     struck = ['the scene: stroke'] * (ctx.js('document.querySelectorAll("#scenestrokes button").length') or 0)
     r.check(ring[-1:] == ['pane B'] and not under, 'Tab from the far end\'s pane goes once round the ring and back to it, reaching nothing the scene covers — neither the mirror\'s item nor the plane\'s corner', {'ring': ring})
-    r.check(own == ['pane B\'s corner', 'the scene: re-level', 'the scene: x', 'pane A', 'pane A\'s corner'] + struck + ['pane B'] and ring[:3] == own[:3],
-            'the scene\'s own stops in D5\'s order — pane, its corner, the strokes between its bands in view, pane, its corner, the scene\'s acts (K-61; issues #160 and #331): from the far end\'s pane Tab reaches its corner, then the acts, and no stop lies inside a pane\'s article', {'scene_stops': own, 'ring': ring, 'strokes': len(struck)})
+    r.check(own == ['pane B\'s byline', 'pane B\'s corner', 'the scene: re-level', 'the scene: x', 'pane A', 'pane A\'s byline', 'pane A\'s corner'] + struck + ['pane B'] and ring[:4] == own[:4],
+            'the scene\'s own stops in D5\'s order — pane, its byline, its corner, the strokes between its bands in view, pane, its byline, its corner, the scene\'s acts (K-61; issues #160 and #331; the byline\'s act decision, point 3): from the far end\'s pane Tab reaches its byline\'s stop, its corner, then the acts, and no other stop lies inside a pane\'s article', {'scene_stops': own, 'ring': ring, 'strokes': len(struck)})
     r.figures['ring']['scene_from_pane_b'] = ring
     ring = []
-    for _ in range(3):
+    for _ in range(4):
         press('Tab', mods=('Shift',))
         ring.append(stop())
-    r.check(ring == (struck + ['pane A\'s corner', 'pane A', 'the line'])[:3], 'Shift+Tab walks the ring back: from the far end\'s pane to the strokes in view, the other\'s corner, the other pane, and from there to the one line', {'ring': ring})
+    r.check(ring == (struck + ['pane A\'s corner', 'pane A\'s byline', 'pane A', 'the line'])[:4], 'Shift+Tab walks the ring back: from the far end\'s pane to the strokes in view, the other\'s corner, its byline\'s stop, the other pane, and from there to the one line', {'ring': ring})
     r.figures['ring']['scene_back_from_pane_b'] = ring
     # the same ring and the same names where the panes stack (issue #467's design decision: "The mirror reads the same in both
     # layouts"): the window narrowed until a pane side by side keeps too few characters, the corners compact there as at the
@@ -898,7 +950,7 @@ def run(ctx):
         ctx.resize(*was)
         ctx.settle()
         ctx.frames(2)
-    r.check(stacked and own == ['pane B\'s corner', 'the scene: re-level', 'the scene: x', 'pane A', 'pane A\'s corner'] + struck + ['pane B'] and apart == beside,
+    r.check(stacked and own == ['pane B\'s byline', 'pane B\'s corner', 'the scene: re-level', 'the scene: x', 'pane A', 'pane A\'s byline', 'pane A\'s corner'] + struck + ['pane B'] and apart == beside,
             f'the scene stacked in a {STACKED_PX} px window, its corners compact as side by side: Tab from the far end\'s pane goes round the scene\'s own stops in D5\'s order, as side by side, and each pane and its corner are named as side by side (issue #467: "The mirror reads the same in both layouts")',
             {'stacked': stacked, 'ring': ring, 'names': {'beside': beside, 'stacked': apart}})
     r.figures['ring']['scene_stacked_from_pane_b'] = ring
@@ -1347,4 +1399,5 @@ def run(ctx):
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
+    r.figures['byline'] = byline_tree(ctx, r)
     return r.out()

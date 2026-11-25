@@ -240,6 +240,7 @@ import { memberOf, boardOf, accountOf, documentOf } from '../model/address.js';
 import { inFace, runsOf, runWidth, cutWords, LEAD_WORDS } from '../plane/labels.js';
 import { t, tHTML, tRuns, addressedHTML, facedHTML, lastRead, runningHTML, sentence, sentences, heard, joinRuns, asRuns, runsText, CLIENT_CLOSE, FIELD } from '../strings.js';
 import { esc, numeral } from '../util.js';
+import { OPENS, OPENED } from '../text/article.js';
 
 /** @type {HTMLElement | null} */
 let el = null;
@@ -1411,8 +1412,10 @@ function shown() {
  * The acting-as segment in a form (see the head): its whole form as it
  * stands; any other — a compact one, or its whole one its act opened — its
  * act, a native button titled by its whole form's words and named by them
- * rendered for the ear (ST's `heard`), the device label kept as written; a
- * form past its last, its last.
+ * rendered for the ear (ST's `heard`), the device label kept as written, `▸`
+ * leading it and `▾` while its act holds its whole form open (T-ARTICLE's
+ * `OPENS`, `OPENED`; the byline's act decision, point 1), hidden from its
+ * name; a form past its last, its last.
  * @param {Acting} a
  * @param {number} form the form the layout holds (`Acting.forms`)
  * @param {boolean} open its act opened its whole form
@@ -1420,7 +1423,7 @@ function shown() {
 function actingHTML(a, form, open) {
   const at = open ? 0 : Math.min(form, a.forms.length - 1);
   if (!a.name || (at === 0 && !open)) return `<span class="seg acting" data-state="${a.state}">${a.forms[0]}</span>`;
-  return `<button class="seg acting" data-act="acting" data-state="${a.state}" title="${esc(t(a.name.id, a.name.values))}" aria-label="${esc(heard(tRuns(a.name.id, a.name.values, a.name.faces)))}">${a.forms[at]}</button>`;
+  return `<button class="seg acting" data-act="acting" data-state="${a.state}" title="${esc(t(a.name.id, a.name.values))}" aria-label="${esc(heard(tRuns(a.name.id, a.name.values, a.name.faces)))}"><span class="sign" aria-hidden="true">${esc(open ? OPENED : OPENS)}</span>${a.forms[at]}</button>`;
 }
 
 /**

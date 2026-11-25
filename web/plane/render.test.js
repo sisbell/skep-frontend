@@ -27,9 +27,13 @@
 // marks at its cell's first column slot, drawn with its region's boxes at
 // their alpha in its ink as the person's settings ask it, labelled by its
 // slot's name and address, pressed anywhere in its rectangle or, small, in
-// the least target's area about it — the nearest centre winning, a drawn
+// the least target's area about it — the nearest drawn shape winning, a drawn
 // shape its own place's, small boxes alike — and a link's stroke ending on
-// its rectangle where no tail is drawn.
+// its rectangle where no tail is drawn; and the one press test over every
+// target (#780; FP-44): a drawn shape its own target's, the topmost where
+// shapes meet, a tail's area grown from where it leaves and evenly about its
+// stroke, a mark standing as one target pressed in its area, the nearest
+// drawn shape winning where areas meet, the ground one pixel past them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -692,7 +696,7 @@ test('the one form\'s label (its drawing\'s parts 1, 5): the slot\'s name then i
 /** the account the one line names as it stands — the region named in view (L-LINE's `named`) */
 const LINE_NAMED = () => RENDER.stats.labels.some((l) => l.kind === 'form') ? accountAt(CAM.cam.x, CAM.cam.y, '1') : null;
 
-test('a press goes to the one form wherever its rectangle is drawn (B11-S5\'s press), and to a form, or a box drawn smaller than the least target, anywhere in an area grown about its rectangle\'s centre to that target each way — where areas meet the nearest centre winning, a point in a place\'s drawn shape going to that place, a box at least the target each way pressed on its outline alone; the drawing the same with the areas as without (WCAG 2.2 SC 2.5.8; P-REG\'s TARGET)', () => {
+test('a press goes to the one form wherever its rectangle is drawn (B11-S5\'s press), and to a form, or a box drawn smaller than the least target, anywhere in an area grown about its rectangle\'s centre to that target each way — where areas meet the nearest drawn shape winning, a point in a place\'s drawn shape going to that place, a box at least the target each way pressed on its outline alone; the drawing the same with the areas as without (WCAG 2.2 SC 2.5.8; P-REG\'s TARGET; FP-44)', () => {
   const { ctx, strokes, texts } = recorder();
   RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
   CAM.setViewport(1440, 900);
@@ -718,12 +722,12 @@ test('a press goes to the one form wherever its rectangle is drawn (B11-S5\'s pr
     // between two forms, nearer the one listed second
     const between = { x: c3.x + (c4.x - c3.x) * 0.6, y: c3.y };
     assert.ok(Math.abs(between.x - c3.x) <= TARGET.min / 2 && Math.abs(between.x - c4.x) <= TARGET.min / 2, 'inside both areas');
-    assert.equal(at(between)?.addr, SLOT4, 'the nearer centre: the form listed second');
-    // the ordinary edition beside slot 5, a box drawn small: below it, its area; between it and the form, the nearer centre
+    assert.equal(at(between)?.addr, SLOT4, 'the nearer drawn shape: the form listed second');
+    // the ordinary edition beside slot 5, a box drawn small: below it, its area; between it and the form, the nearer drawn shape
     const o = RENDER.stats.labels && LAYER.shapeOf(ORDINARY), ob = { x: CAM.sx(o.x), y: CAM.sy(o.y), w: o.w * CAM.cam.scale, h: o.h * CAM.cam.scale }, co = mid(ob);
     assert.ok(ob.w < TARGET.min && ob.h < TARGET.min, 'the edition\'s box drawn smaller than the target');
     assert.deepEqual(at({ x: co.x, y: ob.y + ob.h + 8 }), { addr: ORDINARY, form: false, padded: true }, '8 px below a small box, inside its area: the box');
-    assert.deepEqual([at({ x: c5.x + (co.x - c5.x) * 0.4, y: c5.y })?.addr, at({ x: c5.x + (co.x - c5.x) * 0.6, y: c5.y })?.addr], [SLOT5, ORDINARY], 'between a form and a small box: the nearer centre');
+    assert.deepEqual([at({ x: c5.x + (co.x - c5.x) * 0.4, y: c5.y })?.addr, at({ x: c5.x + (co.x - c5.x) * 0.6, y: c5.y })?.addr], [SLOT5, ORDINARY], 'between a form and a small box: the nearer drawn shape');
     // a point in the mailbox's drawn outline, nearer the bio form's centre than its own and inside that form's area: the mailbox
     const outline = RENDER.stats.labels && LAYER.shapeOf(MAIL), mo = { x: CAM.sx(outline.x), y: CAM.sy(outline.y), w: outline.w * CAM.cam.scale, h: outline.h * CAM.cam.scale };
     const inMail = { x: mo.x + mo.w - 0.25, y: c3.y };
@@ -736,6 +740,81 @@ test('a press goes to the one form wherever its rectangle is drawn (B11-S5\'s pr
     assert.deepEqual({ strokes: JSON.stringify(strokes), texts: JSON.stringify(texts) }, drawn, 'reading the press areas moves no stroke and no label');
     assert.notEqual(drawn.strokes, before.strokes, 'the frames compared drew');
   } finally { REC._reset(); WRITE._reset(); }
+});
+
+/**
+ * A tail as the frame draws it (P-RENDER's `tailsOf`), handed to the one press test as the last frame's: leaving a place at a
+ * screen point, its stroke `len` px rightward at its links' own weight, its label's lines' rects as the pass set them
+ */
+const drawnTail = (/** @type {string} */ at, /** @type {'box' | 'line'} */ form, /** @type {{x: number, y: number}} */ from, len = 10, /** @type {Rect[]} */ rects = []) => /** @type {import('./render.js').DrawnTail} */ ({
+  key: `tail ${at} ${from.x},${from.y}`, form, at, docs: [at], links: ['1.0.9.0.1.0.2.1'], far: ['1.0.9.0.1'], from, to: { x: from.x + len, y: from.y }, world: { x: CAM.wx(from.x), y: CAM.wy(from.y) },
+  line: null, pos: null, hue: '#9aa5b4', alpha: 1, weight: 1, dashed: false, label: rects.map(() => 'a far end'), rects, stroke: { x: from.x, y: from.y - 0.8, w: len, h: 1.6 },
+});
+
+test('one press test (#780\'s design decision; FP-44): a press inside a target\'s drawn shape goes to it — on a box\'s own edge where a tail\'s stroke leaves it, the box; on the stroke, the tail — the topmost where two shapes meet, a tail\'s stroke over the box it starts in, and no area takes a press from another target\'s ink; outside every shape, the target whose area holds the point and whose drawn shape is nearest, though another\'s centre is nearer; one pixel past every area, the ground', () => {
+  const { ctx } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  CAM.setViewport(4000, 900);
+  formBoard();
+  REC.takeSpanSet(MAIL, [{ subspace: 1, ordinal: 1, positions: 40000 }]);
+  const press = (/** @type {number} */ x, /** @type {number} */ y) => RENDER.pressAt(x, y);
+  const kindOf = (/** @type {import('./render.js').Press | null} */ p) => (p ? (p.kind === 'tail' ? 'tail ' + p.tail.at + (p.padded ? ' padded' : '') : p.kind === 'place' ? p.place.addr + (p.place.padded ? ' padded' : '') : 'mark') : null);
+  try {
+    // the mailbox a box 120 px wide, the bio form 30 px right of its first row's end
+    atSlots(120);
+    RENDER.draw();
+    const box = docBox(MAIL), row = firstRow(LAYER.foldOf(REC.doc(MAIL)));
+    const from = { x: CAM.sx(box.x + row.x + row.w), y: CAM.sy(box.y + row.y + row.h / 2) }, s3 = onScreen(SLOT3);
+    assert.ok(s3.x - from.x > TARGET.min + 2, `room for a tail's area between the mailbox and the bio form: ${s3.x - from.x} px`);
+    const tail = drawnTail(MAIL, 'box', from);
+    RENDER.stats.tails = [tail];
+    assert.equal(kindOf(press(from.x - 2, from.y)), MAIL, 'on the mailbox\'s own edge where the stroke leaves it: the box, never the tail');
+    assert.equal(kindOf(press(from.x + 5, from.y)), 'tail ' + MAIL, 'on the stroke: the tail');
+    assert.equal(kindOf(press(from.x + 20, from.y + 10)), 'tail ' + MAIL + ' padded', 'beside the stroke, in its area: the tail');
+    assert.deepEqual([kindOf(press(from.x + TARGET.min + 1, from.y)), kindOf(press(from.x + 5, from.y + TARGET.min / 2 + 1)), kindOf(press(from.x + 5, from.y - TARGET.min / 2 - 1))], [null, null, null], 'one pixel past its area, right, below and above: the ground');
+    // a tail leaving a passage's line, its stroke inside the mailbox's outline: the stroke the topmost there, and the box's ink beside it the box's
+    const inner = { x: from.x - 40, y: from.y + 40 }, line = drawnTail(MAIL, 'line', inner);
+    RENDER.stats.tails = [tail, line];
+    assert.equal(kindOf(press(inner.x + 4, inner.y)), 'tail ' + MAIL, 'on a stroke drawn over the box: the tail, the topmost');
+    assert.equal(kindOf(press(inner.x + 4, inner.y - 3)), MAIL, '3 px off that stroke, inside its area and on the box\'s ink: the box');
+    // two tails out on the ground below the boxes: a labelled one, long and thin, and a bare one beneath it, their areas meeting
+    const far = CAM.sy(box.y + box.h) + 120, longFrom = { x: from.x + 200, y: far };
+    const label = { x: longFrom.x + 13, y: far - 5.4, w: 60, h: 10.8 }, longTail = drawnTail('1.0.4.0.1', 'box', longFrom, 10, [label]);
+    const shortFrom = { x: longFrom.x, y: far + 20 }, shortTail = drawnTail('1.0.4.0.64', 'box', shortFrom);
+    RENDER.stats.tails = [longTail, shortTail];
+    const p = { x: longFrom.x + 20, y: far + 10 };
+    const centre = (/** @type {Rect} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 }), dist = (/** @type {{x: number, y: number}} */ a) => Math.hypot(a.x - p.x, a.y - p.y);
+    const longCentre = centre({ x: longFrom.x, y: label.y, w: label.x + label.w - longFrom.x, h: label.h }), shortCentre = centre(shortTail.stroke);
+    assert.ok(dist(shortCentre) < dist(longCentre), `the bare tail's centre is the nearer: ${dist(shortCentre)} against ${dist(longCentre)}`);
+    assert.ok([RENDER.tailArea(longTail), RENDER.tailArea(shortTail)].every((a) => !!a && p.x >= a.x && p.x <= a.x + a.w && p.y >= a.y && p.y <= a.y + a.h), 'the point in both areas');
+    assert.equal(kindOf(press(p.x, p.y)), 'tail 1.0.4.0.1 padded', 'outside every shape: the tail whose drawn shape — its label — is nearest');
+  } finally { RENDER.stats.tails = []; REC._reset(); WRITE._reset(); }
+});
+
+test('a tail\'s press area (#780\'s design decision; FP-44): its stroke and its label\'s lines grown as one rectangle to at least the least target each way, from where it leaves — never back over the place it leaves — and evenly above and below its stroke; a tail whose label is left out grows its stroke alone', () => {
+  const from = { x: 500, y: 300 };
+  const bare = /** @type {Rect} */ (RENDER.tailArea(drawnTail('1.0.4.0.2', 'box', from)));
+  assert.deepEqual(bare, { x: from.x, y: from.y - TARGET.min / 2, w: TARGET.min, h: TARGET.min }, 'its stroke alone: the least target each way, from its root, level with its stroke');
+  const one = { x: from.x + 13, y: from.y - 5.4, w: 60, h: 10.8 };
+  const labelled = /** @type {Rect} */ (RENDER.tailArea(drawnTail('1.0.4.0.2', 'box', from, 10, [one])));
+  assert.deepEqual(labelled, { x: from.x, y: from.y - TARGET.min / 2, w: one.x + one.w - from.x, h: TARGET.min }, 'with a one-line label: its stroke and label as one, grown to the least target tall');
+  const two = [one, { x: from.x + 13, y: from.y + 5.4, w: 40, h: 10.8 }];
+  const tall = /** @type {Rect} */ (RENDER.tailArea(drawnTail('1.0.4.0.2', 'box', from, 10, two)));
+  assert.ok(Math.abs(tall.y + tall.h / 2 - from.y) < 1e-9 && tall.h >= TARGET.min && tall.y <= one.y && tall.y + tall.h >= two[1].y + two[1].h - 1e-9 && tall.x === from.x, `with a two-line label: holding both lines, its middle level with the stroke: ${JSON.stringify(tall)}`);
+});
+
+test('a continuation\'s mark standing as one target, drawn under the least target one way, is pressed in an area grown to it (#780\'s design decision; FP-44): half a pixel off its drawn edge it opens the list, one pixel past its area it does not; a mark holding two targets keeps them (issue #42)', () => {
+  try {
+    sixty();
+    const c = continuationCell('1.0.1', 1);
+    CAM.set({ ...middleOf(c), scale: markScale(1, 0) });
+    RENDER.draw();
+    const m = firstMark();
+    assert.ok(m && m.newestTarget === null && m.rect.w < TARGET.min, `one target, narrower than the least: ${JSON.stringify(m && m.rect)}`);
+    const y = m.rect.y + m.rect.h / 2, edge = m.rect.x + m.rect.w / 2 - TARGET.min / 2;
+    assert.deepEqual(RENDER.residueAtScreen(m.rect.x - 0.5, y), { account: '1.0.1', k: 1, key: '1.0.1:1', newest: m.newest, target: 'list' }, 'off its drawn edge, inside its area: the list');
+    assert.equal(RENDER.residueAtScreen(edge - 1, y), null, 'one pixel past its area: not the mark');
+  } finally { REC._reset(); WRITE._reset(); CAM.setViewport(1440, 900); }
 });
 
 test('a link the reader can read whose far end is an assigned slot no document the reader can read stands at is a mid connection to the one form there, its stroke ending on the form\'s rectangle where it meets it — never short of it, never inside — and no tail; to another person\'s mailbox\'s form no stroke at rest and no tail; a reserved number\'s far end and another board\'s keep their tail (the one form\'s part 7, changing #132 at an assigned slot; #771)', () => {
