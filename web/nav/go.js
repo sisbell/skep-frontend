@@ -414,7 +414,12 @@
 // does, no sign hiding it, so its acts are reached by Tab with the face
 // standing. Every act aimed at an assigned slot's address on the board the
 // page opened arrives, whatever the board answered for it before (`arrives`;
-// B11-S5), its own read's answer faced where its camera went. A failure
+// B11-S5), its own read's answer faced where its camera went — at one past
+// the mailbox where the one form stands and nothing is created, the slot's
+// face, the place's own form, with no notice: its entry holding none, the
+// links ending at the address read at the act of every landing there, a
+// LEAP's, a follow's — the face's told line naming the link followed — and a
+// return's (M-PUMP's `readLinksEndingAt`, `landFace`; T-FACE's). A failure
 // known at the act — the board answered for the document
 // with nothing; a follow's far end projected into such a document, or a
 // follow's far end or source withheld whose text the page holds or held
@@ -549,6 +554,7 @@ import * as LK from '../links/links.js';
 import * as SCENE from '../scene/scene.js';
 import * as FACES from '../overlays/faces.js';
 import * as LAYER from '../text/layer.js';
+import * as SLOTFACE from '../text/face.js';
 import * as HELD from '../beams/held.js';
 import * as SEL from '../overlays/selection.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
@@ -1204,6 +1210,7 @@ function nextAct(ends = true) {
   if (ends || (reach && reach.entry && reach.entry.scene)) HOST.endOpening();
   giveUp();
   if (air) endAir(air.act, false);
+  SLOTFACE.acted();
   return ++made;
 }
 
@@ -1881,6 +1888,39 @@ function failed(act, entry, n, byKey, to = null) {
   if (takenAt !== act) { if (to) focusOn({ ...to, take: false }, byKey); else void WALK.focusTo(n.addr, null, false); }
   endAir(act, false);
   return true;
+}
+
+/**
+ * A landing at a slot's face (see the head; B11-S5): an assigned slot past
+ * the mailbox the board answered with nothing, where the one form stands —
+ * the face is the place's own form, so the jump holds no notice: its entry
+ * settled where its camera went with none, a return reading the place again
+ * as any landing reads (FP-25); then, where no act was made since, the reading
+ * face ended, the face told of its opening and of the link followed, at an
+ * arrival by follow, which its told line names (T-FACE's `landed`), the link
+ * lit, and the camera going on to the view that reads the face, the walk on
+ * the form — save where the reader took the camera over, its reads then only
+ * marking. Its read of the links ending there went out at the act (M-PUMP's
+ * `readLinksEndingAt`).
+ * @param {number} act
+ * @param {Entry | null} entry
+ * @param {string} addr the slot's address
+ * @param {string | null} link the link followed to it, or the door's
+ * @param {Promise<boolean>} first the jump's first leg
+ * @param {boolean | undefined} byKey
+ * @param {number} ms
+ * @returns {Promise<null>} no document landed in
+ */
+async function landFace(act, entry, addr, link, first, byKey, ms) {
+  const at = toward(addr, null);
+  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(at.view, addr, null)), pos: null, width: null, notice: null });
+  if (act !== made) return null;
+  FACES.endReading();
+  SLOTFACE.landed(addr, { link });
+  lit = link ? [link] : [];
+  if (takenAt === act) return null;
+  await goOn(act, first, at, byKey, ms);
+  return null;
 }
 
 /**
@@ -2643,6 +2683,8 @@ export async function leapTo(addr, opts = {}) {
   const step = c && carried.length ? { kind: 'carry', from: c.addr, to: addr, spans: carried } : null;
   /** @type {Notice | null} the LEAP's reading notice, where its landing waits on a read — the text unread, or the carried passage's `compare` — at the place its camera leaves for */
   const waiting = unread || c ? { face: 'reading', addr, refusal: null, site: siteAt(addr, pos) } : null;
+  // a slot's face's read, at the act: every landing at the one form past the mailbox reads the links ending there (B11-S5)
+  if (REC.faceSlot(addr)) void PUMP.readLinksEndingAt(addr);
   const entry = opts.push === false ? null : TRAIL.push({ addr, pos, width: widthAt(runs, pos), view: viewFor(addr, pos), label: null, notice: waiting }, departure(), !!waiting, step);
   /** @type {Refusal | null} the refusal the text's whole read met, which a carried passage's line says it could not tell by */
   let met = null;
@@ -2668,6 +2710,8 @@ export async function leapTo(addr, opts = {}) {
   const first = leave(act, entry, at0, opts.byKey, ms);
   if (waiting) showNotice(waiting);
   if (unread) { const w = await PUMP.wholeOf(addr); met = w.refused; d = REC.doc(addr); }
+  // nothing created at a slot past the mailbox: the face its place's own form, no notice (B11-S5)
+  if (d.refused === 'unregistered' && REC.faceSlot(addr)) return landFace(act, entry, addr, link, first, opts.byKey, ms);
   if (d.refused === 'unregistered') {
     if (failed(act, entry, { face: 'unregistered', addr, refusal: null, site: siteAt(addr, pos) }, opts.byKey)) lit = link ? [link] : [];
     return null;
@@ -3022,6 +3066,8 @@ export async function follow(s, byKey = false, at = null) {
   }
   dismissChrome(entry);
   LK.follow(l);
+  // a slot's face's read, at the act (B11-S5)
+  if (REC.faceSlot(far)) void PUMP.readLinksEndingAt(far);
   const first = leave(act, entry, toward(far, null), byKey, 620);
   showNotice(waiting);
   /** the follow's read brought a failure, learned in the air: faced where the camera went, the link lit where no act was made after it */
@@ -3030,6 +3076,8 @@ export async function follow(s, byKey = false, at = null) {
   const dead = { ...waiting, face: 'unregistered', far: true };
   const fd = REC.doc(far);
   if (fd.refused !== 'unregistered' && fd.extent == null) await PUMP.loadWhole(far);
+  // nothing created at a slot past the mailbox: landed at its face, its told line naming the link followed (B11-S5)
+  if (REC.doc(far).refused === 'unregistered' && REC.faceSlot(far)) { await landFace(act, entry, far, l.addr, first, byKey, 620); return; }
   if (REC.doc(far).refused === 'unregistered') { faced(dead); return; }
   if (REC.doc(far).refused === 'withheld') { await landWithheld(act, far, s.near, l.addr, entry, byKey, first); return; }
   const proj = await PUMP.projectEnd(l.addr, s.farSlot, far);
@@ -3040,6 +3088,7 @@ export async function follow(s, byKey = false, at = null) {
   }
   const d = REC.doc(far);
   if (d.extent == null || d.from < 0) await PUMP.loadWhole(far);
+  if (REC.doc(far).refused === 'unregistered' && REC.faceSlot(far)) { await landFace(act, entry, far, l.addr, first, byKey, 620); return; }
   if (REC.doc(far).refused === 'unregistered') { faced(dead); return; }
   if (REC.doc(far).refused === 'withheld') { await landWithheld(act, far, s.near, l.addr, entry, byKey, first); return; }
   await landFollowed(act, s, entry, await followed(s, proj), byKey, first);
@@ -3754,6 +3803,8 @@ function followedInto(/** @type {Entry} */ e) {
 function answerOf(ask, w) {
   const r = w.doc ? null : w.refused;
   if (!r) return null;
+  // nothing created at a slot past the mailbox: no notice — the face is the place's own form (B11-S5)
+  if (r.name === 'doc_not_registered' && REC.faceSlot(ask.addr)) return null;
   if (r.name === 'doc_not_registered') return { face: 'unregistered', addr: ask.addr, refusal: null, site: ask.site, ...(ask.far ? { far: true } : {}) };
   if (r.name === 'withheld') return ask.far ? { face: 'withheld', addr: ask.addr, refusal: null, site: placeAt(ask.addr) } : null;
   return { face: 'refused', addr: ask.addr, refusal: r, site: ask.site };
@@ -3784,11 +3835,15 @@ function answerOf(ask, w) {
  */
 async function askAgain(act, e, ask, at, to, first, byKey, told) {
   const d = REC.has(ask.addr) ? REC.doc(ask.addr) : null, reads = !d || d.extent == null;
+  // a return to a slot's face reads the links ending there as any landing does (B11-S5)
+  const face = REC.faceSlot(ask.addr);
+  if (face) void PUMP.readLinksEndingAt(ask.addr);
   if (reads) FACES.reading(ask.addr, ask.site);
   const notice = answerOf(ask, await PUMP.wholeOf(ask.addr));
   TRAIL.settle(e, { notice });
   if (act !== made) return;
   if (reads) FACES.endReading();
+  if (face && !notice && REC.doc(ask.addr).refused === 'unregistered') SLOTFACE.landed(ask.addr);
   if (notice && notice.face !== 'withheld') {
     if (at.reads.length) { await placeRead(act, e, at.reads, first, byKey, notice, !!to.returns); return; }
     showFound(notice);

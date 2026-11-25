@@ -47,8 +47,10 @@
 // the lane's own and the one re-worded, with a size of text in megabytes; and
 // the lines a paste at a published edition draws beneath C-45 — C-241
 // re-worded keeping its trace, the staging act, and the lane's reason it
-// stands inert; and the history act's line where no state opens, the lane's
-// own head before the one read cause, each notice it raises marked whole.
+// stands inert; the history act's line where no state opens, the lane's
+// own head before the one read cause, each notice it raises marked whole; and
+// the slot's face's words, the lane's own DRAFTs naming B11-S5 or B11-S4, the
+// sources' DRAFTs among them verbatim.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -1129,6 +1131,21 @@ test('the words of a draft holding unsent typing are the decision\'s DRAFT strin
   }
   assert.deepEqual([designed('B3.history.put-back'), STRINGS['B3.history.put-back'].source], ['put back in the current text', 'designs/B3-editor.md'], 'B3-S7\'s words, by its trace');
   assert.ok(!lacking().some((x) => DRAFTS.some(([id]) => id === x.id)), 'none of them is listed as the lane\'s own');
+});
+
+test('the slot\'s face\'s words are the lane\'s own as B11-S5 and the slot\'s face decision need them, each DRAFT naming its screen, listed for the report — the sources\' DRAFTs verbatim: "not written yet" after the slot\'s name, "⟨n⟩ more links", "links not read", "yours", the state alone at a created, empty page; none a possessive on an address and none carrying a joiner (B11-S5, B11-S4; the slot\'s face decision, point 4)', () => {
+  const ids = Object.keys(STRINGS).filter((id) => id.startsWith('L.slot-face.')).concat(['L.corner.no-versions.state']);
+  assert.ok(ids.length >= 25, `the face's strings stand: ${ids.length}`);
+  for (const id of ids) {
+    const e = STRINGS[id];
+    assert.ok(e.cls === 'DRAFT' && e.lane === true && e.source === '' && /B11-S[45]/.test(e.screen || '') && e.kind in KINDS, `${id}: DRAFT, the lane's own, naming B11-S5 or B11-S4, its kind KINDS holds`);
+    assert.ok(!/[0-9][’']s\b/.test(e.text) && !/^L\.slot\./.test(id), `${id}: no possessive on an address, never the byline's ids`);
+  }
+  assert.equal(`${STRINGS['L.well-known.bio'].text} — ${STRINGS['L.slot-face.unwritten'].text}`, 'bio — not written yet', 'the head, as point 4 words it');
+  assert.equal(`${STRINGS['L.well-known.your-bio'].text} — ${STRINGS['L.slot-face.unwritten'].text}`, 'your bio — not written yet');
+  assert.deepEqual([STRINGS['L.slot-face.more'].text, STRINGS['L.slot-face.unread'].text, STRINGS['L.slot-face.yours'].text, STRINGS['L.corner.no-versions.state'].text], ['⟨n⟩ more links', 'links not read', 'yours', 'no versions yet'], 'the sources\' DRAFTs verbatim');
+  assert.ok(['L.slot-face.count', 'L.slot-face.count.1', 'L.slot-face.count.compact', 'L.slot-face.count.compact.1'].every((id) => /\bto (this address|here)\b/.test(STRINGS[id].text)), 'the count\'s words, whole and compact, say the links end at the address');
+  assert.equal(STRINGS['L.slot-face.own.key'].hint, 'clause', 'the key\'s line a hint marked whether it compacts');
 });
 
 test('the lane\'s own strings are listed for the report', () => {

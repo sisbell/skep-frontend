@@ -31,7 +31,13 @@
 // document's delivered state is dropped; the edition claims the active view
 // lists on each origin a withheld run names, or that the lookup was withheld
 // or failed (`Lookup`; PUB-5.124), and the failed reads a listed claim's
-// admission waits on (`takeFailedRead`); the owners and key sets; the
+// admission waits on (`takeFailedRead`); the links whose read answered that
+// they are none the reader can read (`takeUnreadableLink`); each slot's
+// face's read — the links its four-set found at the slot's address, or its
+// refusal, the latest read asked alone taken (`askSlotLinks`,
+// `takeSlotLinks`) — read back as the links whose own stored `to` lies at or
+// under that address, each once its read answered (`slotRead`; B11-S5), and
+// dropped at every change of class; the owners and key sets; the
 // byline's facts per account, its device key or why it names none
 // (`AccountFacts`; FP-34), a cause a feed row kept as held marked owed its
 // read again (`causeOwed`); the feed's rows as they arrived; the last
@@ -156,7 +162,9 @@
 // slot from the mailbox's to the last named one where no document the reader
 // can read stands, read off `known` and the address alone, no record made and
 // no read asked, kept until the model next moves (`forms`, `isForm`); at
-// another person's mailbox no line ends at it at rest (`theirMailboxForm`).
+// another person's mailbox no line ends at it at rest (`theirMailboxForm`);
+// at each slot past the mailbox its face stands at reading scale
+// (`faceSlot`).
 // The map's reading of a document's number and where an account's next
 // document stands are read here (`numberKind`, `nextDocument`, the latter
 // kept until the index is next written). So is the one table of the
@@ -386,6 +394,22 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /**
+ * @typedef {Object} SlotLinks — a slot's face's read as M-PUMP asked it (`askSlotLinks`): the links whose `to` the board
+ * matched to the slot's address, as `find_links_ftt` answered them (M-FRAMES' `linksEndingAt`)
+ * @property {number} serial which read it is: a later one asked takes its place, and its answer alone is taken
+ * @property {string[] | null} found the links the board answered, in its order; null while the read is out, or where it was refused
+ * @property {boolean} refused the board refused the read, or did not answer it
+ */
+
+/**
+ * @typedef {Object} SlotRead — a slot's face's read as the model holds it (`slotRead`)
+ * @property {'unread' | 'reading' | 'failed' | 'answered'} state `unread` none was asked; `reading` the read, or the
+ * read of a link it found, is out; `failed` the board refused the read, or a link's, for a reason that says nothing of
+ * whether the reader may read it, or did not answer; `answered` every link it found is read
+ * @property {Link[]} kept the links it found whose stored `to` lies at or under the slot's address, read, in the order found
+ */
+
+/**
  * @typedef {Object} Reader — who reads, as the entitlement arm at a withheld document or run is decided for them (PUB-5.97's key-split defaults, in PUB-5.121's order; R56)
  * @property {string | null} account the acting account, or null (a guest)
  * @property {boolean} keyPresent the device's key store holds a key bound at this board's origin (PUB-5.97)
@@ -484,6 +508,12 @@ const state = {
   editionClaims: new Map(),
   /** @type {Set<string>} the links and documents whose read an edition claim's admission waits on failed, unanswered since (`takeFailedRead`) */
   failedReads: new Set(),
+  /** @type {Set<string>} the links whose read answered that the reader may not read one there, or that none resides there (`takeUnreadableLink`) */
+  unreadable: new Set(),
+  /** @type {Map<string, SlotLinks>} each slot's face's read, by the slot's address (`askSlotLinks`, `takeSlotLinks`) */
+  slotReads: new Map(),
+  /** the slots' faces' reads asked, counted, so a read a later one took the place of sets nothing (`SlotLinks.serial`) */
+  slotSerial: 0,
   /** @type {Map<string, number>} how many times each origin's edition claims have changed (`claimsChanged`), by origin (`claimDropsOf`) */
   claimDrops: new Map(),
   /** how many times a refresh has dropped the edition claims on every origin its kept documents do not window (`takeRefresh`): a count every origin's takes (`claimDropsOf`) */
@@ -682,7 +712,7 @@ function dropClass(stood, ended) {
     if (kept.has(addr)) for (const k of [...m.keys()]) { if (!homed(k.split(' ')[0])) m.delete(k); }
     if (!kept.has(addr) || !m.size) state.projections.delete(addr);
   }
-  state.memberAges.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.owners.clear(); state.keySets.clear();
+  state.memberAges.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.unreadable.clear(); state.slotReads.clear(); state.owners.clear(); state.keySets.clear();
   dropKeyCauses();
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
   for (const w of classWatchers) w(ended);
@@ -1114,6 +1144,20 @@ export function isForm(addr) {
  * @returns {boolean}
  */
 export const theirMailboxForm = (addr) => isForm(addr) && assignedSlotOf(addr) === MAILBOX_SLOT && !isOwn(addr);
+
+/**
+ * Does a slot's face stand at an address's place at its reading scale
+ * (B11-S5): the one form (`isForm`) at an assigned slot past the mailbox — a
+ * bio, a link page, a policy document's slot — the address the slot's own,
+ * never a version's. Another person's mailbox keeps its own withheld words at
+ * a landing and takes no face here (B20 §5 Q3).
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export function faceSlot(addr) {
+  const n = documentOf(addr) === addr ? assignedSlotOf(addr) : null;
+  return n != null && n > MAILBOX_SLOT && n <= LAST_NAMED_SLOT && isForm(addr);
+}
 
 /**
  * What a document's number is on the plane's map (P-PROJ's `cellNumberOf`,
@@ -2038,7 +2082,7 @@ export function takeLinks(/** @type {string} */ addr, /** @type {string[]} */ ad
 export function takeLink(/** @type {LinkValue} */ v) {
   const home = homeOf(v.addr) || v.addr;
   state.links.set(v.addr, { addr: v.addr, home, owner: accountOf(home), type: v.type, from: v.from, to: v.to, age: v.age });
-  state.failedReads.delete(v.addr);
+  state.failedReads.delete(v.addr); state.unreadable.delete(v.addr);
   reclause(claiming((c) => c === v.addr));
   bump();
 }
@@ -2142,6 +2186,90 @@ export function takeFailedRead(addr) {
 }
 /** has a read of a link, or of a document's metadata, failed, unanswered since (`takeFailedRead`)? */
 export const readFailed = (/** @type {string} */ addr) => state.failedReads.has(addr);
+/**
+ * A link's read answered that it is none this reader can read: refused as
+ * withheld from the reader, or no link resides at the address. Held until a
+ * read of it answers with the link (`takeLink`) or the class changes
+ * (`dropClass`).
+ * @param {string} link
+ */
+export function takeUnreadableLink(link) { state.unreadable.add(link); bump(); }
+/** did a link's read answer that it is none this reader can read (`takeUnreadableLink`)? */
+export const unreadableLink = (/** @type {string} */ link) => state.unreadable.has(link);
+
+// ---- a slot's face's read -----------------------------------------------------------------------------------------
+
+/**
+ * A slot's face's read asked (M-PUMP's `readLinksEndingAt`): a landing's, or
+ * the view's at a face that stands with none held — its own serial, the read
+ * standing as out and any answer held before it set aside, so the face says
+ * what this read finds and nothing an earlier one found.
+ * @param {string} slot the slot's address
+ * @returns {number} its serial (`SlotLinks.serial`)
+ */
+export function askSlotLinks(slot) {
+  const serial = ++state.slotSerial;
+  state.slotReads.set(slot, { serial, found: null, refused: false });
+  bump();
+  return serial;
+}
+
+/**
+ * A slot's face's read answered: the links the board found, or its refusal —
+ * taken where no read asked after it took its place, else nothing.
+ * @param {string} slot
+ * @param {number} serial the read's (`askSlotLinks`)
+ * @param {string[] | null} found the links found, in the board's order; null where the board refused the read or did not answer
+ */
+export function takeSlotLinks(slot, serial, found) {
+  const r = state.slotReads.get(slot);
+  if (!r || r.serial !== serial) return;
+  state.slotReads.set(slot, { serial, found: found ? [...found] : null, refused: !found });
+  bump();
+}
+
+/** a slot's face's read as asked, or undefined where none was (`askSlotLinks`) */
+export const slotLinksOf = (/** @type {string} */ slot) => state.slotReads.get(slot);
+
+/**
+ * A slot's face's read as the model holds it (B11-S5; the slot's face
+ * decision, point 2, its step 1; P55): the links its four-set found kept
+ * where their own stored `to` lies at or under the slot's address — one that
+ * names the account above it, or a prefix above that, answering the four-set
+ * by overlap alone — each once its read (`read_link`) answered; one whose
+ * read answered that it is none this reader can read dropped, never kept
+ * (`unreadableLink`). Reading while the four-set, or a found link's read, is
+ * out; failed where the board refused the four-set or a found link's read for
+ * a reason that says nothing of the reader, or did not answer
+ * (`readFailed`); unread where no read was asked.
+ * @param {string} slot
+ * @returns {SlotRead}
+ */
+export function slotRead(slot) {
+  const r = state.slotReads.get(slot);
+  if (!r) return { state: 'unread', kept: [] };
+  if (r.refused) return { state: 'failed', kept: [] };
+  if (!r.found) return { state: 'reading', kept: [] };
+  /** @type {Link[]} */
+  const kept = [];
+  let out = false, failed = false;
+  for (const a of r.found) {
+    const l = state.links.get(a);
+    if (l) { if (l.to.some((e) => isUnder(slot, e.start))) kept.push(l); continue; }
+    if (state.unreadable.has(a)) continue;
+    if (state.failedReads.has(a)) failed = true; else out = true;
+  }
+  return { state: failed ? 'failed' : out ? 'reading' : 'answered', kept };
+}
+
+/** the links a slot's face's read found that no read has answered with the link, or with its being none this reader can read — what M-PUMP asks, a failed one among them as its own rules ask a failed read again */
+export function unreadSlotLinks(/** @type {string} */ slot) {
+  const r = state.slotReads.get(slot);
+  return r && r.found ? r.found.filter((a) => !state.links.has(a) && !state.unreadable.has(a)) : [];
+}
+
+/** the slots whose face's read found links, by their addresses */
+export const slotsRead = () => [...state.slotReads].filter(([, r]) => !!r.found).map(([s]) => s);
 /**
  * How many times an origin's edition claims have changed — a change M-PUMP
  * reads from a feed row (`claimsChanged`), every refresh's drop
@@ -2864,6 +2992,7 @@ export function _reset() {
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.owed.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.feedAt = null; state.draftsAt = null; state.rev = 0;
   state.minted.clear(); state.mints.clear(); formsAt = { rev: -1, list: [], set: new Set() };
+  state.unreadable.clear(); state.slotReads.clear(); state.slotSerial = 0;
   for (const waiting of state.writing.values()) for (const w of waiting) w();
   state.writing.clear(); state.typing.clear();
 }

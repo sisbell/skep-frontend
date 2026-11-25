@@ -17,7 +17,7 @@
 // refresh's read left unset, and the drafts a burst's commit owes a read, each
 // read again until it is set, a read a commit waits on marked (`again`); the
 // searches out for what a feed row changed of the edition claims
-// (`searching`), and the claims on an origin a document the
+// (`searching`), the slots' faces' reads out (`slotsOut`), and the claims on an origin a document the
 // view shows windows, each read again until set (`claimsOut`); what stands
 // held as it is while it is read again, the page's clock at the row or drop
 // that left it behind, whether it has stood KEPT_MS and the refusal that left
@@ -69,7 +69,11 @@
 // account for the page's life, a cause again wherever a feed row naming a
 // doc 1 dropped it or kept it as held, owed its read again (M-REC's
 // `causeOwed`); and, from LOD_TXT_LO up at the box's document alone,
-// the chain's members up to MEMBER_PROBE_CAP (`probeMembers`).
+// the chain's members up to MEMBER_PROBE_CAP (`probeMembers`). Beside them,
+// at any scale, each link a slot's face's read found (M-REC's `slotRead`),
+// by the same key a link's read takes everywhere; and, nearer than far, a
+// face a zoom brought to stand at its reading scale with no read of its own
+// held, its read as a landing makes it (`facesInView`).
 // Asked by an act: the board (`openBoard`, `retryBoards`; FP-35) — `boards()`
 // and, for the board held, in this order, the device's key store
 // (`fingerprint`, before the session, so the key the session is opened with
@@ -87,7 +91,9 @@
 // chord's step stands, nearest it first, until what the step needs is held,
 // each part taken the same way (`readNear`);
 // the reads a face stating a withheld origin needs before it shows
-// (`claimsToRead`, `readClaims`); a document's metadata where the page holds
+// (`claimsToRead`, `readClaims`); the links whose end lies at a slot's
+// address, at the act of every landing at its face (`readLinksEndingAt`;
+// B11-S5); a document's metadata where the page holds
 // neither it nor a refusal of it — a claim's home's, the home of a link a
 // card states (`readMetadata`); where a link's end projects (`projectEnd`,
 // `projectedIn`); a member's extent (`extentOf`) and its age (`ageOf`),
@@ -291,7 +297,7 @@ import * as F from './frames.js';
 import { cam, viewportWorld, measure, fit } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation, hasCell } from '../plane/projection.js';
-import { estimate, estimatedSpan, LINE_H } from '../plane/layout.js';
+import { estimate, estimatedSpan, slot as columnSlot, LINE_H } from '../plane/layout.js';
 import { versionAddress, homeOf, documentOf, memberOf, isTrunkMember, kindOf, accountOf, parentAccount, cmpAddr, isUnder } from './address.js';
 import { stretchIn } from './derive.js';
 import { keyFingerprint } from '../util.js';
@@ -485,6 +491,8 @@ const again = new Map();
 const claimsOut = new Map();
 /** the searches out for the origins whose edition claims a feed row changed (`searchClaims`): the view counts each missing */
 let searching = 0;
+/** the slots' faces' four-set reads out (`readLinksEndingAt`): the view counts each missing */
+let slotsOut = 0;
 /** @type {Set<() => void>} the pauses out (`afterPause`), each woken as the board answers again (`answering`), past UNREACHED_MS or at a change of the page's class */
 const waking = new Set();
 
@@ -2667,9 +2675,14 @@ export function pump() {
   if (!started) return 0;
   if (indexing) return 1;
   const lod = lodOf(cam.scale);
-  let missing = reread() + (armed != null || refreshing ? 1 : 0) + searching + (rowsHeld && attempt && attempt.made ? 1 : 0) + (gap && gap.out ? 1 : 0);
+  let missing = reread() + (armed != null || refreshing ? 1 : 0) + searching + (rowsHeld && attempt && attempt.made ? 1 : 0) + (gap && gap.out ? 1 : 0) + slotsOut;
   for (const a of claimsOut.values()) if (!a.paused) missing++;
+  // each slot's face's read: every link its four-set found read once, through the one cache every link's type is learned
+  // through (E17 (a)), whatever the scale — the landing's read, made at the act
+  for (const s of REC.slotsRead()) for (const la of REC.unreadSlotLinks(s)) if (need('k:' + la, F.readLink(la), linkTaken(la), s, (r) => linkRefused(la, r))) missing++;
   if (lod.name === 'far') return missing;
+  // a face a zoom brought to stand with no read of its own held: its read, as a landing makes it — never below its reading scale
+  for (const s of facesInView()) if (REC.slotRead(s).state === 'unread') { readLinksEndingAt(s); missing++; }
   const vis = visibleDocs();
   // nearest the centre first
   const cx = cam.x, cy = cam.y;
@@ -2886,11 +2899,22 @@ function metaRefused(d, r) {
  * A read of a link refused: where the refusal says nothing of the link's home
  * — any but `withheld`, which the home's own refusal answers — the read held
  * failed (M-REC's `takeFailedRead`), so the clause of the edition claim it
- * is says its claims were not read (FP-33).
+ * is says its claims were not read (FP-33); `withheld`, the link held as none
+ * the reader can read (M-REC's `takeUnreadableLink`), which a slot's face
+ * drops (`slotRead`).
  * @param {string} link
  * @param {Refusal} r
  */
-function linkRefused(link, r) { if (nameOf(r) !== 'withheld') REC.takeFailedRead(link); }
+function linkRefused(link, r) { if (nameOf(r) !== 'withheld') REC.takeFailedRead(link); else REC.takeUnreadableLink(link); }
+
+/**
+ * A link's read answered, taken (M-REC's `takeLink`): its slots and its age,
+ * its type learned once (E17 (a)) — or, where no link resides at the address,
+ * the link held as none the reader can read (`takeUnreadableLink`).
+ * @param {string} link
+ * @returns {(answer: unknown) => void}
+ */
+const linkTaken = (link) => (answer) => { const v = F.decodeLinkValue(link, answer); if (v) REC.takeLink(v); else REC.takeUnreadableLink(link); };
 
 /**
  * The view's probe of a document's chain (`probePass`, at most
@@ -3299,6 +3323,44 @@ export async function readClaims(origin) {
     if ('refused' in out) linkRefused(c, out.refused);
     else { const v = F.decodeLinkValue(c, out.answer); if (v) REC.takeLink(v); }
   }));
+}
+
+/**
+ * A slot's face's read (B11-S5; the slot's face decision, point 2): one
+ * `find_links_ftt` with `to` the slot's address (M-FRAMES' `linksEndingAt`),
+ * asked at the act of every landing there (N-GO's) and by the view where a
+ * face a zoom brought stands with none held (`facesInView`) — never for a
+ * form below its reading scale — the read asked recorded first (M-REC's
+ * `askSlotLinks`), so the face reads as reading from the act on, and its
+ * answer, or its refusal, taken where no later read took its place
+ * (`takeSlotLinks`). The links it found are each read once by the view's own
+ * key for a link's read (`pump`), every link's type learned through that one
+ * cache (E17 (a)), within MAX_INFLIGHT. Never `count_ftt`: the face counts
+ * the links it read (M-REC's `slotRead`, LK's `slotFold`).
+ * @param {string} slot the slot's address
+ * @returns {Promise<void>} settled once the four-set's answer is taken
+ */
+export function readLinksEndingAt(slot) {
+  const serial = REC.askSlotLinks(slot);
+  slotsOut++;
+  return read(F.linksEndingAt(slot)).then((out) => {
+    if ('refused' in out) refusals.push({ frame: 'find_links_ftt', refusal: out.refused, addr: slot });
+    REC.takeSlotLinks(slot, serial, 'refused' in out ? null : F.decodeAddrs(out.answer));
+  }).finally(() => { slotsOut--; dirty(); });
+}
+
+/**
+ * The slots whose face a zoom brought to stand (see `pump`; B11-S5): each
+ * place of the one form past the mailbox (M-REC's `faceSlot`) whose cell
+ * meets the view, standing at its reading scale — its first column slot's em
+ * (P-LAY's `slot`, at the fit's measure, as T-LAYER's `formFold` sets it) at
+ * P-LOD's readable threshold or above — read off the address and the camera,
+ * no record made.
+ * @returns {string[]}
+ */
+function facesInView() {
+  const v = viewportWorld(0), cpl = measure();
+  return REC.forms().filter((a) => REC.faceSlot(a) && intersects(docBox(a), v) && columnSlot(docBox(a), cpl, 0).fs * cam.scale >= LOD_TXT_LO);
 }
 
 /**

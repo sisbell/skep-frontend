@@ -339,7 +339,7 @@ import json
 import re
 import time
 
-from . import AGENT_SPACE, BEAMED, BIO, DOC, FAR_LEAP, GHOST, HOME, LAST_NAMED_SLOT, LINK_PAGE, MAILBOX, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, corner_fit, drawn_keys, edition, first_grid, heard, item_words, key_fingerprint, named_as, slot_words, trunk_of
+from . import AGENT_SPACE, BEAMED, BIO, DOC, FAR_LEAP, GHOST, HOME, LAST_NAMED_SLOT, LINK_PAGE, MAILBOX, MAILBOX_SLOT, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, account_of, corner_fit, drawn_keys, edition, first_grid, heard, item_words, key_fingerprint, named_as, slot_words, trunk_of
 from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -406,6 +406,18 @@ def overlay_up(ctx, prefix):
     `settle` — then two frames, so the host has placed it"""
     ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__skep.overlay().id || "").startsWith(%s) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })' % json.dumps(prefix))
     ctx.frames(2)
+
+
+def face_up(ctx, slot):
+    """a slot's face standing at reading scale (T-FACE's), waited on for at most ten seconds — a landing's own reads escape
+    `settle` — then two frames, so it is placed"""
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.faces().some((f) => f.slot === %s) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })' % json.dumps(slot))
+    ctx.frames(2)
+
+
+def face_at(ctx, slot):
+    """the slot's face as the gate's door reads it, or None where none stands"""
+    return next((f for f in ctx.js('window.__skep.faces()') if f['slot'] == slot), None)
 
 
 def placed_at(ctx, addr, pos, width):
@@ -4226,27 +4238,27 @@ def fixed_addresses(ctx, r):
     went = None
     for n in (1, 2):
         type_in_box(ctx, slot)
-        ctx.js(TIMED % ('() => window.__skep.overlay().id === "face:doc_not_registered" && window.__skep.trail().cursor === %d' % (t0['cursor'] + n)))
+        ctx.js(TIMED % ('() => window.__skep.faces().some((f) => f.slot === %s) && window.__skep.trail().cursor === %d' % (json.dumps(slot), t0['cursor'] + n)))
         chord(ctx, 'Enter')
-        overlay_up(ctx, 'face:')
+        face_up(ctx, slot)
         took = ctx.js('window.__gateTimed', timeout=60)
         figures.setdefault('slot_leap_ms', []).append(took)
         s, t1 = state(ctx), trail(ctx)
         newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
         refused = ctx.js('window.__skep.model.doc(%s).refused' % json.dumps(slot))
         went = went or s
-        r.check(not listed and refused == 'unregistered' and ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and not s['leap']
+        r.check(not listed and refused == 'unregistered' and ctx.js('window.__skep.overlay().id') is None and bool(face_at(ctx, slot)) and not s['leap']
                 and t1['cursor'] == t0['cursor'] + n and len(t1['entries']) == t0['cursor'] + 1 + n and bool(newest) and newest['addr'] == slot
-                and (newest.get('notice') or {}).get('face') == 'unregistered' and not same_view(left, s) and (s['focus'] or {}).get('addr') == slot,
-                'Enter on the claimant\'s bio, typed — a slot the board holds nothing at, as its read answers — %s: the box closed, the camera flown to the slot\'s place, an entry of its own holding the fifth cell, faced where the camera went, the walk there (B11-S5; O1)' % ('the first time' if n == 1 else 'again, the page knowing the board says nothing of it'),
+                and newest.get('notice') is None and not same_view(left, s) and (s['focus'] or {}).get('addr') == slot,
+                'Enter on the claimant\'s bio, typed — a slot the board holds nothing at, as its read answers — %s: the box closed, the camera flown to the slot\'s place, an entry of its own holding no notice, the slot\'s face standing there, the walk there (B11-S5; O1; the slot\'s face decision)' % ('the first time' if n == 1 else 'again, the page knowing the board says nothing of it'),
                 {'listed': listed, 'refused': refused, 'face': ctx.js('window.__skep.overlay().id'), 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])],
                  'newest': newest and {'addr': newest['addr'], 'notice': newest.get('notice')}, 'moved': not same_view(left, s), 'focus': s['focus'], 'ms': took})
         chord(ctx, 'Escape')
     chord(ctx, '[', mods=('Meta',))
-    overlay_up(ctx, 'face:')
+    face_up(ctx, slot)
     s, t2 = state(ctx), trail(ctx)
-    r.check(t2['cursor'] == t0['cursor'] + 1 and t2['entries'][t2['cursor']]['addr'] == slot and ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and same_view(went, s),
-            'Mod+[ returns to the first LEAP\'s entry, the slot\'s place, its answer shown there again (B11-S5: "Back returns")', {'cursor': [t0['cursor'], t2['cursor']], 'overlay': ctx.js('window.__skep.overlay().id')})
+    r.check(t2['cursor'] == t0['cursor'] + 1 and t2['entries'][t2['cursor']]['addr'] == slot and ctx.js('window.__skep.overlay().id') is None and bool(face_at(ctx, slot)) and same_view(went, s),
+            'Mod+[ returns to the first LEAP\'s entry, the slot\'s place, its face standing there again (B11-S5: "Back returns")', {'cursor': [t0['cursor'], t2['cursor']], 'overlay': ctx.js('window.__skep.overlay().id')})
     chord(ctx, 'Escape')
     chord(ctx, '[', mods=('Meta',))
     s, t3 = state(ctx), trail(ctx)
@@ -4340,9 +4352,9 @@ def slot_names_typed(ctx, r):
     left, t0 = state(ctx), trail(ctx)
     for n in (1, 2):
         type_in_box(ctx, 'bio')
-        ctx.js(TIMED % ('() => window.__skep.overlay().id === "face:doc_not_registered" && window.__skep.trail().cursor === %d' % (t0['cursor'] + n)))
+        ctx.js(TIMED % ('() => window.__skep.faces().some((f) => f.slot === %s) && window.__skep.trail().cursor === %d' % (json.dumps(BIO), t0['cursor'] + n)))
         chord(ctx, 'Enter')
-        overlay_up(ctx, 'face:')
+        face_up(ctx, BIO)
         took = ctx.js('window.__gateTimed', timeout=60)
         figures.setdefault('bio_leap_ms', []).append(took)
         s, t1 = state(ctx), trail(ctx)
@@ -4403,7 +4415,7 @@ def forms_walked(ctx, r):
     arrivals = []
     for n in (1, 2):
         chord(ctx, 'Enter')
-        overlay_up(ctx, 'face:')
+        face_up(ctx, BIO)
         ctx.settle(); ctx.frames(2)
         t1 = trail(ctx)
         newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
@@ -4459,6 +4471,89 @@ def forms_walked(ctx, r):
     b = rects.get(BIO)
     figures['hit_ms'] = ctx.js('((x, y) => { const t0 = performance.now(); for (let i = 0; i < 100; i++) window.__skep.placeAt(x, y); return Math.round((performance.now() - t0) / 100 * 1000) / 1000; })(%s, %s)' % (b['x'] + b['w'] / 2, b['y'] + b['h'] + 8)) if b else None
     r.figures['forms_walked'] = figures
+
+def slot_face_keys(ctx, r):
+    """THE SLOT'S FACE BY EVERY ROUTE (B11-S5; the slot's face decision; O1) — reads alone: Enter on the second account's bio's
+    form stop lands at its face, no notice standing, the entry holding none, and the face still stands after an arrow key that
+    leaves no place; the zoom out lands at the form; a click on the link page's form at mid lands at its face; its address typed
+    in the LEAP box lands at its face; a zoom into the agent space's bio's cell brings its face with no act and no entry; at the
+    claimant's own bio, its plain word that no act creates it, no entry offered, and a printable key answered by the face's line
+    naming that word — a key at the second account's face keeping the plane's line. Its figures: each landing's face and read"""
+    figures = {}
+    bio2, page2, agent3 = SECOND_ACCOUNT + '.0.%d' % (MAILBOX_SLOT + 1), SECOND_ACCOUNT + '.0.%d' % (MAILBOX_SLOT + 2), AGENT_SPACE + '.0.%d' % (MAILBOX_SLOT + 1)
+    focus = lambda: ctx.js('(() => { const f = window.__skep.view.focus(); return f && [f.kind, f.addr]; })()')
+    # the walk on the second account's bio's form: from its home page, out to its document, then down past its mailbox's form
+    ctx.leap(SECOND_ACCOUNT + '.0.1')
+    for _ in range(4):
+        if (focus() or [None])[0] == 'document':
+            break
+        chord(ctx, 'ArrowLeft')
+    for _ in range(2):
+        chord(ctx, 'ArrowDown')
+    at, t0 = focus(), trail(ctx)
+    chord(ctx, 'Enter')
+    face_up(ctx, bio2)
+    t1, f = trail(ctx), face_at(ctx, bio2)
+    newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+    r.check(at == ['form', bio2] and bool(f) and ctx.js('window.__skep.overlay().id') is None and bool(newest) and newest['addr'] == bio2 and newest.get('notice') is None and t1['cursor'] == t0['cursor'] + 1,
+            'Enter on the second account\'s bio\'s form stop: a LEAP landing at the slot\'s face, an entry of its own holding no notice, no notice standing (B11-S5; O1)',
+            {'at': at, 'face': bool(f), 'overlay': ctx.js('window.__skep.overlay().id'), 'newest': newest and {'addr': newest['addr'], 'notice': newest.get('notice')}})
+    figures['enter'] = f and {'read': f['read'], 'items': f['items'], 'rows': [x['cls'] for x in f['rows']]}
+    chord(ctx, 'ArrowRight')
+    r.check(bool(face_at(ctx, bio2)), 'an arrow key that leaves no place: the face still stands', focus())
+    # the zoom out lands at the form
+    for _ in range(6):
+        if not face_at(ctx, bio2):
+            break
+        chord(ctx, '-', mods=('Meta',))
+    ctx.js('new Promise((res) => setTimeout(res, 400))'); ctx.settle(); ctx.frames(2)
+    drawn = [x['addr'] for x in ctx.js('window.__skep.forms()')]
+    r.check(not face_at(ctx, bio2) and bio2 in drawn and focus() == ['form', bio2],
+            'the zoom out from the face lands at the form, the walk on its stop, never a document (B11-S4 "THE PLACE")', {'focus': focus(), 'forms': drawn[:8]})
+    # a click on the link page's form at mid
+    b3, b4 = ctx.js('window.__skep.boxOf(%s)' % json.dumps(bio2)), ctx.js('window.__skep.boxOf(%s)' % json.dumps(page2))
+    f3 = ctx.js('window.__skep.fold(%s)' % json.dumps(bio2))
+    ctx.set_view((b3['x'] + b3['w'] + b4['x']) / 2, f3['outline']['y'] + f3['outline']['h'] / 2, ctx.extent_scale(FORM_MID_PX))
+    q = {x['addr']: x['rect'] for x in ctx.js('window.__skep.forms()')}.get(page2)
+    if q:
+        ctx.drv.click(q['x'] + q['w'] / 2, q['y'] + q['h'] * 0.6)
+        face_up(ctx, page2)
+    r.check(bool(q) and bool(face_at(ctx, page2)), 'a click on the link page\'s form at mid: a LEAP landing at its face (the one form\'s part 1)', q)
+    # its address typed
+    type_in_box(ctx, bio2)
+    chord(ctx, 'Enter')
+    face_up(ctx, bio2)
+    r.check(bool(face_at(ctx, bio2)) and ctx.js('window.__skep.overlay().id') is None, 'the bio\'s address typed in the LEAP box: landed at its face', ctx.js('window.__skep.overlay()'))
+    # a zoom into the agent space's bio's cell: no act, no entry
+    t2 = trail(ctx)
+    ctx.js('(async () => { const L = await import("./text/layer.js"); const C = await import("./plane/camera.js"); const at = L.frameOf(%s, null); C.reach(at.fs); window.__skep.view.set(C.viewAt(at, at.fs, C.landingPx())); return true; })()' % json.dumps(agent3))
+    face_up(ctx, agent3)
+    ctx.settle(); ctx.frames(2)
+    t3, z = trail(ctx), face_at(ctx, agent3)
+    r.check(bool(z) and t3['cursor'] == t2['cursor'] and len(t3['entries']) == len(t2['entries']) and not ctx.js('window.__skep.view.flying()'),
+            'a zoom into the agent space\'s bio\'s cell brings its face, no act made, no entry and no flight (B11-S5)', {'face': bool(z), 'cursor': [t2['cursor'], t3['cursor']]})
+    figures['zoom'] = z and {'read': z['read'], 'items': z['items']}
+    # the claimant's own bio: its plain word, no entry, a key answered by the face's line
+    ctx.leap(BIO)
+    face_up(ctx, BIO)
+    o = face_at(ctx, BIO)
+    words = ctx.js('import("./strings.js").then(({t, STRINGS}) => STRINGS["L.slot-face.own.none"] ? t("L.slot-face.own.none", {name: t("L.well-known.your-bio")}) : "⟨L.slot-face.own.none⟩")')
+    own = [x for x in (o or {}).get('rows', []) if x['cls'] == 'own']
+    entry = ctx.js('document.querySelectorAll("#slotface [data-leap], #slotface [data-continue]").length')
+    r.check(bool(o) and len(own) == 1 and own[0]['text'].lower().startswith(words.lower()) and entry == 0,
+            'at the claimant\'s own bio its face says plainly that no act here creates it, and offers no entry (B11-S5; P10)', {'own': own, 'entry': entry})
+    chord(ctx, 'x')
+    h = ctx.js('window.__skep.hint()') or {}
+    r.check(h.get('id') == 'L.slot-face.own.key' and words.lower() in json.dumps(h, ensure_ascii=False).lower(),
+            'a printable key no field takes at the claimant\'s own bio\'s face: the face\'s line naming its plain word, the key making nothing (seat-settled 19; K-72\'s shape)', h)
+    chord(ctx, 'Escape')
+    ctx.leap(bio2)
+    face_up(ctx, bio2)
+    chord(ctx, 'x')
+    h2 = ctx.js('window.__skep.hint()') or {}
+    r.check(h2.get('id') == 'F.swallow', 'a printable key at the second account\'s bio\'s face: the plane\'s line (K-9)', h2)
+    chord(ctx, 'Escape')
+    r.figures['slot_face_keys'] = figures
 
 
 def run(ctx):
@@ -5364,5 +5459,6 @@ def run(ctx):
     fixed_addresses(ctx, r)
     slot_names_typed(ctx, r)
     forms_walked(ctx, r)
+    slot_face_keys(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

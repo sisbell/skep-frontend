@@ -2304,7 +2304,7 @@ test('an account\'s documents are the boxes the plane draws there: another perso
   } finally { for (const a of [THEIRS, RESERVED, DRAFT]) REC.invalidate(a); }
 });
 
-test('the one form at each assigned slot no box stands at is a fixed stop of the walk, a place and never a document (B11-S5; B11-F20 (3); the one form\'s part 6): its account\'s children in record order — its home page, its slots 2–5, then its documents from 64 — before any read and whatever a read answers, the count the same once a read shows a document at a slot; a landing at a slot finding its stop listed, inserting none; a leaf that → enters nothing; named by its label — the slot\'s name, then its address whole — never a read\'s answer, "your" at the acting account\'s own; its shape its rectangle; no read asked and no record made', async () => {
+test('the one form at each assigned slot no box stands at is a fixed stop of the walk, a place and never a document (B11-S5; B11-F20 (3); the one form\'s part 6): its account\'s children in record order — its home page, its slots 2–5, then its documents from 64 — before any read and whatever a read answers, the count the same once a read shows a document at a slot; a landing at a slot finding its stop listed, inserting none; a leaf that → enters nothing; named by its label — the slot\'s name, then its address whole — then what it is, never a read\'s answer, "your" at the acting account\'s own; its shape its rectangle; no read asked and no record made', async () => {
   const yourBio = t('L.well-known.your-bio'), mailbox = t('L.well-known.mailbox'), unregistered = t('L.far.unregistered');
   const A = '1.0.10', HOME_A = A + '.0.1', MAIL_A = A + '.0.2', DOC_A = A + '.0.64', SLOTS = [3, 4, 5].map((n) => `${A}.0.${n}`);
   const listing = (/** @type {string[]} */ docs) => REC.takeIndex(/** @type {any} */ ({ docs: docs.map((doc) => ({ doc, kind: 'edition', label: null, standing: 'public' })), counts: [{ account: A, documents: docs.length }], state: { arm: 'complete' } }));
@@ -2330,11 +2330,12 @@ test('the one form at each assigned slot no box stands at is a fixed stop of the
     const named = (/** @type {string} */ addr) => { const sibs = WALK.siblingsNow(), i = sibs.findIndex((n) => n.addr === addr); return WALK.nameOf(sibs[i], i, sibs.length); };
     await WALK.focusTo(SLOTS[0], null);
     const bio = named(SLOTS[0]), page = named(SLOTS[1]), five = named(SLOTS[2]), mail = named(MAIL_A);
-    assert.ok(bio.startsWith(`Your bio, ${SLOTS[0]}.`) && bio.toLowerCase().startsWith(yourBio), `the acting account's own bio's item: its label first — "your bio", then its address: ${bio}`);
-    assert.ok(mail.startsWith(`Your mailbox, ${MAIL_A}.`) && page.startsWith(`Your link page, ${SLOTS[1]}.`) && five.startsWith(`${SLOTS[2]}.`), `its mailbox's and link page's by their own names, slot 5's its address alone: ${[mail, page, five].join(' | ')}`);
+    const mine = t('L.slot-face.name.own'), unwritten = t('L.slot-face.unwritten');
+    assert.ok(bio.startsWith(`Your bio, ${SLOTS[0]}, ${mine}, ${unwritten}.`) && bio.toLowerCase().startsWith(yourBio), `the acting account's own bio's item: its label first — "your bio", then its address, then its accessible statement — yours, nothing written there yet where its own index is complete: ${bio}`);
+    assert.ok(mail.startsWith(`Your mailbox, ${MAIL_A}, ${mine}`) && page.startsWith(`Your link page, ${SLOTS[1]}, ${mine}`) && five.startsWith(`${SLOTS[2]}, ${mine}`), `its mailbox's and link page's by their own names, slot 5's its address alone, each then its statement: ${[mail, page, five].join(' | ')}`);
     assert.ok(![bio, page, five, mail].some((w) => w.includes(unregistered)), 'never a read\'s answer: not even where a read answered "unregistered"');
     REC.setSession(/** @type {any} */ ({ session: 's-1', principal: 1, account: '1.0.1' }));
-    assert.ok(named(MAIL_A).startsWith(`${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}, ${MAIL_A}.`), 'another reader\'s: the bare name');
+    assert.ok(named(MAIL_A).startsWith(`${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}, ${MAIL_A}, ${t('L.slot-face.name.other')}.`), 'another reader\'s: the bare name, then an assigned address');
     const room = docBox(SLOTS[2]), s = LAYER.shapeOf(SLOTS[2]);
     assert.ok(s.x === room.x && s.y === room.y && s.w < room.w && s.h < room.h && !REC.has(SLOTS[2]), `its shape its rectangle, the room's first column slot, no record made: ${JSON.stringify(s)}`);
     assert.equal(fake.asked.length, asked, 'no read asked');

@@ -491,6 +491,35 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 :is(#corners, .pane) .margin-mark[data-kind="held"] { background:var(--margin-held); }
 :is(#corners, .pane) .margin-mark[data-kind="refused"] { border-style:solid; border-color:var(--margin-refused); border-left-width:0; }
 
+/* A SLOT'S FACE (T-FACE's; B11-S5): its body set inside the one form's corners by transform at LAY_FS, each of its rows
+   placed at its own top and set unwrapped, the place's words in the client's face, its address the identifier's; it takes
+   no selection and no press but on its acts. Its corner on the screen's layer at the interface's size: one line of acts,
+   each at least the minimum press area tall (FP-44), the count's place hollow while its read is out, the open item drawn
+   open as a disclosure's is (▾); at one column its head's first row stands in the corner with it, on the place's ground */
+#slotface { position:fixed; inset:0; overflow:clip; pointer-events:none; contain:strict; z-index:5; }
+#slotface .slotface { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; font-family:var(--face-client); font-size:16px; line-height:1.45; color:#cfd6df; user-select:none; -webkit-user-select:none; }
+#slotface .fbody { position:relative; }
+#slotface .frow { position:absolute; left:0; right:0; white-space:pre; }
+#slotface .fline { display:block; white-space:pre; }
+#slotface .frow.head { display:flex; justify-content:space-between; align-items:baseline; column-gap:.5em; }
+#slotface .faddr { font-family:var(--face-ident); color:var(--dim); white-space:pre; }
+#slotface .frow.run { color:var(--dim); }
+#slotface .flist { position:static; }
+#slotface button { font:inherit; color:inherit; background:none; border:0; padding:0; margin:0; text-align:left; cursor:pointer; pointer-events:auto; }
+#slotface .fact[aria-disabled="true"] { cursor:default; color:var(--dim); }
+#slotface .fcompact { text-decoration:underline dotted; color:var(--dim); }
+#slotface .fitem { display:block; width:100%; }
+#slotface .fitem.more { color:var(--dim); text-decoration:underline dotted; }
+#slotface .facecorner { position:absolute; top:0; left:0; pointer-events:auto; font-family:var(--face-client); font-size:var(--corner-px); line-height:24px; will-change:transform; }
+#slotface .facecorner.head { background:var(--bg); }
+#slotface .facecorner .fhead { display:flex; justify-content:space-between; align-items:baseline; column-gap:8px; white-space:pre; color:#cfd6df; overflow:hidden; }
+#slotface .facecorner .fbar { display:flex; flex-wrap:wrap; column-gap:8px; align-items:center; }
+#slotface .facecorner .fbar > * { display:inline-flex; align-items:center; min-height:24px; min-width:24px; padding:0 6px; background:var(--bg); border-radius:3px; white-space:pre; box-sizing:border-box; }
+#slotface .facecorner .fbar > .arriving { height:24px; border:1px dashed var(--dim); }
+#slotface .facecorner .fbar > .funread { color:var(--warn); }
+#slotface .facecorner .fsocial { justify-content:center; }
+#slotface .facecorner button[aria-expanded="true"]::before { content:'▾ ' / ''; }
+
 /* A LANDING'S LINE (issue #153's design decision): at the text's edge beside the landing (O-LAND places it), over the
    beams and the corners, under the reading scene, the LEAP box and the overlay; opaque, as all chrome over the plane is,
    its border the arrival's hue, which outlines what it speaks of; its acts the page's buttons */

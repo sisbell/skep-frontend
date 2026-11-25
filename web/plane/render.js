@@ -50,7 +50,8 @@
 // butt-ended and mitred, in P-REG's form ink as the person's settings ask it
 // (`inkOfForm`) — nothing inside them, its rectangle a shape of the pass —
 // and its label, its slot's name then its address (T-LAYER's `formLabel`),
-// set as a document's is, on no plate. The mid connections come
+// set as a document's is, on no plate — save past the mailbox at its reading
+// scale, where the slot's face carries the label in place (T-FACE's). The mid connections come
 // from LK's `connections`, each end at the outline that draws a document,
 // the mark that holds it or the one form's rectangle — none where the plane
 // draws no place for it (`drawsPlace`, the one test LK reads through the
@@ -830,7 +831,8 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   // the one form at each assigned slot no box stands at, with the boxes and at their alpha — the boxes at its depth stand whole wherever boxes are
   // drawn: its four corner marks at its cell's first column slot, nothing inside them, its rectangle a shape of the pass, so no other label stands
   // on it; its label — its slot's name, then its address (T-LAYER's `formLabel`) — handed to the pass as a document's is, at the head of that
-  // rectangle, held below the one line within it but where the line names it, on no plate, the ground showing through
+  // rectangle, held below the one line within it but where the line names it, on no plate, the ground showing through — save at a slot
+  // past the mailbox at its reading scale, where the slot's face carries the label into itself in place (T-FACE's; M-REC's `faceSlot`)
   const ink = inkOfForm();
   for (const addr of forms) {
     const w = LAYER.shapeOf(addr), box = docBox(addr), f = LAYER.formFold(addr);
@@ -840,7 +842,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     stats.forms.push({ addr, rect, alpha, arms, ink, label: [] });
     const row = firstRow(f), g = (GUTTER / 2) * f.fs;
     const X = sx(box.x + row.x + g), Y = sy(box.y + row.y + g), W = (row.w - 2 * g) * cam.scale, H = (row.h - 2 * g) * cam.scale;
-    if (W < 10) continue;
+    if (W < 10 || (REC.faceSlot(addr) && LAYER.atReadingScale(addr))) continue;
     const fsPx = f.fs * cam.scale, lab = LAYER.formLabel(addr), lead = leadOf(f), col = f.columns[lead.column], rowH = Math.max(lineHeight(lab.address.px), lineHeight(fsPx));
     pass.labels.push({ kind: 'form', place: addr, within: { x: X, y: Y, w: W, h: H }, x: sx(box.x + col.x), y: Math.max(Y, sy(box.y + lead.y + lead.h / 2) - rowH / 2), align: 'left', alpha, plate: null,
       contents: { lead: null, name: lab.name, px: fsPx, address: lab.address, kept: null, from: sx(box.x + lead.x), to: sx(box.x + col.x + col.w), end: X + W, slot: true },

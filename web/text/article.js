@@ -227,7 +227,10 @@
 // and each pane's own in the scene.
 // The plan (`articlePlan`): the same article as P-LAY's rows — the head's
 // lines, each block's text at its size with the symbols it carries, a
-// record's words and keys, the line a reference or an empty document takes,
+// record's words and keys, the line a reference or an empty document takes —
+// at a created, empty slot page past the mailbox, to every reader but its
+// owner, the slot's plain name with its state in that line's place, and its
+// corner's state alone, no act named (`ArticleView.slotPage`; B11-S4) —
 // the gap of a withheld run and of an item not rendered, its width, the
 // scene-offers, and none of the signs a column's edge holds nor a run's
 // hairlines or its ground on an empty line, which set no line — each row
@@ -301,6 +304,12 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
 /** @typedef {{text: string, face: Face}} Faced a stretch of words in one face */
 
 /**
+ * @typedef {Object} SlotPage — a created, empty slot page as its reader reads it (`ArticleView.slotPage`; B11-S4)
+ * @property {boolean} own the reader is its owner: the corner's whole line and "nothing here yet", as every document with no version yet
+ * @property {string} words every other reader's statement in the empty line's place — the slot's plain name with its state (T-FACE's), its head naming its address
+ */
+
+/**
  * @typedef {Object} ArticleView — the view state the article renders, handed in as values
  * @property {Span | null} selected the selected span (O-SELECTION's): the blocks it touches are marked
  * @property {{addr: string, pos: number} | null} focus the focused block (N-WALK's), by its first position
@@ -329,6 +338,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {boolean} [keptOpen] the kept word's statement stands open in the corner, on its act (T-LAYER's `openStatement`, SC's); absent, closed
  * @property {boolean} [held] the corner is the moved scene's held version's (SC; B3-S2; D6 BM-14): no document, with no chip, its line the corner's title, standing in the place of the kind, a draft's kept word and its chip (`cornerTitle`); absent, false
  * @property {CornerFace | null} [face] the face standing at a draft's corner beneath its kept word (T-LAYER's reader `face`; B3-S2): a moved document's; absent or null, none
+ * @property {SlotPage | null} [slotPage] a created, empty slot page read by reader (B11-S4): at an assigned slot past the mailbox whose document is published and holds no version yet, whether the reader is its owner and the words every other reader reads there; absent or null at every other document
  * @property {KeptSaid} [keptSaid] what the kept word's statement is said by, beside its state (T-LAYER's `keptSaid`): the board's silence, the venue, the board's name and what opened it; absent, the save chord's on the notebook, the board answering
  * @property {boolean} [opened] the corner, compact in its room, stands opened whole on the reader's act (FP-26): the item its compact form draws as a glyph stands in its words as the act that compacts it again, and the glyph, where it stands, says it is expanded; absent, false
  * @property {boolean} [acts] false: the corner's items stand as their words, no act among them, save a face's own acts, which no row holds — the form a corner at its document's head opens beneath its rows, which hold its acts (T-LAYER's `headOf`, `sceneHead`); absent, true
@@ -1754,7 +1764,7 @@ function kindHTML(v) {
 export const statedChain = (d, n) => (n != null && n >= 1 && d.meta && d.meta.birth ? n : null);
 
 /**
- * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'history' | 'held' | 'past' | 'face' | 'originOwner' | 'kind'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state and the act its kept line offers, whether it is the moved scene's held version's or a past state's, which its title names, the face standing at it, the one owner rule and the document's kind
+ * @typedef {Pick<ArticleView, 'members' | 'lags' | 'notebook' | 'localTrust' | 'kept' | 'history' | 'held' | 'past' | 'face' | 'originOwner' | 'kind' | 'slotPage'>} CornerFacts — what a corner's state is made from (`stateItems`): its box's chain, the board's lag, the venue, the local trust flag, a draft's kept state and the act its kept line offers, whether it is the moved scene's held version's or a past state's, which its title names, the face standing at it, the one owner rule, the document's kind, and a created, empty slot page's reader
  */
 
 /**
@@ -1829,7 +1839,8 @@ function stateItems(d, v) {
     /** a state's words keyed by venue (P7): on a notebook, its clause before them */
     const venued = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ vals, /** @type {string} */ glyph) =>
       (v.notebook ? item('st', 'L.corner.venue', { venue: t('F.published.notebook'), state: t(id, vals) }, glyph) : item('st', id, vals, glyph));
-    const st = d.meta && d.meta.birth === null && !k ? venued('F.corner.no-versions', {}, 'L.corner.bare')
+    // a created, empty slot page: the whole line to its owner, the state alone to every other reader, no act named (B11-S4)
+    const st = d.meta && d.meta.birth === null && !k ? venued(v.slotPage && !v.slotPage.own ? 'L.corner.no-versions.state' : 'F.corner.no-versions', {}, 'L.corner.bare')
       : k ? venued('F.corner.pinned', { k }, 'L.corner.pinned')
         : v.lags ? (v.notebook ? item('st', 'F.published.notebook', {}, 'L.corner.bare') : null)
           : venued('F.corner.latest', {}, 'L.corner.bare');
@@ -2440,6 +2451,17 @@ function segHTML(s, v) {
 }
 
 /**
+ * The words an empty document's line says (`B1.empty_subspace`): "nothing
+ * here yet", save at a created, empty slot page read by any reader but its
+ * owner, which says what every other reader meets at an unwritten slot's
+ * face — the slot's plain name with its state — so one state reads one way
+ * at the face and at the page (`ArticleView.slotPage`; B11-S4).
+ * @param {ArticleView} v
+ * @returns {string}
+ */
+const emptyWords = (v) => (v.slotPage && !v.slotPage.own ? v.slotPage.words : t('B1.empty_subspace'));
+
+/**
  * The article: the head and the blocks (each a span the walk and the mirror
  * key by its first position, and a click on the plane selects whole) — a
  * typed line a `p` in the body's type, on the indent where it opens a typed
@@ -2474,7 +2496,7 @@ export function articleHTML(d, v, ownerAccount) {
     if (p.kind === 'unshown') { run += unshownHTML(b, v, cls.join(' '), at); continue; }
     run += `<p class="${cls.join(' ')}" ${at}${p.blank ? ` style="--blank:${p.blank}"` : ''}${p.blankIn ? ` data-blank-origin="${esc(p.blankIn)}"` : ''}>${countHTML(p.count, 1)}${p.segs.map((s) => segHTML(s, v)).join('')}</p>`;
   }
-  if (w.empty) run += `<p class="sp empty" data-addr="${esc(d.addr)}" data-pos="1" data-width="0">${esc(t('B1.empty_subspace'))}</p>`;
+  if (w.empty) run += `<p class="sp empty" data-addr="${esc(d.addr)}" data-pos="1" data-width="0">${esc(emptyWords(v))}</p>`;
   for (const o of w.offers) run += `<span class="offer" data-scene="${esc(d.addr)}|${esc(o)}" role="button" tabindex="-1">${htmlIn('B1.scene-offer', { D: o }, { D: 'ident' })}</span>`;
   return h + `<div class="run">${run}</div>`;
 }
@@ -2587,7 +2609,7 @@ export function articlePlan(d, v, ownerAccount) {
     } else if (p.kind === 'ref') rows.push(row('text', b.pos, 1, [piece('⟡', 1)]));
     else rows.push(row('text', b.pos, 1, paraPieces(p, 1), { after: p.blank * LINE_H, keep: 'lines', pre: true, indent: p.opens ? MEASURE.indent : 0 }));
   }
-  if (w.empty) rows.push(row('text', 1, 1, [piece(t('B1.empty_subspace'), 1)]));
+  if (w.empty) rows.push(row('text', 1, 1, [piece(emptyWords(v), 1)]));
   const O = MEASURE.offer;
   for (const o of w.offers) rows.push(row('chrome', null, O, [piece(t('B1.scene-offer', { D: o }), O)], { before: MEASURE.offerGap * O, after: MEASURE.offerGap * O }));
   return rows;

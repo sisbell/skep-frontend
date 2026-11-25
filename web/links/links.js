@@ -31,6 +31,8 @@
 //     by T-ARTICLE, never counted, never marked;
 //   - every count is a fold of `find_links_v`'s answer (E17 (a)); a document
 //     whose links are not yet read shows its count arriving (`countDoc`);
+//     a slot's face's, of the links its own read kept by their stored end,
+//     by the same test (`slotFold`; B11-S5);
 //   - an end stands where its bytes stand now, at every document whose text
 //     holds them: a link's slot stores the permanent I-spans of the bytes it
 //     named, never a place (wire.md §Links), and `find_links_v` answers every
@@ -180,9 +182,9 @@
 // drawing modules — BM, T-LAYER, P-RENDER, SC, the cards — draw what `shown`,
 // `shownAt`, `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`,
 // `markOf`, `mergedMark`, `lit`, `floats`, `farPos`, `besideAt`, `farWords`, `farFaced`,
-// `farLabel`, `farLabelHTML`, `farLabelRuns`, `wayOf`, `endRuns`, `farEmpty`, `emptyAt`, `reservedAt`, `tailFaced`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
+// `farLabel`, `farLabelHTML`, `farLabelRuns`, `wayOf`, `endRuns`, `farEmpty`, `emptyAt`, `reservedAt`, `tailFaced`, `slotFold`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
 // size the fold of what `utmost` gives takes.
-// Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-21, FP-22, FP-30.
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-21, FP-22, FP-30, FP-33.
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
@@ -947,6 +949,28 @@ export function countDoc(addr) {
     if (kind === 'passage' || kind === 'whole') n++;
   }
   return { n, social, arriving: !d.linksRead };
+}
+
+/**
+ * A slot's face's links folded by rule (i) (see the head; B11-S5): the links
+ * its read kept by their stored end (M-REC's `slotRead`), each by its kind
+ * (`classify`) — the count, the links between two places, its end a whole
+ * work or a passage; the social mark, the social types; a record, a
+ * structural type and an account-named end nowhere — each newest first by
+ * the commit that made it (`Link.age`), one the board keeps no position for
+ * after them, in the order found. While the read, or a found link's read, is
+ * out it is reading; failed, where the board refused one.
+ * @param {string} slot the slot's address
+ * @returns {{state: 'reading' | 'failed' | 'answered', count: Link[], social: Link[]}}
+ */
+export function slotFold(slot) {
+  const r = REC.slotRead(slot);
+  if (r.state !== 'answered') return { state: r.state === 'failed' ? 'failed' : 'reading', count: [], social: [] };
+  /** @type {Link[]} */
+  const count = [], social = [];
+  for (const l of r.kept) { const k = classify(l); if (k === 'social') social.push(l); else if (k === 'whole' || k === 'passage') count.push(l); }
+  const newest = (/** @type {Link} */ a, /** @type {Link} */ b) => (b.age.at ?? -Infinity) - (a.age.at ?? -Infinity);
+  return { state: 'answered', count: count.sort(newest), social: social.sort(newest) };
 }
 
 /** the cluster's count: the fold over an account's indexed documents whose links are read; arriving where any is not */

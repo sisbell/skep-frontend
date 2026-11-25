@@ -491,6 +491,25 @@ def inside_rect(a, b):
 
 
 
+def guest_face(ctx, r):
+    """(k) the claimant's bio typed by the guest (B11-S5; the slot's face decision, point 4): the LEAP landing at the slot's face —
+    its head the bare name and its state, never "your", its address at the row's end — no fifth cell's notice standing"""
+    bio = '1.0.1.0.3'
+    words = ctx.js('import("./strings.js").then(({t, STRINGS}) => [STRINGS["L.slot-face.unwritten"] ? t("L.well-known.bio") + " — " + t("L.slot-face.unwritten") : "⟨L.slot-face.unwritten⟩", t("L.well-known.your-bio")])')
+    ctx.drv.key('l', mods=('Meta',)); ctx.settle(); ctx.frames(2)
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(bio)
+    ctx.frames(2)
+    ctx.drv.key('Enter'); ctx.settle(); ctx.frames(2)
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.faces().some((f) => f.slot === %s) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })' % json.dumps(bio))
+    ctx.frames(2)
+    f = next((x for x in ctx.js('window.__skep.faces()') if x['slot'] == bio), None) or {}
+    text = (f.get('text') or '').strip()
+    r.check(bool(f) and text.startswith(words[0]) and words[1] not in text and ctx.js('window.__skep.overlay().id') is None,
+            '(k) the guest at the claimant\'s bio: the slot\'s face, "%s" then its address, never "%s", no notice standing (B11-S5)' % (words[0], words[1]), {'text': text[:160], 'overlay': ctx.js('window.__skep.overlay().id')})
+    ctx.drv.key('Escape'); ctx.frames(1)
+
+
 def mailbox_typed(ctx, r):
     """(j) the claimant's mailbox typed by the guest (see the head): the LEAP arriving at its own withheld words, and no box at
     cell 2 after it but the one form — its stop, its label and its press"""
@@ -1038,6 +1057,7 @@ def run(ctx):
     r.figures['withheld_box_found'] = {'retaken': retaken, 'clicked': went}
     ctx.esc()
     mailbox_typed(ctx, r)
+    guest_face(ctx, r)
 
     # (a) the whole guest run: the page's own log, and the provider's from the navigation on
     mine = calls(ctx)

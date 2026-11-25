@@ -186,6 +186,22 @@ def run(ctx):
     r.figures['refusals_met'] = ctx.js('window.__skep.pump.refusals()')
     r.figures['provider_log_fields'] = sorted({k for e in all_rows for k in e.keys()})
     r.note('the provider\'s dial entries carry method, path, bytes and ms — not the op kind; the write check is over the frames, the page\'s own `op` field; the test board\'s /health.log_position is a figure, not a check — the editor case writes there')
+    # ---- (iii-b) a slot's face (B11-S5; the slot's face decision, point 2): a landing at the second account's bio sends one
+    # find_links_ftt with `to` that slot, never the census, each frame a read -----------------------------------------------
+    slot = '1.0.2.0.3'
+    k0 = len(ctx.js('window.__skep.bridge.calls()'))
+    ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(slot))
+    ctx.settle()
+    ctx.frames(2)
+    face_calls = [c for c in ctx.js('window.__skep.bridge.calls()')[k0:] if c['name'] == 'op']
+    fours = [json.loads(c.get('frame') or 'null') for c in face_calls if c.get('op') == 'find_links_ftt']
+    to_slot = [fr for fr in fours if fr and (fr.get('q') or {}).get('to') == [{'start': slot, 'width': '0.0.0.0.1'}]]
+    r.check(len(to_slot) == 1 and not any(c.get('op') == 'count_ftt' for c in face_calls) and all(c.get('op') in ops_allowed for c in face_calls),
+            'a landing at the second account\'s bio sends one find_links_ftt with `to` that slot and no count_ftt, every frame a read (the slot\'s face decision, point 2)',
+            {'ops': dict(Counter(c.get('op') for c in face_calls)), 'four_sets': fours})
+    face = next((f for f in ctx.js('window.__skep.faces()') if f['slot'] == slot), None)
+    r.figures['slot_face_landing'] = {'ops': dict(Counter(c.get('op') for c in face_calls)), 'calls': len(face_calls), 'read': face and face['read'],
+                                      'ms': sum(c['ms'] for c in face_calls), 'bytes_out': sum(c['bytesOut'] for c in face_calls)}
     # ---- (iv) FP-15: the recorded calls replayed over the fake port -----------
     # the page reads the first edition whole too (a LEAP), so both documents' whole reads are on record
     ctx.leap(DOC, WINDOW[0])

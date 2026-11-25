@@ -16,7 +16,13 @@ own row first, into `shots/B11-S9/` (B11-S7, B11-S9, B11-F10). The one form
 is shot into `shots/B11-S5/` (B11-S5): each region the test board draws
 framed at mid on its slot cells, with its forms' labels set and below their
 drop, at 1440 px and at 390 px; the walk's ring on the claimant's bio's form;
-and the claimant's first row beside the second account's in one view."""
+and the claimant's first row beside the second account's in one view. The
+slot's face at reading scale is shot into `shots/B11-S5-face/` (B11-S5; the
+slot's face decision): the second account's bio at zero, its first opening
+in the session and a later one, at 1440 px and at 390 px; its read held at
+the landing, the count's place hollow; the claimant's own bio, its plain
+word; and the zoom's pair, the form's label at mid, then the face in its
+place at reading scale."""
 import json
 
 from . import AGENT_SPACE, BIO, DOC, GHOST, MAILBOX, MAILBOX_SLOT, SECOND_ACCOUNT, WINDOW, Result, frame_row, slot_words
@@ -128,6 +134,55 @@ def form_shots(ctx, r):
     return shots
 
 
+def face_shots(ctx, r):
+    """B11-S5's face at reading scale (see the head): each shot's claim asserted on the page — the face standing, its statement
+    whole or compact, its corner's items, its own plain word, the form's label at mid — through the gate's face door"""
+    shots = []
+    bio2 = '%s.0.%d' % (SECOND_ACCOUNT, MAILBOX_SLOT + 1)
+    face = lambda slot: next((f for f in ctx.js('window.__skep.faces()') if f['slot'] == slot), None)
+    wait = lambda slot, cond='true': ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => { const f = window.__skep.faces().find((x) => x.slot === %s); return (f && (%s)) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50); }; tick(); })' % (json.dumps(slot), cond))
+    ctx.js('window.__skep.slotFaceSession()')
+    for width, height in ((1440, 900), (390, 844)):
+        was = ctx.resize(width, height)
+        ctx.js('window.__skep.slotFaceSession()')
+        ctx.leap(bio2); wait(bio2)
+        f = face(bio2)
+        shots.append(ctx.shot(f'B11-S5-face/empty-first-{width}.png'))
+        r.check(bool(f) and f['whole'] is True and f['items'] == [], f'B11-S5\'s face at zero, its first opening in the session, at {width} px: the statement whole, the corner drawing nothing, as the caption claims', f and {'whole': f['whole'], 'items': f['items']})
+        ctx.leap(bio2); wait(bio2)
+        f = face(bio2)
+        shots.append(ctx.shot(f'B11-S5-face/empty-later-{width}.png'))
+        r.check(bool(f) and f['whole'] is False, f'B11-S5\'s face at zero, a later opening, at {width} px: the statement compact, as the caption claims', f and f['whole'])
+        ctx.drv.hold_op('find_links_ftt')
+        ctx.js('void window.__skep.go.leapTo(%s, null)' % json.dumps(bio2))
+        wait(bio2, 'f.items.some((i) => i.cls.includes("arriving"))')
+        ctx.frames(3)
+        f = face(bio2)
+        shots.append(ctx.shot(f'B11-S5-face/reading-{width}.png'))
+        ctx.drv.answer_op('whole'); ctx.drv.unhold()
+        wait(bio2, '!f.items.some((i) => i.cls.includes("arriving"))')
+        r.check(bool(f) and any('arriving' in i['cls'] for i in f['items']), f'B11-S5\'s face with its read out, at {width} px: the count\'s place hollow, as the caption claims', f and f['items'])
+        ctx.leap(BIO); wait(BIO)
+        f = face(BIO)
+        shots.append(ctx.shot(f'B11-S5-face/own-bio-{width}.png'))
+        r.check(bool(f) and any(x['cls'] == 'own' for x in f['rows']), f'B11-S5\'s face at the claimant\'s own bio, at {width} px: its plain word that no act here creates it, as the caption claims', f and [x['cls'] for x in f['rows']])
+        ctx.resize(*was)
+    # the zoom's pair: the form's label at mid, then the face in its place at reading scale (law 8)
+    b3, b4 = ctx.js('window.__skep.boxOf(%s)' % json.dumps(bio2)), ctx.js('window.__skep.boxOf(%s)' % json.dumps('%s.0.%d' % (SECOND_ACCOUNT, MAILBOX_SLOT + 2)))
+    o3 = ctx.js('window.__skep.fold(%s)' % json.dumps(bio2))['outline']
+    ctx.set_view((b3['x'] + b3['w'] + b4['x']) / 2, o3['y'] + o3['h'] / 2, ctx.extent_scale(FORM_LABELLED_PX[1440]))
+    drawn = next((x for x in ctx.js('window.__skep.forms()') if x['addr'] == bio2), None)
+    shots.append(ctx.shot('B11-S5-face/zoom-label-mid-1440.png'))
+    r.check(bool(drawn) and bool(drawn['label']) and not face(bio2), 'B11-S5\'s zoom at 1440 px, at mid: the form\'s label set, no face, as the caption claims', drawn and drawn['label'])
+    ctx.js('(async () => { const L = await import("./text/layer.js"); const C = await import("./plane/camera.js"); const at = L.frameOf(%s, null); C.reach(at.fs); window.__skep.view.set(C.viewAt(at, at.fs, C.landingPx())); return true; })()' % json.dumps(bio2))
+    wait(bio2); ctx.settle(); ctx.frames(2)
+    shots.append(ctx.shot('B11-S5-face/zoom-face-1440.png'))
+    f = face(bio2)
+    label = next((x for x in ctx.js('window.__skep.forms()') if x['addr'] == bio2), None)
+    r.check(bool(f) and not (label or {}).get('label'), 'B11-S5\'s zoom at 1440 px, at reading scale: the face in the label\'s place, the canvas setting no label there, as the caption claims', {'face': bool(f), 'label': label and label['label']})
+    return shots
+
+
 def run(ctx):
     r = Result()
     thresholds = ctx.js('window.__skep.thresholds')
@@ -208,5 +263,6 @@ def run(ctx):
     r.figures['b11_reserved'] = reserved_shots(ctx, r)
     r.figures['b11_slot_names'] = slot_name_shots(ctx, r)
     r.figures['b11_one_form'] = form_shots(ctx, r)
+    r.figures['b11_slot_face'] = face_shots(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

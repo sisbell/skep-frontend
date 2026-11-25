@@ -114,8 +114,12 @@
 // before any read and whatever a read answers, so a first row's ↓ count
 // never moves at a creation, a letter or a read, and a landing at a slot
 // finds its stop listed — a place and never a document, a leaf holding no
-// element, named by its label (`named`), framed at its rectangle and
-// entered by no read; Enter there arrives at the slot's address (N-KEYS'); where
+// element, named by its label and what it is (`named`), framed at its
+// rectangle and entered by no read; Enter there arrives at the slot's
+// address (N-KEYS'), and while the slot's face stands there at reading scale
+// (T-FACE's) its item is described by the face's words, a hidden
+// description of its own written as the face comes to stand
+// (`markDescribed`), the face's acts its Tab stops after the item; where
 // the plane draws a continuation of the account as its one mark at the scale
 // the camera is bound for (P-LOD's `residueDepth`), one stop for the mark
 // stands before its members, each a stop still in record order (P-PROJ's
@@ -305,6 +309,7 @@ import * as LK from '../links/links.js';
 import * as PUMP from '../model/pump.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
+import * as SLOTFACE from '../text/face.js';
 import * as FOCUS from './focus.js';
 import { placeholderOf, itemOf, itemWords, itemLength, recordOf, kindWord, CLAUSE_READING } from '../text/article.js';
 import { farSays } from '../beams/held.js';
@@ -396,6 +401,8 @@ const HELD = 'walk-held';
 const SELECTED = 'walk-selected', PARTLY = 'walk-partly';
 /** the id of the hidden description of a link item's far end the board will say nothing of, item i's (see the head) */
 const farId = (/** @type {number} */ i) => 'walk-far-' + i;
+/** the id of the hidden description of a form whose slot's face stands, by the slot's address (see the head) */
+const faceId = (/** @type {string} */ slot) => 'walk-face-' + slot.replace(/\./g, '-');
 /** the id of the hidden description of a withheld origin, which every run of it the mirror holds names (see the head) */
 const originId = (/** @type {string} */ origin) => 'walk-origin-' + origin.replace(/[^0-9]/g, '-');
 
@@ -705,11 +712,14 @@ function named(n, i, total) {
   if (n.kind === 'mark') return item(plainly(ended(markCount(membersOf(n.addr).length, REC.countsExact()))), at);
   if (n.kind === 'form') {
     // the one form's stop opens with its visible label (WCAG 2.5.3): the name of the slot it stands at as the reader is shown it (T-LAYER's
-    // `slotNamed`), then its address, whole as the mirror reads every sign — its address alone where the slot bears no name — and never a read's
-    // answer; no words of the strings table say what the place is, so no statement follows them. Read off the address: no record is made
+    // `slotNamed`), then its address, whole as the mirror reads every sign — its address alone where the slot bears no name — then what it is,
+    // its accessible statement (the slot's face decision, point 4): at another person's form an assigned address, the account voiced once in
+    // its address; at the reader's own their assigned address, and, where their own index is complete and lists none there, that nothing is
+    // written there yet — never a read's answer, asserting no document and no absence. Read off the address: no record is made
     const slot = LAYER.slotNamed(n.addr), name = slot ? opening(slot.id) : '';
     const address = { text: n.addr, html: addressedHTML(n.addr), runs: [{ text: n.addr, face: /** @type {const} */ ('ident') }] };
-    return item(endSaid(listSaid([slot ? { text: name, html: `<span data-string="${esc(slot.id)}">${esc(name)}</span>`, runs: asRuns(name) } : plainly(''), address])), at);
+    const own = REC.isOwn(n.addr), what = own ? [plainly(t('L.slot-face.name.own')), ...(REC.countsExact() && !REC.place(n.addr) ? [plainly(t('L.slot-face.unwritten'))] : [])] : [plainly(t('L.slot-face.name.other'))];
+    return item(endSaid(listSaid([slot ? { text: name, html: `<span data-string="${esc(slot.id)}">${esc(name)}</span>`, runs: asRuns(name) } : plainly(''), address, ...what])), at);
   }
   if (n.kind === 'document') {
     // led by its corner's first item — its kind, else a refused document's own words (T-LAYER's `mirrorLead`) — then its address;
@@ -1139,6 +1149,9 @@ function farWhole(/** @type {Node} */ n) {
   return empty ? empty.whole.map((p) => p.text).join(' ') : '';
 }
 
+/** a form node's face's words, where its slot's face stands at reading scale (T-FACE's `heardWords`): its own description's words (see the head); '' for every other node */
+const faceWords = (/** @type {Node} */ n) => (n.kind === 'form' ? SLOTFACE.heardWords(n.addr) : '');
+
 /** does a span node hold what a hold keeps from the board (see the head; T-LAYER's `heldIn`): words the board has not minted, or a held removal, while its draft holds a line the board has not kept */
 function isHeld(/** @type {Node} */ n) {
   const b = blockOf(n);
@@ -1189,6 +1202,7 @@ function describedBy(n, i, at) {
   if (isHeld(n)) ids.push(HELD);
   if (otherRuns(n, at)) ids.push(pieceId(i));
   if (farWhole(n)) ids.push(farId(i));
+  if (faceWords(n)) ids.push(faceId(n.addr));
   const o = originWords(n);
   if (o) ids.push(originId(o.origin));
   return ids.length ? ids.join(' ') : null;
@@ -1225,8 +1239,15 @@ export function markDescribed() {
       const e = document.createElement('div'); e.id = originId(o.origin); e.hidden = true; mirrorEl.appendChild(e); held = e;
     }
     if (o && held && held.textContent !== spoken(o.words)) held.textContent = spoken(o.words);
+    // a form's face's description: written where its face came to stand, its words set as they stand
+    const fw = n ? faceWords(n) : '';
+    let face = fw && n ? q(faceId(n.addr)) : null;
+    if (fw && n && !face && typeof mirrorEl.appendChild === 'function' && typeof document !== 'undefined') {
+      const e = document.createElement('div'); e.id = faceId(n.addr); e.hidden = true; mirrorEl.appendChild(e); face = e;
+    }
+    if (fw && face && face.textContent !== spoken(fw)) face.textContent = spoken(fw);
     const by = n ? describedBy(n, i, said) : null;
-    const named = by ? by.split(' ').filter((x) => (x !== pieceId(i) || piece) && (x !== farId(i) || far) && (!o || x !== originId(o.origin) || held)).join(' ') || null : null;
+    const named = by ? by.split(' ').filter((x) => (x !== pieceId(i) || piece) && (x !== farId(i) || far) && (!o || x !== originId(o.origin) || held) && (!n || x !== faceId(n.addr) || face)).join(' ') || null : null;
     if (named && li.getAttribute('aria-describedby') !== named) li.setAttribute('aria-describedby', named);
     else if (!named && li.getAttribute('aria-describedby') != null) li.removeAttribute('aria-describedby');
   }

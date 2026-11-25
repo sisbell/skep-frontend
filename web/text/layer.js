@@ -642,7 +642,7 @@ import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, landingPx, panBy, leastPan, flying, fly, set as setView, viewAt, reducedMotion } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
-import { docBox, intersects, clearLeftOf, hasCell } from '../plane/projection.js';
+import { docBox, intersects, clearLeftOf, hasCell, assignedSlotOf, MAILBOX_SLOT, LAST_NAMED_SLOT } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, endsColumn, columnAt, MEASURE, MEASURE_CPL, LAY_FS, LINE_H, EDGE, EDGE_GAP, GUTTER, CHAR_W, GRID } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, LABEL_MIN_PX, MARGIN, cornerWidth } from '../plane/register.js';
 import { holdTop, holdStack, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth, cutWords, LINE_BOX, ELLIPSIS } from '../plane/labels.js';
@@ -1643,7 +1643,37 @@ export function chainOf(addr) {
  */
 function cornerFacts(d, scene = false) {
   const h = REC.health();
-  return { members: chainOf(d.addr), lags: lags(), notebook: onNotebook(), localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), history: historyAct(d.addr), face: scene ? null : read.face(d.addr), originOwner, kind: kindOf(d) };
+  return { members: chainOf(d.addr), lags: lags(), notebook: onNotebook(), localTrust: !!(h && h.auth && h.auth.local_trust), kept: WRITE.keptOf(d.addr), history: historyAct(d.addr), face: scene ? null : read.face(d.addr), originOwner, kind: kindOf(d), slotPage: slotPageOf(d) };
+}
+
+/**
+ * A slot page as its reader reads it (T-ARTICLE's `SlotPage`; B11-S4): at a
+ * document at an assigned slot past the mailbox, its own address and never a
+ * version's, whether the reader is its owner (M-REC's `isOwn`) and what every
+ * other reader reads where it holds no version yet (`unwrittenWords`); null
+ * at every other document. T-ARTICLE keys a created, empty one's corner and
+ * empty line by it.
+ * @param {Doc} d
+ * @returns {import('./article.js').SlotPage | null}
+ */
+function slotPageOf(d) {
+  const n = memberOf(d.addr) == null ? assignedSlotOf(d.addr) : null;
+  return n != null && n > MAILBOX_SLOT && n <= LAST_NAMED_SLOT ? { own: REC.isOwn(d.addr), words: unwrittenWords(d.addr, false) } : null;
+}
+
+/**
+ * An unwritten slot's head (B11-S5; B11-S4): the slot's name — as the reader
+ * is shown it (`slotNamed`), or its plain name, what every other reader is
+ * shown — with its state set in after it; its state alone at a slot whose
+ * name is not given. The one rule a slot's face's head (T-FACE's) and a
+ * created, empty slot page's words to every other reader read.
+ * @param {string} addr
+ * @param {boolean} [shown] the name as the reader is shown it, else its plain name
+ * @returns {string}
+ */
+export function unwrittenWords(addr, shown = true) {
+  const id = shown ? REC.slotNameShown(addr) : REC.slotName(addr), state = t('L.slot-face.unwritten');
+  return id ? `${t(id)} — ${state}` : state;
 }
 
 /**
@@ -2122,13 +2152,14 @@ const shapeAt = (/** @type {string} */ addr, /** @type {Fold} */ f) => { const b
  * The middle of the line holding a position of the text shown (`shownOf`), in
  * world units: centred across its column (P-LAY's `placeOf`); the first
  * column's centre where no position is named — what a reading view frames
- * (`frameOf`) and Back's test of a line in view reads (`lineInView`).
+ * (`frameOf`) and Back's test of a line in view reads (`lineInView`); at the
+ * one form's place its first column slot's (`formFold`), no record read.
  * @param {string} addr
  * @param {number | null} pos a position of the text shown
  * @returns {{x: number, y: number}}
  */
 export function centreOf(addr, pos) {
-  const f = foldOf(REC.doc(addr)), box = docBox(addr);
+  const f = REC.isForm(addr) ? placeFold(addr) : foldOf(REC.doc(addr)), box = docBox(addr);
   if (pos == null) { const c = f.columns[0]; return { x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }; }
   const p = placeIn(f, pos);
   return { x: box.x + p.x + p.w / 2, y: box.y + p.y + p.h / 2 };
@@ -2146,7 +2177,9 @@ export function centreOf(addr, pos) {
  * named, the first column — the head's band above it, where the corner stands
  * at the document's head — centred where the visible view below the one line
  * holds it, else moved down so the column's outline tops the visible view and
- * the document's head stands in it, never under the line (FP-37). N-GO's
+ * the document's head stands in it, never under the line (FP-37); at the
+ * one form's place, its first column slot (`formFold`), where the slot's face
+ * stands (T-FACE's). N-GO's
  * landing and N-WALK's flight to a span read it, the view's
  * scale from its em (P-CAM's `viewAt`), so the place and the size are one
  * fold's, and read it again each frame as the camera flies there (P-CAM's
@@ -2159,7 +2192,7 @@ export function centreOf(addr, pos) {
  * @returns {{x: number, y: number, fs: number}} the view's centre, and the document's em in the fold it frames, in world units
  */
 export function frameOf(addr, pos, fsPx = landingPx()) {
-  const f = renderedFold(REC.doc(addr)), c = centreOf(addr, pos), scale = fsPx / f.fs, box = docBox(addr);
+  const f = REC.isForm(addr) ? placeFold(addr) : renderedFold(REC.doc(addr)), c = centreOf(addr, pos), scale = fsPx / f.fs, box = docBox(addr);
   const x = box.x + frameAcross(addr, f, pos == null ? 0 : Math.max(0, placeIn(f, pos).column), fsPx), seen = visibleView(read.top());
   const first = f.columns[0];
   if (pos != null) return { x, y: c.y, fs: f.fs };

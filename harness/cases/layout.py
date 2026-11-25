@@ -5628,6 +5628,69 @@ def step(ctx, em):
     return {'em': em, 'frames': len(f), 'both': max((x[0] for x in f), default=0), 'neither': max((x[1] for x in f), default=0)}
 
 
+def slot_face_site(ctx, r):
+    """THE SLOT'S FACE AT READING SCALE, ITS SITE (B11-S5; the slot's face decision, points 1, 2 and 4; the one form's drawing,
+    part 1) — reads alone: at 1440 and at 390, landed at the second account's bio — the face set inside the one form's corners, its
+    head row within the form's rectangle on screen and the form's four corner marks still drawn; its head's first row the slot's
+    name, its state, then its address; at zero no corner item; and the landing again with its four-set held at the act, the
+    count's place hollow — beside the column level with the head's first row, its left at or past the column's right edge, at
+    1440; on a row of its own beneath the head's first row at 390 — every row of the face where it stood once the read answers.
+    Its figures: at each face on the board, what its four-set answered and what its read kept"""
+    bio2 = SECOND_ACCOUNT + '.0.%d' % (MAILBOX_SLOT + 1)
+    want = ctx.js('import("./strings.js").then(({t, STRINGS}) => STRINGS["L.slot-face.unwritten"] ? t("L.well-known.bio") + " — " + t("L.slot-face.unwritten") : "⟨L.slot-face.unwritten⟩")')
+    figures = {}
+    wait = lambda slot, cond='true': ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => { const f = window.__skep.faces().find((x) => x.slot === %s); return (f && (%s)) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50); }; tick(); })' % (json.dumps(slot), cond))
+    face = lambda slot: next((f for f in ctx.js('window.__skep.faces()') if f['slot'] == slot), None)
+    inside = lambda a, b: bool(a) and bool(b) and a['x'] >= b['x'] - 1 and a['y'] >= b['y'] - 1 and a['x'] + a['w'] <= b['x'] + b['w'] + 1 and a['y'] + a['h'] <= b['y'] + b['h'] + 1
+    for w, h in ((1440, 900), (390, 844)):
+        was = ctx.resize(w, h)
+        ctx.leap(bio2)
+        wait(bio2)
+        ctx.frames(2)
+        f, drawn = face(bio2), {x['addr']: x for x in ctx.js('window.__skep.forms()')}
+        form = drawn.get(bio2)
+        head = f and f['head']
+        r.check(bool(f) and bool(form) and inside(head, form['rect']) and len(form.get('arms') or []) > 0,
+                '%d: the face set inside the one form\'s corners — its head row within the form\'s rectangle, the form\'s corner marks still drawn (the one form\'s drawing, part 1; FP-43)' % w,
+                {'head': head, 'form': form and {'rect': form['rect'], 'arms': form.get('arms')}})
+        text = (f or {}).get('text') or ''
+        r.check(bool(f) and text.strip().startswith(want) and (w < 1000 or bio2 in text.split(want, 1)[1][:40]),
+                '%d: the head\'s first row the slot\'s name, its state, then its address (the slot\'s face decision, point 4)' % w, text[:120])
+        r.check(bool(f) and f['items'] == [], '%d: at zero the corner draws nothing (P69)' % w, f and f['items'])
+        # the landing again, its four-set held at the act: the count's place hollow, where the corner stands
+        ctx.drv.hold_op('find_links_ftt')
+        ctx.js('void window.__skep.go.leapTo(%s, null)' % json.dumps(bio2))
+        wait(bio2, 'f.items.includes("arriving")')
+        ctx.frames(3)
+        held = face(bio2)
+        before = [(x['cls'], x['rect']) for x in (held or {}).get('rows', [])]
+        corner, row = (held or {}).get('corner') or {}, ((held or {}).get('head') or {})
+        item = next((i for i in (held or {}).get('items', []) if 'arriving' in i['cls']), None) if held else None
+        if w >= 1000:
+            site = bool(item) and abs(item['rect']['y'] - row.get('y', -99)) <= 1 and item['rect']['x'] >= (held or {}).get('columnRight', 1e9) - 0.5
+            what = 'beside the column, level with the head\'s first row, its left at or past the column\'s right edge (the slot\'s face decision, point 1, test 1)'
+        else:
+            site = bool(item) and corner.get('head') is True and item['rect']['y'] >= row.get('y', 1e9) + row.get('h', 0) - 0.5
+            what = 'on a row of its own beneath the head\'s first row (the slot\'s face decision, point 1, test 2)'
+        r.check(bool(held) and bool(item) and item['rect']['w'] > 0 and item['rect']['h'] > 0 and site,
+                '%d: its read held, the count\'s place hollow — drawn, never blank — %s' % (w, what), {'items': held and held['items'], 'corner': corner, 'head': row})
+        ctx.drv.answer_op('whole')
+        ctx.drv.unhold()
+        wait(bio2, '!f.items.some((i) => i.cls.includes("arriving"))')
+        ctx.frames(3)
+        after = [(x['cls'], x['rect']) for x in (face(bio2) or {}).get('rows', [])]
+        moved = [(c, a, b) for (c, a), (_, b) in zip(before, after) if abs(a['y'] - b['y']) > 0.5]
+        r.check(len(before) == len(after) and not moved, '%d: the read answered, nothing moves (FP-34)' % w, {'moved': moved, 'before': len(before), 'after': len(after)})
+        figures[str(w)] = {'head': row, 'corner': corner, 'read': (face(bio2) or {}).get('read')}
+        ctx.resize(*was)
+    for slot in ('1.0.1.0.%d' % (MAILBOX_SLOT + 1), bio2, AGENT_SPACE + '.0.%d' % (MAILBOX_SLOT + 1)):
+        ctx.leap(slot)
+        wait(slot)
+        f = face(slot)
+        figures.setdefault('reads', {})[slot] = f and f['read']
+    return figures
+
+
 def run(ctx):
     r = Result()
     ctx.leap(DOC, WINDOW[0])
@@ -5991,6 +6054,7 @@ def run(ctx):
     r.figures['labels'] = seen
     r.figures['slot_names'] = slot_name_holds(ctx, r)
     r.figures['forms'] = forms_hold(ctx, r)
+    r.figures['slot_face'] = slot_face_site(ctx, r)
     r.figures['contents_handoff'] = lead_handoff(ctx, r)
     r.figures['address_dots'] = address_dots(ctx, r)
     # THE TYPE, THE READING SCENE, THE CARRY, THE VERSION MOVE, THE CHROME, THE TRAIL

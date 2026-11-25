@@ -62,7 +62,9 @@
 // `addressDisplay` names at its reading scale, as the version its box shows,
 // N-GO's `shownIn`, FP-22 — beside which a row opens its place, `reading`
 // — its foot, where the creation row stands, and the one line's transient
-// segment, which says a mint); O-SELECTION's and O-HOST's (each reading
+// segment, which says a mint); T-FACE's (the line's bottom, whether the walk
+// stands on a form, the LEAP a row of a face's list makes — N-GO's `leapTo`
+// — and the walk's element a focus goes back to); O-SELECTION's and O-HOST's (each reading
 // scene's pane as it stands, SC's `siteOf` — a site whose selection the
 // overlay owns and an overlay may stand at — and, O-SELECTION's alone, the
 // pane holding the platform's focus, SC's `focusedPane`, Q4, and the reason a
@@ -175,6 +177,7 @@ import * as MACHINE from '../write/machine.js';
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
 import * as LAYER from '../text/layer.js';
+import * as SLOTFACE from '../text/face.js';
 import * as LK from '../links/links.js';
 import * as BM from '../beams/beams.js';
 import * as HOST from '../overlays/host.js';
@@ -273,6 +276,7 @@ function loop(/** @type {number} */ now) {
     // an editor pane set again from its draft's text shown before the layer sets the caret's mark in it
     if (SCENE.isOpen()) SCENE.followShown();
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
+    SLOTFACE.frame();
     GO.recheck();
     GO.surfacesAcross();
     FIND.refresh();
@@ -328,7 +332,7 @@ function reading() {
  * @param {import('../model/pump.js').Dropped} x
  */
 function dropped(x) {
-  if (!x.addrs) { SEL.classChanged(); HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); FIND.classChanged(); GO.classChanged(); LINE.classChanged(x.at); HINT.classChanged(); DELETION.classChanged(); }
+  if (!x.addrs) { SEL.classChanged(); HOST.classChanged(); FACES.classChanged(); SLOTFACE.classChanged(); LEAP.classChanged(); FIND.classChanged(); GO.classChanged(); LINE.classChanged(x.at); HINT.classChanged(); DELETION.classChanged(); }
   SCENE.dropped(x);
   void WALK.dropped(x);
 }
@@ -346,6 +350,8 @@ function whereIs(/** @type {EventTarget | null} */ target) {
   if (t.closest('#scenebar, #scenestop, #scenestrokes, #scenepast')) return /** @type {const} */ ('scene-acts');
   if (t.closest('#scene')) return /** @type {const} */ ('scene');
   if (t.closest('#corners')) return /** @type {const} */ ('corner');
+  // a slot's face (T-FACE's): its corner a corner's, its other acts the face's own
+  if (t.closest('#slotface')) return t.closest('[data-corner]') ? /** @type {const} */ ('corner') : /** @type {const} */ ('face');
   return /** @type {const} */ ('plane');
 }
 
@@ -374,6 +380,8 @@ async function boot() {
   const faces = facesLoaded();
   const plane = /** @type {HTMLCanvasElement} */ (el('plane'));
   RENDER.attach(plane); LAYER.attach(el('domlayer'), el('corners'), { measure: true }); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
+  SLOTFACE.attach(el('slotface'));
+  SLOTFACE.readers({ top: () => LINE.bottom(), focused: (a) => { const f = WALK.current(); return !!f && f.addr === a; }, leap: (a, byKey) => { void GO.leapTo(a, { how: 'leap', byKey }); }, handOff: () => WALK.focusItem() });
   HOST.attach(el('overlay'), el('notice'));
   FOCUS.attach({ live: el('live') });
   WALK.attach(el('mirror'));

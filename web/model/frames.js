@@ -15,8 +15,9 @@
 // (`editionLinksIn`); the audit view's `edition_claims` is not composed
 // (PUB-8.46). The
 // enrollment records naming an account (R22; FP-34) are `find_links_ftt`'s
-// two-slot lookup too (`enrollmentsOf`; AUTH-2.113, AUTH-5.68). `count_v` is
-// not composed (E17 (a)). No write is composed here; of the editor's writes,
+// two-slot lookup too (`enrollmentsOf`; AUTH-2.113, AUTH-5.68), and the links
+// whose end lies at an address its lookup by `to` alone (`linksEndingAt`).
+// `count_v` and `count_ftt` are not composed (E17 (a)). No write is composed here; of the editor's writes,
 // this module decodes the answers alone.
 // The answers decoded: the delivery's items (`content`, `hex`, `atom`,
 // `atom_hex`, `ref`, `withheld`, and an item of a kind this module does not
@@ -262,6 +263,17 @@ export const ENROLL_CLASS = '1.1.0.1.0.1.0.3.1';
  * @param {string} account
  */
 export const enrollmentsOf = (account) => findLinksFtt({ from: 'any', home: 'any', to: [unitSpan(account)], ty: [unitSpan(ENROLL_CLASS)] });
+/**
+ * The links whose end lies at an address — the one read a slot's face makes
+ * (B11-S5): `find_links_ftt` constrained in one slot, the address's unit span
+ * in `to`, `from`, `home` and `ty` `"any"`, a four-set that takes no permit
+ * (A-47). The query matches by span overlap, so a link whose `to` names the
+ * account above the address, or a prefix above that, answers too: a link ends
+ * at the address only where its own stored `to` lies at or under it, which
+ * M-REC's `slotRead` keeps it by.
+ * @param {string} addr
+ */
+export const linksEndingAt = (addr) => findLinksFtt({ from: 'any', home: 'any', to: [unitSpan(addr)], ty: 'any' });
 /** @param {string} a */
 export const readLink = (a) => ({ op: 'read_link', a });
 /** @param {string} a @param {1 | 2 | 3} slot */

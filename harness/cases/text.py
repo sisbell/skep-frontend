@@ -281,6 +281,14 @@ def slot_name_strings(ctx, r):
     ctx.leap(BIO)
     bio_line, bio_mirror = wording_marks(ctx, '#line'), wording_marks(ctx, '#mirror')
     hits += placeholder_sweep(ctx)
+    # the claimant's own bio's face (B11-S5): its words located where shown, each naming its string, none set apart by its class
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.faces().some((f) => f.slot === %s) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })' % json.dumps(BIO))
+    ctx.frames(2)
+    face = wording_marks(ctx, '#slotface')
+    want = ['L.well-known.your-bio', 'L.slot-face.unwritten', 'L.slot-face.own.none', 'L.slot-face.own.others', 'L.slot-face.no-link-act']
+    r.check(all(x in face['shown'] for x in want) and ('L.slot-face.what' in face['shown'] or 'L.slot-face.compact' in face['shown']) and not face['marked'],
+            'the slot\'s face at the claimant\'s own bio: its words located where shown — its head\'s name and state, its statement or its compact mark, its plain word and that word\'s clause, the link act\'s plain word — each naming its string, none set apart by its class (B11-S5)',
+            {'shown': face['shown'], 'marked': face['marked']})
     ctx.esc()
     r.check(not hits, 'the slot names in the LEAP box, at the claimant\'s own mailbox and at its bio\'s form: no template placeholder the page shows or tells (FP-34; issue #208)', hits[:6])
     marked = [x for marks in (*boxed.values(), line, mirror, bio_line, bio_mirror) for x in marks['marked']]

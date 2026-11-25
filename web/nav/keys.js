@@ -39,8 +39,13 @@
 // way back to the draft's text by its chord, Shift+Tab (`B3.caret.back`),
 // nothing placed (`cornerSays`; D5 K-72; D6 BM-52), and at any other corner
 // of the plane every key the platform's; Space at a corner the act's it stands on,
-// else the platform's (`cornerKey`), Space wherever else it is swallowed, and every other key at
-// every other site, K-9's line (`swallow`).
+// else the platform's (`cornerKey`), Space wherever else it is swallowed; at
+// a slot's face standing at the reader's own unwritten slot — the walk on
+// its form, or the focus on its acts or its corner — every key but Space
+// answered by the face's line naming its plain word, nothing made
+// (`ownFaceSays`; seat-settled 19), ↓ and ↑ moving along the face's own acts
+// (`faceKey`); and every other key at every other site, another person's
+// slot's face among them, K-9's line (`swallow`).
 // Each of those lines a printable key raises — the corner's and the scene's
 // swallow among them — ends with where the person was writing, "you were
 // last writing in ⟨label⟩", a sentence after the line's (O-HINT's), where the
@@ -373,6 +378,7 @@ import * as HINT from '../overlays/hint.js';
 import * as DELETION from '../overlays/deletion.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
+import * as SLOTFACE from '../text/face.js';
 import { keptWord, keptStatement } from '../text/article.js';
 import { accountOf, documentOf } from '../model/address.js';
 import { byteLength } from '../util.js';
@@ -587,7 +593,7 @@ export const keyShortcut = (chord) => chord.split('+').map((p) => (p === 'Mod' ?
 
 /**
  * @typedef {Object} Ctx — where the focus is, and whether a key made the act
- * @property {'plane' | 'caret' | 'line' | 'box' | 'overlay' | 'landing' | 'corner' | 'scene' | 'scene-acts' | 'field'} where `caret` the plane, or a reading scene's editor pane, while a live caret stands in its text (T-LAYER's `caret`, `caretPane`; set here, `whereNow`), `scene` a reading scene's pane or its corner, `scene-acts` its bar's buttons, `landing` a landing's line's acts (O-LAND)
+ * @property {'plane' | 'caret' | 'line' | 'box' | 'overlay' | 'landing' | 'corner' | 'face' | 'scene' | 'scene-acts' | 'field'} where `caret` the plane, or a reading scene's editor pane, while a live caret stands in its text (T-LAYER's `caret`, `caretPane`; set here, `whereNow`), `scene` a reading scene's pane or its corner, `scene-acts` its bar's buttons, `landing` a landing's line's acts (O-LAND), `face` a slot's face's acts past its corner (T-FACE's)
  * @property {boolean} byKey a key made the act (the focus owner's one reading, `FOCUS.byKey`)
  * @property {boolean} [landed] the key is made at a jump's landing, held while the jump was in the air — or once an undo reading the text its step stands in is decided, held behind it (`replay`): Esc passes over the chrome a field the reader types in stands in (`esc`), and a key pressed at a corner is dropped (`cornerKey`)
  * @property {'a' | 'b'} [pane] the reading scene's pane whose text the key was pressed at — never its corner (SC's `textPane`; set here, `whereNow`): its span focus the key's site, and its own line the one a key it swallows raises
@@ -1076,6 +1082,8 @@ function route(e, chord, ctx) {
   // the line is one stop (K-22): ← and → move among its acts; every other key is the act's own
   if (ctx.where === 'line') return chord === '←' || chord === '→' ? () => { e.preventDefault(); return LINE.step(chord === '→' ? 1 : -1); } : null;
   if (ctx.where === 'overlay' || ctx.where === 'landing') return null; // the overlay's own keys, and a landing's line's: Enter and Space press its act
+  // a slot's face's acts past its corner (T-FACE's): Enter and Space press its act, ↓ and ↑ move along its stops, a printable key its line
+  if (ctx.where === 'face') return faceKey(e, chord, ctx);
   if (lacking && WALK_KEYS.has(chord)) return lacking;
   // the walk (K-1 … K-8): each key waits on the camera's flight, and the platform runs a key's default — a scroll of
   // the scroller the focus stands in, the mirror — as soon as the listeners return; so the default is prevented first
@@ -1280,7 +1288,48 @@ async function typeAt(e, ctx) {
   if (e.key !== ' ' && siteSays(e, ctx, { writing })) return;
   // in a reading scene no key is answered by K-9's line: one at no pane, the scene's own, by its acts' line
   if (e.key !== ' ' && SCENE.isOpen()) { actsSays(e, ctx); return; }
+  // the walk on the reader's own unwritten slot whose face stands: that face's line (`ownFaceSays`)
+  const f = WALK.current();
+  if (e.key !== ' ' && f && f.kind === 'form' && ownFaceSays(e, ctx, f.addr)) return;
   swallow(e, ctx, writing);
+}
+
+/**
+ * A key no field takes at a slot's face (see the head; B11-S5; seat-settled
+ * 19; K-72's shape): at the reader's own unwritten slot, the face's line
+ * naming its own act — before that act lands, the face's plain word that no
+ * act here creates the slot (`L.slot-face.own.key`) — its hint at the focus
+ * until the next act, the key making nothing; false at another person's slot
+ * face, which keeps the plane's line, and where no face stands.
+ * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
+ * @param {string} slot
+ * @returns {boolean} the face answered the key
+ */
+function ownFaceSays(e, ctx, slot) {
+  if (!SLOTFACE.stands(slot) || !REC.isOwn(slot)) return false;
+  const name = LAYER.slotNamed(slot);
+  HINT.show('L.slot-face.own.key', { 'plain word': t('L.slot-face.own.none', { name: name ? name.text : slot }) }, hinted(e, ctx));
+  return true;
+}
+
+/**
+ * A key at a slot's face's acts past its corner (see the head; T-FACE's):
+ * Enter and Space the act's own, ↓ and ↑ the focus along its stops in the
+ * order they are drawn (T-FACE's `step`), a printable key but Space answered
+ * at the reader's own face by its line (`ownFaceSays`), at another's by the
+ * plane's (`swallow`); none at a key made at a landing.
+ * @param {KeyboardEvent} e
+ * @param {string} chord
+ * @param {Ctx} ctx
+ * @returns {Act | null}
+ */
+function faceKey(e, chord, ctx) {
+  const target = /** @type {HTMLElement | null} */ (e.target);
+  if (ctx.landed || !target) return null;
+  if (chord === '↓' || chord === '↑') return () => { e.preventDefault(); SLOTFACE.step(target, chord === '↓' ? 1 : -1); return true; };
+  if (printable(e) && e.key !== ' ') { const slot = SLOTFACE.faceHolding(target); return () => { if (!slot || !ownFaceSays(e, ctx, slot)) swallow(e, ctx); return true; }; }
+  return null;
 }
 
 /** the document the walk stands in — its element the document, or a span or a link in it — the site a printable key on the plane was pressed at (`writingElsewhere`); null off any document */
@@ -2136,6 +2185,8 @@ function cornerKey(e, chord, ctx, pane = false) {
     return () => { paneSays(e, { ...ctx, pane: p.side }, { writing: writingElsewhere(keySite(ctx, corner)) }); return true; };
   }
   if (printable(e) && LAYER.editable(addr)) return () => { cornerSays(e, ctx, addr); return true; };
+  // a slot's face's corner (T-FACE's): its face's line, at the reader's own; the plane's at another's
+  if (printable(e) && e.key !== ' ' && SLOTFACE.faceHolding(corner)) return () => { if (!ownFaceSays(e, ctx, addr)) swallow(e, ctx); return true; };
   return undefined;
 }
 

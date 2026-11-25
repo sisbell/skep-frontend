@@ -194,13 +194,57 @@ def form_heard(ctx, r):
     r.check(at['focus'] == ['form', BIO] and opens and at['dom'] == at['item'] and unregistered not in (at['item'] or '') and framed,
             'the walk on the claimant\'s bio\'s form: its mirror item opens with its label, "%s", then its address, the DOM item the same, no read\'s answer, framed at the form\'s rectangle (B11-S5; WCAG 2.5.3)' % mine, at)
     ctx.drv.key('Enter'); ctx.settle(); ctx.frames(2)
-    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__skep.overlay().id || "").startsWith("face:") || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.faces().some((f) => f.slot === %s) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })' % json.dumps(BIO))
     ctx.frames(2)
     landed = item()
     r.check(landed['focus'] == ['form', BIO] and (landed['item'] or '').lower().startswith(mine.lower() + ', ' + BIO) and unregistered not in (landed['item'] or ''),
             'Enter\'s LEAP made and its read answered: the item still opens with its label and never says "%s" (the one form\'s part 6)' % unregistered, landed)
     ctx.drv.key('Escape'); ctx.frames(1)
     r.figures['form_heard'] = {'item': at['item'], 'landed': landed['item'], 'ring': at['ring']}
+
+
+def slot_face_heard(ctx, r):
+    """THE SLOT'S FACE HEARD (B11-S5; the slot's face decision, points 1, 2 and 4; WCAG 2.5.3) — reads alone: landed at the second
+    account's bio, the form's mirror item opens with its visible label, then what it is — "an assigned address" — the account's
+    address voiced once and no possessive on any address; the item described by the face's words, its statement whole among them;
+    Tab from the item reaching the face's own stops in the order they are drawn; a second landing in the session, its statement
+    compact on the face and still whole in the description; at the claimant's own bio its item opens "your bio" then "your assigned
+    address"."""
+    import re as _re
+    bio2 = '1.0.2.0.%d' % 3
+    words = ctx.js('import("./strings.js").then(({t, STRINGS}) => Object.fromEntries(["L.well-known.bio", "L.well-known.your-bio", "L.slot-face.name.other", "L.slot-face.name.own"].map((id) => [id, STRINGS[id] ? t(id) : "⟨" + id + "⟩"])))')
+    def item():
+        return ctx.js('''(() => { const S = window.__skep, i = S.mirror.index(), li = document.getElementById('walk-' + i), f = S.view.focus();
+          const by = li ? li.getAttribute('aria-describedby') : null;
+          return {focus: f && [f.kind, f.addr], item: S.mirror.item(i), described: by ? by.split(' ').map((id) => (document.getElementById(id) || {}).textContent || '').join(' ') : ''}; })()''')
+    ctx.js('window.__skep.slotFaceSession()')
+    ctx.leap(bio2)
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.faces().some((f) => f.slot === %s) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })' % json.dumps(bio2))
+    ctx.frames(3)
+    at = item()
+    face = next((f for f in ctx.js('window.__skep.faces()') if f['slot'] == bio2), None) or {}
+    said = heard(ctx, face.get('said') or '')
+    label = heard(ctx, words['L.well-known.bio'])
+    opens = (at['item'] or '').lower().startswith('%s, %s, %s' % (label.lower(), bio2, heard(ctx, words['L.slot-face.name.other']).lower()))
+    r.check(at['focus'] == ['form', bio2] and opens and (at['item'] or '').count('1.0.2') == 1,
+            'landed at the second account\'s bio: the form\'s mirror item opens with its visible label, then its address, then "%s", the account voiced once (WCAG 2.5.3; the slot\'s face decision, point 4)' % words['L.slot-face.name.other'], at)
+    everything = ' '.join([at['item'] or '', at['described'] or '', face.get('text') or ''])
+    r.check(not _re.search(r"[0-9][’']s\b", everything), 'no possessive on an address anywhere the face or its item says', everything[:400])
+    r.check(bool(said) and said in (at['described'] or ''), 'the item described by the face\'s words, its statement whole among them (FP-26)', {'described': at['described'][:400], 'said': said[:200]})
+    stops = ctx.js('''(() => { const out = []; for (const e of document.querySelectorAll('#slotface button')) if (e.tabIndex === 0) out.push(e.className.split(' ')[0]); return out; })()''')
+    r.check(stops == ['fact'], 'the walk on the form: the face\'s one stop at zero its link act\'s plain word — no corner item, the statement whole', stops)
+    ctx.leap(bio2)
+    ctx.frames(3)
+    again = next((f for f in ctx.js('window.__skep.faces()') if f['slot'] == bio2), None) or {}
+    at2 = item()
+    r.check(again.get('whole') is False and said in (at2['described'] or ''), 'a second landing in the session: the statement compact on the face, still read whole (P41; FP-26)', {'whole': again.get('whole'), 'described': (at2['described'] or '')[:300]})
+    ctx.leap(BIO)
+    ctx.frames(3)
+    own = item()
+    mine = heard(ctx, words['L.well-known.your-bio'])
+    r.check(own['focus'] == ['form', BIO] and (own['item'] or '').lower().startswith('%s, %s, %s' % (mine.lower(), BIO, heard(ctx, words['L.slot-face.name.own']).lower())),
+            'at the claimant\'s own bio: its item opens "%s", its address, then "%s" (the one form\'s drawing, part 5)' % (words['L.well-known.your-bio'], words['L.slot-face.name.own']), own)
+    r.figures['slot_face_heard'] = {'item': at['item'], 'own': own['item'], 'stops': stops}
 
 
 def run(ctx):
@@ -1298,6 +1342,7 @@ def run(ctx):
     reserved_keys(ctx, r)
     slot_names_heard(ctx, r)
     form_heard(ctx, r)
+    slot_face_heard(ctx, r)
     # leave the page as the case found it: the landing, the focus on no element
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
